@@ -110,10 +110,6 @@ def test_valid_windows() -> None:
         assert nwd.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
 
 
-# TODO @dangotbanned: Get parity with the existing tests
-# https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L48-L105
-
-
 def test_invalid_repeat_agg() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().mean()
@@ -127,14 +123,6 @@ def test_invalid_repeat_agg() -> None:
         nwd.col("a").arg_max().min()
     with pytest.raises(InvalidOperationError):
         nwd.col("a").arg_min().arg_max()
-
-
-# TODO @dangotbanned: Non-`polars`` rule
-def test_misleading_order_by() -> None:
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().over(order_by="b")
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").rank().over(order_by="b")
 
 
 # NOTE: Previously multiple different errors, but they can be reduced to the same thing
