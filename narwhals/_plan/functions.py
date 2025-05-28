@@ -202,6 +202,7 @@ class CumAgg(Function):
             CumMin: "min",
             CumMax: "max",
             CumProd: "prod",
+            CumSum: "sum",
         }
         return f"cum_{m[tp]}"
 
@@ -239,6 +240,9 @@ class CumMax(CumAgg): ...
 
 
 class CumProd(CumAgg): ...
+
+
+class CumSum(CumAgg): ...
 
 
 class RollingSum(RollingWindow): ...

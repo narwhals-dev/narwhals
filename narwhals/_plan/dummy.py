@@ -233,6 +233,9 @@ class DummyExpr:
     def cum_prod(self, *, reverse: bool = False) -> Self:
         return self._from_ir(F.CumProd(reverse=reverse).to_function_expr(self._ir))
 
+    def cum_sum(self, *, reverse: bool = False) -> Self:
+        return self._from_ir(F.CumSum(reverse=reverse).to_function_expr(self._ir))
+
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
