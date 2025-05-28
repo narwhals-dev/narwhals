@@ -27,7 +27,7 @@ class FunctionFlags(enum.Flag):
     """Automatically explode on unit length if it ran as final aggregation."""
 
     ROW_SEPARABLE = 1 << 8
-    """Not sure lol.
+    """`drop_nulls` is the only one we've got that is *just* this.
 
     https://github.com/pola-rs/polars/pull/22573
     """
@@ -36,13 +36,16 @@ class FunctionFlags(enum.Flag):
     """mutually exclusive with `RETURNS_SCALAR`"""
 
     def is_elementwise(self) -> bool:
-        return self in (FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING)
+        return (FunctionFlags.ROW_SEPARABLE | FunctionFlags.LENGTH_PRESERVING) in self
 
     def returns_scalar(self) -> bool:
         return FunctionFlags.RETURNS_SCALAR in self
 
     def is_length_preserving(self) -> bool:
         return FunctionFlags.LENGTH_PRESERVING in self
+
+    def is_row_separable(self) -> bool:
+        return FunctionFlags.ROW_SEPARABLE in self
 
     @staticmethod
     def default() -> FunctionFlags:
@@ -74,6 +77,9 @@ class FunctionOptions(Immutable):
 
     def is_length_preserving(self) -> bool:
         return self.flags.is_length_preserving()
+
+    def is_row_separable(self) -> bool:
+        return self.flags.is_row_separable()
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:

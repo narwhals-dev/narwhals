@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Callable, Iterable
 
 import pytest
@@ -81,15 +82,8 @@ def test_function_expr_horizontal(
     assert sequence_node != unrelated_node
 
 
-# TODO @dangotbanned: Get partity with the existing tests
+# TODO @dangotbanned: Get parity with the existing tests
 # https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L48-L105
-
-
-def test_misleading_order_by() -> None:
-    with pytest.raises(InvalidOperationError):
-        nw.col("a").mean().over(order_by="b")
-    with pytest.raises(InvalidOperationError):
-        nw.col("a").rank().over(order_by="b")
 
 
 # `test_double_over` is already covered in the later `test_nested_over`
@@ -107,6 +101,9 @@ def test_invalid_repeat_agg() -> None:
         nwd.col("a").all().quantile(0.5, "linear")
 
 
+# TODO @dangotbanned: Weirdly, `polars` suggestion **does** resolve it
+# InvalidOperationError: Series idx, length 1 doesn't match the DataFrame height of 9
+# If you want expression: col("idx").mean().drop_nulls() to be broadcasted, ensure it is a scalar (for instance by adding '.first()')
 def test_filter_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().drop_nulls()
@@ -118,32 +115,48 @@ def test_head_aggregation() -> None:
         nwd.col("a").mean().head()  # type: ignore[attr-defined]
 
 
+# TODO @dangotbanned: (Same as `test_filter_aggregation`)
 def test_rank_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().rank()
 
 
+# TODO @dangotbanned: No error in `polars`, but results in all `null`s
 def test_diff_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().diff()
 
 
-def test_invalid_over() -> None:
+# TODO @dangotbanned: Non-`polars`` rule
+def test_misleading_order_by() -> None:
     with pytest.raises(InvalidOperationError):
+        nwd.col("a").mean().over(order_by="b")
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").rank().over(order_by="b")
+
+
+# NOTE: Non-`polars`` rule
+def test_invalid_over() -> None:
+    pattern = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").fill_null(3).over("b")
 
 
 def test_nested_over() -> None:
-    with pytest.raises(InvalidOperationError):
+    pattern = re.compile(r"cannot nest.+over", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").mean().over("b").over("c")
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").mean().over("b").over("c", order_by="i")
 
 
+# NOTE: This *can* error in polars, but only if the length **actualy changes**
+# The rule then breaks down to needing the same length arrays in all parts of the over
 def test_filtration_over() -> None:
-    with pytest.raises(InvalidOperationError):
+    pattern = re.compile(r"cannot use.+over.+change length", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").drop_nulls().over("b")
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").drop_nulls().over("b", order_by="i")
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").diff().drop_nulls().over("b", order_by="i")
