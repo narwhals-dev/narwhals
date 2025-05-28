@@ -114,10 +114,6 @@ def test_valid_windows() -> None:
 # https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L48-L105
 
 
-# `test_double_over` is already covered in the later `test_nested_over`
-
-
-# test_double_agg
 def test_invalid_repeat_agg() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().mean()
@@ -127,15 +123,6 @@ def test_invalid_repeat_agg() -> None:
         nwd.col("a").any().std()
     with pytest.raises(InvalidOperationError):
         nwd.col("a").all().quantile(0.5, "linear")
-
-
-# TODO @dangotbanned: Add `head`, `tail`
-# head/tail are implemented in terms of `Expr::Slice`
-# We don't support `Expr.slice`, seems odd to add it for a deprecation 🤔
-# polars allows this in `select`, but not `with_columns`
-def test_head_aggregation() -> None:
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().head()  # type: ignore[attr-defined]
 
 
 # TODO @dangotbanned: Non-`polars`` rule
