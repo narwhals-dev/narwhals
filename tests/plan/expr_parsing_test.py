@@ -82,6 +82,34 @@ def test_function_expr_horizontal(
     assert sequence_node != unrelated_node
 
 
+def test_valid_windows() -> None:
+    """Was planning to test this matched, but we seem to allow elementwise horizontal?
+
+    https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L10-L45
+    """
+    ELEMENTWISE_ERR = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)  # noqa: N806
+    a = nwd.col("a")
+    assert a.cum_sum()
+    assert a.cum_sum().over(order_by="id")
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert a.cum_sum().abs().over(order_by="id")
+
+    assert (a.cum_sum() + 1).over(order_by="id")
+    assert a.cum_sum().cum_sum().over(order_by="id")
+    assert a.cum_sum().cum_sum()
+    assert nwd.sum_horizontal(a, a.cum_sum())
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwd.sum_horizontal(a, a.cum_sum()).over(order_by="a")
+
+    assert nwd.sum_horizontal(a, a.cum_sum().over(order_by="i"))
+    assert nwd.sum_horizontal(a.diff(), a.cum_sum().over(order_by="i"))
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwd.sum_horizontal(a.diff(), a.cum_sum()).over(order_by="i")
+
+    with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
+        assert nwd.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
+
+
 # TODO @dangotbanned: Get parity with the existing tests
 # https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L48-L105
 
@@ -110,6 +138,9 @@ def test_filter_aggregation() -> None:
 
 
 # TODO @dangotbanned: Add `head`, `tail`
+# head/tail are implemented in terms of `Expr::Slice`
+# We don't support `Expr.slice`, seems odd to add it for a deprecation 🤔
+# polars allows this in `select`, but not `with_columns`
 def test_head_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().head()  # type: ignore[attr-defined]
