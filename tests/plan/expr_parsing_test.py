@@ -181,7 +181,7 @@ def test_nested_over() -> None:
         nwd.col("a").mean().over("b").over("c", order_by="i")
 
 
-# NOTE: This *can* error in polars, but only if the length **actualy changes**
+# NOTE: This *can* error in polars, but only if the length **actually changes**
 # The rule then breaks down to needing the same length arrays in all parts of the over
 def test_filtration_over() -> None:
     pattern = re.compile(r"cannot use.+over.+change length", re.IGNORECASE)
