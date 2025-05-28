@@ -22,6 +22,7 @@ from narwhals._plan.typing import (
     RollingT,
     SelectorOperatorT,
 )
+from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
@@ -299,6 +300,20 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
         yield self
         for e in reversed(self.input):
             yield from e.iter_right()
+
+    def __init__(
+        self,
+        *,
+        input: Seq[ExprIR],  # noqa: A002
+        function: FunctionT,
+        options: FunctionOptions,
+        **kwds: t.Any,
+    ) -> None:
+        parent = input[0]
+        if parent.is_scalar and not options.is_elementwise():
+            msg = f"Cannot use `{function!r}()` on aggregated expression `{parent!r}`."
+            raise InvalidOperationError(msg)
+        super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
 
 class RollingExpr(FunctionExpr[RollingT]): ...

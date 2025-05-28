@@ -129,14 +129,6 @@ def test_invalid_repeat_agg() -> None:
         nwd.col("a").all().quantile(0.5, "linear")
 
 
-# TODO @dangotbanned: Weirdly, `polars` suggestion **does** resolve it
-# InvalidOperationError: Series idx, length 1 doesn't match the DataFrame height of 9
-# If you want expression: col("idx").mean().drop_nulls() to be broadcasted, ensure it is a scalar (for instance by adding '.first()')
-def test_filter_aggregation() -> None:
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().drop_nulls()
-
-
 # TODO @dangotbanned: Add `head`, `tail`
 # head/tail are implemented in terms of `Expr::Slice`
 # We don't support `Expr.slice`, seems odd to add it for a deprecation 🤔
@@ -146,24 +138,26 @@ def test_head_aggregation() -> None:
         nwd.col("a").mean().head()  # type: ignore[attr-defined]
 
 
-# TODO @dangotbanned: (Same as `test_filter_aggregation`)
-def test_rank_aggregation() -> None:
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().rank()
-
-
-# TODO @dangotbanned: No error in `polars`, but results in all `null`s
-def test_diff_aggregation() -> None:
-    with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().diff()
-
-
 # TODO @dangotbanned: Non-`polars`` rule
 def test_misleading_order_by() -> None:
     with pytest.raises(InvalidOperationError):
         nwd.col("a").mean().over(order_by="b")
     with pytest.raises(InvalidOperationError):
         nwd.col("a").rank().over(order_by="b")
+
+
+# NOTE: Previously multiple different errors, but they can be reduced to the same thing
+# Once we are scalar, only elementwise is allowed
+def test_invalid_agg_non_elementwise() -> None:
+    pattern = re.compile(r"cannot use.+rank.+aggregated.+mean", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwd.col("a").mean().rank()
+    pattern = re.compile(r"cannot use.+drop_nulls.+aggregated.+max", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").max().drop_nulls()
+    pattern = re.compile(r"cannot use.+diff.+aggregated.+min", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").min().diff()
 
 
 # NOTE: Non-`polars`` rule
