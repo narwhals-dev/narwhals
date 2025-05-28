@@ -99,6 +99,12 @@ class DummyExpr:
     def sum(self) -> Self:
         return self._from_ir(agg.Sum(expr=self._ir))
 
+    def arg_min(self) -> Self:
+        return self._from_ir(agg.ArgMin(expr=self._ir))
+
+    def arg_max(self) -> Self:
+        return self._from_ir(agg.ArgMax(expr=self._ir))
+
     def first(self) -> Self:
         return self._from_ir(agg.First(expr=self._ir))
 

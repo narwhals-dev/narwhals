@@ -123,6 +123,10 @@ def test_invalid_repeat_agg() -> None:
         nwd.col("a").any().std()
     with pytest.raises(InvalidOperationError):
         nwd.col("a").all().quantile(0.5, "linear")
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").arg_max().min()
+    with pytest.raises(InvalidOperationError):
+        nwd.col("a").arg_min().arg_max()
 
 
 # TODO @dangotbanned: Non-`polars`` rule
