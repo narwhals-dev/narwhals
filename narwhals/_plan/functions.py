@@ -11,7 +11,10 @@ from narwhals.exceptions import ComputeError
 if TYPE_CHECKING:
     from typing import Any
 
-    from narwhals._plan.common import Seq, Udf
+    from typing_extensions import Self
+
+    from narwhals._plan.common import ExprIR, Seq, Udf
+    from narwhals._plan.expr import AnonymousExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
@@ -229,6 +232,12 @@ class RollingWindow(Function):
         }
         return f"rolling_{m[tp]}"
 
+    def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
+        from narwhals._plan.expr import RollingExpr
+
+        options = self.function_options
+        return RollingExpr(input=inputs, function=self, options=options)
+
 
 class CumCount(CumAgg): ...
 
@@ -394,3 +403,9 @@ class MapBatches(Function):
 
     def __repr__(self) -> str:
         return "map_batches"
+
+    def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
+        from narwhals._plan.expr import AnonymousExpr
+
+        options = self.function_options
+        return AnonymousExpr(input=inputs, function=self, options=options)
