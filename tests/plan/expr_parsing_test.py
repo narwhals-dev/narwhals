@@ -14,7 +14,7 @@ from narwhals._plan import (
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr
 from narwhals._plan.expr import FunctionExpr
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from narwhals._plan.common import IntoExpr, Seq
@@ -164,3 +164,23 @@ def test_filtration_over() -> None:
         nwd.col("a").drop_nulls().over("b", order_by="i")
     with pytest.raises(InvalidOperationError, match=pattern):
         nwd.col("a").diff().drop_nulls().over("b", order_by="i")
+
+
+def test_invalid_binary_expr() -> None:
+    pattern = re.escape("all() + cols(['b', 'c'])\n        ^^^^^^^^^^^^^^^^")
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        nwd.all() + nwd.col("b", "c")
+    pattern = re.escape(
+        "index_columns((1, 2, 3)) * index_columns((4, 5, 6)).max()\n"
+        "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        nwd.nth(1, 2, 3) * nwd.nth(4, 5, 6).max()
+    pattern = re.escape(
+        "cols(['a', 'b', 'c']).abs().fill_null([lit(int: 0)]).round() * index_columns((9, 10)).cast(Int64).sort(asc)\n"
+        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    )
+    with pytest.raises(MultiOutputExpressionError, match=pattern):
+        nwd.col("a", "b", "c").abs().fill_null(0).round(2) * nwd.nth(9, 10).cast(
+            nw.Int64()
+        ).sort()

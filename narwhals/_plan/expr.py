@@ -470,7 +470,7 @@ class All(ExprIR):
     """
 
     def __repr__(self) -> str:
-        return "*"
+        return "all()"
 
 
 class RootSelector(SelectorIR):

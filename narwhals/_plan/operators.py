@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Immutable
 from narwhals._plan.expr import BinarySelector
+from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
@@ -51,6 +52,18 @@ class Operator(Immutable):
         self, left: LeftT, right: RightT, /
     ) -> BinaryExpr[LeftT, Self, RightT]:
         from narwhals._plan.expr import BinaryExpr
+
+        if right.meta.has_multiple_outputs():
+            lhs_op = f"{left!r} {self!r} "
+            rhs = repr(right)
+            indent = len(lhs_op) * " "
+            underline = len(rhs) * "^"
+            msg = (
+                "Multi-output expressions are only supported on the "
+                f"left-hand side of a binary operation.\n"
+                f"{lhs_op}{rhs}\n{indent}{underline}"
+            )
+            raise MultiOutputExpressionError(msg)
 
         return BinaryExpr(left=left, op=self, right=right)
 
