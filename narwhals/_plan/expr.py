@@ -23,6 +23,7 @@ from narwhals._plan.typing import (
     SelectorOperatorT,
 )
 from narwhals.exceptions import InvalidOperationError
+from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
@@ -433,9 +434,22 @@ class Len(ExprIR):
 
 
 class Exclude(ExprIR):
-    __slots__ = ("names",)
+    __slots__ = ("expr", "names")
 
+    expr: ExprIR
+    """Default is `all()`."""
     names: Seq[str]
+    """We're using a `frozenset` in main.
+
+    Might want to switch to that later.
+    """
+
+    @staticmethod
+    def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
+        return Exclude(expr=expr, names=tuple(flatten(names)))
+
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.exclude({list(self.names)!r})"
 
 
 class Nth(ExprIR):

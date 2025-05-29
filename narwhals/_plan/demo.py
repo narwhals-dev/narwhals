@@ -74,6 +74,10 @@ def all() -> DummyExpr:
     return All().to_narwhals()
 
 
+def exclude(*names: str | t.Iterable[str]) -> DummyExpr:
+    return all().exclude(*names)
+
+
 def max(*columns: str) -> DummyExpr:
     return col(columns).max()
 

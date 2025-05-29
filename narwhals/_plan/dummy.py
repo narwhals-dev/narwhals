@@ -78,6 +78,9 @@ class DummyExpr:
         dtype = dtype if isinstance(dtype, DType) else self.version.dtypes.Unknown()
         return self._from_ir(expr.Cast(expr=self._ir, dtype=dtype))
 
+    def exclude(self, *names: str | t.Iterable[str]) -> Self:
+        return self._from_ir(expr.Exclude.from_names(self._ir, *names))
+
     def count(self) -> Self:
         return self._from_ir(agg.Count(expr=self._ir))
 
