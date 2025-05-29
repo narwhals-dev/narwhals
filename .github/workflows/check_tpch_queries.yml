@@ -2,6 +2,7 @@ name: Tests for TPCH Queries
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -33,5 +34,13 @@ jobs:
           uv pip install -U --pre duckdb --system
       - name: generate-data
         run: cd tpch && python generate_data.py
-      - name: tpch-tests 
-        run: cd tpch && pytest tests
+      - name: tpch-tests
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'performance')}}
+        run: cd tpch && pytest tests/queries_test.py::test_execute_query
+      - name: tpch-benchmark
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'performance')}}
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: |
+            uv pip install "numpy<2" pytest-codspeed --system
+            cd tpch && pytest tests/queries_test.py::test_benchmark_query --codspeed
