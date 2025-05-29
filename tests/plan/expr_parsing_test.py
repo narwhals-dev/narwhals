@@ -13,8 +13,13 @@ from narwhals._plan import (
 )
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr
-from narwhals._plan.expr import FunctionExpr
-from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
+from narwhals._plan.expr import BinaryExpr, FunctionExpr
+from narwhals.exceptions import (
+    InvalidOperationError,
+    LengthChangingExprError,
+    MultiOutputExpressionError,
+    ShapeError,
+)
 
 if TYPE_CHECKING:
     from narwhals._plan.common import IntoExpr, Seq
@@ -166,7 +171,7 @@ def test_filtration_over() -> None:
         nwd.col("a").diff().drop_nulls().over("b", order_by="i")
 
 
-def test_invalid_binary_expr() -> None:
+def test_invalid_binary_expr_multi() -> None:
     pattern = re.escape("all() + cols(['b', 'c'])\n        ^^^^^^^^^^^^^^^^")
     with pytest.raises(MultiOutputExpressionError, match=pattern):
         nwd.all() + nwd.col("b", "c")
@@ -184,3 +189,52 @@ def test_invalid_binary_expr() -> None:
         nwd.col("a", "b", "c").abs().fill_null(0).round(2) * nwd.nth(9, 10).cast(
             nw.Int64()
         ).sort()
+
+
+def test_invalid_binary_expr_length_changing() -> None:
+    a = nwd.col("a")
+    b = nwd.col("b")
+
+    with pytest.raises(LengthChangingExprError):
+        a.unique() + b.unique()
+
+    with pytest.raises(LengthChangingExprError):
+        a.mode() * b.unique()
+
+    with pytest.raises(LengthChangingExprError):
+        a.drop_nulls() - b.mode()
+
+    with pytest.raises(LengthChangingExprError):
+        a.gather_every(2, 1) / b.drop_nulls()
+
+    with pytest.raises(LengthChangingExprError):
+        a.map_batches(lambda x: x) / b.gather_every(1, 0)
+
+
+def _is_expr_ir_binary_expr(expr: DummyExpr) -> bool:
+    return isinstance(expr._ir, BinaryExpr)
+
+
+def test_binary_expr_length_changing_agg() -> None:
+    a = nwd.col("a")
+    b = nwd.col("b")
+
+    assert _is_expr_ir_binary_expr(a.unique().first() + b.unique())
+    assert _is_expr_ir_binary_expr(a.mode().last() * b.unique())
+    assert _is_expr_ir_binary_expr(a.drop_nulls().min() - b.mode())
+    assert _is_expr_ir_binary_expr(a.gather_every(2, 1) / b.drop_nulls().max())
+    assert _is_expr_ir_binary_expr(
+        b.gather_every(1, 0) / a.map_batches(lambda x: x, returns_scalar=True)
+    )
+    assert _is_expr_ir_binary_expr(
+        a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
+    )
+    assert _is_expr_ir_binary_expr(b.unique() * a.map_batches(lambda x: x).first())
+
+
+# TODO @dangotbanned: Figure out how to fit this in
+@pytest.mark.xfail(reason="Did not raise, haven't added a check to raise for it yet")
+def test_invalid_binary_expr_shape() -> None:
+    """Cannot combine length-changing expressions with length-preserving ones or aggregations."""
+    with pytest.raises(ShapeError):
+        nwd.col("a").unique() + nwd.col("b")

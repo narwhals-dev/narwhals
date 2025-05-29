@@ -3,9 +3,9 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable
-from narwhals._plan.expr import BinarySelector
-from narwhals.exceptions import MultiOutputExpressionError
+from narwhals._plan.common import ExprIR, Immutable
+from narwhals._plan.expr import BinarySelector, FunctionExpr
+from narwhals.exceptions import LengthChangingExprError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
@@ -65,11 +65,31 @@ class Operator(Immutable):
             )
             raise MultiOutputExpressionError(msg)
 
+        if not any(_is_not_filtration(e) for e in (left, right)):
+            lhs, rhs = repr(left), repr(right)
+            op = f" {self!r} "
+            underline_left = len(lhs) * "^"
+            underline_right = len(rhs) * "^"
+            pad_middle = len(op) * " "
+            msg = (
+                "Length-changing expressions can only be used in isolation, "
+                "or followed by an aggregation.\n"
+                f"{lhs}{op}{rhs}\n{underline_left}{pad_middle}{underline_right}"
+            )
+            raise LengthChangingExprError(msg)
+
         return BinaryExpr(left=left, op=self, right=right)
 
     def __call__(self, lhs: Any, rhs: Any) -> Any:
         """Apply binary operator to `left`, `right` operands."""
         return self.__class__._op(lhs, rhs)
+
+
+def _is_not_filtration(ir: ExprIR) -> bool:
+    # NOTE: Strange naming/negation is to short-circuit on the `any`
+    if not ir.is_scalar and isinstance(ir, FunctionExpr):
+        return ir.options.is_elementwise()
+    return True
 
 
 class SelectorOperator(Operator):
