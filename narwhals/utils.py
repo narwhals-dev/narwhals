@@ -17,6 +17,7 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Mapping,
     Protocol,
     Sequence,
     TypeVar,
@@ -26,6 +27,7 @@ from typing import (
 )
 from warnings import warn
 
+from narwhals import dependencies as deps
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
@@ -163,21 +165,6 @@ CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
-
-
-IMPORT_FUNCTIONS: dict[str, Callable[[], ModuleType]] = {
-    "pandas": lambda: __import__("pandas"),
-    "modin": lambda: __import__("modin").pandas,
-    "cudf": lambda: __import__("cudf"),  # pragma: no cover
-    "pyarrow": lambda: __import__("pyarrow"),
-    "pyspark": lambda: __import__("pyspark").sql,  # pragma: no cover
-    "polars": lambda: __import__("polars"),
-    "dask": lambda: __import__("dask").dataframe,
-    "duckdb": lambda: __import__("duckdb"),
-    "sqlframe": lambda: __import__("sqlframe"),
-    "ibis": lambda: __import__("ibis"),
-    "pyspark[connect]": lambda: __import__("pyspark").sql.connect,  # pragma: no cover
-}
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
@@ -366,11 +353,10 @@ class Implementation(NoAutoEnum):
         Returns:
             Native module.
         """
-        if (name := self.value) not in IMPORT_FUNCTIONS:  # pragma: no cover
-            msg = f"Not supported Implementation: {self}"
-            raise AssertionError(msg)
-
-        return IMPORT_FUNCTIONS[name]()
+        if importer := _IMPORT_FUNCTIONS.get(self):
+            return importer()
+        msg = f"Not supported Implementation: {self}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -617,6 +603,19 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
+}
+_IMPORT_FUNCTIONS: Mapping[Implementation, Callable[[], ModuleType]] = {
+    Implementation.PANDAS: deps.import_pandas,
+    Implementation.MODIN: deps.import_modin,
+    Implementation.CUDF: deps.import_cudf,
+    Implementation.PYARROW: deps.import_pyarrow,
+    Implementation.PYSPARK: deps.import_pyspark,
+    Implementation.POLARS: deps.import_polars,
+    Implementation.DASK: deps.import_dask,
+    Implementation.DUCKDB: deps.import_duckdb,
+    Implementation.SQLFRAME: deps.import_sqlframe,
+    Implementation.IBIS: deps.import_ibis,
+    Implementation.PYSPARK_CONNECT: deps.import_pyspark_connect,
 }
 
 

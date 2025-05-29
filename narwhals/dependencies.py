@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import sys
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
+
+from narwhals.exceptions import module_not_found
 
 if TYPE_CHECKING:
     import cudf
@@ -437,6 +440,105 @@ def is_narwhals_series(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeri
 
 def is_narwhals_series_int(ser: Any | Series[IntoSeriesT]) -> TypeIs[Series[IntoSeriesT]]:
     return is_narwhals_series(ser) and ser.dtype.is_integer()
+
+
+def import_polars():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("polars"):
+        import polars as pl
+
+        return pl
+
+    raise module_not_found(module_name="polars")
+
+
+def import_pandas():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("pandas"):
+        import pandas as pd
+
+        return pd
+
+    raise module_not_found(module_name="pandas")
+
+
+def import_modin():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("modin.pandas"):
+        import modin.pandas
+
+        return modin.pandas
+
+    raise module_not_found(module_name="modin.pandas")
+
+
+def import_cudf():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("cudf"):
+        import cudf
+
+        return cudf
+
+    raise module_not_found(module_name="cudf")
+
+
+def import_pyarrow():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("pyarrow"):
+        import pyarrow as pa
+
+        return pa
+
+    raise module_not_found(module_name="pyarrow")
+
+
+def import_pyspark():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("pyspark.sql"):
+        import pyspark.sql
+
+        return pyspark.sql
+
+    raise module_not_found(module_name="pyspark.sql")
+
+
+def import_dask():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("dask.dataframe"):
+        import dask.dataframe
+
+        return dask.dataframe
+
+    raise module_not_found(module_name="dask.dataframe")
+
+
+def import_duckdb():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("duckdb"):
+        import duckdb
+
+        return duckdb
+
+    raise module_not_found(module_name="duckdb")
+
+
+def import_sqlframe():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("sqlframe"):
+        import sqlframe
+
+        return sqlframe
+
+    raise module_not_found(module_name="sqlframe")
+
+
+def import_ibis():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("ibis"):
+        import ibis
+
+        return ibis
+
+    raise module_not_found(module_name="ibis")
+
+
+def import_pyspark_connect():  # type: ignore[no-untyped-def] # noqa: ANN202
+    if find_spec("pyspark.sql.connect"):
+        import pyspark.sql.connect
+
+        return pyspark.sql.connect
+
+    raise module_not_found(module_name="pyspark.sql.connect")
 
 
 __all__ = [
