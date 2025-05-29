@@ -4,6 +4,7 @@ import operator
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Iterable,
     Literal,
     Mapping,
@@ -222,6 +223,17 @@ class PolarsNamespace:
 
         return self._expr(
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
+            version=self._version,
+            backend_version=self._backend_version,
+        )
+
+    def reduce(
+        self,
+        function: Callable[[pl.Series, pl.Series], pl.Series],
+        exprs: Iterable[PolarsExpr],
+    ) -> PolarsExpr:
+        return self._expr(
+            pl.reduce(function, [expr._native_expr for expr in exprs]),
             version=self._version,
             backend_version=self._backend_version,
         )

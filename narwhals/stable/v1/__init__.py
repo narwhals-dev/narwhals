@@ -1456,6 +1456,22 @@ def concat_str(
     )
 
 
+def reduce(
+    function: Callable[[Expr, Expr], Expr], exprs: IntoExpr | Iterable[IntoExpr]
+) -> Expr:
+    """Accumulate over multiple columns horizontally/row wise with a left fold.
+
+    Arguments:
+        function: Function to apply over the accumulator and the value.
+            Fn(acc, value) -> new_value
+        exprs: Expressions to aggregate over.
+
+    Returns:
+        A new expression with the accumulated value
+    """
+    return _stableify(nw.reduce(function=function, exprs=exprs))
+
+
 class When(NwWhen):
     @classmethod
     def from_when(cls, when: NwWhen) -> When:
@@ -1911,6 +1927,7 @@ __all__ = [
     "nth",
     "read_csv",
     "read_parquet",
+    "reduce",
     "scan_csv",
     "scan_parquet",
     "selectors",

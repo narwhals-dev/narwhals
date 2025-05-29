@@ -3,7 +3,16 @@ from __future__ import annotations
 import platform
 import sys
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+)
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -1803,6 +1812,71 @@ def concat_str(
             ),
             *flat_exprs,
             str_as_lit=False,
+        ),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
+    )
+
+
+def reduce(
+    function: Callable[[Expr, Expr], Expr], exprs: IntoExpr | Iterable[IntoExpr]
+) -> Expr:
+    """Accumulate over multiple columns horizontally/row wise with a left fold.
+
+    Arguments:
+        function: Function to apply over the accumulator and the value.
+            Fn(acc, value) -> new_value
+        exprs: Expressions to aggregate over.
+
+    Returns:
+        A new expression with the accumulated value
+
+    Examples:
+        Let's calculate the horizontal exponentially weighted moving average (EWMA):
+
+        >>> import narwhals as nw
+        >>> import pyarrow as pa
+        >>>
+        >>> data = {
+        ...     "t0": [10, 15, 20, 25, 30],
+        ...     "t1": [12, 16, 22, 26, 32],
+        ...     "t2": [14, 18, 24, 28, 34],
+        ...     "t3": [16, 20, 26, 30, 36],
+        ...     "t4": [18, 22, 28, 32, 38],
+        ... }
+        >>>
+        >>> def ewma(acc, x, alpha: float = 0.8):
+        ...     '''Binary function that computes an exponentially weighted moving average.
+        ...
+        ...     More recent values (processed later) have higher weight.
+        ...     '''
+        ...     return acc * (1 - alpha) + x * alpha
+        >>>
+        >>> df_native = pa.table(data)
+        >>> (
+        ...     nw.from_native(df_native).select(
+        ...         nw.reduce(ewma, nw.all()).round(2).alias("ewma")
+        ...     )
+        ... )
+        ┌──────────────────────────────────┐
+        |        Narwhals DataFrame        |
+        |----------------------------------|
+        |pyarrow.Table                     |
+        |ewma: double                      |
+        |----                              |
+        |ewma: [[17.5,21.5,27.5,31.5,37.5]]|
+        └──────────────────────────────────┘
+    """
+    if not exprs:
+        msg = "At least one expression must be passed to `reduce`"
+        raise ValueError(msg)
+    if isinstance(exprs, Expr):
+        exprs = [exprs]
+    flat_exprs = flatten(exprs)
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.reduce(function, args), *flat_exprs, str_as_lit=False
         ),
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
