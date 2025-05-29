@@ -80,7 +80,8 @@ class Immutable:
 
     def __hash__(self) -> int:
         slots: tuple[str, ...] = self.__slots__
-        return hash(tuple(getattr(self, name) for name in slots))
+        it = (getattr(self, name) for name in slots)
+        return hash((self.__class__, *it))
 
     def __eq__(self, other: object) -> bool:
         if self is other:
