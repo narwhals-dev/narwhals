@@ -7,6 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import dependencies
+from narwhals.exceptions import module_not_found
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrameT
@@ -71,3 +72,8 @@ def test_import_pyarrow(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -
     import pyarrow as pa
 
     assert isinstance(result, pa.Table)
+
+
+def test_module_not_found() -> None:
+    with pytest.raises(ModuleNotFoundError, match="not_a_real_package"):
+        raise module_not_found(module_name="not_a_real_package")

@@ -127,4 +127,5 @@ class NarwhalsUnstableWarning(UserWarning):
 
 # NOTE: Placeholder for anything fancier we might wanna do
 def module_not_found(module_name: str) -> ModuleNotFoundError:
-    return ModuleNotFoundError(name=module_name)
+    msg = f"No module named {module_name!r}"
+    return ModuleNotFoundError(msg, name=module_name)
