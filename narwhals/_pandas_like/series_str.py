@@ -77,3 +77,6 @@ class PandasLikeSeriesStringNamespace(
 
     def to_lowercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.lower())
+
+    def zfill(self, width: int) -> PandasLikeSeries:
+        return self.with_native(self.native.str.zfill(width))
