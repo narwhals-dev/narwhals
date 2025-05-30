@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Iterable,
     Literal,
+    Mapping,
     Sequence,
     cast,
     overload,
@@ -88,7 +89,6 @@ from narwhals.utils import (
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Mapping
 
     from typing_extensions import ParamSpec, Self
 
@@ -174,8 +174,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     ) -> LazyFrame[Any]:
         return super().lazy(backend=backend)  # type: ignore[return-value]
 
-    # Not sure what mypy is complaining about, probably some fancy
-    # thing that I need to understand category theory for
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
     @overload
@@ -187,6 +185,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
+        # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
+        # However the return type actually is `nw.v1.stable.Series`, check `tests/v1_test.py::test_to_dict_as_series`.
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
