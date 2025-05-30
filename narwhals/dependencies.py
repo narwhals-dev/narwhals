@@ -461,7 +461,7 @@ def import_pandas(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
 
 
 def import_modin(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
-    if find_spec("modin.pandas"):
+    if find_spec("modin"):
         import modin.pandas
 
         return modin.pandas
@@ -488,7 +488,7 @@ def import_pyarrow(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
 
 
 def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
-    if find_spec("pyspark.sql"):
+    if find_spec("pyspark") and find_spec("pyspark.sql"):
         import pyspark.sql
 
         return pyspark.sql
@@ -497,7 +497,7 @@ def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
 
 
 def import_dask(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
-    if find_spec("dask.dataframe"):
+    if find_spec("dask"):
         import dask.dataframe
 
         return dask.dataframe
@@ -533,7 +533,11 @@ def import_ibis(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
 
 
 def import_pyspark_connect(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
-    if find_spec("pyspark.sql.connect"):
+    if (
+        find_spec("pyspark")
+        and find_spec("pyspark.sql")
+        and find_spec("pyspark.sql.connect")
+    ):
         import pyspark.sql.connect
 
         return pyspark.sql.connect
