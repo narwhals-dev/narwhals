@@ -4,7 +4,7 @@ from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
 
-from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from sqlframe.base.session import _BaseSession as Session
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
@@ -282,3 +283,31 @@ def strptime_to_pyspark_format(format: str | None) -> str | None:
     for py_format, spark_format in DATETIME_PATTERNS_MAPPING.items():
         pyspark_format = pyspark_format.replace(py_format, spark_format)
     return pyspark_format.replace("T", " ")
+
+
+def catch_pyspark_sql_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
+
+
+def catch_pyspark_connect_exception(
+    exception: Exception, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors.exceptions.connect import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError(str(exception))
+    # Just return exception as-is.
+    return exception

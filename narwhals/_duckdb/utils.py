@@ -5,15 +5,18 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
+
 
 UNITS_DICT = {
     "y": "year",
@@ -293,3 +296,20 @@ def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
         tp_names = " | ".join(tp.__name__ for tp in valid_types)
         msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
         raise TypeError(msg)
+
+
+def catch_duckdb_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:
+    if isinstance(exception, duckdb.BinderException) and any(
+        msg in str(exception)
+        for msg in (
+            "not found in FROM clause",
+            "this column cannot be referenced before it is defined",
+        )
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
