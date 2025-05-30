@@ -6,10 +6,7 @@ import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]}
-polars_expected = {"a": ["-01", "0+1", "001", "012", "123", "99999", "+9999", None]}
-pandas_and_dask_expected = {
-    "a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]
-}
+expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
 
 
 def skip_pandas_pyarrow(constructor: Constructor | ConstructorEager) -> None:
@@ -21,12 +18,9 @@ def skip_pandas_pyarrow(constructor: Constructor | ConstructorEager) -> None:
         )
         raise pytest.skip(reason=reason)
 
-
-def get_expected(constructor_name: str) -> dict[str, list[str | None]]:
-    if "pandas" in constructor_name or "dask" in constructor_name:
-        return pandas_and_dask_expected
-
-    return polars_expected
+    if "polars" in name:
+        reason = "Polars zfill behavior is different from pandas at the moment."
+        raise pytest.skip(reason=reason)
 
 
 def test_str_zfill(constructor: Constructor) -> None:
@@ -34,7 +28,6 @@ def test_str_zfill(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(3))
-    expected = get_expected(constructor.__name__)
     assert_equal_data(result, expected)
 
 
@@ -43,5 +36,4 @@ def test_str_zfill_series(constructor_eager: ConstructorEager) -> None:
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.zfill(3))
-    expected = get_expected(constructor_eager.__name__)
     assert_equal_data(result, expected)

@@ -106,6 +106,7 @@ class IbisExprStringNamespace:
             length = expr.length()
             less_than_width = expr.length() < lit(width)
             starts_with_minus = expr.startswith("-")
+            starts_with_plus = expr.startswith("+")
             one = cast("ir.IntegerScalar", lit(1))
             sub_length = cast("ir.IntegerValue", length - one)
 
@@ -113,6 +114,10 @@ class IbisExprStringNamespace:
                 (
                     starts_with_minus & less_than_width,
                     (expr.substr(1, sub_length).lpad(width - 1, "0").lpad(width, "-")),
+                ),
+                (
+                    starts_with_plus & less_than_width,
+                    (expr.substr(1, sub_length).lpad(width - 1, "0").lpad(width, "+")),
                 ),
                 (less_than_width, expr.lpad(width, "0")),
                 else_=expr,

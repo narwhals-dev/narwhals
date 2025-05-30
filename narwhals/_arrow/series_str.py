@@ -68,14 +68,23 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         native = self.native
         less_than_width = pc.less(pc.utf8_length(native), lit(width))
         starts_with_minus = pc.equal(self.slice(0, 1).native, lit("-"))
+        starts_with_plus = pc.equal(self.slice(0, 1).native, lit("+"))
 
         condition_1 = pc.and_(starts_with_minus, less_than_width)
+        condition_1_plus = pc.and_(starts_with_plus, less_than_width)
         condition_2 = less_than_width
         statement_1 = pc.utf8_lpad(self.slice(1, None).native, width - 1, padding="0")
+        statement_1_plus = pc.utf8_lpad(
+            self.slice(1, None).native, width - 1, padding="0"
+        )
         prefix = pa.repeat(lit("-"), len(native))
+        prefix_plus = pa.repeat(lit("+"), len(native))
         statement_1 = binary_join(prefix, statement_1, "")
+        statement_1_plus = binary_join(prefix_plus, statement_1_plus, "")
         statement_2 = pc.utf8_lpad(native, width=width, padding="0")
 
-        conditions = pc.make_struct(condition_1, condition_2)
-        result = pc.case_when(conditions, statement_1, statement_2, native)
+        conditions = pc.make_struct(condition_1, condition_1_plus, condition_2)
+        result = pc.case_when(
+            conditions, statement_1, statement_1_plus, statement_2, native
+        )
         return self.with_native(result)
