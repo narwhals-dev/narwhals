@@ -1,0 +1,249 @@
+"""`pl.Expr.meta` namespace functionality.
+
+- https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/meta.rs#L11-L111
+- https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L10-L105
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from narwhals._plan.common import IRNamespace
+from narwhals.exceptions import ComputeError
+from narwhals.utils import Version
+
+if TYPE_CHECKING:
+    from typing import Any, Iterator
+
+    import polars as pl
+
+    from narwhals._plan.common import ExprIR
+
+
+class IRMetaNamespace(IRNamespace):
+    """Methods to modify and traverse existing expressions."""
+
+    def has_multiple_outputs(self) -> bool:
+        return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
+
+    def is_column(self) -> bool:
+        from narwhals._plan.expr import Column
+
+        return isinstance(self._ir, Column)
+
+    def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
+        return all(
+            _is_column_selection(e, allow_aliasing=allow_aliasing)
+            for e in self._ir.iter_left()
+        )
+
+    def is_literal(self, *, allow_aliasing: bool = False) -> bool:
+        return all(
+            _is_literal(e, allow_aliasing=allow_aliasing) for e in self._ir.iter_left()
+        )
+
+    def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
+        """Get the output name of this expression.
+
+        Examples:
+            >>> from narwhals._plan import demo as nwd
+            >>>
+            >>> a = nwd.col("a")
+            >>> b = a.alias("b")
+            >>> c = b.min().alias("c")
+            >>> c_over = c.over(nwd.col("e"), nwd.col("f"))
+            >>> c_over_sort = c_over.sort_by(nwd.nth(9), nwd.col("g", "h"))
+            >>>
+            >>> a.meta.output_name()
+            'a'
+            >>> b.meta.output_name()
+            'b'
+            >>> c.meta.output_name()
+            'c'
+            >>> c_over.meta.output_name()
+            'c'
+            >>> c_over_sort.meta.output_name()
+            'c'
+            >>> nwd.lit(1).meta.output_name()
+            'literal'
+            >>> nwd.len().meta.output_name()
+            'len'
+        """
+        ok_or_err = _expr_output_name(self._ir)
+        if isinstance(ok_or_err, ComputeError):
+            if raise_if_undetermined:
+                raise ok_or_err
+            return None
+        return ok_or_err
+
+    def root_names(self) -> list[str]:
+        """Get the root column names."""
+        return _expr_to_leaf_column_names(self._ir)
+
+    # NOTE: Seems too complex to do whilst keeping things immutable
+    def undo_aliases(self) -> ExprIR:
+        """Investigate components.
+
+        Seems like it unnests each of these:
+        - `Alias.expr`
+        - `KeepName.expr`
+        - `RenameAlias.expr`
+
+        Notes:
+        - [`meta.undo_aliases`]
+        - [`Expr.map_expr`]
+        - [`TreeWalker.rewrite`]
+
+        [`Expr.map_expr`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/iterator.rs#L146-L149
+        [`meta.undo_aliases`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L45-L53
+        [`TreeWalker.rewrite`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/visitor/visitors.rs#L46-L68
+        """
+        raise NotImplementedError
+
+    # NOTE: Less important for us, but maybe nice to have
+    def pop(self) -> list[ExprIR]:
+        """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L14-L25."""
+        raise NotImplementedError
+
+
+def _expr_to_leaf_column_names(ir: ExprIR) -> list[str]:
+    """After a lot of indirection, [root_names] resolves [here].
+
+    [root_names]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L27-L30
+    [here]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/utils.rs#L171-L195
+    """
+    return list(_expr_to_leaf_column_names_iter(ir))
+
+
+def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
+    for e in _expr_to_leaf_column_exprs_iter(ir):
+        result = _expr_to_leaf_column_name(e)
+        if isinstance(result, str):
+            yield result
+
+
+def _expr_to_leaf_column_exprs_iter(ir: ExprIR) -> Iterator[ExprIR]:
+    from narwhals._plan import expr
+
+    for outer in ir.iter_left():
+        if isinstance(outer, (expr.Column, expr.All)):
+            yield outer
+
+
+def _expr_to_leaf_column_name(ir: ExprIR) -> str | ComputeError:
+    leaves = list(_expr_to_leaf_column_exprs_iter(ir))
+    if not len(leaves) <= 1:
+        msg = "found more than one root column name"
+        return ComputeError(msg)
+    if not leaves:
+        msg = "no root column name found"
+        return ComputeError(msg)
+    leaf = leaves[0]
+    from narwhals._plan import expr
+
+    if isinstance(leaf, expr.Column):
+        return leaf.name
+    if isinstance(leaf, expr.All):
+        msg = "wildcard has no root column name"
+        return ComputeError(msg)
+    msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
+    return ComputeError(msg)
+
+
+def _expr_output_name(ir: ExprIR) -> str | ComputeError:
+    from narwhals._plan import expr
+
+    for e in ir.iter_right():
+        if isinstance(e, (expr.WindowExpr, expr.SortBy)):
+            # Don't follow `over(partition_by=...)` or `sort_by(by=...)
+            return _expr_output_name(e.expr)
+        if isinstance(e, (expr.Column, expr.Alias, expr.Literal, expr.Len)):
+            return e.name
+        if isinstance(e, (expr.All, expr.KeepName, expr.RenameAlias)):
+            msg = "cannot determine output column without a context for this expression"
+            return ComputeError(msg)
+        if isinstance(e, (expr.Columns, expr.IndexColumns, expr.Nth)):
+            msg = "this expression may produce multiple output names"
+            return ComputeError(msg)
+        continue
+    msg = f"unable to find root column name for expr '{ir!r}' when calling 'output_name'"
+    return ComputeError(msg)
+
+
+def _has_multiple_outputs(ir: ExprIR) -> bool:
+    from narwhals._plan import expr
+
+    return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.SelectorIR, expr.All))
+
+
+def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
+    from narwhals._plan import expr
+    from narwhals._plan.literal import ScalarLiteral
+
+    if isinstance(ir, expr.Literal):
+        return True
+    if isinstance(ir, expr.Alias):
+        return allow_aliasing
+    if isinstance(ir, expr.Cast):
+        return (
+            isinstance(ir.expr, expr.Literal)
+            and isinstance(ir.expr, ScalarLiteral)
+            and isinstance(ir.expr.dtype, Version.MAIN.dtypes.Datetime)
+        )
+    return False
+
+
+def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
+    from narwhals._plan import expr
+
+    if isinstance(
+        ir,
+        (
+            expr.Column,
+            expr.Columns,
+            expr.Exclude,
+            expr.Nth,
+            expr.IndexColumns,
+            expr.SelectorIR,
+            expr.All,
+        ),
+    ):
+        return True
+    if isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias)):
+        return allow_aliasing
+    return False
+
+
+def polars_expr_metadata(expr: pl.Expr) -> dict[str, Any]:
+    """Gather all metadata for a native `Expr`.
+
+    Eventual goal would be that a `nw.Expr` matches a `pl.Expr` in as much of this as possible.
+    """
+    return {
+        "has_multiple_outputs": expr.meta.has_multiple_outputs(),
+        "is_column": expr.meta.is_column(),
+        "is_regex_projection": expr.meta.is_regex_projection(),
+        "is_column_selection": expr.meta.is_column_selection(),
+        "is_column_selection(allow_aliasing=True)": expr.meta.is_column_selection(
+            allow_aliasing=True
+        ),
+        "is_literal": expr.meta.is_literal(),
+        "is_literal(allow_aliasing=True)": expr.meta.is_literal(allow_aliasing=True),
+        "output_name": expr.meta.output_name(raise_if_undetermined=False),
+        "root_names": expr.meta.root_names(),
+        "pop": expr.meta.pop(),
+        "undo_aliases": expr.meta.undo_aliases(),
+        "expr": expr,
+    }
+
+
+def polars_expr_to_dict(expr: pl.Expr) -> dict[str, Any]:
+    """Serialize a native `Expr`, roundtrip back to `dict`.
+
+    Using to inspect [`FunctionOptions`] and ensure we combine them in a similar way.
+
+    [`FunctionOptions`]: https://github.com/narwhals-dev/narwhals/pull/2572#issuecomment-2891577685
+    """
+    import json
+
+    return json.loads(expr.meta.serialize(format="json"))  # type: ignore[no-any-return]
