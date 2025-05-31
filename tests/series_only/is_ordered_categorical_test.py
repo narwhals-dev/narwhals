@@ -5,10 +5,26 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries
     from tests.utils import ConstructorEager
+
+
+class MockCompliantSeries:
+    _version = Version.MAIN
+
+    def __narwhals_series__(self) -> Any:
+        return self
+
+    @property
+    def native(self) -> tuple[()]:
+        return ()
+
+    @property
+    def dtype(self) -> nw.Categorical:
+        return nw.Categorical()
 
 
 def test_is_ordered_categorical_polars() -> None:
@@ -62,3 +78,8 @@ def test_is_ordered_categorical_pyarrow() -> None:
     assert nw.is_ordered_categorical(
         nw.from_native(s, series_only=True)
     )  # pragma: no cover
+
+
+def test_is_ordered_categorical_unknown_series() -> None:
+    series: nw.Series[Any] = nw.Series(MockCompliantSeries(), level="full")
+    assert nw.is_ordered_categorical(series) is False
