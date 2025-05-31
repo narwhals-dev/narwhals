@@ -50,7 +50,7 @@ def test_preserve_type_var(backend: BackendName) -> None:
     assert expr_any
     if TYPE_CHECKING:
         assert_type(expr_any, Any)
-        namespace_pandas = Version.MAIN.namespace.from_backend("pandas").compliant
+        namespace_pandas = from_backend("pandas").compliant
         expr_pandas = _compliant_len(namespace_pandas)
         assert_type(expr_pandas, PandasLikeExpr)
 
