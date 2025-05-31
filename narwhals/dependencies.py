@@ -469,7 +469,7 @@ def import_modin(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="modin.pandas")
 
 
-def import_cudf(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_cudf(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
     if find_spec("cudf"):
         import cudf
 
@@ -487,7 +487,7 @@ def import_pyarrow(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="pyarrow")
 
 
-def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
     if find_spec("pyspark") and find_spec("pyspark.sql"):
         import pyspark.sql
 
@@ -532,7 +532,7 @@ def import_ibis(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="ibis")
 
 
-def import_pyspark_connect(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_pyspark_connect(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
     if (
         find_spec("pyspark")
         and find_spec("pyspark.sql")
