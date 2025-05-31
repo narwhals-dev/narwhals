@@ -17,6 +17,7 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Mapping,
     Protocol,
     Sequence,
     TypeVar,
@@ -26,6 +27,7 @@ from typing import (
 )
 from warnings import warn
 
+from narwhals import dependencies as deps
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
@@ -345,63 +347,16 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
+    def to_native_namespace(self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
             Native module.
         """
-        if self is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
-            return pd
-        if self is Implementation.MODIN:
-            import modin.pandas
-
-            return modin.pandas
-        if self is Implementation.CUDF:  # pragma: no cover
-            import cudf  # ignore-banned-import
-
-            return cudf
-        if self is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
-            return pa
-        if self is Implementation.PYSPARK:  # pragma: no cover
-            import pyspark.sql
-
-            return pyspark.sql
-        if self is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
-            return pl
-        if self is Implementation.DASK:
-            import dask.dataframe  # ignore-banned-import
-
-            return dask.dataframe
-
-        if self is Implementation.DUCKDB:
-            import duckdb  # ignore-banned-import
-
-            return duckdb
-
-        if self is Implementation.SQLFRAME:
-            import sqlframe  # ignore-banned-import
-
-            return sqlframe
-
-        if self is Implementation.IBIS:
-            import ibis  # ignore-banned-import
-
-            return ibis
-
-        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql.connect  # ignore-banned-import
-
-            return pyspark.sql.connect
-
-        msg = "Not supported Implementation"  # pragma: no cover
-        raise AssertionError(msg)
+        if importer := _IMPORT_FUNCTIONS.get(self):
+            return importer()
+        msg = f"Not supported Implementation: {self}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -648,6 +603,19 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
+}
+_IMPORT_FUNCTIONS: Mapping[Implementation, Callable[[], ModuleType]] = {
+    Implementation.PANDAS: deps.import_pandas,
+    Implementation.MODIN: deps.import_modin,
+    Implementation.CUDF: deps.import_cudf,
+    Implementation.PYARROW: deps.import_pyarrow,
+    Implementation.PYSPARK: deps.import_pyspark,
+    Implementation.POLARS: deps.import_polars,
+    Implementation.DASK: deps.import_dask,
+    Implementation.DUCKDB: deps.import_duckdb,
+    Implementation.SQLFRAME: deps.import_sqlframe,
+    Implementation.IBIS: deps.import_ibis,
+    Implementation.PYSPARK_CONNECT: deps.import_pyspark_connect,
 }
 
 

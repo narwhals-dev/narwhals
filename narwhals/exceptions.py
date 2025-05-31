@@ -123,3 +123,9 @@ class UnsupportedDTypeError(NarwhalsError):
 
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
+
+
+# NOTE: Placeholder for anything fancier we might wanna do
+def module_not_found(module_name: str) -> ModuleNotFoundError:
+    msg = f"No module named {module_name!r}"
+    return ModuleNotFoundError(msg, name=module_name)
