@@ -39,15 +39,10 @@ def test_import_polars(data: dict[str, Any]) -> None:
     assert isinstance(result, pl.DataFrame)
 
 
-# NOTE: Don't understand this one
-@pytest.mark.xfail(
-    reason="'dict' object has no attribute '_meta'.\n"
-    "dask/dataframe/dask_expr/_collection.py:609",
-    raises=AttributeError,
-)
-def test_import_dask(data: dict[str, Any]) -> None:
+def test_import_dask(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -> None:
     pytest.importorskip("dask")
-    df = dependencies.import_dask().DataFrame(data)
+    monkeypatch.delitem(sys.modules, "dask")
+    df = dependencies.import_dask().from_dict(data, npartitions=1)
     result = _roundtrip_query(df)
     import dask.dataframe as dd
 
