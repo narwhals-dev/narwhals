@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._namespace import BackendName, _EagerAllowed
+    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
-    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
     from narwhals.typing import _2DArray
     from tests.utils import Constructor
@@ -50,9 +50,9 @@ def test_preserve_type_var(backend: BackendName) -> None:
     assert expr_any
     if TYPE_CHECKING:
         assert_type(expr_any, Any)
-        namespace_polars = from_backend("polars").compliant
-        expr_polars = _compliant_len(namespace_polars)
-        assert_type(expr_polars, PolarsExpr)
+        namespace_pandas = Version.MAIN.namespace.from_backend("pandas").compliant
+        expr_pandas = _compliant_len(namespace_pandas)
+        assert_type(expr_pandas, PandasLikeExpr)
 
 
 @backends
