@@ -56,7 +56,11 @@ def test_import_dask(data: dict[str, Any]) -> None:
 
 def test_import_pandas(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -> None:
     pytest.importorskip("pandas")
-    monkeypatch.delitem(sys.modules, "pandas")
+    if sys.version_info >= (3, 9):
+        monkeypatch.delitem(sys.modules, "pandas")
+    else:  # pragma: no cover
+        # NOTE: AttributeError: partially initialized module 'pandas' has no attribute 'compat' (most likely due to a circular import)
+        ...
     df = dependencies.import_pandas().DataFrame(data)
     result = _roundtrip_query(df)
     import pandas as pd
