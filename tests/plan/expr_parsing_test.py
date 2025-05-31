@@ -226,15 +226,20 @@ def test_binary_expr_length_changing_agg() -> None:
     assert _is_expr_ir_binary_expr(
         b.gather_every(1, 0) / a.map_batches(lambda x: x, returns_scalar=True)
     )
-    assert _is_expr_ir_binary_expr(
-        a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
-    )
     assert _is_expr_ir_binary_expr(b.unique() * a.map_batches(lambda x: x).first())
 
 
-# TODO @dangotbanned: Figure out how to fit this in
-@pytest.mark.xfail(reason="Did not raise, haven't added a check to raise for it yet")
 def test_invalid_binary_expr_shape() -> None:
-    """Cannot combine length-changing expressions with length-preserving ones or aggregations."""
-    with pytest.raises(ShapeError):
-        nwd.col("a").unique() + nwd.col("b")
+    pattern = re.compile(
+        re.escape("Cannot combine length-changing expressions with length-preserving"),
+        re.IGNORECASE,
+    )
+    a = nwd.col("a")
+    b = nwd.col("b")
+
+    with pytest.raises(ShapeError, match=pattern):
+        a.unique() + b
+    with pytest.raises(ShapeError, match=pattern):
+        a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
+    with pytest.raises(ShapeError, match=pattern):
+        a / b.drop_nulls()

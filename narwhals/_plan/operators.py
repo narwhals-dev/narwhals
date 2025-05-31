@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprIR, Immutable
 from narwhals._plan.expr import BinarySelector, FunctionExpr
-from narwhals.exceptions import LengthChangingExprError, MultiOutputExpressionError
+from narwhals.exceptions import (
+    LengthChangingExprError,
+    MultiOutputExpressionError,
+    ShapeError,
+)
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
@@ -54,29 +58,16 @@ class Operator(Immutable):
         from narwhals._plan.expr import BinaryExpr
 
         if right.meta.has_multiple_outputs():
-            lhs_op = f"{left!r} {self!r} "
-            rhs = repr(right)
-            indent = len(lhs_op) * " "
-            underline = len(rhs) * "^"
-            msg = (
-                "Multi-output expressions are only supported on the "
-                f"left-hand side of a binary operation.\n"
-                f"{lhs_op}{rhs}\n{indent}{underline}"
-            )
-            raise MultiOutputExpressionError(msg)
+            raise _bin_op_multi_output_error(left, self, right)
 
-        if not any(_is_not_filtration(e) for e in (left, right)):
-            lhs, rhs = repr(left), repr(right)
-            op = f" {self!r} "
-            underline_left = len(lhs) * "^"
-            underline_right = len(rhs) * "^"
-            pad_middle = len(op) * " "
-            msg = (
-                "Length-changing expressions can only be used in isolation, "
-                "or followed by an aggregation.\n"
-                f"{lhs}{op}{rhs}\n{underline_left}{pad_middle}{underline_right}"
-            )
-            raise LengthChangingExprError(msg)
+        if _is_filtration(left):
+            if _is_filtration(right):
+                raise _bin_op_length_changing_error(left, self, right)
+            if not right.is_scalar:
+                raise _bin_op_shape_error(left, self, right)
+        elif _is_filtration(right):
+            if not left.is_scalar:
+                raise _bin_op_shape_error(left, self, right)
 
         return BinaryExpr(left=left, op=self, right=right)
 
@@ -85,11 +76,55 @@ class Operator(Immutable):
         return self.__class__._op(lhs, rhs)
 
 
-def _is_not_filtration(ir: ExprIR) -> bool:
-    # NOTE: Strange naming/negation is to short-circuit on the `any`
+# NOTE: Always underlining `right`, since the message refers to both types of exprs
+# Assuming the most recent as the issue
+def _bin_op_shape_error(left: ExprIR, op: Operator, right: ExprIR) -> ShapeError:
+    lhs_op = f"{left!r} {op!r} "
+    rhs = repr(right)
+    indent = len(lhs_op) * " "
+    underline = len(rhs) * "^"
+    msg = (
+        f"Cannot combine length-changing expressions with length-preserving ones.\n"
+        f"{lhs_op}{rhs}\n{indent}{underline}"
+    )
+    return ShapeError(msg)
+
+
+def _bin_op_multi_output_error(
+    left: ExprIR, op: Operator, right: ExprIR
+) -> MultiOutputExpressionError:
+    lhs_op = f"{left!r} {op!r} "
+    rhs = repr(right)
+    indent = len(lhs_op) * " "
+    underline = len(rhs) * "^"
+    msg = (
+        "Multi-output expressions are only supported on the "
+        f"left-hand side of a binary operation.\n"
+        f"{lhs_op}{rhs}\n{indent}{underline}"
+    )
+    return MultiOutputExpressionError(msg)
+
+
+def _bin_op_length_changing_error(
+    left: ExprIR, op: Operator, right: ExprIR
+) -> LengthChangingExprError:
+    lhs, rhs = repr(left), repr(right)
+    op_s = f" {op!r} "
+    underline_left = len(lhs) * "^"
+    underline_right = len(rhs) * "^"
+    pad_middle = len(op_s) * " "
+    msg = (
+        "Length-changing expressions can only be used in isolation, "
+        "or followed by an aggregation.\n"
+        f"{lhs}{op_s}{rhs}\n{underline_left}{pad_middle}{underline_right}"
+    )
+    return LengthChangingExprError(msg)
+
+
+def _is_filtration(ir: ExprIR) -> bool:
     if not ir.is_scalar and isinstance(ir, FunctionExpr):
-        return ir.options.is_elementwise()
-    return True
+        return not ir.options.is_elementwise()
+    return False
 
 
 class SelectorOperator(Operator):
