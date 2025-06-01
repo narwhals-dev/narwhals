@@ -166,7 +166,7 @@ def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
-def is_modin_index(index: Any) -> TypeIs[mpd.Index]:
+def is_modin_index(index: Any) -> TypeIs[mpd.Index[Any]]:
     """Check whether `index` is a modin Index without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(
         index, mpd.Index
