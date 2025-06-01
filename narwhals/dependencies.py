@@ -273,7 +273,7 @@ def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
 
 
 def is_daft_dataframe(df: Any) -> TypeIs[daft.DataFrame]:
-    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    """Check whether `df` is a Daft DataFrame without importing Daft."""
     return bool((daft := get_daft()) is not None and isinstance(df, daft.DataFrame))
 
 
