@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from narwhals._daft.expr import DaftExpr
 
 
-class DaftGroupBy(LazyGroupBy["DaftLazyFrame", "DaftExpr", "daft.Expression"]):
+class DaftGroupBy(LazyGroupBy["DaftLazyFrame", "DaftExpr", "Expression"]):
     def __init__(
         self,
         df: DaftLazyFrame,

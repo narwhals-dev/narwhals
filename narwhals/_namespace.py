@@ -106,7 +106,7 @@ if TYPE_CHECKING:
         _partition_type: type[pd.DataFrame]
 
     class _NativeDaft(Protocol):
-        num_partitions: int
+        def explain(self, *args: Any, **kwds: Any) -> Any: ...
 
     class _NativeCuDF(Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
