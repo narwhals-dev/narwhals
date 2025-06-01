@@ -13,7 +13,7 @@ from narwhals._plan import (
     functions as F,  # noqa: N812
     operators as ops,
 )
-from narwhals._plan.common import is_expr, is_series
+from narwhals._plan.common import is_column, is_expr, is_series
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -22,6 +22,7 @@ from narwhals._plan.options import (
     SortMultipleOptions,
     SortOptions,
 )
+from narwhals._plan.selectors import by_name
 from narwhals._plan.window import Over
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
@@ -506,15 +507,24 @@ class DummyExpr:
         rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
+    def __rand__(self, other: IntoExpr) -> Self:
+        return (self & other).alias("literal")
+
     def __or__(self, other: IntoExpr) -> Self:
         op = ops.Or()
         rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
+    def __ror__(self, other: IntoExpr) -> Self:
+        return (self | other).alias("literal")
+
     def __xor__(self, other: IntoExpr) -> Self:
         op = ops.ExclusiveOr()
         rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
+    def __rxor__(self, other: IntoExpr) -> Self:
+        return (self ^ other).alias("literal")
 
     def __invert__(self) -> Self:
         return self._from_ir(boolean.Not().to_function_expr(self._ir))
@@ -620,6 +630,8 @@ class DummySelector(DummyExpr):
     @t.overload
     def __and__(self, other: IntoExpr) -> DummyExpr: ...
     def __and__(self, other: IntoExpr) -> Self | DummyExpr:
+        if is_column(other) and (name := other.meta.output_name()):
+            other = by_name(name)
         if isinstance(other, type(self)):
             op = ops.And()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -654,20 +666,40 @@ class DummySelector(DummyExpr):
             raise TypeError(msg)
         return self._to_expr() + other  # type: ignore[no-any-return]
 
-    def __rsub__(self, other: t.Any) -> Never:
-        raise NotImplementedError
-
-    def __rand__(self, other: t.Any) -> Never:
-        raise NotImplementedError
-
-    def __ror__(self, other: t.Any) -> Never:
-        raise NotImplementedError
-
-    def __rxor__(self, other: t.Any) -> Never:
-        raise NotImplementedError
-
     def __radd__(self, other: t.Any) -> Never:
-        raise NotImplementedError
+        msg = "unsupported operand type(s) for op: ('Expr' + 'Selector')"
+        raise TypeError(msg)
+
+    def __rsub__(self, other: t.Any) -> Never:
+        msg = "unsupported operand type(s) for op: ('Expr' - 'Selector')"
+        raise TypeError(msg)
+
+    @t.overload  # type: ignore[override]
+    def __rand__(self, other: Self) -> Self: ...
+    @t.overload
+    def __rand__(self, other: IntoExpr) -> DummyExpr: ...
+    def __rand__(self, other: IntoExpr) -> Self | DummyExpr:
+        if is_column(other) and (name := other.meta.output_name()):
+            return by_name(name) & self
+        return self._to_expr().__rand__(other)
+
+    @t.overload  # type: ignore[override]
+    def __ror__(self, other: Self) -> Self: ...
+    @t.overload
+    def __ror__(self, other: IntoExpr) -> DummyExpr: ...
+    def __ror__(self, other: IntoExpr) -> Self | DummyExpr:
+        if is_column(other) and (name := other.meta.output_name()):
+            return by_name(name) | self
+        return self._to_expr().__ror__(other)
+
+    @t.overload  # type: ignore[override]
+    def __rxor__(self, other: Self) -> Self: ...
+    @t.overload
+    def __rxor__(self, other: IntoExpr) -> DummyExpr: ...
+    def __rxor__(self, other: IntoExpr) -> Self | DummyExpr:
+        if is_column(other) and (name := other.meta.output_name()):
+            return by_name(name) ^ self
+        return self._to_expr().__rxor__(other)
 
 
 class DummyExprV1(DummyExpr):

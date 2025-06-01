@@ -300,6 +300,14 @@ def is_expr(obj: Any) -> TypeIs[DummyExpr]:
     return isinstance(obj, DummyExpr)
 
 
+def is_column(obj: Any) -> TypeIs[DummyExpr]:
+    """Indicate if the given object is a basic/unaliased column.
+
+    https://github.com/pola-rs/polars/blob/a3d6a3a7863b4d42e720a05df69ff6b6f5fc551f/py-polars/polars/_utils/various.py#L164-L168.
+    """
+    return is_expr(obj) and obj.meta.is_column()
+
+
 def is_series(obj: Any) -> TypeIs[DummySeries]:
     from narwhals._plan.dummy import DummySeries
 

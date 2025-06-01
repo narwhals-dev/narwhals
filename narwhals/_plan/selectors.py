@@ -99,6 +99,13 @@ class Matches(Selector):
     def from_string(pattern: str, /) -> Matches:
         return Matches(pattern=re.compile(pattern))
 
+    @staticmethod
+    def from_names(*names: str | Iterable[str]) -> Matches:
+        """Implements `cs.by_name` to support `__r<op>__` with column selections."""
+        it: Iterator[str] = _flatten_hash_safe(names)
+        pattern = f"^({'|'.join(re.escape(name) for name in it)})$"
+        return Matches.from_string(pattern)
+
     def __repr__(self) -> str:
         return f"ncs.matches(pattern={self.pattern.pattern!r})"
 
@@ -121,6 +128,10 @@ def by_dtype(
     *dtypes: DType | type[DType] | Iterable[DType | type[DType]],
 ) -> DummySelector:
     return ByDType.from_dtypes(*dtypes).to_selector().to_narwhals()
+
+
+def by_name(*names: str | Iterable[str]) -> DummySelector:
+    return Matches.from_names(*names).to_selector().to_narwhals()
 
 
 def boolean() -> DummySelector:
