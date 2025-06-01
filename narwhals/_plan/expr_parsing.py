@@ -4,12 +4,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterable, Sequence, TypeVar
 
 from narwhals._plan.common import is_expr, is_iterable_reject
+from narwhals._plan.exceptions import (
+    invalid_into_expr_error,
+    is_iterable_pandas_error,
+    is_iterable_polars_error,
+)
 from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
-from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from typing import Any, Iterator
 
+    import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.common import ExprIR, IntoExpr, Seq
@@ -108,7 +113,7 @@ def _parse_into_iter_expr_ir(
         # Otherwise, `str | bytes` always passes through typing
         if _is_iterable(first_input) and not is_iterable_reject(first_input):
             if more_inputs:
-                raise _invalid_into_expr_error(first_input, more_inputs, named_inputs)
+                raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
             else:
                 yield from _parse_positional_inputs(first_input)
         else:
@@ -136,16 +141,9 @@ def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
     if is_pandas_dataframe(obj) or is_pandas_series(obj):
-        msg = f"Expected Narwhals class or scalar, got: {type(obj)}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
+        raise is_iterable_pandas_error(obj)
     if _is_polars(obj):
-        msg = (
-            f"Expected Narwhals class or scalar, got: {type(obj)}.\n\n"
-            "Hint: Perhaps you\n"
-            "- forgot a `nw.from_native` somewhere?\n"
-            "- used `pl.col` instead of `nw.col`?"
-        )
-        raise TypeError(msg)
+        raise is_iterable_polars_error(obj)
     return isinstance(obj, Iterable)
 
 
@@ -153,18 +151,7 @@ def _is_empty_sequence(obj: Any) -> bool:
     return isinstance(obj, Sequence) and not obj
 
 
-def _is_polars(obj: Any) -> bool:
+def _is_polars(obj: Any) -> TypeIs[pl.Series | pl.Expr | pl.DataFrame | pl.LazyFrame]:
     return (pl := get_polars()) is not None and isinstance(
         obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
     )
-
-
-def _invalid_into_expr_error(
-    first_input: Any, more_inputs: Any, named_inputs: Any
-) -> InvalidIntoExprError:
-    msg = (
-        f"Passing both iterable and positional inputs is not supported.\n"
-        f"Hint:\nInstead try collecting all arguments into a {type(first_input).__name__!r}\n"
-        f"{first_input!r}\n{more_inputs!r}\n{named_inputs!r}"
-    )
-    return InvalidIntoExprError(msg)

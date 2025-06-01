@@ -3,19 +3,20 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR, Immutable
-from narwhals._plan.expr import BinarySelector, FunctionExpr
-from narwhals.exceptions import (
-    LengthChangingExprError,
-    MultiOutputExpressionError,
-    ShapeError,
+from narwhals._plan.common import Immutable
+from narwhals._plan.exceptions import (
+    binary_expr_length_changing_error,
+    binary_expr_multi_output_error,
+    binary_expr_shape_error,
 )
+from narwhals._plan.expr import BinarySelector, FunctionExpr
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
 
     from typing_extensions import Self
 
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import BinaryExpr, BinarySelector
     from narwhals._plan.typing import (
         LeftSelectorT,
@@ -58,67 +59,20 @@ class Operator(Immutable):
         from narwhals._plan.expr import BinaryExpr
 
         if right.meta.has_multiple_outputs():
-            raise _bin_op_multi_output_error(left, self, right)
-
+            raise binary_expr_multi_output_error(left, self, right)
         if _is_filtration(left):
             if _is_filtration(right):
-                raise _bin_op_length_changing_error(left, self, right)
+                raise binary_expr_length_changing_error(left, self, right)
             if not right.is_scalar:
-                raise _bin_op_shape_error(left, self, right)
+                raise binary_expr_shape_error(left, self, right)
         elif _is_filtration(right):
             if not left.is_scalar:
-                raise _bin_op_shape_error(left, self, right)
-
+                raise binary_expr_shape_error(left, self, right)
         return BinaryExpr(left=left, op=self, right=right)
 
     def __call__(self, lhs: Any, rhs: Any) -> Any:
         """Apply binary operator to `left`, `right` operands."""
         return self.__class__._op(lhs, rhs)
-
-
-# NOTE: Always underlining `right`, since the message refers to both types of exprs
-# Assuming the most recent as the issue
-def _bin_op_shape_error(left: ExprIR, op: Operator, right: ExprIR) -> ShapeError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
-    msg = (
-        f"Cannot combine length-changing expressions with length-preserving ones.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
-    )
-    return ShapeError(msg)
-
-
-def _bin_op_multi_output_error(
-    left: ExprIR, op: Operator, right: ExprIR
-) -> MultiOutputExpressionError:
-    lhs_op = f"{left!r} {op!r} "
-    rhs = repr(right)
-    indent = len(lhs_op) * " "
-    underline = len(rhs) * "^"
-    msg = (
-        "Multi-output expressions are only supported on the "
-        f"left-hand side of a binary operation.\n"
-        f"{lhs_op}{rhs}\n{indent}{underline}"
-    )
-    return MultiOutputExpressionError(msg)
-
-
-def _bin_op_length_changing_error(
-    left: ExprIR, op: Operator, right: ExprIR
-) -> LengthChangingExprError:
-    lhs, rhs = repr(left), repr(right)
-    op_s = f" {op!r} "
-    underline_left = len(lhs) * "^"
-    underline_right = len(rhs) * "^"
-    pad_middle = len(op_s) * " "
-    msg = (
-        "Length-changing expressions can only be used in isolation, "
-        "or followed by an aggregation.\n"
-        f"{lhs}{op_s}{rhs}\n{underline_left}{pad_middle}{underline_right}"
-    )
-    return LengthChangingExprError(msg)
 
 
 def _is_filtration(ir: ExprIR) -> bool:

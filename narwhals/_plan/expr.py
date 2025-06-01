@@ -8,6 +8,7 @@ import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import ExprIR, SelectorIR, _field_str, is_non_nested_literal
+from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     ExprT,
@@ -22,7 +23,6 @@ from narwhals._plan.typing import (
     RollingT,
     SelectorOperatorT,
 )
-from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
@@ -312,8 +312,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     ) -> None:
         parent = input[0]
         if parent.is_scalar and not options.is_elementwise():
-            msg = f"Cannot use `{function!r}()` on aggregated expression `{parent!r}`."
-            raise InvalidOperationError(msg)
+            raise function_expr_invalid_operation_error(function, parent)
         super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
 

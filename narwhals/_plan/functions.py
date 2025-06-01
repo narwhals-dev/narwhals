@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Function
+from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
-from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing import Any
@@ -54,8 +54,7 @@ class HistBins(Hist):
     def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
         for i in range(1, len(bins)):
             if bins[i - 1] >= bins[i]:
-                msg = "bins must increase monotonically"
-                raise ComputeError(msg)
+                raise hist_bins_monotonic_error(bins)
         object.__setattr__(self, "bins", bins)
         object.__setattr__(self, "include_breakpoint", include_breakpoint)
 

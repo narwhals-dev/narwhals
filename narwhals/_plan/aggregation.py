@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan.common import ExprIR
-from narwhals.exceptions import InvalidOperationError
+from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
     from typing import Iterator
@@ -38,8 +38,7 @@ class Agg(ExprIR):
 
     def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
         if expr.is_scalar:
-            msg = "Can't apply aggregations to scalar-like expressions."
-            raise InvalidOperationError(msg)
+            raise agg_scalar_error(self, expr)
         super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
 
 
