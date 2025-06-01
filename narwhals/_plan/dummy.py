@@ -511,6 +511,11 @@ class DummyExpr:
         rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
+    def __xor__(self, other: IntoExpr) -> Self:
+        op = ops.ExclusiveOr()
+        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
     def __invert__(self) -> Self:
         return self._from_ir(boolean.Not().to_function_expr(self._ir))
 
@@ -600,25 +605,41 @@ class DummySelector(DummyExpr):
     def _to_expr(self) -> DummyExpr:
         return self._ir.to_narwhals(self.version)
 
-    def __or__(self, other: t.Any) -> Self | t.Any:
+    @t.overload  # type: ignore[override]
+    def __or__(self, other: Self) -> Self: ...
+    @t.overload
+    def __or__(self, other: IntoExpr) -> DummyExpr: ...
+    def __or__(self, other: IntoExpr) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() | other
 
-    def __and__(self, other: t.Any) -> Self | t.Any:
+    @t.overload  # type: ignore[override]
+    def __and__(self, other: Self) -> Self: ...
+    @t.overload
+    def __and__(self, other: IntoExpr) -> DummyExpr: ...
+    def __and__(self, other: IntoExpr) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.And()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() & other
 
-    def __sub__(self, other: t.Any) -> Self | t.Any:
+    @t.overload  # type: ignore[override]
+    def __sub__(self, other: Self) -> Self: ...
+    @t.overload
+    def __sub__(self, other: IntoExpr) -> DummyExpr: ...
+    def __sub__(self, other: IntoExpr) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.Sub()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() - other
 
-    def __xor__(self, other: t.Any) -> Self | t.Any:
+    @t.overload  # type: ignore[override]
+    def __xor__(self, other: Self) -> Self: ...
+    @t.overload
+    def __xor__(self, other: IntoExpr) -> DummyExpr: ...
+    def __xor__(self, other: IntoExpr) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
