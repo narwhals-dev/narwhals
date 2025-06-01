@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Sequence
 from narwhals._compliant import LazyGroupBy
 
 if TYPE_CHECKING:
+    from daft import Expression  # noqa: F401
+
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.expr import DaftExpr
 
