@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from narwhals.exceptions import (
     ComputeError,
+    DuplicateError,
     InvalidIntoExprError,
     InvalidOperationError,
     LengthChangingExprError,
@@ -157,3 +158,8 @@ def is_iterable_polars_error(
         "- used `pl.col` instead of `nw.col`?"
     )
     return TypeError(msg)
+
+
+def alias_duplicate_error(expr: ExprIR, name: str) -> DuplicateError:
+    msg = f"Cannot apply alias {name!r} to multi-output expression:\n{expr!r}"
+    return DuplicateError(msg)

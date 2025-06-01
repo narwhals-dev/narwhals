@@ -8,7 +8,10 @@ import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import ExprIR, SelectorIR, _field_str, is_non_nested_literal
-from narwhals._plan.exceptions import function_expr_invalid_operation_error
+from narwhals._plan.exceptions import (
+    alias_duplicate_error,
+    function_expr_invalid_operation_error,
+)
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     ExprT,
@@ -87,6 +90,12 @@ class Alias(ExprIR):
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
+
+    def __init__(self, *, expr: ExprIR, name: str) -> None:
+        if expr.meta.has_multiple_outputs():
+            raise alias_duplicate_error(expr, name)
+        kwds = {"expr": expr, "name": name}
+        super().__init__(**kwds)
 
 
 class Column(ExprIR):
