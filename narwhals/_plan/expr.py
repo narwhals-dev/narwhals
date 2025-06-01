@@ -22,6 +22,7 @@ from narwhals._plan.typing import (
     RightT,
     RollingT,
     SelectorOperatorT,
+    SelectorT,
 )
 from narwhals.utils import flatten
 
@@ -508,6 +509,16 @@ class BinarySelector(
     Note:
         `left` and `right` may also nest other `BinarySelector`s.
     """
+
+
+class InvertSelector(SelectorIR, t.Generic[SelectorT]):
+    __slots__ = ("selector",)
+
+    selector: SelectorT
+    """`(Root|Binary)Selector`."""
+
+    def __repr__(self) -> str:
+        return f"~{self.selector!r}"
 
 
 class Ternary(ExprIR):

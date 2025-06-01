@@ -15,7 +15,15 @@ if t.TYPE_CHECKING:
     from narwhals._plan.functions import RollingWindow
     from narwhals.typing import NonNestedLiteral
 
-__all__ = ["FunctionT", "LeftT", "OperatorT", "RightT", "RollingT", "SelectorOperatorT"]
+__all__ = [
+    "FunctionT",
+    "LeftT",
+    "OperatorT",
+    "RightT",
+    "RollingT",
+    "SelectorOperatorT",
+    "SelectorT",
+]
 
 
 FunctionT = TypeVar("FunctionT", bound="Function")
@@ -25,6 +33,7 @@ OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 
+SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
 SelectorOperatorT = TypeVar(

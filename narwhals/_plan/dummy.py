@@ -580,6 +580,10 @@ class DummySelector(DummyExpr):
         >>> (ncs.matches("[^z]a") & ncs.string()) | ncs.datetime("us", None)
         Narwhals DummySelector (main):
         [([(ncs.matches(pattern='[^z]a')) & (ncs.string())]) | (ncs.datetime(time_unit=['us'], time_zone=[None]))]
+        >>>
+        >>> ~(ncs.boolean() | ncs.matches(r"is_.*"))
+        Narwhals DummySelector (main):
+        ~[(ncs.boolean()) | (ncs.matches(pattern='is_.*'))]
     """
 
     _ir: expr.SelectorIR
@@ -620,8 +624,8 @@ class DummySelector(DummyExpr):
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() ^ other
 
-    def __invert__(self) -> Never:
-        raise NotImplementedError
+    def __invert__(self) -> Self:
+        return self._from_ir(expr.InvertSelector(selector=self._ir))
 
     def __add__(self, other: t.Any) -> DummyExpr:  # type: ignore[override]
         if isinstance(other, type(self)):
