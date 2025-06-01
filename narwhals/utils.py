@@ -30,6 +30,7 @@ from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
     get_cudf,
+    get_daft,
     get_dask,
     get_dask_dataframe,
     get_duckdb,
@@ -275,6 +276,8 @@ class Implementation(NoAutoEnum):
     """SQLFrame implementation."""
     PYSPARK_CONNECT = "pyspark[connect]"
     """PySpark Connect implementation."""
+    DAFT = "daft"
+    """Daft implementation."""
     UNKNOWN = "unknown"
     """Unknown implementation."""
 
@@ -305,6 +308,7 @@ class Implementation(NoAutoEnum):
             get_ibis(): Implementation.IBIS,
             get_sqlframe(): Implementation.SQLFRAME,
             get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
+            get_daft(): Implementation.DAFT,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -399,6 +403,11 @@ class Implementation(NoAutoEnum):
             import pyspark.sql.connect  # ignore-banned-import
 
             return pyspark.sql.connect
+
+        if self is Implementation.DAFT:  # pragma: no cover
+            import daft  # ignore-banned-import
+
+            return daft
 
         msg = "Not supported Implementation"  # pragma: no cover
         raise AssertionError(msg)
@@ -599,6 +608,14 @@ class Implementation(NoAutoEnum):
         """
         return self is Implementation.IBIS  # pragma: no cover
 
+    def is_daft(self) -> bool:
+        """Return whether implementation is Daft.
+
+        Returns:
+            Boolean.
+        """
+        return self is Implementation.DAFT  # pragma: no cover
+
     def is_sqlframe(self) -> bool:
         """Return whether implementation is SQLFrame.
 
@@ -623,6 +640,7 @@ class Implementation(NoAutoEnum):
             Implementation.PYSPARK_CONNECT,
             Implementation.DASK,
             Implementation.SQLFRAME,
+            Implementation.DAFT,
         }:
             into_version = native
         elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
@@ -648,6 +666,7 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
+    Implementation.DAFT: (0, 4, 7),
 }
 
 

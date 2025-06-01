@@ -366,8 +366,8 @@ class SparkLikeLazyFrame(
         left_columns = self.columns
         right_columns = other.columns
 
-        right_on_: list[str] = list(right_on) if right_on is not None else []
-        left_on_: list[str] = list(left_on) if left_on is not None else []
+        right_on_ = list(right_on) if right_on is not None else []
+        left_on_ = list(left_on) if left_on is not None else []
 
         # create a mapping for columns on other
         # `right_on` columns will be renamed as `left_on`

@@ -39,6 +39,8 @@ def test_arithmetic_expr(
 ) -> None:
     if "duckdb" in str(constructor) and attr == "__floordiv__":
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor) and attr in {"__pow__"}:
+        request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
@@ -71,6 +73,8 @@ def test_right_arithmetic_expr(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         pytest.skip()
+    if "daft" in str(constructor) and attr in {"__rpow__"}:
+        request.applymarker(pytest.mark.xfail)
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
@@ -279,14 +283,14 @@ def test_mod_pyarrow(left: int, right: int) -> None:
 @pytest.mark.parametrize(
     ("attr", "lhs", "expected"),
     [
-        ("__add__", nw.lit(1), [2, 3, 5]),
-        ("__sub__", nw.lit(1), [0, -1, -3]),
-        ("__mul__", nw.lit(2), [2, 4, 8]),
-        ("__truediv__", nw.lit(2.0), [2.0, 1.0, 0.5]),
-        ("__truediv__", nw.lit(1), [1, 0.5, 0.25]),
-        ("__floordiv__", nw.lit(2), [2, 1, 0]),
-        ("__mod__", nw.lit(3), [0, 1, 3]),
-        ("__pow__", nw.lit(2), [2, 4, 16]),
+        ("__add__", 1, [2, 3, 5]),
+        ("__sub__", 1, [0, -1, -3]),
+        ("__mul__", 2, [2, 4, 8]),
+        ("__truediv__", 2.0, [2.0, 1.0, 0.5]),
+        ("__truediv__", 1, [1, 0.5, 0.25]),
+        ("__floordiv__", 2, [2, 1, 0]),
+        ("__mod__", 3, [0, 1, 3]),
+        ("__pow__", 2, [2, 4, 16]),
     ],
 )
 def test_arithmetic_expr_left_literal(
@@ -304,10 +308,12 @@ def test_arithmetic_expr_left_literal(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor) and (attr == "__pow__"):
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}
     df = nw.from_native(constructor(data))
-    result = df.select(getattr(lhs, attr)(nw.col("a")))
+    result = df.select(getattr(nw.lit(lhs), attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
 
 
@@ -342,10 +348,14 @@ def test_arithmetic_series_left_literal(
     assert_equal_data(result, {"literal": expected})
 
 
-def test_std_broadcating(constructor: Constructor) -> None:
+def test_std_broadcating(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # `std(ddof=2)` fails for duckdb here
         pytest.skip()
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.with_columns(b=nw.col("a").std()).sort("a")
     expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}

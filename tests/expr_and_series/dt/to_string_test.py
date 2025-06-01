@@ -111,7 +111,7 @@ def test_dt_to_string_iso_local_datetime_expr(
     expected: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     df = constructor({"a": [data]})
 

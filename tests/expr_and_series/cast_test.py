@@ -59,6 +59,7 @@ SCHEMA = {
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
+DAFT_INCOMPATIBLE_COLUMNS = {"o"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -77,6 +78,8 @@ def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "ibis" in str(constructor):
         incompatible_columns = IBIS_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "daft" in str(constructor):
+        incompatible_columns = DAFT_INCOMPATIBLE_COLUMNS  # pragma: no cover
     else:
         incompatible_columns = set()
 
@@ -179,7 +182,7 @@ def test_cast_string() -> None:
 def test_cast_raises_for_unknown_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "daft")):
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         # Unsupported cast from string to dictionary using function cast_dictionary
@@ -330,7 +333,8 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
         pytest.skip()
 
     if any(
-        backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
+        backend in str(constructor)
+        for backend in ("dask", "pyspark", "modin", "cudf", "daft")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -344,7 +348,7 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
 
-    if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
+    if any(backend in str(constructor) for backend in ("cudf", "dask", "modin", "daft")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": ["test1", "test2"]}

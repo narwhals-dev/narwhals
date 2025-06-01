@@ -241,6 +241,8 @@ filterwarnings = [
   "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+  # raised internally by daft
+  "ignore:.*datetime.datetime.utcnow.. is deprecated and scheduled for removal:DeprecationWarning:daft",
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 ]

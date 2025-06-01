@@ -42,6 +42,8 @@ def test_duration_attributes(
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and attribute == "total_nanoseconds":
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
 

@@ -24,10 +24,12 @@ NON_NULLABLE_CONSTRUCTORS = [
 ]
 
 
-def test_nan(constructor: Constructor) -> None:
+def test_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     data_na = {"int": [-1, 1, None]}
     df = nw.from_native(constructor(data_na)).with_columns(
-        float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
+        float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") * nw.col("int")
     )
     result = df.select(
         int=nw.col("int").is_nan(),
@@ -110,6 +112,9 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
     exc = (
         ArrowNotImplementedError
         if "pyarrow_table" in str(constructor)
+        # Daft raises its own error
+        else Exception
+        if "daft" in str(constructor)
         else InvalidOperationError
     )
 

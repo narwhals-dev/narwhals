@@ -607,6 +607,9 @@ class Expr:
         self,
         function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
+        *,
+        is_elementwise: bool = False,
+        returns_scalar: bool = False,
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
 
@@ -614,11 +617,18 @@ class Expr:
         or a NumPy array (in which case it will be automatically converted into
         a Series).
 
+        Note that the function must either aggregate to a single value or preserve
+        the input length.
+
         Arguments:
             function: Function to apply to Series.
             return_dtype: Dtype of the output Series.
                 If not set, the dtype will be inferred based on the first non-null value
                 that is returned by the function.
+            is_elementwise: Whether the function operates row-by-row without context
+                of the rows around it. Setting this incorrectly may lead to incorrect
+                results.
+            returns_scalar: Whether the function aggregates to a single value.
 
         Returns:
             A new expression.

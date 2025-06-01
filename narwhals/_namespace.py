@@ -20,6 +20,7 @@ from narwhals.dependencies import (
     get_pandas,
     get_polars,
     get_pyarrow,
+    is_daft_dataframe,
     is_dask_dataframe,
     is_duckdb_relation,
     is_ibis_table,
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
+    from narwhals._daft.namespace import DaftNamespace
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._ibis.namespace import IbisNamespace
@@ -58,18 +60,20 @@ if TYPE_CHECKING:
     _Polars: TypeAlias = Literal["polars"]
     _Arrow: TypeAlias = Literal["pyarrow"]
     _Dask: TypeAlias = Literal["dask"]
+    _Daft: TypeAlias = Literal["daft"]
     _DuckDB: TypeAlias = Literal["duckdb"]
     _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
     _Ibis: TypeAlias = Literal["ibis"]
     _SparkLike: TypeAlias = Literal["pyspark", "sqlframe", "pyspark[connect]"]
     _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
     _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
+    _LazyOnly: TypeAlias = "_Daft | _Dask | _DuckDB | _Ibis | _SparkLike"
     _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
     Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
     Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
     Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
+    Daft: TypeAlias = Literal[_Daft, Implementation.DAFT]
     DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
     Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
     PandasLike: TypeAlias = Literal[
@@ -83,7 +87,7 @@ if TYPE_CHECKING:
     ]
     EagerOnly: TypeAlias = "PandasLike | Arrow"
     EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
+    LazyOnly: TypeAlias = "Daft | Dask | DuckDB | SparkLike"
     LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
@@ -100,6 +104,9 @@ if TYPE_CHECKING:
 
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
+
+    class _NativeDaft(Protocol):
+        num_partitions: int
 
     class _NativeCuDF(Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
@@ -129,7 +136,7 @@ if TYPE_CHECKING:
         "_NativeSQLFrame | _NativePySpark | _NativePySparkConnect"
     )
 
-    NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask | _NativeIbis"
+    NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask | _NativeIbis | _NativeDaft"
     NativeUnknown: TypeAlias = (
         "NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike"
     )
@@ -192,6 +199,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(cls, backend: Dask, /) -> Namespace[DaskNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls, backend: Daft, /) -> Namespace[DaftNamespace]: ...
 
     @overload
     @classmethod
@@ -259,6 +270,10 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals._ibis.namespace import IbisNamespace
 
             ns = IbisNamespace(backend_version=backend_version, version=version)
+        elif impl.is_daft():
+            from narwhals._daft.namespace import DaftNamespace
+
+            ns = DaftNamespace(backend_version=backend_version, version=version)
         else:
             msg = "Not supported Implementation"  # pragma: no cover
             raise AssertionError(msg)
@@ -302,12 +317,16 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
+    def from_native_object(cls, native: _NativeDaft, /) -> Namespace[DaftNamespace]: ...
+
+    @overload
+    @classmethod
     def from_native_object(
         cls, native: NativeUnknown, /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
-    def from_native_object(  # noqa: PLR0911
+    def from_native_object(  # noqa: PLR0911,C901
         cls: type[Namespace[Any]], native: NativeAny, /
     ) -> Namespace[Any]:
         if is_native_polars(native):
@@ -326,6 +345,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             )
         elif is_native_dask(native):
             return cls.from_backend(Implementation.DASK)  # pragma: no cover
+        elif is_native_daft(native):
+            return cls.from_backend(Implementation.DAFT)  # pragma: no cover
         elif is_native_duckdb(native):
             return cls.from_backend(Implementation.DUCKDB)
         elif is_native_cudf(native):  # pragma: no cover
@@ -353,6 +374,10 @@ def is_native_arrow(obj: Any) -> TypeIs[_NativeArrow]:
 
 def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
     return is_dask_dataframe(obj)
+
+
+def is_native_daft(obj: Any) -> TypeIs[_NativeDaft]:
+    return is_daft_dataframe(obj)
 
 
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation

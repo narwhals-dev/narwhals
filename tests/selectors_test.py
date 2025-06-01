@@ -73,6 +73,8 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
     df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
@@ -93,6 +95,8 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="too slow")
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     ts1 = datetime(2000, 11, 20, 18, 12, 16, 600000)
     ts2 = datetime(2020, 10, 30, 10, 20, 25, 123000)
@@ -213,7 +217,7 @@ def test_set_ops(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
+        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "daft"))
         and not expected
     ):
         # https://github.com/narwhals-dev/narwhals/issues/2469
@@ -265,6 +269,8 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or "ibis" in str(constructor)
     ):
         # replace_time_zone not implemented
+        request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}

@@ -9,7 +9,8 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("ibis", "daft")):
+        # ibis misses skew, daft misses median
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8.0, 9.0]}
@@ -71,7 +72,8 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 def test_unary_two_elements(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("ibis",)):
+        # ibis misses skew
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
     result = nw.from_native(constructor(data)).select(
@@ -120,7 +122,8 @@ def test_unary_one_element(
 ) -> None:
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("ibis",)):
+        # ibis misses skew
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
@@ -156,7 +159,7 @@ def test_unary_one_element(
 
 def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1], "b": [2], "c": [None]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_nunique": [df["a"].n_unique()],
         "a_skew": [df["a"].skew()],

@@ -36,6 +36,7 @@ def test_str_to_uppercase(
                 "polars",
                 "cudf",
                 "pyspark",
+                "daft",
             )
         )
         and "ẞ" in expected["a"][0]

@@ -42,8 +42,8 @@ def test_concat_vertical(constructor: Constructor) -> None:
     data_right = {"c": [6, 12, -1], "d": [0, -4, 2]}
     df_right = nw.from_native(constructor(data_right)).lazy()
 
-    result = nw.concat([df_left, df_right], how="vertical")
-    expected = {"c": [1, 3, 2, 6, 12, -1], "d": [4, 4, 6, 0, -4, 2]}
+    result = nw.concat([df_left, df_right], how="vertical").sort("c")
+    expected = {"c": [-1, 1, 2, 3, 6, 12], "d": [2, 4, 6, 4, 0, -4]}
     assert_equal_data(result, expected)
 
     with pytest.raises(ValueError, match="No items"):
@@ -64,20 +64,20 @@ def test_concat_vertical(constructor: Constructor) -> None:
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
-    data_2 = {"a": [100, 200], "z": ["x", "y"]}
+    data_2 = {"a": [100, 200, 200], "z": ["x", "y", "y"]}
     expected = {
-        "a": [1, 3, 100, 200],
-        "b": [4, 6, None, None],
-        "z": [None, None, "x", "y"],
+        "a": [1, 3, 100, 200, 200],
+        "b": [4, 6, None, None, None],
+        "z": [None, None, "x", "y", "y"],
     }
 
     df_1 = nw.from_native(constructor(data_1)).lazy()
     df_2 = nw.from_native(constructor(data_2)).lazy()
 
-    result = nw.concat([df_1, df_2], how="diagonal")
+    result = nw.concat([df_1, df_2], how="diagonal").sort("a")
 
     assert_equal_data(result, expected)
 

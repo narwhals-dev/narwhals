@@ -483,7 +483,7 @@ def test_joinasof_numeric(
     strategy: Literal["backward", "forward", "nearest"],
     expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark", "daft")):
         request.applymarker(pytest.mark.xfail)
     if (
         "duckdb" in str(constructor) or "ibis" in str(constructor)
@@ -554,7 +554,7 @@ def test_joinasof_time(
     strategy: Literal["backward", "forward", "nearest"],
     expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark", "daft")):
         request.applymarker(pytest.mark.xfail)
     if (
         "duckdb" in str(constructor) or "ibis" in str(constructor)
@@ -597,7 +597,7 @@ def test_joinasof_time(
 
 
 def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("daft", "pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
@@ -632,7 +632,7 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
 def test_joinasof_suffix(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("daft", "pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))

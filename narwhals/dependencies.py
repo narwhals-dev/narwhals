@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import cudf
+    import daft
     import dask.dataframe as dd
     import duckdb
     import ibis
@@ -121,6 +122,11 @@ def get_pyspark_connect() -> Any:
 def get_sqlframe() -> Any:
     """Get sqlframe module (if already imported - else return None)."""
     return sys.modules.get("sqlframe", None)
+
+
+def get_daft() -> Any:
+    """Get daft module (if already imported - else return None)."""
+    return sys.modules.get("daft", None)
 
 
 def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
@@ -264,6 +270,11 @@ def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
 
         return isinstance(df, BaseDataFrame)
     return False  # pragma: no cover
+
+
+def is_daft_dataframe(df: Any) -> TypeIs[daft.DataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    return bool((daft := get_daft()) is not None and isinstance(df, daft.DataFrame))
 
 
 def is_numpy_array(arr: Any | _NDArray[_ShapeT]) -> TypeIs[_NDArray[_ShapeT]]:

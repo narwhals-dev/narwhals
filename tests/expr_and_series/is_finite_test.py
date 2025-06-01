@@ -12,7 +12,7 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 def test_is_finite_expr(constructor: Constructor) -> None:
     if any(
         x in str(constructor)
-        for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis")
+        for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis", "daft")
     ):
         expected = {"a": [False, False, True, None]}
     elif any(

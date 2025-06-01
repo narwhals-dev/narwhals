@@ -4,6 +4,7 @@ import argparse
 from importlib import import_module
 from pathlib import Path
 
+import daft
 import dask.dataframe as dd
 import duckdb
 import pandas as pd
@@ -34,11 +35,18 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "polars[lazy]": (pl, {}),
     "pyarrow": (pa, {}),
     "duckdb": (duckdb, {}),
+    "daft": (daft, {}),
     "dask": (dd, {"engine": "pyarrow", "dtype_backend": "pyarrow"}),
     "sqlframe": (sqlframe, {"session": DuckDBSession()}),
 }
 
-DUCKDB_SKIPS = ["q15"]
+DAFT_SKIPS = [
+    "q4",  # needs `unique` with `subset`
+    "q15",  # needs `filter` which works with windows
+]
+DUCKDB_SKIPS = [
+    "q15"  # needs `filter` which works with windows
+]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),
@@ -95,7 +103,9 @@ def execute_query(query_id: str) -> None:
     expected = pl.read_parquet(DATA_DIR / f"result_{query_id}.parquet")
 
     for backend, (native_namespace, kwargs) in BACKEND_NAMESPACE_KWARGS_MAP.items():
-        if backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS:
+        if (backend in {"duckdb", "sqlframe"} and query_id in DUCKDB_SKIPS) or (
+            backend == "daft" and query_id in DAFT_SKIPS
+        ):
             print(f"\nSkipping {query_id} for {backend}")  # noqa: T201
             continue
 
@@ -108,7 +118,7 @@ def execute_query(query_id: str) -> None:
                 )
             )
             .lazy()
-            .collect(backend=nw.Implementation.POLARS)
+            .collect(backend="polars")
             .to_native()
         )
 

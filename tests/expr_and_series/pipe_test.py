@@ -9,7 +9,7 @@ expected = [4, 16, 36, 64]
 
 def test_pipe_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(input_list))
-    e = df.select(nw.col("a").pipe(lambda x: x**2))
+    e = df.select(nw.col("a").pipe(lambda x: x * x))
     assert_equal_data(e, {"a": expected})
 
 

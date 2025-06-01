@@ -52,7 +52,7 @@ def test_truncate(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark", "daft")):
         # TODO(marco): investigate pyspark, it also localizes to UTC here.
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/383")
@@ -108,7 +108,9 @@ def test_truncate_multiples(
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "cudf", "pyspark", "duckdb")):
+    if any(
+        x in str(constructor) for x in ("sqlframe", "cudf", "pyspark", "duckdb", "daft")
+    ):
         # Reasons:
         # - sqlframe: https://github.com/eakmanrq/sqlframe/issues/383
         # - cudf: https://github.com/rapidsai/cudf/issues/18654

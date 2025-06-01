@@ -52,6 +52,10 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import sqlframe
 
         return sqlframe
+    elif "daft" in constructor_name:
+        import daft
+
+        return daft
     return None  # pragma: no cover
 
 
