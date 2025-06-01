@@ -87,7 +87,7 @@ if TYPE_CHECKING:
     ]
     EagerOnly: TypeAlias = "PandasLike | Arrow"
     EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "Daft | Dask | DuckDB | SparkLike"
+    LazyOnly: TypeAlias = "Daft | Dask | DuckDB | Ibis | SparkLike"
     LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"

@@ -347,7 +347,7 @@ _1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
 _1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
-_NumpyScalar: TypeAlias = "np.generic"
+_NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
 

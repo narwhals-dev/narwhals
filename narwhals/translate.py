@@ -535,23 +535,20 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
+    # Daft
     elif is_daft_dataframe(native_object):  # pragma: no cover
-        from narwhals._daft.dataframe import DaftLazyFrame
-
-        if series_only:
-            msg = "Cannot only use `series_only` with Daft DataFrame"
-            raise TypeError(msg)
-        if eager_only or eager_or_interchange_only:
-            msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with Daft DataFrame"
-            raise TypeError(msg)
-        import daft
-
-        backend_version = parse_version(daft.__version__)
-        return LazyFrame(
-            DaftLazyFrame(
-                native_object, backend_version=backend_version, version=version
-            ),
-            level="lazy",
+        if series_only or eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = (
+                    "Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` "
+                    "with Daft DataFrame"
+                )
+                raise TypeError(msg)
+            return native_object
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
         )
 
     # Interchange protocol

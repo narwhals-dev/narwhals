@@ -14,7 +14,6 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
-from narwhals.dataframe import LazyFrame
 from narwhals.dependencies import (
     is_narwhals_series,
     is_numpy_array,
@@ -44,7 +43,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
-    from narwhals.dataframe import DataFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.series import Series
@@ -164,13 +163,6 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
         )
         raise InvalidOperationError(msg)
     plx = first_item.__narwhals_namespace__()
-    if isinstance(first_item, LazyFrame) and how == "horizontal":
-        msg = (
-            "Horizontal concatenation is not supported for LazyFrames.\n\n"
-            "Hint: you may want to use `join` instead."
-        )
-        raise InvalidOperationError(msg)
-
     return first_item._with_compliant(
         plx.concat([df._compliant_frame for df in items], how=how)
     )
@@ -774,8 +766,8 @@ def _scan_csv_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
-        Implementation.DAFT,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -873,6 +865,7 @@ def _read_parquet_impl(
         Implementation.CUDF,
         Implementation.DUCKDB,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -985,8 +978,8 @@ def _scan_parquet_impl(
         Implementation.CUDF,
         Implementation.DASK,
         Implementation.DUCKDB,
-        Implementation.DAFT,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
