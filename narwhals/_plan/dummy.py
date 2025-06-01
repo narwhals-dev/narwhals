@@ -13,6 +13,7 @@ from narwhals._plan import (
     functions as F,  # noqa: N812
     operators as ops,
 )
+from narwhals._plan.common import is_expr, is_series
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -427,13 +428,18 @@ class DummyExpr:
             boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
 
-    def is_in(self, other: t.Any) -> Self:
-        msg = (
-            "There's some special handling of iterables that I'm not sure on:\n"
-            "https://github.com/narwhals-dev/narwhals/blob/8975189cb2459f129017cf833075b28ec3d4dfa8/narwhals/expr.py#L1176-L1184"
-        )
-        raise NotImplementedError(msg)
-        return self._from_ir(boolean.IsIn().to_function_expr(self._ir))
+    def is_in(self, other: t.Iterable[t.Any]) -> Self:
+        node: boolean.IsIn[t.Any]
+        if is_series(other):
+            node = boolean.IsInSeries.from_series(other)
+        elif isinstance(other, t.Iterable):
+            node = boolean.IsInSeq.from_iterable(other)
+        elif is_expr(other):
+            node = boolean.IsInExpr(other=other._ir)
+        else:
+            msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
+            raise TypeError(msg)
+        return self._from_ir(node.to_function_expr(self._ir))
 
     def __eq__(self, other: IntoExpr) -> Self:  # type: ignore[override]
         op = ops.Eq()
@@ -692,6 +698,9 @@ class DummySeries:
 
     def to_native(self) -> NativeSeries:
         return self._compliant._native
+
+    def __iter__(self) -> t.Iterator[t.Any]:
+        yield from self.to_native()
 
 
 class DummySeriesV1(DummySeries):

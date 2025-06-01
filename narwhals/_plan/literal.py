@@ -28,7 +28,7 @@ class LiteralValue(Immutable, Generic[LiteralT]):
     def is_scalar(self) -> bool:
         return False
 
-    def to_literal(self) -> Literal:
+    def to_literal(self) -> Literal[LiteralT]:
         from narwhals._plan.expr import Literal
 
         return Literal(value=self)

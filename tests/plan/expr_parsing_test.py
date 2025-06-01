@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Callable, Iterable
+from collections import deque
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
 
 import pytest
 
@@ -12,7 +13,7 @@ from narwhals._plan import (
     functions as F,  # noqa: N812
 )
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.dummy import DummyExpr
+from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr
 from narwhals.exceptions import (
     InvalidOperationError,
@@ -22,7 +23,14 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from typing import ContextManager
+
+    from typing_extensions import TypeAlias
+
     from narwhals._plan.common import IntoExpr, Seq
+
+
+IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
 
 
 @pytest.mark.parametrize(
@@ -243,3 +251,51 @@ def test_invalid_binary_expr_shape() -> None:
         a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
     with pytest.raises(ShapeError, match=pattern):
         a / b.drop_nulls()
+
+
+@pytest.mark.parametrize("into_iter", [list, tuple, deque, iter, dict.fromkeys, set])
+def test_is_in_seq(into_iter: IntoIterable) -> None:
+    expected = 1, 2, 3
+    other = into_iter(list(expected))
+    expr = nwd.col("a").is_in(other)
+    ir = expr._ir
+    assert isinstance(ir, FunctionExpr)
+    assert isinstance(ir.function, boolean.IsInSeq)
+    assert ir.function.other == expected
+
+
+def test_is_in_series() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    native = pl.Series([1, 2, 3])
+    other = DummySeries.from_native(native)
+    expr = nwd.col("a").is_in(other)
+    ir = expr._ir
+    assert isinstance(ir, FunctionExpr)
+    assert isinstance(ir.function, boolean.IsInSeries)
+    assert ir.function.other.unwrap().to_native() is native
+
+
+@pytest.mark.parametrize(
+    ("other", "context"),
+    [
+        ("words", pytest.raises(TypeError, match=r"str \| bytes.+str")),
+        (b"words", pytest.raises(TypeError, match=r"str \| bytes.+bytes")),
+        (
+            nwd.col("b"),
+            pytest.raises(
+                NotImplementedError, match=re.compile(r"iterable instead", re.IGNORECASE)
+            ),
+        ),
+        (
+            999,
+            pytest.raises(
+                TypeError, match=re.compile(r"only.+iterable.+int", re.IGNORECASE)
+            ),
+        ),
+    ],
+)
+def test_invalid_is_in(other: Any, context: ContextManager[Any]) -> None:
+    with context:
+        nwd.col("a").is_in(other)
