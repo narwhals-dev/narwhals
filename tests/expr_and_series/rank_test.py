@@ -225,6 +225,8 @@ def test_lazy_rank_expr_desc(
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     context = (
         pytest.raises(

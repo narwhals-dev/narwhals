@@ -144,7 +144,12 @@ def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int
     assert_equal_data(result, expected)
 
 
-def test_group_by_median(constructor: Constructor) -> None:
+def test_group_by_median(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "daft" in str(constructor):
+        # https://github.com/Eventual-Inc/Daft/issues/3491
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
     result = (
         nw.from_native(constructor(data))
@@ -294,13 +299,12 @@ def test_no_agg(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_categorical(constructor: Constructor) -> None:
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        pytest.skip(reason="DuckDB, PySpark, and Ibis do not support categorical types")
+def test_group_by_categorical(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis", "daft")):
+        # No support (yet?) for categorical
+        request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover

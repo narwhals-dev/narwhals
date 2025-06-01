@@ -28,8 +28,7 @@ def test_replace_time_zone(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-
-    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
+    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis", "daft")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -83,7 +82,7 @@ def test_replace_time_zone_series(
         or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf",)):
+    if any(x in str(constructor_eager) for x in ("cudf", "daft")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [

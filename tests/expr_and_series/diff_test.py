@@ -30,7 +30,7 @@ def test_diff(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_diff_lazy(constructor: Constructor) -> None:
+def test_diff_lazy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         pytest.skip()
@@ -38,6 +38,8 @@ def test_diff_lazy(constructor: Constructor) -> None:
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff().over(order_by="i")).filter(
         nw.col("i") > 0
