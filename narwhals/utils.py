@@ -1057,7 +1057,6 @@ def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
     return isinstance(obj, native_namespace.RangeIndex)
 
 
-# NOTE: Remove ignore(s) after release w/ (https://github.com/pandas-dev/pandas-stubs/pull/1115)
 def _has_default_index(
     native_frame_or_series: pd.Series[Any] | pd.DataFrame, native_namespace: Any
 ) -> bool:
@@ -1268,20 +1267,13 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
 
 
 def parse_columns_to_drop(
-    compliant_frame: Any,
-    columns: Iterable[str],
-    strict: bool,  # noqa: FBT001
+    frame: _StoresColumns, subset: Iterable[str], /, *, strict: bool
 ) -> list[str]:
-    cols = compliant_frame.columns
-    to_drop = list(columns)
-    if strict:
-        missing_columns = [x for x in to_drop if x not in cols]
-        if missing_columns:
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns=missing_columns, available_columns=cols
-            )
-    else:
-        to_drop = list(set(cols).intersection(set(to_drop)))
+    if not strict:
+        return list(set(frame.columns).intersection(subset))
+    to_drop = list(subset)
+    if error := check_columns_exist(to_drop, available=frame.columns):
+        raise error
     return to_drop
 
 
@@ -1544,10 +1536,14 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def check_column_exists(columns: Sequence[str], subset: Sequence[str] | None) -> None:
-    if subset is not None and (missing := set(subset).difference(columns)):
-        msg = f"Column(s) {sorted(missing)} not found in {columns}"
-        raise ColumnNotFoundError(msg)
+def check_columns_exist(
+    subset: Sequence[str], /, *, available: Sequence[str]
+) -> ColumnNotFoundError | None:
+    if missing := set(subset).difference(available):
+        return ColumnNotFoundError.from_missing_and_available_column_names(
+            missing, available
+        )
+    return None
 
 
 def check_column_names_are_unique(columns: Sequence[str]) -> None:

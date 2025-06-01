@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Mapping
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -63,20 +63,6 @@ UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "us": "us",
     "ns": "ns",
 }
-
-
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self,
-        expr: ir.Expr | ir.Value | ir.Column,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
 
 
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:

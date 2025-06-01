@@ -482,3 +482,26 @@ def test_datetime_w_tz_duckdb() -> None:
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
+
+
+def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no cover
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.skip()
+    pytest.importorskip("pyspark")
+    pytest.importorskip("zoneinfo")
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.config(
+        "spark.sql.session.timeZone", "UTC"
+    ).getOrCreate()
+
+    df = nw.from_native(
+        session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "UTC")
+    df = nw.from_native(
+        session.createDataFrame([([datetime(2020, 1, 1, tzinfo=timezone.utc)],)], ["a"])
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.List(nw.Datetime("us", "UTC"))

@@ -48,9 +48,7 @@ def test_replace_time_zone(
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_none(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_replace_time_zone_none(constructor: Constructor) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
@@ -58,9 +56,6 @@ def test_replace_time_zone_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("pyspark",)):
-        # pyspark: needs `to_string`
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -147,5 +142,29 @@ def test_replace_time_zone_to_connection_tz_duckdb() -> None:
     assert_equal_data(result, expected)
     with pytest.raises(NotImplementedError):
         result = nw.from_native(rel).with_columns(
+            nw.col("a").dt.replace_time_zone("Asia/Kathmandu")
+        )
+
+
+def test_replace_time_zone_to_connection_tz_pyspark(
+    constructor: Constructor,
+) -> None:  # pragma: no cover
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.skip()
+    pytest.importorskip("pyspark")
+    pytest.importorskip("zoneinfo")
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.config(
+        "spark.sql.session.timeZone", "UTC"
+    ).getOrCreate()
+    df = nw.from_native(
+        session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
+    )
+    result = nw.from_native(df).with_columns(nw.col("a").dt.replace_time_zone("UTC"))
+    expected = {"a": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
+    assert_equal_data(result, expected)
+    with pytest.raises(NotImplementedError):
+        result = nw.from_native(df).with_columns(
             nw.col("a").dt.replace_time_zone("Asia/Kathmandu")
         )

@@ -153,3 +153,27 @@ def test_convert_time_zone_to_connection_tz_duckdb() -> None:
         result = nw.from_native(rel).with_columns(
             nw.col("a").dt.convert_time_zone("Asia/Kathmandu")
         )
+
+
+def test_convert_time_zone_to_connection_tz_pyspark(
+    constructor: Constructor,
+) -> None:  # pragma: no cover
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.skip()
+    pytest.importorskip("pyspark")
+    pytest.importorskip("zoneinfo")
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.config(
+        "spark.sql.session.timeZone", "UTC"
+    ).getOrCreate()
+    df = nw.from_native(
+        session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
+    )
+    result = nw.from_native(df).with_columns(nw.col("a").dt.convert_time_zone("UTC"))
+    expected = {"a": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
+    assert_equal_data(result, expected)
+    with pytest.raises(NotImplementedError):
+        result = nw.from_native(df).with_columns(
+            nw.col("a").dt.convert_time_zone("Asia/Kathmandu")
+        )

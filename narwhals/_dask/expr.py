@@ -14,7 +14,7 @@ from narwhals._dask.utils import (
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
@@ -106,12 +106,9 @@ class DaskExpr(
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [
-                    x for x in evaluate_column_names(df) if x not in df.columns
-                ]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns, available_columns=df.columns
-                ) from e
+                if error := df._check_columns_exist(evaluate_column_names(df)):
+                    raise error from e
+                raise
 
         return cls(
             func,
