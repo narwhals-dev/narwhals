@@ -640,7 +640,6 @@ class Implementation(NoAutoEnum):
             Implementation.PYSPARK_CONNECT,
             Implementation.DASK,
             Implementation.SQLFRAME,
-            Implementation.DAFT,
         }:
             into_version = native
         elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
