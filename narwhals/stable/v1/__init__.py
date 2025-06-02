@@ -55,7 +55,6 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
-from narwhals.stable.v1.typing import FrameT
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
 from narwhals.utils import (
@@ -1803,7 +1802,6 @@ __all__ = [
     "Field",
     "Float32",
     "Float64",
-    "FrameT",
     "Implementation",
     "Int8",
     "Int16",
