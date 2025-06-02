@@ -963,7 +963,7 @@ def from_native(  # noqa: D417
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
 
-    result = _from_native_impl(
+    return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
@@ -972,7 +972,6 @@ def from_native(  # noqa: D417
         allow_series=allow_series,
         version=Version.V1,
     )
-    return _stableify(result)  # type: ignore[no-any-return]
 
 
 @overload
