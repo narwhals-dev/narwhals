@@ -1,12 +1,14 @@
 # Test assorted functions which we overwrite in stable.v1
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import pytest
-from typing_extensions import assert_type
+
+if TYPE_CHECKING:
+    from typing_extensions import assert_type
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
@@ -140,7 +142,8 @@ def test_concat(constructor_eager: ConstructorEager) -> None:
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
-    assert_type(result, nw_v1.DataFrame[Any])
+    if TYPE_CHECKING:
+        assert_type(result, nw_v1.DataFrame[Any])
 
 
 @pytest.mark.filterwarnings(
