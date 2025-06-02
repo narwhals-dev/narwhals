@@ -3,7 +3,18 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
+from operator import floordiv, mul
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    Mapping,
+    Sized,
+    TypeAlias,
+    TypeVar,
+)
 
 import pandas as pd
 
@@ -28,6 +39,11 @@ if TYPE_CHECKING:
     from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
+
+    UnitCurrent: TypeAlias = TimeUnit
+    UnitTarget: TypeAlias = TimeUnit
+    BinOpBroadcast: TypeAlias = Callable[[pd.Series[int], int], pd.Series[int]]
+    IntoRhs: TypeAlias = int
 
 
 PANDAS_LIKE_IMPLEMENTATION = {
@@ -82,6 +98,28 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 UNIT_DICT = {"d": "D", "m": "min"}
+
+_TIMESTAMP_DATE_FACTOR: Mapping[TimeUnit, int] = {
+    "ns": 1_000_000_000,
+    "us": 1_000_000,
+    "ms": 1_000,
+    "s": 1,
+}
+_TIMESTAMP_DATETIME_OP_FACTOR: Mapping[
+    tuple[UnitCurrent, UnitTarget], tuple[BinOpBroadcast, IntoRhs]
+] = {
+    ("ns", "us"): (floordiv, 1_000),
+    ("ns", "ms"): (floordiv, 1_000_000),
+    ("us", "ns"): (mul, 1_000),
+    ("us", "ms"): (floordiv, 1_000),
+    ("ms", "ns"): (mul, 1_000_000),
+    ("ms", "us"): (mul, 1_000),
+    ("s", "ns"): (mul, 1_000_000_000),
+    ("s", "us"): (mul, 1_000_000),
+    ("s", "ms"): (mul, 1_000),
+}
+
+SECONDS_IN_A_DAY: Final[int] = 86_400  # number of seconds in a day
 
 
 def align_and_extract_native(
@@ -557,52 +595,21 @@ def int_dtype_mapper(dtype: Any) -> str:
     return "int64"
 
 
-def calculate_timestamp_datetime(  # noqa: C901, PLR0912
-    s: pd.Series[int], original_time_unit: str, time_unit: str
+def calculate_timestamp_datetime(
+    s: pd.Series[int], original_time_unit: TimeUnit, time_unit: TimeUnit
 ) -> pd.Series[int]:
-    if original_time_unit == "ns":
-        if time_unit == "ns":
-            result = s
-        elif time_unit == "us":
-            result = s // 1_000
-        else:
-            result = s // 1_000_000
-    elif original_time_unit == "us":
-        if time_unit == "ns":
-            result = s * 1_000
-        elif time_unit == "us":
-            result = s
-        else:
-            result = s // 1_000
-    elif original_time_unit == "ms":
-        if time_unit == "ns":
-            result = s * 1_000_000
-        elif time_unit == "us":
-            result = s * 1_000
-        else:
-            result = s
-    elif original_time_unit == "s":
-        if time_unit == "ns":
-            result = s * 1_000_000_000
-        elif time_unit == "us":
-            result = s * 1_000_000
-        else:
-            result = s * 1_000
+    if original_time_unit == time_unit:
+        return s
+    elif item := _TIMESTAMP_DATETIME_OP_FACTOR.get((original_time_unit, time_unit)):
+        fn, factor = item
+        return fn(s, factor)
     else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
-    return result
 
 
-def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int]:
-    s = s * 86_400  # number of seconds in a day
-    if time_unit == "ns":
-        result = s * 1_000_000_000
-    elif time_unit == "us":
-        result = s * 1_000_000
-    else:
-        result = s * 1_000
-    return result
+def calculate_timestamp_date(s: pd.Series[int], time_unit: TimeUnit) -> pd.Series[int]:
+    return s * SECONDS_IN_A_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]
 
 
 def select_columns_by_name(
