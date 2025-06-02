@@ -993,6 +993,10 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
+        if not isinstance(n, int):
+            msg = f"argument `n` must be of type {int!r}, got type {type(n)!r}"
+            raise TypeError(msg)
+
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).shift(n)
         )

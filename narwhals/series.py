@@ -1017,6 +1017,10 @@ class Series(Generic[IntoSeriesT]):
             2    4.0
             dtype: float64
         """
+        if not isinstance(n, int):
+            msg = f"argument `n` must be of type {int!r}, got type {type(n)!r}"
+            raise TypeError(msg)
+
         return self._with_compliant(self._compliant_series.shift(n))
 
     def sample(

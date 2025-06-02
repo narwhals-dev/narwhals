@@ -15,7 +15,6 @@ from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
     col,
-    ensure_type,
     generate_order_by_sql,
     generate_partition_by_sql,
     lit,
@@ -546,8 +545,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def shift(self, n: int) -> Self:
-        ensure_type(n, int)
-
         def func(inputs: DuckDBWindowInputs) -> Expression:
             order_by_sql = generate_order_by_sql(*inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*inputs.partition_by)
