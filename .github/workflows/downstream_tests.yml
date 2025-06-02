@@ -37,6 +37,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
+          # temporary pin to get ci green
+          uv pip install "geopandas<1.1.0" --system
           uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
