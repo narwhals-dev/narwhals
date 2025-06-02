@@ -157,6 +157,57 @@ def test_truediv_same_dims(
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
+@pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            (-2, 0),
+            (0, 0),
+            (2, 0)
+        ]
+)
+def test_div_by_zero_polars(left: int, right: int) -> None:
+    data = {"a": left, "b": right}
+    df = nw.from_dict(data, backend="polars")
+    truediv_result = df["a"] / df["b"] # truediv
+    floordiv_result = df["a"] // df["b"] # floordiv
+
+    assert truediv_result.is_nan()
+    assert floordiv_result.is_nan()
+
+@pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            (-2, 0),
+            (0, 0),
+            (2, 0)
+        ]
+)
+def test_div_by_zero_pandas(left: int, right: int) -> None:
+    data = {"a": [left], "b": [right]}
+    df = nw.from_dict(data, backend="pandas")
+    truediv_result = df["a"] / df["b"] # truediv
+    floordiv_result = df["a"] // df["b"] # floordiv
+
+    assert truediv_result.is_nan()
+    assert floordiv_result.is_nan()
+
+@pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            (-2, 0),
+            (0, 0),
+            (2, 0)
+        ]
+)
+def test_div_by_zero_pyarrow(left: int, right: int) -> None:
+    data = {"a": [left], "b": [right]}
+    df = nw.from_dict(data, backend="pyarrow")
+    truediv_result = df["a"] / df["b"] # truediv
+    floordiv_result = df["a"] // df["b"] # floordiv
+
+    assert truediv_result.is_nan()
+    assert floordiv_result.is_nan()
+
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
