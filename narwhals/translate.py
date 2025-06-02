@@ -552,7 +552,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
+        return version.dataframe(
             InterchangeFrame(native_object, version=version), level="interchange"
         )
 
