@@ -72,13 +72,9 @@ class Series(Generic[IntoSeriesT]):
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`][]:
+            create a series via [`narwhals.new_series`][], e.g.:
             ```py
-            narwhals.new_series(
-                name=name,
-                values=values,
-                backend=narwhals.get_native_namespace(another_object),
-            )
+            narwhals.new_series(name="price", values=[10.5, 9.4, 1.2], backend="pandas")
             ```
     """
 
