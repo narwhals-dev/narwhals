@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 
-def test_scatter(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "modin" in str(constructor_eager):
-        # https://github.com/modin-project/modin/issues/7392
-        request.applymarker(pytest.mark.xfail)
+def test_scatter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
         constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
     )
@@ -61,12 +55,7 @@ def test_scatter_integer(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result}, expected)
 
 
-def test_scatter_unordered_indices(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "modin" in str(constructor_eager):
-        # bugged
-        request.applymarker(pytest.mark.xfail)
+def test_scatter_unordered_indices(constructor_eager: ConstructorEager) -> None:
     data = {"a": [16, 12, 10, 9, 6, 5, 2]}
     indices = [6, 1, 0, 5, 3, 2, 4]
     df = nw.from_native(constructor_eager(data))
