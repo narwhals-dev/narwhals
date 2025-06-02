@@ -57,7 +57,7 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.stable.v1.typing import FrameT
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import ConcatMethod, IntoDataFrameT, IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoFrameT
 from narwhals.utils import (
     Implementation,
     Version,
@@ -1793,7 +1793,6 @@ __all__ = [
     "Binary",
     "Boolean",
     "Categorical",
-    "ConcatMethod",
     "DataFrame",
     "Date",
     "Datetime",
