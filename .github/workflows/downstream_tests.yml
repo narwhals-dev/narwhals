@@ -37,6 +37,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
+          # temporary pin to get ci green
+          uv pip install "mypy<1.16.0" --system
           uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
