@@ -125,8 +125,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         min_samples: int,
         ddof: int | None = None,
     ) -> DuckDBWindowFunction:
-        ensure_type(window_size, int, type(None))
-        ensure_type(min_samples, int)
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
