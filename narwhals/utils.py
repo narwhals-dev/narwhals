@@ -1974,6 +1974,8 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         if param_name:
             left_pad = " " * 4
             val = repr(obj)
+            if len(val) > 20:  # truncate long reprs
+                val = f"{type(obj).__name__}(...)"
             assign = f"{left_pad}{param_name}="
             underline = (" " * len(assign)) + ("^" * len(val))
             msg = f"{msg}\n{assign}{val}\n{underline}"
