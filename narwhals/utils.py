@@ -1473,10 +1473,6 @@ def deprecate_native_namespace(
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
-    if window_size < 1:
-        msg = "window_size must be greater or equal than 1"
-        raise ValueError(msg)
-
     if not isinstance(window_size, int):
         _type = window_size.__class__.__name__
         msg = (
@@ -1485,11 +1481,11 @@ def _validate_rolling_arguments(
         )
         raise TypeError(msg)
 
-    if min_samples is not None:
-        if min_samples < 1:
-            msg = "min_samples must be greater or equal than 1"
-            raise ValueError(msg)
+    if window_size < 1:
+        msg = "window_size must be greater or equal than 1"
+        raise ValueError(msg)
 
+    if min_samples is not None:
         if not isinstance(min_samples, int):
             _type = min_samples.__class__.__name__
             msg = (
@@ -1497,6 +1493,11 @@ def _validate_rolling_arguments(
                 "interpreted as an integer"
             )
             raise TypeError(msg)
+
+        if min_samples < 1:
+            msg = "min_samples must be greater or equal than 1"
+            raise ValueError(msg)
+
         if min_samples > window_size:
             msg = "`min_samples` must be less or equal than `window_size`"
             raise InvalidOperationError(msg)

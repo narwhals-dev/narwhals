@@ -207,6 +207,22 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             ),
         ),
         (
+            "2",
+            1,
+            pytest.raises(
+                TypeError,
+                match="argument 'window_size': 'str' object cannot be interpreted as an integer",
+            ),
+        ),
+        (
+            2,
+            "1",
+            pytest.raises(
+                TypeError,
+                match="argument 'min_samples': 'str' object cannot be interpreted as an integer",
+            ),
+        ),
+        (
             1,
             2,
             pytest.raises(
