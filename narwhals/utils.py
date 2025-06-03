@@ -1966,6 +1966,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
             ...
         TypeError: Expected 'int', got: 'str'
             test='hello'
+                 ^^^^^^^
     """
     if not isinstance(obj, valid_types):  # pragma: no cover
         tp_names = " | ".join(tp.__name__ for tp in valid_types)
