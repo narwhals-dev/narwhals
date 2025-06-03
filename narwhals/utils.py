@@ -44,8 +44,6 @@ from narwhals.dependencies import (
     get_pyspark_connect,
     get_pyspark_sql,
     get_sqlframe,
-    is_cudf_series,
-    is_modin_series,
     is_narwhals_series,
     is_narwhals_series_int,
     is_numpy_array_1d,
@@ -64,6 +62,7 @@ if TYPE_CHECKING:
     from typing import AbstractSet as Set
 
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import (
         Concatenate,
@@ -1115,7 +1114,7 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
         raise ValueError(msg)
 
 
-def is_ordered_categorical(series: Series[Any]) -> bool:  # noqa: PLR0911
+def is_ordered_categorical(series: Series[Any]) -> bool:
     """Return whether indices of categories are semantically meaningful.
 
     This is a convenience function to accessing what would otherwise be
@@ -1161,29 +1160,27 @@ def is_ordered_categorical(series: Series[Any]) -> bool:  # noqa: PLR0911
 
     dtypes = series._compliant_series._version.dtypes
     compliant = series._compliant_series
+    # If it doesn't match any branches, let's just play it safe and return False.
+    result: bool = False
     if isinstance(compliant, InterchangeSeries) and isinstance(
         series.dtype, dtypes.Categorical
     ):
-        return compliant.native.describe_categorical["is_ordered"]
-    if series.dtype == dtypes.Enum:
-        return True
-    if series.dtype != dtypes.Categorical:
-        return False
-    native_series = series.to_native()
-    if is_polars_series(native_series):
-        return native_series.dtype.ordering == "physical"  # type: ignore[attr-defined]
-    if is_pandas_series(native_series):
-        return bool(native_series.cat.ordered)
-    if is_modin_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered
-    if is_cudf_series(native_series):  # pragma: no cover
-        return native_series.cat.ordered
-    if is_pyarrow_chunked_array(native_series):
-        from narwhals._arrow.utils import is_dictionary
+        result = compliant.native.describe_categorical["is_ordered"]
+    elif series.dtype == dtypes.Enum:
+        result = True
+    elif series.dtype != dtypes.Categorical:
+        result = False
+    else:
+        native = series.to_native()
+        if is_polars_series(native):
+            result = cast("pl.Categorical", native.dtype).ordering == "physical"
+        elif is_pandas_like_series(native):
+            result = bool(native.cat.ordered)
+        elif is_pyarrow_chunked_array(native):
+            from narwhals._arrow.utils import is_dictionary
 
-        return is_dictionary(native_series.type) and native_series.type.ordered
-    # If it doesn't match any of the above, let's just play it safe and return False.
-    return False  # pragma: no cover
+            result = is_dictionary(native.type) and native.type.ordered
+    return result
 
 
 def generate_unique_token(
