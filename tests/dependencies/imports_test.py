@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals import dependencies
+from narwhals import _dependencies as _deps
 from narwhals.exceptions import module_not_found
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ def test_import_polars(data: dict[str, Any]) -> None:
     # NOTE: Can't do `monkeypatch.delitem` safely
     #     ImportError: PyO3 modules compiled for CPython 3.8 or older may only be initialized once per interpreter process
     pytest.importorskip("polars")
-    df = dependencies.import_polars().DataFrame(data)
+    df = _deps.import_polars().DataFrame(data)
     result = _roundtrip_query(df)
     import polars as pl
 
@@ -41,7 +41,7 @@ def test_import_polars(data: dict[str, Any]) -> None:
 
 def test_import_dask(data: dict[str, Any]) -> None:
     pytest.importorskip("dask")
-    df = dependencies.import_dask().from_dict(data, npartitions=1)
+    df = _deps.import_dask().from_dict(data, npartitions=1)
     result = _roundtrip_query(df)
     import dask.dataframe as dd
 
@@ -55,7 +55,7 @@ def test_import_pandas(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) ->
     else:  # pragma: no cover
         # NOTE: AttributeError: partially initialized module 'pandas' has no attribute 'compat' (most likely due to a circular import)
         ...
-    df = dependencies.import_pandas().DataFrame(data)
+    df = _deps.import_pandas().DataFrame(data)
     result = _roundtrip_query(df)
     import pandas as pd
 
@@ -65,7 +65,7 @@ def test_import_pandas(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) ->
 def test_import_pyarrow(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -> None:
     pytest.importorskip("pyarrow")
     monkeypatch.delitem(sys.modules, "pyarrow")
-    df = dependencies.import_pyarrow().table(data)
+    df = _deps.import_pyarrow().table(data)
     result = _roundtrip_query(df)
     import pyarrow as pa
 

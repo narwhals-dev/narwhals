@@ -27,7 +27,7 @@ from typing import (
 )
 from warnings import warn
 
-from narwhals import dependencies as deps
+from narwhals import _dependencies as _deps
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
@@ -605,17 +605,17 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.SQLFRAME: (3, 22, 0),
 }
 _IMPORT_FUNCTIONS: Mapping[Implementation, Callable[[], ModuleType]] = {
-    Implementation.PANDAS: deps.import_pandas,
-    Implementation.MODIN: deps.import_modin,
-    Implementation.CUDF: deps.import_cudf,
-    Implementation.PYARROW: deps.import_pyarrow,
-    Implementation.PYSPARK: deps.import_pyspark,
-    Implementation.POLARS: deps.import_polars,
-    Implementation.DASK: deps.import_dask,
-    Implementation.DUCKDB: deps.import_duckdb,
-    Implementation.SQLFRAME: deps.import_sqlframe,
-    Implementation.IBIS: deps.import_ibis,
-    Implementation.PYSPARK_CONNECT: deps.import_pyspark_connect,
+    Implementation.PANDAS: _deps.import_pandas,
+    Implementation.MODIN: _deps.import_modin,
+    Implementation.CUDF: _deps.import_cudf,
+    Implementation.PYARROW: _deps.import_pyarrow,
+    Implementation.PYSPARK: _deps.import_pyspark,
+    Implementation.POLARS: _deps.import_polars,
+    Implementation.DASK: _deps.import_dask,
+    Implementation.DUCKDB: _deps.import_duckdb,
+    Implementation.SQLFRAME: _deps.import_sqlframe,
+    Implementation.IBIS: _deps.import_ibis,
+    Implementation.PYSPARK_CONNECT: _deps.import_pyspark_connect,
 }
 
 
