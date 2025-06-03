@@ -122,6 +122,7 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 class DataFrame(NwDataFrame[IntoDataFrameT]):
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -172,7 +173,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
-        return super().lazy(backend=backend)  # type: ignore[return-value]
+        return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -190,10 +191,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
-        return super().is_duplicated()  # type: ignore[return-value]
+        return _stableify(super().is_duplicated())
 
     def is_unique(self) -> Series[Any]:
-        return super().is_unique()  # type: ignore[return-value]
+        return _stableify(super().is_unique())
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -207,6 +208,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 class LazyFrame(NwLazyFrame[IntoFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     @property
@@ -244,7 +246,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     def collect(
         self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
-        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
+        return _stableify(super().collect(backend=backend, **kwargs))
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -254,7 +256,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return self.select(all()._l1_norm())
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+    def tail(self, n: int = 5) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -285,6 +287,7 @@ class Series(NwSeries[IntoSeriesT]):
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
+        assert series._version is Version.V1  # noqa: S101
         super().__init__(series, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -295,7 +298,7 @@ class Series(NwSeries[IntoSeriesT]):
         return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
-        return super().to_frame()  # type: ignore[return-value]
+        return _stableify(super().to_frame())
 
     def value_counts(
         self,
@@ -305,8 +308,10 @@ class Series(NwSeries[IntoSeriesT]):
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        return super().value_counts(  # type: ignore[return-value]
-            sort=sort, parallel=parallel, name=name, normalize=normalize
+        return _stableify(
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
         )
 
     def hist(
@@ -324,8 +329,10 @@ class Series(NwSeries[IntoSeriesT]):
             "an unstable feature."
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().hist(  # type: ignore[return-value]
-            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+        return _stableify(
+            super().hist(
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
         )
 
 
