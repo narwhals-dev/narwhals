@@ -1,31 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Sequence
-from typing import TypedDict
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.dataframe import CompliantLazyFrame
-    from narwhals._compliant.dataframe import EagerDataFrame
-    from narwhals._compliant.expr import CompliantExpr
-    from narwhals._compliant.expr import DepthTrackingExpr
-    from narwhals._compliant.expr import EagerExpr
-    from narwhals._compliant.expr import LazyExpr
-    from narwhals._compliant.expr import NativeExpr
-    from narwhals._compliant.namespace import CompliantNamespace
-    from narwhals._compliant.namespace import EagerNamespace
-    from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.series import EagerSeries
-    from narwhals.typing import FillNullStrategy
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeSeries
-    from narwhals.typing import RankMethod
+    from narwhals._compliant.dataframe import (
+        CompliantDataFrame,
+        CompliantLazyFrame,
+        EagerDataFrame,
+    )
+    from narwhals._compliant.expr import (
+        CompliantExpr,
+        DepthTrackingExpr,
+        EagerExpr,
+        LazyExpr,
+        NativeExpr,
+    )
+    from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._compliant.series import CompliantSeries, EagerSeries
+    from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
+    from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
 
     class ScalarKwargs(TypedDict, total=False):
         """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
@@ -150,3 +145,10 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
+
+WindowFunction: TypeAlias = "Callable[[WindowInputs[NativeExprT]], NativeExprT]"
+"""A function evaluated with `over(partition_by=..., order_by=...)`."""
+UnorderableWindowFunction: TypeAlias = (
+    "Callable[[UnorderableWindowInputs[NativeExprT]], NativeExprT]"
+)
+"""A function evaluated with `over(partition_by=...)`, without `order_by` (e.g. `is_unique`, `rank`)."""

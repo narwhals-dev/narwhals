@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Literal, Mapping
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -15,8 +11,7 @@ from narwhals.utils import isinstance_or_issubclass
 if TYPE_CHECKING:
     import ibis.expr.types as ir
     from ibis.expr.datatypes import DataType as IbisDataType
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
@@ -68,20 +63,6 @@ UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "us": "us",
     "ns": "ns",
 }
-
-
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self,
-        expr: ir.Expr | ir.Value | ir.Column,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
 
 
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:

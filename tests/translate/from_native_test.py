@@ -24,20 +24,14 @@ import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Literal, cast
 
 import numpy as np
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import maybe_get_modin_df
+from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
@@ -72,15 +66,9 @@ class MockSeries:
 
 data: dict[str, Any] = {"a": [1, 2, 3]}
 
-eager_frames: list[Any] = [
-    MockDataFrame(),
-]
-lazy_frames: list[Any] = [
-    MockLazyFrame(),
-]
-all_series: list[Any] = [
-    MockSeries(),
-]
+eager_frames: list[Any] = [MockDataFrame()]
+lazy_frames: list[Any] = [MockLazyFrame()]
+all_series: list[Any] = [MockSeries()]
 
 if find_spec("pandas") is not None:
     import pandas as pd
@@ -91,14 +79,8 @@ if find_spec("pandas") is not None:
     series_pd = pd.Series(data["a"])
     series_mpd = df_mpd["a"]
 
-    eager_frames += [
-        df_pd,
-        df_mpd,
-    ]
-    all_series += [
-        series_pd,
-        series_mpd,
-    ]
+    eager_frames += [df_pd, df_mpd]
+    all_series += [series_pd, series_mpd]
 else:  # pragma: no cover
     df_pd = None
 
@@ -109,15 +91,9 @@ if find_spec("polars") is not None:
     lf_pl: pl.LazyFrame | None = pl.LazyFrame(data)
     series_pl = pl.Series(data["a"])
 
-    all_series += [
-        series_pl,
-    ]
-    eager_frames += [
-        df_pl,
-    ]
-    lazy_frames += [
-        lf_pl,
-    ]
+    all_series += [series_pl]
+    eager_frames += [df_pl]
+    lazy_frames += [lf_pl]
 else:  # pragma: no cover
     lf_pl = None
 
@@ -127,12 +103,8 @@ if find_spec("pyarrow") is not None:  # pragma: no cover
     df_pa = pa.table(data)
     series_pa = pa.chunked_array([data["a"]])
 
-    eager_frames += [
-        df_pa,
-    ]
-    all_series += [
-        series_pa,
-    ]
+    eager_frames += [df_pa]
+    all_series += [series_pa]
 else:  # pragma: no cover
     pass
 
@@ -314,7 +286,13 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     ("eager_only", "context"),
     [
         (False, does_not_raise()),
-        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+        (
+            True,
+            pytest.raises(
+                TypeError,
+                match="Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` with sqlframe DataFrame",
+            ),
+        ),
     ],
 )
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="too old for sqlframe")
@@ -410,7 +388,7 @@ def test_dataframe_recursive() -> None:
 
         nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
         # NOTE: Checking that the type is `DataFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw.DataFrame)
+        assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
 
 
@@ -431,7 +409,7 @@ def test_lazyframe_recursive() -> None:
 
         nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw.LazyFrame)
+        assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
 
 
@@ -453,7 +431,7 @@ def test_dataframe_recursive_v1() -> None:
             nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
         )
         nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")
-        assert_type(nw_frame_depth_2, nw_v1.DataFrame)
+        assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(
             nw_frame_early_return,
@@ -478,7 +456,7 @@ def test_lazyframe_recursive_v1() -> None:
 
         nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
-        assert_type(nw_frame_depth_2, nw_v1.LazyFrame)
+        assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
 
 
@@ -500,7 +478,7 @@ def test_series_recursive() -> None:
 
         nw_series_depth_2 = nw.Series(nw_series, level="full")
         # NOTE: Checking that the type is `Series[Unknown]`
-        assert_type(nw_series_depth_2, nw.Series)
+        assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])
 
 
@@ -573,6 +551,31 @@ def test_pyspark_connect_deps_2517() -> None:  # pragma: no cover
 
     import narwhals as nw
 
-    spark = SparkSession.builder.getOrCreate()  # pyright: ignore[reportAttributeAccessIssue]
+    spark = SparkSession.builder.getOrCreate()
     # Check this doesn't raise
-    nw.from_native(spark.createDataFrame([{"a": 1}]))
+    nw.from_native(spark.createDataFrame([(1,)], ["a"]))
+
+
+@pytest.mark.parametrize(
+    ("eager_only", "pass_through", "context"),
+    [
+        (False, False, does_not_raise()),
+        (False, True, does_not_raise()),
+        (True, True, does_not_raise()),
+        (True, False, pytest.raises(TypeError, match="Cannot only use")),
+    ],
+)
+def test_eager_only_pass_through_main(
+    constructor: Constructor, *, eager_only: bool, pass_through: bool, context: Any
+) -> None:
+    if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
+        pytest.skip(reason="Non lazy or polars")
+
+    df = constructor(data)
+
+    with context:
+        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)  # type: ignore[call-overload]
+        if eager_only and pass_through:
+            assert not isinstance(res, nw.LazyFrame)
+        else:
+            assert isinstance(res, nw.LazyFrame)

@@ -19,8 +19,7 @@ def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
 
 
 def test_interchange_ibis_to_pandas(
-    tmpdir: pytest.TempdirFactory,
-    request: pytest.FixtureRequest,
+    tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     if PANDAS_VERSION < (1, 5, 0):
         request.applymarker(pytest.mark.xfail)

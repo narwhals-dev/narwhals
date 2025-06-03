@@ -6,10 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 def test_with_columns_int_col_name_pandas() -> None:
@@ -58,8 +55,7 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 
 
 def test_with_columns_dtypes_single_row(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         pytest.skip()

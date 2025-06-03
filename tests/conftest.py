@@ -5,11 +5,7 @@ import sys
 import uuid
 from copy import deepcopy
 from functools import lru_cache
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 import pytest
 
@@ -27,10 +23,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
-    from narwhals.typing import NativeFrame
-    from narwhals.typing import NativeLazyFrame
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from narwhals.typing import NativeFrame, NativeLazyFrame
+    from tests.utils import Constructor, ConstructorEager
 
     Data: TypeAlias = "dict[str, list[Any]]"
 
@@ -141,6 +135,8 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     import duckdb
     import polars as pl
+
+    duckdb.sql("""set timezone = 'UTC'""")
 
     _df = pl.LazyFrame(obj)
     return duckdb.table("_df")

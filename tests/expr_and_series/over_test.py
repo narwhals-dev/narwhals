@@ -8,12 +8,14 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "a": ["a", "a", "b", "b", "b"],
@@ -376,12 +378,7 @@ def test_over_cum_reverse(
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = constructor_eager(
-        {
-            "a": [1, 1, 2, 2, 2],
-            "b": [4, 5, 7, None, 9],
-        }
-    )
+    df = constructor_eager({"a": [1, 1, 2, 2, 2], "b": [4, 5, 7, None, 9]})
     expr = getattr(nw.col("b"), attr)(reverse=True)
     result = nw.from_native(df).with_columns(expr.over("a"))
     expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}
@@ -413,9 +410,7 @@ def test_over_without_partition_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # probably bugged
-        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
         df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))

@@ -5,12 +5,8 @@ from typing import Sequence
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import ShapeError
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 # For context, polars allows to explode multiple columns only if the columns
 # have matching element counts, therefore, l1 and l2 but not l1 and l3 together.
@@ -147,7 +143,6 @@ def test_explode_invalid_operation_error(
         pytest.skip()
 
     with pytest.raises(
-        InvalidOperationError,
-        match="`explode` operation not supported for dtype",
+        InvalidOperationError, match="`explode` operation not supported for dtype"
     ):
         _ = nw.from_native(constructor(data)).lazy().explode("a").collect()

@@ -4,56 +4,46 @@ from __future__ import annotations
 
 import re
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Collection
-from typing import Iterable
-from typing import Iterator
-from typing import Protocol
-from typing import Sequence
-from typing import TypeVar
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Collection,
+    Iterable,
+    Iterator,
+    Protocol,
+    Sequence,
+    TypeVar,
+    overload,
+)
 
 from narwhals._compliant.expr import CompliantExpr
-from narwhals.utils import _parse_time_unit_and_time_zone
-from narwhals.utils import dtype_matches_time_unit_and_time_zone
-from narwhals.utils import get_column_names
-from narwhals.utils import is_compliant_dataframe
-
-if not TYPE_CHECKING:  # pragma: no cover
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    import sys
-
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
-
-else:  # pragma: no cover
-    from typing import Protocol as Protocol38
+from narwhals._typing_compat import Protocol38
+from narwhals.utils import (
+    _parse_time_unit_and_time_zone,
+    dtype_matches_time_unit_and_time_zone,
+    get_column_names,
+    is_compliant_dataframe,
+)
 
 if TYPE_CHECKING:
     from datetime import timezone
 
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.expr import NativeExpr
-    from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._compliant.typing import CompliantExprAny
-    from narwhals._compliant.typing import CompliantFrameAny
-    from narwhals._compliant.typing import CompliantLazyFrameAny
-    from narwhals._compliant.typing import CompliantSeriesAny
-    from narwhals._compliant.typing import CompliantSeriesOrNativeExprAny
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import (
+        CompliantDataFrameAny,
+        CompliantExprAny,
+        CompliantFrameAny,
+        CompliantLazyFrameAny,
+        CompliantSeriesAny,
+        CompliantSeriesOrNativeExprAny,
+        EvalNames,
+        EvalSeries,
+        ScalarKwargs,
+    )
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = [
     "CompliantSelector",

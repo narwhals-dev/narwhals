@@ -3,20 +3,19 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 3, None, 2]}
 
-expected = {
-    "cum_max": [1, 3, None, 3],
-    "reverse_cum_max": [3, 3, None, 2],
-}
+expected = {"cum_max": [1, 3, None, 3], "reverse_cum_max": [3, 3, None, 2]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -33,19 +32,13 @@ def test_cum_max_expr(
 
     name = "reverse_cum_max" if reverse else "cum_max"
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        nw.col("a").cum_max(reverse=reverse).alias(name),
-    )
+    result = df.select(nw.col("a").cum_max(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [2, 2, 3]),
-        (True, [3, 3, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [2, 2, 3]), (True, [3, 3, 3])]
 )
 def test_lazy_cum_max_grouped(
     constructor: Constructor,
@@ -71,14 +64,7 @@ def test_lazy_cum_max_grouped(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 2, 3],
-                "b": [1, 0, 2],
-                "i": [0, 1, 2],
-                "g": [1, 1, 1],
-            }
-        )
+        constructor({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]})
     )
     result = df.with_columns(
         nw.col("a").cum_max(reverse=reverse).over("g", order_by="b")
@@ -89,10 +75,7 @@ def test_lazy_cum_max_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [4, 4, 4, 4, 4, 4, 4]),
-        (True, [3, 3, 3, 3, 2, 3, 4]),
-    ],
+    [(False, [4, 4, 4, 4, 4, 4, 4]), (True, [3, 3, 3, 3, 2, 3, 4])],
 )
 def test_lazy_cum_max_ordered_by_nulls(
     constructor: Constructor,
@@ -140,11 +123,7 @@ def test_lazy_cum_max_ordered_by_nulls(
 
 
 @pytest.mark.parametrize(
-    ("reverse", "expected_a"),
-    [
-        (False, [2, 2, 3]),
-        (True, [3, 3, 3]),
-    ],
+    ("reverse", "expected_a"), [(False, [2, 2, 3]), (True, [3, 3, 3])]
 )
 def test_lazy_cum_max_ungrouped(
     constructor: Constructor,
@@ -166,13 +145,7 @@ def test_lazy_cum_max_ungrouped(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [2, 3, 1],
-                "b": [0, 2, 1],
-                "i": [1, 2, 0],
-            }
-        )
+        constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
     ).sort("i")
     result = df.with_columns(
         nw.col("a").cum_max(reverse=reverse).over(order_by="b")
@@ -183,10 +156,7 @@ def test_lazy_cum_max_ungrouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [
-        (False, [4, 4, 4, 4, 4, 4, 4]),
-        (True, [3, 3, 3, 3, 2, 3, 4]),
-    ],
+    [(False, [4, 4, 4, 4, 4, 4, 4]), (True, [3, 3, 3, 3, 2, 3, 4])],
 )
 def test_lazy_cum_max_ungrouped_ordered_by_nulls(
     constructor: Constructor,
@@ -240,7 +210,6 @@ def test_cum_max_series(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
-        cum_max=df["a"].cum_max(),
-        reverse_cum_max=df["a"].cum_max(reverse=True),
+        cum_max=df["a"].cum_max(), reverse_cum_max=df["a"].cum_max(reverse=True)
     )
     assert_equal_data(result, expected)

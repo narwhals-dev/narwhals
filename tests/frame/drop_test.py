@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,11 +15,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize(
     ("to_drop", "expected"),
-    [
-        ("abc", ["b", "z"]),
-        (["abc"], ["b", "z"]),
-        (["abc", "b"], ["z"]),
-    ],
+    [("abc", ["b", "z"]), (["abc"], ["b", "z"]), (["abc", "b"], ["z"])],
 )
 def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
@@ -32,13 +27,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
 
 @pytest.mark.parametrize(
     ("strict", "context"),
-    [
-        (
-            True,
-            pytest.raises(ColumnNotFoundError, match="z"),
-        ),
-        (False, does_not_raise()),
-    ],
+    [(True, pytest.raises(ColumnNotFoundError, match="z")), (False, does_not_raise())],
 )
 def test_drop_strict(
     request: pytest.FixtureRequest,

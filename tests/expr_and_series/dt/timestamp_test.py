@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -11,22 +10,21 @@ import pytest
 from hypothesis import given
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
-from tests.utils import is_pyarrow_windows_no_tzdata
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_pyarrow_windows_no_tzdata,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
 
 data = {
-    "a": [
-        datetime(2021, 3, 1, 12, 34, 56, 49000),
-        datetime(2020, 1, 2, 2, 4, 14, 715000),
-    ],
+    "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
 }
 
 

@@ -1,29 +1,31 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+)
 
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._ibis.utils import evaluate_exprs
-from narwhals._ibis.utils import native_to_narwhals_dtype
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import InvalidOperationError
+from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    Version,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -31,9 +33,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
     from ibis.expr.operations import Binary
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._ibis.expr import IbisExpr
@@ -43,9 +43,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
     from narwhals.utils import _FullContext
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
@@ -178,7 +176,7 @@ class IbisLazyFrame(
         return self._with_native(t)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 

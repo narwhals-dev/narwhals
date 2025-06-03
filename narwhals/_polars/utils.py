@@ -1,26 +1,28 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Iterator
-from typing import Mapping
-from typing import TypeVar
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Iterator,
+    Mapping,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import polars as pl
 
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import ComputeError
-from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import NarwhalsError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Version
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    ComputeError,
+    DuplicateError,
+    InvalidOperationError,
+    NarwhalsError,
+    ShapeError,
+)
+from narwhals.utils import Version, _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -45,8 +47,7 @@ def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
 def _is_compliant_polars(
     obj: _StoresNative[NativeT] | Any,
 ) -> TypeIs[_StoresNative[NativeT]]:
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._polars.dataframe import PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
 

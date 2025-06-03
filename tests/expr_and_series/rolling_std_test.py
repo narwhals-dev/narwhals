@@ -6,12 +6,14 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1.0, 2.0, 1.0, 3.0, 1.0, 4.0, 1.0]}
 
@@ -68,8 +70,7 @@ kwargs_and_expected = (
 
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_std_expr(
-    constructor_eager: ConstructorEager,
-    kwargs_and_expected: dict[str, Any],
+    constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
@@ -89,8 +90,7 @@ def test_rolling_std_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_std_series(
-    constructor_eager: ConstructorEager,
-    kwargs_and_expected: dict[str, Any],
+    constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         pytest.skip()

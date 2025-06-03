@@ -3,9 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Literal
-from typing import Sequence
+from typing import TYPE_CHECKING, Literal, Sequence
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -14,19 +12,19 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast
-from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._compliant import CompliantThen
-from narwhals._compliant import EagerNamespace
-from narwhals._compliant import EagerWhen
-from narwhals._expression_parsing import combine_alias_output_names
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._arrow.utils import (
+    align_series_full_broadcast,
+    cast_to_comparable_string_types,
+)
+from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ArrayOrScalar
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Version
@@ -234,10 +232,7 @@ class ArrowNamespace(
         return ArrowWhen.from_expr(predicate, context=self)
 
     def concat_str(
-        self,
-        *exprs: ArrowExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             compliant_series_list = align_series_full_broadcast(

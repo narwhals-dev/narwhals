@@ -3,10 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -25,9 +22,7 @@ from tests.utils import assert_equal_data
     ],
 )
 def test_str_to_uppercase(
-    constructor: Constructor,
-    data: dict[str, list[str]],
-    expected: dict[str, list[str]],
+    constructor: Constructor, data: dict[str, list[str]], expected: dict[str, list[str]]
 ) -> None:
     if "dask" in str(constructor) and PYARROW_VERSION < (12,):
         pytest.skip()
@@ -112,9 +107,7 @@ def test_str_to_uppercase_series(
     ],
 )
 def test_str_to_lowercase(
-    constructor: Constructor,
-    data: dict[str, list[str]],
-    expected: dict[str, list[str]],
+    constructor: Constructor, data: dict[str, list[str]], expected: dict[str, list[str]]
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_lowercase())

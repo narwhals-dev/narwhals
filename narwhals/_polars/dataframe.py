@@ -1,67 +1,69 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import Sized
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    Sized,
+    cast,
+    overload,
+)
 
 import polars as pl
 
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
-from narwhals._polars.utils import catch_polars_exception
-from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import native_to_narwhals_dtype
+from narwhals._polars.utils import (
+    catch_polars_exception,
+    extract_args_kwargs,
+    native_to_narwhals_dtype,
+)
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Implementation
-from narwhals.utils import _into_arrow_table
-from narwhals.utils import convert_str_slice_to_int_slice
-from narwhals.utils import is_compliant_series
-from narwhals.utils import is_index_selector
-from narwhals.utils import is_range
-from narwhals.utils import is_sequence_like
-from narwhals.utils import is_slice_index
-from narwhals.utils import is_slice_none
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import requires
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    _into_arrow_table,
+    check_columns_exist,
+    convert_str_slice_to_int_slice,
+    is_compliant_series,
+    is_index_selector,
+    is_range,
+    is_sequence_like,
+    is_slice_index,
+    is_slice_none,
+    parse_columns_to_drop,
+    parse_version,
+    requires,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
-    from typing import Callable
-    from typing import TypeVar
+    from typing import Callable, TypeVar
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._compliant.typing import CompliantLazyFrameAny
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
-    from narwhals._polars.group_by import PolarsGroupBy
-    from narwhals._polars.group_by import PolarsLazyGroupBy
+    from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import MultiColSelector
-    from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import PivotAgg
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import _2DArray
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        JoinStrategy,
+        MultiColSelector,
+        MultiIndexSelector,
+        PivotAgg,
+        SingleIndexSelector,
+        _2DArray,
+    )
+    from narwhals.utils import Version, _FullContext
 
     T = TypeVar("T")
     R = TypeVar("R")
@@ -453,9 +455,7 @@ class PolarsDataFrame:
         return self._with_native(self.native.with_row_index(name))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
 
     def unpivot(
@@ -531,6 +531,9 @@ class PolarsDataFrame:
             )
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e, self._backend_version) from None
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class PolarsLazyFrame:
@@ -758,4 +761,9 @@ class PolarsLazyFrame:
                 right_on=right_on,
                 suffix=suffix,
             )
+        )
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(  # pragma: no cover
+            subset, available=self.columns
         )

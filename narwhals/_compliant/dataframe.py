@@ -1,41 +1,50 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Protocol
-from typing import Sequence
-from typing import Sized
-from typing import TypeVar
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterator,
+    Literal,
+    Mapping,
+    Protocol,
+    Sequence,
+    Sized,
+    TypeVar,
+    overload,
+)
 
-from narwhals._compliant.typing import CompliantDataFrameAny
-from narwhals._compliant.typing import CompliantExprT_contra
-from narwhals._compliant.typing import CompliantLazyFrameAny
-from narwhals._compliant.typing import CompliantSeriesT
-from narwhals._compliant.typing import EagerExprT
-from narwhals._compliant.typing import EagerSeriesT
-from narwhals._compliant.typing import NativeFrameT
-from narwhals._compliant.typing import NativeSeriesT
-from narwhals._translate import ArrowConvertible
-from narwhals._translate import DictConvertible
-from narwhals._translate import FromNative
-from narwhals._translate import NumpyConvertible
-from narwhals._translate import ToNarwhals
-from narwhals._translate import ToNarwhalsT_co
-from narwhals.utils import Version
-from narwhals.utils import _StoresNative
-from narwhals.utils import deprecated
-from narwhals.utils import is_compliant_series
-from narwhals.utils import is_index_selector
-from narwhals.utils import is_range
-from narwhals.utils import is_sequence_like
-from narwhals.utils import is_sized_multi_index_selector
-from narwhals.utils import is_slice_index
-from narwhals.utils import is_slice_none
+from narwhals._compliant.typing import (
+    CompliantDataFrameAny,
+    CompliantExprT_contra,
+    CompliantLazyFrameAny,
+    CompliantSeriesT,
+    EagerExprT,
+    EagerSeriesT,
+    NativeFrameT,
+    NativeSeriesT,
+)
+from narwhals._translate import (
+    ArrowConvertible,
+    DictConvertible,
+    FromNative,
+    NumpyConvertible,
+    ToNarwhals,
+    ToNarwhalsT_co,
+)
+from narwhals._typing_compat import deprecated
+from narwhals.utils import (
+    Version,
+    _StoresNative,
+    check_columns_exist,
+    is_compliant_series,
+    is_index_selector,
+    is_range,
+    is_sequence_like,
+    is_sized_multi_index_selector,
+    is_slice_index,
+    is_slice_none,
+)
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -44,32 +53,32 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.group_by import CompliantGroupBy
-    from narwhals._compliant.group_by import DataFrameGroupBy
+    from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.exceptions import ColumnNotFoundError
     from narwhals.schema import Schema
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import LazyUniqueKeepStrategy
-    from narwhals.typing import MultiColSelector
-    from narwhals.typing import MultiIndexSelector
-    from narwhals.typing import PivotAgg
-    from narwhals.typing import SingleIndexSelector
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import SizedMultiNameSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.typing import _SliceName
-    from narwhals.utils import Implementation
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        LazyUniqueKeepStrategy,
+        MultiColSelector,
+        MultiIndexSelector,
+        PivotAgg,
+        SingleIndexSelector,
+        SizedMultiIndexSelector,
+        SizedMultiNameSelector,
+        SizeUnit,
+        UniqueKeepStrategy,
+        _2DArray,
+        _SliceIndex,
+        _SliceName,
+    )
+    from narwhals.utils import Implementation, _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -263,6 +272,9 @@ class CompliantDataFrame(
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
 
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
+
 
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
@@ -369,6 +381,9 @@ class CompliantLazyFrame(
     def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(

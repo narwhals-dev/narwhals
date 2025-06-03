@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Generic
-from typing import TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -605,12 +603,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "a": [
-            ...             datetime(2020, 3, 1),
-            ...             datetime(2020, 5, 1),
-            ...         ]
-            ...     }
+            ...     {"a": [datetime(2020, 3, 1), datetime(2020, 5, 1)]}
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.to_string("%Y/%m/%d %H:%M:%S"))
@@ -660,9 +653,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             1 2024-01-02 00:00:00+05:45
         """
         return self._expr._with_elementwise_op(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(
-                time_zone
-            ),
+            lambda plx: self._expr._to_compliant_expr(plx).dt.replace_time_zone(time_zone)
         )
 
     def convert_time_zone(self, time_zone: str) -> ExprT:
@@ -699,9 +690,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
             raise TypeError(msg)
         return self._expr._with_elementwise_op(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(
-                time_zone
-            ),
+            lambda plx: self._expr._to_compliant_expr(plx).dt.convert_time_zone(time_zone)
         )
 
     def timestamp(self, time_unit: TimeUnit = "us") -> ExprT:
@@ -744,7 +733,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             )
             raise ValueError(msg)
         return self._expr._with_elementwise_op(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit),
+            lambda plx: self._expr._to_compliant_expr(plx).dt.timestamp(time_unit)
         )
 
     def truncate(self, every: str) -> ExprT:
@@ -791,5 +780,5 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             └─────────────────────────────────────────────┘
         """
         return self._expr._with_elementwise_op(
-            lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every),
+            lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every)
         )

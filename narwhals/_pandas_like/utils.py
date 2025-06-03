@@ -3,23 +3,19 @@ from __future__ import annotations
 import functools
 import re
 from contextlib import suppress
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import Sized
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
 
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.exceptions import DuplicateError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import _DeferredIterable
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.exceptions import DuplicateError, ShapeError
+from narwhals.utils import (
+    Implementation,
+    Version,
+    _DeferredIterable,
+    check_columns_exist,
+    isinstance_or_issubclass,
+)
 
 T = TypeVar("T", bound=Sized)
 
@@ -29,9 +25,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend
-    from narwhals.typing import TimeUnit
-    from narwhals.typing import _1DArray
+    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -513,9 +507,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     raise AssertionError(msg)
 
 
-def align_series_full_broadcast(
-    *series: PandasLikeSeries,
-) -> list[PandasLikeSeries]:
+def align_series_full_broadcast(*series: PandasLikeSeries) -> list[PandasLikeSeries]:
     # Ensure all of `series` have the same length and index. Scalars get broadcasted to
     # the full length of the longest Series. This is useful when you need to construct a
     # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
@@ -631,21 +623,21 @@ def select_columns_by_name(
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        if missing_columns:  # pragma: no cover
-            raise ColumnNotFoundError.from_missing_and_available_column_names(
-                missing_columns, available_columns
-            )
+        if error := check_columns_exist(
+            column_names,  # type: ignore[arg-type]
+            available=df.columns.tolist(),  # type: ignore[attr-defined]
+        ):
+            raise error
         return df.loc[:, column_names]  # type: ignore[attr-defined]
     try:
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
-        available_columns = df.columns.tolist()  # type: ignore[attr-defined]
-        missing_columns = [x for x in column_names if x not in available_columns]
-        raise ColumnNotFoundError.from_missing_and_available_column_names(
-            missing_columns, available_columns
-        ) from e
+        if error := check_columns_exist(
+            column_names,  # type: ignore[arg-type]
+            available=df.columns.tolist(),  # type: ignore[attr-defined]
+        ):
+            raise error from e
+        raise
 
 
 def check_column_names_are_unique(columns: pd.Index[str]) -> None:

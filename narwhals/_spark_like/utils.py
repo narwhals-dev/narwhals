@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from importlib import import_module
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, overload
 
 from narwhals.exceptions import UnsupportedDTypeError
-from narwhals.utils import Implementation
-from narwhals.utils import isinstance_or_issubclass
+from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
+    from sqlframe.base.session import _BaseSession as Session
     from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
+    SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
 
 UNITS_DICT = {
     "y": "year",
@@ -36,24 +36,30 @@ UNITS_DICT = {
     "ns": "nanosecond",
 }
 
-
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self,
-        expr: Column,
-        partition_by: Sequence[str] | Sequence[Column],
-        order_by: Sequence[str],
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
+# see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
+# and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+DATETIME_PATTERNS_MAPPING = {
+    "%Y": "yyyy",  # Year with century (4 digits)
+    "%y": "yy",  # Year without century (2 digits)
+    "%m": "MM",  # Month (01-12)
+    "%d": "dd",  # Day of the month (01-31)
+    "%H": "HH",  # Hour (24-hour clock) (00-23)
+    "%I": "hh",  # Hour (12-hour clock) (01-12)
+    "%M": "mm",  # Minute (00-59)
+    "%S": "ss",  # Second (00-59)
+    "%f": "S",  # Microseconds -> Milliseconds
+    "%p": "a",  # AM/PM
+    "%a": "E",  # Abbreviated weekday name
+    "%A": "E",  # Full weekday name
+    "%j": "D",  # Day of the year
+    "%z": "Z",  # Timezone offset
+    "%s": "X",  # Unix timestamp
+}
 
 
 # NOTE: don't lru_cache this as `ModuleType` isn't hashable
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
-    dtype: _NativeDType, version: Version, spark_types: ModuleType
+    dtype: _NativeDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> DType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
@@ -83,16 +89,14 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         # TODO(marco): cover this
         return dtypes.Datetime()  # pragma: no cover
     if isinstance(dtype, native.TimestampType):
-        # TODO(marco): is UTC correct, or should we be getting the connection timezone?
-        # https://github.com/narwhals-dev/narwhals/issues/2165
-        return dtypes.Datetime(time_zone="UTC")
+        return dtypes.Datetime(time_zone=fetch_session_time_zone(session))
     if isinstance(dtype, native.DecimalType):
         # TODO(marco): cover this
         return dtypes.Decimal()  # pragma: no cover
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
-                dtype.elementType, version=version, spark_types=spark_types
+                dtype.elementType, version, spark_types, session
             )
         )
     if isinstance(dtype, native.StructType):
@@ -101,7 +105,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
                 dtypes.Field(
                     name=field.name,
                     dtype=native_to_narwhals_dtype(
-                        field.dataType, version=version, spark_types=spark_types
+                        field.dataType, version, spark_types, session
                     ),
                 )
                 for field in dtype
@@ -110,6 +114,16 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
+
+
+@lru_cache(maxsize=4)
+def fetch_session_time_zone(session: SparkSession) -> str:
+    # Timezone can't be changed in PySpark session, so this can be cached.
+    try:
+        return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        # https://github.com/eakmanrq/sqlframe/issues/406
+        return "<unknown>"
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
@@ -248,3 +262,23 @@ def import_window(implementation: Implementation, /) -> type[Any]:
     return import_module(
         f"sqlframe.{_BaseSession().execution_dialect_name}.window"
     ).Window
+
+
+@overload
+def strptime_to_pyspark_format(format: None) -> None: ...
+
+
+@overload
+def strptime_to_pyspark_format(format: str) -> str: ...
+
+
+def strptime_to_pyspark_format(format: str | None) -> str | None:
+    """Converts a Python strptime datetime format string to a PySpark datetime format string."""
+    if format is None:  # pragma: no cover
+        return None
+
+    # Replace Python format specifiers with PySpark specifiers
+    pyspark_format = format
+    for py_format, spark_format in DATETIME_PATTERNS_MAPPING.items():
+        pyspark_format = pyspark_format.replace(py_format, spark_format)
+    return pyspark_format.replace("T", " ")

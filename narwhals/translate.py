@@ -3,70 +3,50 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Literal
-from typing import TypeVar
-from typing import overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
-from narwhals._namespace import is_native_arrow
-from narwhals._namespace import is_native_pandas_like
-from narwhals._namespace import is_native_polars
-from narwhals._namespace import is_native_spark_like
-from narwhals.dependencies import get_cudf
-from narwhals.dependencies import get_dask
-from narwhals.dependencies import get_dask_expr
-from narwhals.dependencies import get_modin
-from narwhals.dependencies import get_numpy
-from narwhals.dependencies import get_pandas
-from narwhals.dependencies import get_polars
-from narwhals.dependencies import get_pyarrow
-from narwhals.dependencies import is_cudf_dataframe
-from narwhals.dependencies import is_cudf_series
-from narwhals.dependencies import is_cupy_scalar
-from narwhals.dependencies import is_dask_dataframe
-from narwhals.dependencies import is_duckdb_relation
-from narwhals.dependencies import is_ibis_table
-from narwhals.dependencies import is_modin_dataframe
-from narwhals.dependencies import is_modin_series
-from narwhals.dependencies import is_numpy_scalar
-from narwhals.dependencies import is_pandas_dataframe
-from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.dependencies import is_pandas_series
-from narwhals.dependencies import is_polars_dataframe
-from narwhals.dependencies import is_polars_lazyframe
-from narwhals.dependencies import is_polars_series
-from narwhals.dependencies import is_pyarrow_chunked_array
-from narwhals.dependencies import is_pyarrow_scalar
-from narwhals.dependencies import is_pyarrow_table
+from narwhals._namespace import (
+    is_native_arrow,
+    is_native_pandas_like,
+    is_native_polars,
+    is_native_spark_like,
+)
+from narwhals.dependencies import (
+    get_dask,
+    get_dask_expr,
+    get_numpy,
+    get_pandas,
+    is_cupy_scalar,
+    is_dask_dataframe,
+    is_duckdb_relation,
+    is_ibis_table,
+    is_numpy_scalar,
+    is_pandas_like_dataframe,
+    is_polars_lazyframe,
+    is_polars_series,
+    is_pyarrow_scalar,
+    is_pyarrow_table,
+)
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
-    from narwhals.typing import DataFrameT
-    from narwhals.typing import IntoDataFrameT
-    from narwhals.typing import IntoFrame
-    from narwhals.typing import IntoFrameT
-    from narwhals.typing import IntoLazyFrameT
-    from narwhals.typing import IntoSeries
-    from narwhals.typing import IntoSeriesT
-    from narwhals.typing import LazyFrameT
-    from narwhals.typing import SeriesT
+    from narwhals.typing import (
+        DataFrameT,
+        IntoDataFrameT,
+        IntoFrame,
+        IntoFrameT,
+        IntoLazyFrameT,
+        IntoSeries,
+        IntoSeriesT,
+        LazyFrameT,
+        SeriesT,
+    )
 
 T = TypeVar("T")
 
-NON_TEMPORAL_SCALAR_TYPES = (
-    bool,
-    bytes,
-    str,
-    int,
-    float,
-    complex,
-    Decimal,
-)
+NON_TEMPORAL_SCALAR_TYPES = (bool, bytes, str, int, float, complex, Decimal)
 TEMPORAL_SCALAR_TYPES = (dt.date, dt.timedelta, dt.time)
 
 
@@ -375,14 +355,15 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     allow_series: bool | None = None,
     version: Version,
 ) -> Any:
-    from narwhals.dataframe import DataFrame
-    from narwhals.dataframe import LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
-    from narwhals.utils import _supports_dataframe_interchange
-    from narwhals.utils import is_compliant_dataframe
-    from narwhals.utils import is_compliant_lazyframe
-    from narwhals.utils import is_compliant_series
-    from narwhals.utils import parse_version
+    from narwhals.utils import (
+        _supports_dataframe_interchange,
+        is_compliant_dataframe,
+        is_compliant_lazyframe,
+        is_compliant_series,
+        parse_version,
+    )
 
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
@@ -406,10 +387,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `series_only` with dataframe"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
-            native_object.__narwhals_dataframe__(),
-            level="full",
-        )
+        return DataFrame(native_object.__narwhals_dataframe__(), level="full")
     elif is_compliant_lazyframe(native_object):
         if series_only:
             if not pass_through:
@@ -421,20 +399,14 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
                 raise TypeError(msg)
             return native_object
-        return LazyFrame(
-            native_object.__narwhals_lazyframe__(),
-            level="full",
-        )
+        return LazyFrame(native_object.__narwhals_lazyframe__(), level="full")
     elif is_compliant_series(native_object):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        return Series(
-            native_object.__narwhals_series__(),
-            level="full",
-        )
+        return Series(native_object.__narwhals_series__(), level="full")
 
     # Polars
     elif is_native_polars(native_object):
@@ -552,14 +524,14 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # PySpark
     elif is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = version.namespace.from_native_object(native_object)
-        if series_only:
-            msg = (
-                f"Cannot only use `series_only` with {ns_spark.implementation} DataFrame"
-            )
-            raise TypeError(msg)
-        if eager_only or eager_or_interchange_only:
-            msg = f"Cannot only use `eager_only` or `eager_or_interchange_only` with {ns_spark.implementation} DataFrame"
-            raise TypeError(msg)
+        if series_only or eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = (
+                    "Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` "
+                    f"with {ns_spark.implementation} DataFrame"
+                )
+                raise TypeError(msg)
+            return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
@@ -575,8 +547,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return DataFrame(
-            InterchangeFrame(native_object, version=version),
-            level="interchange",
+            InterchangeFrame(native_object, version=version), level="interchange"
         )
 
     elif not pass_through:
@@ -619,25 +590,20 @@ def get_native_namespace(
     return result.pop()
 
 
-def _get_native_namespace_single_obj(  # noqa: PLR0911
+def _get_native_namespace_single_obj(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
+    from contextlib import suppress
+
     from narwhals.utils import has_native_namespace
+
+    with suppress(TypeError, AssertionError):
+        return Version.MAIN.namespace.from_native_object(
+            obj
+        ).implementation.to_native_namespace()
 
     if has_native_namespace(obj):
         return obj.__native_namespace__()
-    if is_pandas_dataframe(obj) or is_pandas_series(obj):
-        return get_pandas()
-    if is_modin_dataframe(obj) or is_modin_series(obj):  # pragma: no cover
-        return get_modin()
-    if is_pyarrow_table(obj) or is_pyarrow_chunked_array(obj):
-        return get_pyarrow()
-    if is_cudf_dataframe(obj) or is_cudf_series(obj):  # pragma: no cover
-        return get_cudf()
-    if is_dask_dataframe(obj):  # pragma: no cover
-        return get_dask()
-    if is_polars_dataframe(obj) or is_polars_lazyframe(obj) or is_polars_series(obj):
-        return get_polars()
     msg = f"Could not get native namespace from object of type: {type(obj)}"
     raise TypeError(msg)
 
@@ -825,9 +791,4 @@ def _is_pandas_na(obj: Any) -> bool:
     return bool((pd := get_pandas()) and pd.api.types.is_scalar(obj) and pd.isna(obj))
 
 
-__all__ = [
-    "get_native_namespace",
-    "narwhalify",
-    "to_native",
-    "to_py_scalar",
-]
+__all__ = ["get_native_namespace", "narwhalify", "to_native", "to_py_scalar"]

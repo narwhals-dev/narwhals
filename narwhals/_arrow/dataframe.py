@@ -1,38 +1,40 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Collection
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Collection,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import Version
-from narwhals.utils import check_column_exists
-from narwhals.utils import check_column_names_are_unique
-from narwhals.utils import convert_str_slice_to_int_slice
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import scale_bytes
-from narwhals.utils import supports_arrow_c_stream
-from narwhals.utils import validate_backend_version
+from narwhals.utils import (
+    Implementation,
+    Version,
+    check_column_names_are_unique,
+    convert_str_slice_to_int_slice,
+    generate_temporary_column_name,
+    not_implemented,
+    parse_columns_to_drop,
+    parse_version,
+    scale_bytes,
+    supports_arrow_c_stream,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -41,32 +43,32 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._arrow.typing import Mask  # type: ignore[attr-defined]
-    from narwhals._arrow.typing import Order  # type: ignore[attr-defined]
-    from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._compliant.typing import CompliantLazyFrameAny
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        ChunkedArrayAny,
+        Mask,
+        Order,
+    )
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import SizedMultiNameSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _1DArray
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.typing import _SliceName
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        JoinStrategy,
+        SizedMultiIndexSelector,
+        SizedMultiNameSelector,
+        SizeUnit,
+        UniqueKeepStrategy,
+        _1DArray,
+        _2DArray,
+        _SliceIndex,
+        _SliceName,
+    )
+    from narwhals.utils import Version, _FullContext
 
     JoinType: TypeAlias = Literal[
         "left semi",
@@ -431,15 +433,13 @@ class ArrowDataFrame(
                 join_type=how_to_join_map[how],
                 right_suffix=suffix,
                 coalesce_keys=coalesce_keys,
-            ),
+            )
         )
 
     join_asof = not_implemented()
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
     def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
@@ -448,12 +448,7 @@ class ArrowDataFrame(
         plx = self.__narwhals_namespace__()
         return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
 
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             order: Order = "descending" if descending else "ascending"
             sorting: list[tuple[str, Order]] = [(key, order) for key in by]
@@ -695,7 +690,8 @@ class ArrowDataFrame(
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        check_column_exists(self.columns, subset)
+        if subset and (error := self._check_columns_exist(subset)):
+            raise error
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:

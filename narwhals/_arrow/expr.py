@@ -1,32 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import Implementation
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import not_implemented
+from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._compliant.typing import AliasNames
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals.typing import RankMethod
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.utils import Version, _FullContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
@@ -77,12 +68,9 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     for column_name in evaluate_column_names(df)
                 ]
             except KeyError as e:
-                missing_columns = [
-                    x for x in evaluate_column_names(df) if x not in df.columns
-                ]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns=missing_columns, available_columns=df.columns
-                ) from e
+                if error := df._check_columns_exist(evaluate_column_names(df)):
+                    raise error from e
+                raise
 
         return cls(
             func,

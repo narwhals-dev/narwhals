@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import time
-from datetime import timedelta
-from datetime import timezone
-from typing import TYPE_CHECKING
-from typing import cast
+from datetime import datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
-from tests.utils import is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_windows,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import NativeLazyFrame
@@ -64,10 +62,7 @@ IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
@@ -117,8 +112,7 @@ def test_cast(
 
 
 def test_cast_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION <= (
         15,
@@ -286,10 +280,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         pytest.skip()
 
     data = {
-        "a": [
-            {"movie ": "Cars", "rating": 4.5},
-            {"movie ": "Toy Story", "rating": 4.9},
-        ]
+        "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
     }
 
     native_df = constructor(data)

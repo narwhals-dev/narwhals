@@ -5,8 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
 @pytest.mark.parametrize("col_expr", [nw.col("a"), "a"])
@@ -22,12 +21,8 @@ def test_meanh_all(constructor: Constructor) -> None:
     data = {"a": [2, 4, 6], "b": [10, 20, 30]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.mean_horizontal(nw.all()))
-    expected = {
-        "a": [6, 12, 18],
-    }
+    expected = {"a": [6, 12, 18]}
     assert_equal_data(result, expected)
     result = df.select(c=nw.mean_horizontal(nw.all()))
-    expected = {
-        "c": [6, 12, 18],
-    }
+    expected = {"c": [6, 12, 18]}
     assert_equal_data(result, expected)

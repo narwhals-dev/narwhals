@@ -6,10 +6,7 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v1 as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [-1, 0, 1, 2, 4]}
 
@@ -43,10 +40,7 @@ def test_log_dtype_pandas() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0),
-    reason="nullable types require pandas2+",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="nullable types require pandas2+")
 def test_log_dtype_pandas_nullabe() -> None:
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).log().to_native()
@@ -56,10 +50,7 @@ def test_log_dtype_pandas_nullabe() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (2, 1, 0),
-    reason="nullable types require pandas2+",
-)
+@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_log_dtype_pandas_pyarrow() -> None:
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).log().to_native()

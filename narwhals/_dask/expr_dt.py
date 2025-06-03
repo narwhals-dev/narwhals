@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._duration import parse_interval_string
-from narwhals._pandas_like.utils import UNIT_DICT
-from narwhals._pandas_like.utils import calculate_timestamp_date
-from narwhals._pandas_like.utils import calculate_timestamp_datetime
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import (
+    UNIT_DICT,
+    calculate_timestamp_date,
+    calculate_timestamp_datetime,
+    native_to_narwhals_dtype,
+)
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
@@ -21,73 +23,64 @@ class DaskExprDateTimeNamespace:
         self._compliant_expr = expr
 
     def date(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.dt.date, "date")
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.date, "date")
 
     def year(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.dt.year, "year")
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.year, "year")
 
     def month(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.month, "month"
-        )
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.month, "month")
 
     def day(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.dt.day, "day")
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.day, "day")
 
     def hour(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(lambda _input: _input.dt.hour, "hour")
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.hour, "hour")
 
     def minute(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.minute, "minute"
-        )
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.minute, "minute")
 
     def second(self) -> DaskExpr:
-        return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.second, "second"
-        )
+        return self._compliant_expr._with_callable(lambda expr: expr.dt.second, "second")
 
     def millisecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.microsecond // 1000, "millisecond"
+            lambda expr: expr.dt.microsecond // 1000, "millisecond"
         )
 
     def microsecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.microsecond, "microsecond"
+            lambda expr: expr.dt.microsecond, "microsecond"
         )
 
     def nanosecond(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.microsecond * 1000 + _input.dt.nanosecond,
-            "nanosecond",
+            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond, "nanosecond"
         )
 
     def ordinal_day(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.dayofyear, "ordinal_day"
+            lambda expr: expr.dt.dayofyear, "ordinal_day"
         )
 
     def weekday(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.weekday + 1,  # Dask is 0-6
+            lambda expr: expr.dt.weekday + 1,  # Dask is 0-6
             "weekday",
         )
 
     def to_string(self, format: str) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input, format: _input.dt.strftime(format.replace("%.f", ".%f")),
+            lambda expr, format: expr.dt.strftime(format.replace("%.f", ".%f")),
             "strftime",
             format=format,
         )
 
     def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input, time_zone: _input.dt.tz_localize(None).dt.tz_localize(
-                time_zone
-            )
+            lambda expr, time_zone: expr.dt.tz_localize(None).dt.tz_localize(time_zone)
             if time_zone is not None
-            else _input.dt.tz_localize(None),
+            else expr.dt.tz_localize(None),
             "tz_localize",
             time_zone=time_zone,
         )
@@ -135,29 +128,27 @@ class DaskExprDateTimeNamespace:
 
     def total_minutes(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.total_seconds() // 60, "total_minutes"
+            lambda expr: expr.dt.total_seconds() // 60, "total_minutes"
         )
 
     def total_seconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.total_seconds() // 1, "total_seconds"
+            lambda expr: expr.dt.total_seconds() // 1, "total_seconds"
         )
 
     def total_milliseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.total_seconds() * 1000 // 1, "total_milliseconds"
+            lambda expr: expr.dt.total_seconds() * 1000 // 1, "total_milliseconds"
         )
 
     def total_microseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.total_seconds() * 1_000_000 // 1,
-            "total_microseconds",
+            lambda expr: expr.dt.total_seconds() * 1_000_000 // 1, "total_microseconds"
         )
 
     def total_nanoseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.total_seconds() * 1_000_000_000 // 1,
-            "total_nanoseconds",
+            lambda expr: expr.dt.total_seconds() * 1_000_000_000 // 1, "total_nanoseconds"
         )
 
     def truncate(self, every: str) -> DaskExpr:
@@ -167,5 +158,5 @@ class DaskExprDateTimeNamespace:
             raise NotImplementedError(msg)
         freq = f"{multiple}{UNIT_DICT.get(unit, unit)}"
         return self._compliant_expr._with_callable(
-            lambda _input: _input.dt.floor(freq), "truncate"
+            lambda expr: expr.dt.floor(freq), "truncate"
         )

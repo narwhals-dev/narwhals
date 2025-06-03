@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import NoReturn
+from typing import TYPE_CHECKING, Any, Iterable, NoReturn
 
-from narwhals._expression_parsing import ExprMetadata
-from narwhals._expression_parsing import combine_metadata
+from narwhals._expression_parsing import ExprMetadata, combine_metadata
 from narwhals.expr import Expr
 from narwhals.utils import flatten
 
@@ -112,11 +108,7 @@ def matches(pattern: str) -> Selector:
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
         >>> df_native = pd.DataFrame(
-        ...     {
-        ...         "bar": [123, 456],
-        ...         "baz": [2.0, 5.5],
-        ...         "zap": [0, 1],
-        ...     }
+        ...     {"bar": [123, 456], "baz": [2.0, 5.5], "zap": [0, 1]}
         ... )
         >>> df = nw.from_native(df_native)
 
@@ -128,8 +120,7 @@ def matches(pattern: str) -> Selector:
         1  456  5.5
     """
     return Selector(
-        lambda plx: plx.selectors.matches(pattern),
-        ExprMetadata.selector_multi_unnamed(),
+        lambda plx: plx.selectors.matches(pattern), ExprMetadata.selector_multi_unnamed()
     )
 
 
@@ -259,8 +250,7 @@ def categorical() -> Selector:
         └─────┘
     """
     return Selector(
-        lambda plx: plx.selectors.categorical(),
-        ExprMetadata.selector_multi_unnamed(),
+        lambda plx: plx.selectors.categorical(), ExprMetadata.selector_multi_unnamed()
     )
 
 

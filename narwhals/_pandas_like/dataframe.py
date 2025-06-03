@@ -1,45 +1,47 @@
 from __future__ import annotations
 
-from itertools import chain
-from itertools import product
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import Iterable
-from typing import Iterator
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from itertools import chain, product
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import numpy as np
 
 from narwhals._compliant import EagerDataFrame
-from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING
-from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals._pandas_like.utils import align_and_extract_native
-from narwhals._pandas_like.utils import align_series_full_broadcast
-from narwhals._pandas_like.utils import check_column_names_are_unique
-from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
-from narwhals._pandas_like.utils import object_native_to_narwhals_dtype
-from narwhals._pandas_like.utils import rename
-from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._pandas_like.utils import set_index
+from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
+from narwhals._pandas_like.utils import (
+    align_and_extract_native,
+    align_series_full_broadcast,
+    check_column_names_are_unique,
+    get_dtype_backend,
+    native_to_narwhals_dtype,
+    object_native_to_narwhals_dtype,
+    rename,
+    select_columns_by_name,
+    set_index,
+)
 from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.exceptions import InvalidOperationError
-from narwhals.exceptions import ShapeError
-from narwhals.utils import Implementation
-from narwhals.utils import _into_arrow_table
-from narwhals.utils import _remap_full_join_keys
-from narwhals.utils import check_column_exists
-from narwhals.utils import exclude_column_names
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import parse_columns_to_drop
-from narwhals.utils import parse_version
-from narwhals.utils import scale_bytes
-from narwhals.utils import validate_backend_version
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.utils import (
+    Implementation,
+    _into_arrow_table,
+    _remap_full_join_keys,
+    exclude_column_names,
+    generate_temporary_column_name,
+    parse_columns_to_drop,
+    parse_version,
+    scale_bytes,
+    validate_backend_version,
+)
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -48,31 +50,29 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self
-    from typing_extensions import TypeAlias
-    from typing_extensions import TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny
-    from narwhals._compliant.typing import CompliantLazyFrameAny
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import AsofJoinStrategy
-    from narwhals.typing import DTypeBackend
-    from narwhals.typing import JoinStrategy
-    from narwhals.typing import PivotAgg
-    from narwhals.typing import SizedMultiIndexSelector
-    from narwhals.typing import SizedMultiNameSelector
-    from narwhals.typing import SizeUnit
-    from narwhals.typing import UniqueKeepStrategy
-    from narwhals.typing import _2DArray
-    from narwhals.typing import _SliceIndex
-    from narwhals.typing import _SliceName
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        DTypeBackend,
+        JoinStrategy,
+        PivotAgg,
+        SizedMultiIndexSelector,
+        SizedMultiNameSelector,
+        SizeUnit,
+        UniqueKeepStrategy,
+        _2DArray,
+        _SliceIndex,
+        _SliceName,
+    )
+    from narwhals.utils import Version, _FullContext
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
@@ -130,7 +130,9 @@ class PandasLikeDataFrame(
         if implementation.is_pandas():
             native = tbl.to_pandas()
         elif implementation.is_modin():  # pragma: no cover
-            from modin.pandas.utils import from_arrow as mpd_from_arrow
+            from modin.pandas.utils import (
+                from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
+            )
 
             native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover
@@ -333,25 +335,13 @@ class PandasLikeDataFrame(
         return self.native.columns.tolist()
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[True],
-    ) -> list[dict[str, Any]]: ...
+    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: Literal[False],
-    ) -> list[tuple[Any, ...]]: ...
+    def rows(self, *, named: Literal[False]) -> list[tuple[Any, ...]]: ...
 
     @overload
-    def rows(
-        self,
-        *,
-        named: bool,
-    ) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if not named:
@@ -371,10 +361,7 @@ class PandasLikeDataFrame(
     _iter_columns = iter_columns
 
     def iter_rows(
-        self,
-        *,
-        named: bool,
-        buffer_size: int,
+        self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
         # The param ``buffer_size`` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -497,20 +484,13 @@ class PandasLikeDataFrame(
         )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(
             self.native.drop(columns=to_drop), validate_column_names=False
         )
 
     # --- transform ---
-    def sort(
-        self,
-        *by: str,
-        descending: bool | Sequence[bool],
-        nulls_last: bool,
-    ) -> Self:
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         df = self.native
         if isinstance(descending, bool):
             ascending: bool | list[bool] = not descending
@@ -714,7 +694,7 @@ class PandasLikeDataFrame(
                     right_on=right_on,
                     how="outer",
                     suffixes=("", suffix),
-                ),
+                )
             )
 
         return self._with_native(
@@ -749,7 +729,7 @@ class PandasLikeDataFrame(
                 right_by=by_right,
                 direction=strategy,
                 suffixes=("", suffix),
-            ),
+            )
         )
 
     # --- partial reduction ---
@@ -770,7 +750,8 @@ class PandasLikeDataFrame(
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
-        check_column_exists(self.columns, subset)
+        if subset and (error := self._check_columns_exist(subset)):
+            raise error
         return self._with_native(
             self.native.drop_duplicates(subset=subset, keep=mapped_keep),
             validate_column_names=False,
@@ -981,12 +962,7 @@ class PandasLikeDataFrame(
                 yield self._pivot_multi_on_name(col[-n_on:])
 
     def _pivot_remap_column_names(
-        self,
-        column_names: Iterable[Any],
-        *,
-        n_on: int,
-        n_values: int,
-        separator: str,
+        self, column_names: Iterable[Any], *, n_on: int, n_values: int, separator: str
     ) -> list[str]:
         """Reformat output column names from a native pivot operation, to match `polars`.
 

@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _1DArray
@@ -50,13 +47,11 @@ def test_slice_rows_with_step_pyarrow() -> None:
     import pyarrow as pa
 
     with pytest.raises(
-        NotImplementedError,
-        match="Slicing with step is not supported on PyArrow tables",
+        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
     ):
         nw.from_native(pa.table(data))[1::2]
     with pytest.raises(
-        NotImplementedError,
-        match="Slicing with step is not supported on PyArrow tables",
+        NotImplementedError, match="Slicing with step is not supported on PyArrow tables"
     ):
         nw.from_native(pa.chunked_array([data["a"]]), series_only=True)[1::2]
 
@@ -84,10 +79,7 @@ def test_slice_fails(constructor_eager: ConstructorEager) -> None:
 def test_gather(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
-    expected = {
-        "a": [1.0, 4.0, 2.0],
-        "b": [11, 14, 12],
-    }
+    expected = {"a": [1.0, 4.0, 2.0], "b": [11, 14, 12]}
     assert_equal_data(result, expected)
     arr = cast("_1DArray", np.array([0, 3, 1]))
     result = df[arr]
@@ -229,12 +221,7 @@ def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
 
 
 @pytest.mark.parametrize(
-    ("row_idx", "col"),
-    [
-        ([0, 2], slice(1)),
-        ((0, 2), slice(1)),
-        (range(2), slice(1)),
-    ],
+    ("row_idx", "col"), [([0, 2], slice(1)), ((0, 2), slice(1)), (range(2), slice(1))]
 )
 def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
     constructor_eager: ConstructorEager,
@@ -246,17 +233,10 @@ def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col
 
 
 @pytest.mark.parametrize(
-    ("row_idx", "col"),
-    [
-        ([0, 2], "a"),
-        ((0, 2), "a"),
-        (range(2), "a"),
-    ],
+    ("row_idx", "col"), [([0, 2], "a"), ((0, 2), "a"), (range(2), "a")]
 )
 def test_get_item_works_with_tuple_and_list_indexing_and_str(
-    constructor_eager: ConstructorEager,
-    row_idx: list[int] | tuple[int] | range,
-    col: str,
+    constructor_eager: ConstructorEager, row_idx: list[int] | tuple[int] | range, col: str
 ) -> None:
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
@@ -352,9 +332,6 @@ def test_horizontal_slice_with_series_2(
 ) -> None:
     if "pandas_pyarrow" in str(constructor_eager):
         # https://github.com/pandas-dev/pandas/issues/61311
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/18556
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)

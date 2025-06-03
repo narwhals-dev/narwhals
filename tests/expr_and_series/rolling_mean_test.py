@@ -10,12 +10,14 @@ import pytest
 from hypothesis import given
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import PANDAS_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 
@@ -69,10 +71,7 @@ def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-@given(
-    center=st.booleans(),
-    values=st.lists(st.floats(-10, 10), min_size=3, max_size=10),
-)
+@given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=3, max_size=10))
 @pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.slow
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")

@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Mapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Mapping, Sequence
 
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
-from tests.utils import POLARS_VERSION
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
-    from tests.utils import Constructor
-    from tests.utils import ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data: dict[str, list[PythonLiteral]] = {
     "a": [8, 2, 1, None],

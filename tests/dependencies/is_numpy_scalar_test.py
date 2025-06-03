@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -30,15 +29,6 @@ def test_is_numpy_scalar_valid(data: _NumpyScalar) -> None:
     assert is_numpy_scalar(data)
 
 
-@pytest.mark.parametrize(
-    "data",
-    [
-        -70,
-        12,
-        94.999,
-        "word",
-        dt.date(2000, 1, 1),
-    ],
-)
+@pytest.mark.parametrize("data", [-70, 12, 94.999, "word", dt.date(2000, 1, 1)])
 def test_is_numpy_scalar_invalid(data: Any) -> None:
     assert not is_numpy_scalar(data)

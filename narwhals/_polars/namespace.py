@@ -1,41 +1,35 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import Literal
-from typing import Mapping
-from typing import Sequence
-from typing import cast
-from typing import overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Literal,
+    Mapping,
+    Sequence,
+    cast,
+    overload,
+)
 
 import polars as pl
 
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
-from narwhals._polars.utils import extract_args_kwargs
-from narwhals._polars.utils import narwhals_to_native_dtype
+from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
-from narwhals.utils import Implementation
-from narwhals.utils import requires
+from narwhals.utils import Implementation, requires
 
 if TYPE_CHECKING:
     from datetime import timezone
 
-    from narwhals._compliant import CompliantSelectorNamespace
-    from narwhals._compliant import CompliantWhen
-    from narwhals._polars.dataframe import Method
-    from narwhals._polars.dataframe import PolarsDataFrame
-    from narwhals._polars.dataframe import PolarsLazyFrame
+    from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
+    from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray
-    from narwhals.typing import TimeUnit
-    from narwhals.typing import _2DArray
-    from narwhals.utils import Version
-    from narwhals.utils import _FullContext
+    from narwhals.typing import Into1DArray, TimeUnit, _2DArray
+    from narwhals.utils import Version, _FullContext
 
 
 class PolarsNamespace:
@@ -108,12 +102,7 @@ class PolarsNamespace:
             raise TypeError(msg)
 
     @overload
-    def from_numpy(
-        self,
-        data: Into1DArray,
-        /,
-        schema: None = ...,
-    ) -> PolarsSeries: ...
+    def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> PolarsSeries: ...
 
     @overload
     def from_numpy(
@@ -197,10 +186,7 @@ class PolarsNamespace:
         )
 
     def concat_str(
-        self,
-        *exprs: PolarsExpr,
-        separator: str,
-        ignore_nulls: bool,
+        self, *exprs: PolarsExpr, separator: str, ignore_nulls: bool
     ) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
 
@@ -235,11 +221,7 @@ class PolarsNamespace:
             )
 
         return self._expr(
-            pl.concat_str(
-                pl_exprs,
-                separator=separator,
-                ignore_nulls=ignore_nulls,
-            ),
+            pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
             backend_version=self._backend_version,
         )

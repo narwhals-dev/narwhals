@@ -5,8 +5,7 @@ import string
 import sys
 from inspect import isfunction
 from pathlib import Path
-from typing import Any
-from typing import Iterator
+from typing import Any, Iterator
 
 import polars as pl
 
