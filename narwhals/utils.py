@@ -1961,21 +1961,36 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         >>> from narwhals.utils import ensure_type
         >>> ensure_type(42, int, float)
         >>> ensure_type("hello", str)
+
         >>> ensure_type("hello", int, param_name="test")
         Traceback (most recent call last):
             ...
         TypeError: Expected 'int', got: 'str'
             test='hello'
                  ^^^^^^^
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> df = pl.DataFrame([[1], [2], [3], [4], [5]], schema=[*"abcde"])
+        >>> ensure_type(df, pd.DataFrame, param_name="df")
+        Traceback (most recent call last):
+            ...
+        TypeError: Expected 'pandas.core.frame.DataFrame', got: 'polars.dataframe.frame.DataFrame'
+            df=polars.dataframe.frame.DataFrame(...)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     """
+
+    def import_path(tp: type[Any]) -> str:
+        module = tp.__module__ if tp.__module__ != "builtins" else ""
+        return f"{module}.{tp.__name__}".lstrip(".")
+
     if not isinstance(obj, valid_types):  # pragma: no cover
-        tp_names = " | ".join(tp.__name__ for tp in valid_types)
-        msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
+        tp_names = " | ".join(import_path(tp) for tp in valid_types)
+        msg = f"Expected {tp_names!r}, got: {import_path(type(obj))!r}"
         if param_name:
             left_pad = " " * 4
             val = repr(obj)
-            if len(val) > 20:  # truncate long reprs
-                val = f"{type(obj).__name__}(...)"
+            if len(val) > 40:  # truncate long reprs
+                val = f"{import_path(type(obj))}(...)"
             assign = f"{left_pad}{param_name}="
             underline = (" " * len(assign)) + ("^" * len(val))
             msg = f"{msg}\n{assign}{val}\n{underline}"
