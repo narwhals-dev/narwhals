@@ -165,43 +165,9 @@ def test_truediv_same_dims(
             (2, 0)
         ]
 )
-def test_div_by_zero_polars(left: int, right: int) -> None:
-    data = {"a": left, "b": right}
-    df = nw.from_dict(data, backend="polars")
-    truediv_result = df["a"] / df["b"] # truediv
-    floordiv_result = df["a"] // df["b"] # floordiv
-
-    assert truediv_result.is_nan()
-    assert floordiv_result.is_nan()
-
-@pytest.mark.parametrize(
-        ("left", "right"),
-        [
-            (-2, 0),
-            (0, 0),
-            (2, 0)
-        ]
-)
-def test_div_by_zero_pandas(left: int, right: int) -> None:
+def test_div_by_zero(left: int, right: int, constructor_eager: ConstructorEager) -> None:
     data = {"a": [left], "b": [right]}
-    df = nw.from_dict(data, backend="pandas")
-    truediv_result = df["a"] / df["b"] # truediv
-    floordiv_result = df["a"] // df["b"] # floordiv
-
-    assert truediv_result.is_nan()
-    assert floordiv_result.is_nan()
-
-@pytest.mark.parametrize(
-        ("left", "right"),
-        [
-            (-2, 0),
-            (0, 0),
-            (2, 0)
-        ]
-)
-def test_div_by_zero_pyarrow(left: int, right: int) -> None:
-    data = {"a": [left], "b": [right]}
-    df = nw.from_dict(data, backend="pyarrow")
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     truediv_result = df["a"] / df["b"] # truediv
     floordiv_result = df["a"] // df["b"] # floordiv
 
