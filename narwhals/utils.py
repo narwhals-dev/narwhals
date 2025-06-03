@@ -1473,27 +1473,14 @@ def deprecate_native_namespace(
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
-    if not isinstance(window_size, int):
-        _type = window_size.__class__.__name__
-        msg = (
-            f"argument 'window_size': '{_type}' object cannot be "
-            "interpreted as an integer"
-        )
-        raise TypeError(msg)
+    ensure_type(window_size, int, param_name="window_size")
+    ensure_type(min_samples, int, type(None), param_name="min_samples")
 
     if window_size < 1:
         msg = "window_size must be greater or equal than 1"
         raise ValueError(msg)
 
     if min_samples is not None:
-        if not isinstance(min_samples, int):
-            _type = min_samples.__class__.__name__
-            msg = (
-                f"argument 'min_samples': '{_type}' object cannot be "
-                "interpreted as an integer"
-            )
-            raise TypeError(msg)
-
         if min_samples < 1:
             msg = "min_samples must be greater or equal than 1"
             raise ValueError(msg)
@@ -1956,6 +1943,40 @@ def inherit_doc(
             raise TypeError(msg)
 
     return decorate
+
+
+def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> None:
+    """Validate that an object is an instance of one or more specified types.
+
+    Parameters:
+        obj: The object to validate.
+        *valid_types: One or more valid types that `obj` is expected to match.
+        param_name: The name of the parameter being validated.
+            Used to improve error message clarity.
+
+    Raises:
+        TypeError: If `obj` is not an instance of any of the provided `valid_types`.
+
+    Examples:
+        >>> from narwhals.utils import ensure_type
+        >>> ensure_type(42, int, float)
+        >>> ensure_type("hello", str)
+        >>> ensure_type("hello", int, param_name="test")
+        Traceback (most recent call last):
+            ...
+        TypeError: Expected 'int', got: 'str'
+            test='hello'
+    """
+    if not isinstance(obj, valid_types):  # pragma: no cover
+        tp_names = " | ".join(tp.__name__ for tp in valid_types)
+        msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
+        if param_name:
+            left_pad = " " * 4
+            val = repr(obj)
+            assign = f"{left_pad}{param_name}="
+            underline = (" " * len(assign)) + ("^" * len(val))
+            msg = f"{msg}\n{assign}{val}\n{underline}"
+        raise TypeError(msg)
 
 
 class _DeferredIterable(Generic[_T]):

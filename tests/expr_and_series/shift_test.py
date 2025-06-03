@@ -73,9 +73,9 @@ def test_shift_multi_chunk_pyarrow() -> None:
 @pytest.mark.parametrize(
     ("n", "context"),
     [
-        (1.0, pytest.raises(TypeError, match="argument `n` must be of type")),
-        ("1", pytest.raises(TypeError, match="argument `n` must be of type")),
-        (None, pytest.raises(TypeError, match="argument `n` must be of type")),
+        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
         (1, nullcontext()),
         (0, nullcontext()),
     ],
@@ -88,9 +88,9 @@ def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
 @pytest.mark.parametrize(
     ("n", "context"),
     [
-        (1.0, pytest.raises(TypeError, match="argument `n` must be of type")),
-        ("1", pytest.raises(TypeError, match="argument `n` must be of type")),
-        (None, pytest.raises(TypeError, match="argument `n` must be of type")),
+        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
         (1, nullcontext()),
         (0, nullcontext()),
     ],

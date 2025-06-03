@@ -25,6 +25,7 @@ from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import (
     _validate_rolling_arguments,
+    ensure_type,
     generate_repr,
     is_compliant_series,
     is_index_selector,
@@ -1017,9 +1018,7 @@ class Series(Generic[IntoSeriesT]):
             2    4.0
             dtype: float64
         """
-        if not isinstance(n, int):
-            msg = f"argument `n` must be of type {int!r}, got type {type(n)!r}"
-            raise TypeError(msg)
+        ensure_type(n, int, param_name="n")
 
         return self._with_compliant(self._compliant_series.shift(n))
 
