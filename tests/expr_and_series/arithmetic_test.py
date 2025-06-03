@@ -157,22 +157,16 @@ def test_truediv_same_dims(
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
-@pytest.mark.parametrize(
-        ("left", "right"),
-        [
-            (-2, 0),
-            (0, 0),
-            (2, 0)
-        ]
-)
+@pytest.mark.parametrize(("left", "right"), [(-2, 0), (0, 0), (2, 0)])
 def test_div_by_zero(left: int, right: int, constructor_eager: ConstructorEager) -> None:
     data = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    truediv_result = df["a"] / df["b"] # truediv
-    floordiv_result = df["a"] // df["b"] # floordiv
+    truediv_result = df["a"] / df["b"]  # truediv
+    floordiv_result = df["a"] // df["b"]  # floordiv
 
     assert truediv_result.is_nan()
     assert floordiv_result.is_nan()
+
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
