@@ -30,7 +30,7 @@ jobs:
       - name: local-install
         run: |
           uv pip install -U -e ".[dask]" --group core-tests --system
-          uv pip install -U --pre duckdb --system
+          uv pip install -U duckdb --system
       - name: generate-data
         run: cd tpch && python generate_data.py
       - name: tpch-tests 
