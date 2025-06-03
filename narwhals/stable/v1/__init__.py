@@ -463,16 +463,13 @@ def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
-@overload
-def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
     obj: NwDataFrame[IntoFrameT]
     | NwLazyFrame[IntoFrameT]
     | NwSeries[IntoSeriesT]
-    | NwExpr
-    | Any,
+    | NwExpr,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
@@ -482,7 +479,8 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    return obj
+    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 @overload
@@ -1425,7 +1423,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return cast("FrameT", _stableify(nw.concat(items, how=how)))
+    return _stableify(nw.concat(items, how=how))
 
 
 def concat_str(
@@ -1533,7 +1531,7 @@ def new_series(
         A new Series
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
+    return _stableify(
         _new_series_impl(name, values, dtype, backend=backend, version=Version.V1)
     )
 
@@ -1569,9 +1567,7 @@ def from_arrow(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
-    )
+    return _stableify(_from_arrow_impl(native_frame, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace()
@@ -1615,9 +1611,7 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
-    )
+    return _stableify(_from_dict_impl(data, schema, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace(required=True)
@@ -1659,7 +1653,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
+    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace(required=True)
@@ -1696,9 +1690,7 @@ def read_csv(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_read_csv_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1738,9 +1730,7 @@ def scan_csv(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_scan_csv_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1777,9 +1767,7 @@ def read_parquet(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_read_parquet_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1833,9 +1821,7 @@ def scan_parquet(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_scan_parquet_impl(source, backend=backend, **kwargs))
 
 
 __all__ = [
