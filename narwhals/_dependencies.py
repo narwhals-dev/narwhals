@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never
 
 
-def import_polars(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_polars(**_: Never):
     if find_spec("polars"):
         import polars as pl
 
@@ -18,7 +18,7 @@ def import_polars(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="polars")
 
 
-def import_pandas(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_pandas(**_: Never):
     if find_spec("pandas"):
         import pandas as pd
 
@@ -27,7 +27,7 @@ def import_pandas(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="pandas")
 
 
-def import_modin(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_modin(**_: Never):
     if find_spec("modin"):
         import modin.pandas
 
@@ -36,7 +36,7 @@ def import_modin(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="modin.pandas")
 
 
-def import_cudf(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
+def import_cudf(**_: Never):  # pragma: no cover
     if find_spec("cudf"):
         import cudf
 
@@ -45,7 +45,7 @@ def import_cudf(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pr
     raise module_not_found(module_name="cudf")
 
 
-def import_pyarrow(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_pyarrow(**_: Never):
     if find_spec("pyarrow"):
         import pyarrow as pa
 
@@ -54,7 +54,7 @@ def import_pyarrow(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="pyarrow")
 
 
-def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
+def import_pyspark(**_: Never):  # pragma: no cover
     if find_spec("pyspark") and find_spec("pyspark.sql"):
         import pyspark.sql
 
@@ -63,7 +63,7 @@ def import_pyspark(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 #
     raise module_not_found(module_name="pyspark.sql")
 
 
-def import_dask(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_dask(**_: Never):
     if find_spec("dask"):
         import dask.dataframe
 
@@ -72,7 +72,7 @@ def import_dask(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="dask.dataframe")
 
 
-def import_duckdb(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_duckdb(**_: Never):
     if find_spec("duckdb"):
         import duckdb
 
@@ -81,7 +81,7 @@ def import_duckdb(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="duckdb")
 
 
-def import_sqlframe(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_sqlframe(**_: Never):
     if find_spec("sqlframe"):
         import sqlframe
 
@@ -90,7 +90,7 @@ def import_sqlframe(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="sqlframe")
 
 
-def import_ibis(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
+def import_ibis(**_: Never):
     if find_spec("ibis"):
         import ibis
 
@@ -99,7 +99,7 @@ def import_ibis(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202
     raise module_not_found(module_name="ibis")
 
 
-def import_pyspark_connect(**_: Never):  # type: ignore[no-untyped-def] # noqa: ANN202 # pragma: no cover
+def import_pyspark_connect(**_: Never):  # pragma: no cover
     if (
         find_spec("pyspark")
         and find_spec("pyspark.sql")
