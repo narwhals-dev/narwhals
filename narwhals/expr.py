@@ -18,7 +18,12 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import _validate_rolling_arguments, flatten, issue_deprecation_warning
+from narwhals.utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    issue_deprecation_warning,
+)
 
 if TYPE_CHECKING:
     from typing import TypeVar
@@ -993,6 +998,8 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
+        ensure_type(n, int, param_name="n")
+
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).shift(n)
         )
