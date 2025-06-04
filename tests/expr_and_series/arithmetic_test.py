@@ -165,14 +165,52 @@ def test_truediv_same_dims(
             (2, 0)
         ]
 )
-def test_div_by_zero(left: int, right: int, constructor_eager: ConstructorEager) -> None:
-    data = {"a": [left], "b": [right]}
+def test_series_div_by_zero(left: int, right: int, constructor_eager: ConstructorEager, request: pytest.FixtureRequest) -> None:
+    data: dict[str,list[int]] = {"a": [left], "b": [right]}
+    div_by_zero_results: set[float|None] = {float("inf"), float("-inf"), None}
     df = nw.from_native(constructor_eager(data), eager_only=True)
+    if "pyarrow" in str(constructor_eager):
+        # pyarrow floordiv cannot divide by zero
+        request.applymarker(pytest.mark.xfail)
+        truediv_result = df["a"] / df["b"] # truediv
+        floordiv_result = df["a"] // df["b"] # floordiv
+        assert truediv_result[0] in div_by_zero_results or truediv_result.is_nan()[0]
+        assert floordiv_result[0] in div_by_zero_results or floordiv_result.is_nan()[0]
     truediv_result = df["a"] / df["b"] # truediv
     floordiv_result = df["a"] // df["b"] # floordiv
+    assert truediv_result[0] in div_by_zero_results or truediv_result.is_nan()[0]
+    assert floordiv_result[0] in div_by_zero_results or floordiv_result.is_nan()[0]
 
-    assert truediv_result.is_nan()
-    assert floordiv_result.is_nan()
+@pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            (-2, 0),
+            (0, 0),
+            (2, 0)
+        ]
+)
+def test_div_by_zero(left: int, right: int, constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    data: dict[str,list[int]] = {"a": [left]}
+    df = nw.from_native(constructor(data))
+    div_by_zero_results: set[float|None] = {float("inf"), float("-inf"), None}
+    if "pyarrow" in str(constructor):
+        # pyarrow floordiv cannot divide by zero
+        request.applymarker(pytest.mark.xfail)
+        truediv_result = df.select(nw.col("a") / right)
+        floordiv_result = df.select(nw.col("a") // right)
+    elif "lazy_constructor" in str(constructor):
+        # if lazy then collect value to enable slicing for comparison
+        truediv_result = df.select(nw.col("a") / right).collect()
+        # ibis floordiv cannot divide by zero
+        if "ibis" in str(constructor):
+            request.applymarker(pytest.mark.xfail)
+            floordiv_result = df.select(nw.col("a") // right).collect()
+        floordiv_result = df.select(nw.col("a") // right).collect()
+    else:
+        truediv_result = df.select(nw.col("a") / right)
+        floordiv_result = df.select(nw.col("a") // right)
+    assert truediv_result["a"][0] in div_by_zero_results or truediv_result["a"].is_nan()[0]
+    assert floordiv_result["a"][0] in div_by_zero_results or floordiv_result["a"].is_nan()[0]
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
