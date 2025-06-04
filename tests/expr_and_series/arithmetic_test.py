@@ -157,6 +157,7 @@ def test_truediv_same_dims(
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
+<<<<<<< HEAD
 @pytest.mark.parametrize(
         ("left", "right"),
         [
@@ -180,6 +181,14 @@ def test_series_div_by_zero(left: int, right: int, constructor_eager: Constructo
     floordiv_result = df["a"] // df["b"] # floordiv
     assert truediv_result[0] in div_by_zero_results or truediv_result.is_nan()[0]
     assert floordiv_result[0] in div_by_zero_results or floordiv_result.is_nan()[0]
+=======
+@pytest.mark.parametrize(("left", "right"), [(-2, 0), (0, 0), (2, 0)])
+def test_div_by_zero(left: int, right: int, constructor_eager: ConstructorEager) -> None:
+    data = {"a": [left], "b": [right]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    truediv_result = df["a"] / df["b"]  # truediv
+    floordiv_result = df["a"] // df["b"]  # floordiv
+>>>>>>> 6e6ee7917693e2c1c6683c51e01579b13173935a
 
 @pytest.mark.parametrize(
         ("left", "right"),
@@ -211,6 +220,7 @@ def test_div_by_zero(left: int, right: int, constructor: Constructor, request: p
         floordiv_result = df.select(nw.col("a") // right)
     assert truediv_result["a"][0] in div_by_zero_results or truediv_result["a"].is_nan()[0]
     assert floordiv_result["a"][0] in div_by_zero_results or floordiv_result["a"].is_nan()[0]
+
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
