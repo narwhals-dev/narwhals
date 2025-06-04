@@ -32,6 +32,7 @@ from narwhals.functions import (
     _read_parquet_impl,
     _scan_csv_impl,
     _scan_parquet_impl,
+    concat,
     get_level,
     show_versions,
     when as nw_when,
@@ -95,9 +96,7 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import FrameT
     from narwhals.typing import (
-        ConcatMethod,
         IntoExpr,
         IntoFrame,
         IntoLazyFrameT,
@@ -1408,29 +1407,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         A new expression.
     """
     return _stableify(nw.max_horizontal(*exprs))
-
-
-def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
-    """Concatenate multiple DataFrames, LazyFrames into a single entity.
-
-    Arguments:
-        items: DataFrames, LazyFrames to concatenate.
-        how: concatenating strategy
-
-            - vertical: Concatenate vertically. Column names must match.
-            - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values. This is only supported
-                when all inputs are (eager) DataFrames.
-            - diagonal: Finds a union between the column schemas and fills missing column
-                values with null.
-
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
-
-    Raises:
-        TypeError: The items to concatenate should either all be eager, or all lazy
-    """
-    return _stableify(nw.concat(items, how=how))
 
 
 def concat_str(
