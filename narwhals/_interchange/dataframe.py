@@ -73,23 +73,10 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     raise AssertionError(msg)
 
 
-class WrapInterchangeFrame:
-    def __init__(self, interchange_frame: InterchangeFrame) -> None:
-        self._interchange_frame = interchange_frame
-
-    def __dataframe__(self) -> InterchangeFrame:
-        return self._interchange_frame
-
-
 class InterchangeFrame:
     def __init__(self, df: DataFrameLike, version: Version) -> None:
         self._interchange_frame = df.__dataframe__()
         self._version = version
-
-    def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            WrapInterchangeFrame(self._interchange_frame), version=version
-        )
 
     def __narwhals_dataframe__(self) -> Self:
         return self

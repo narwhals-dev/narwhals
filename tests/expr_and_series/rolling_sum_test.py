@@ -184,26 +184,10 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             ),
         ),
         (
-            4.2,
-            None,
-            pytest.raises(
-                TypeError,
-                match="argument 'window_size': 'float' object cannot be interpreted as an integer",
-            ),
-        ),
-        (
             2,
             -1,
             pytest.raises(
                 ValueError, match="min_samples must be greater or equal than 1"
-            ),
-        ),
-        (
-            2,
-            4.2,
-            pytest.raises(
-                TypeError,
-                match="argument 'min_samples': 'float' object cannot be interpreted as an integer",
             ),
         ),
         (
@@ -213,6 +197,16 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
         ),
     ],
 )
@@ -244,26 +238,10 @@ def test_rolling_sum_expr_invalid_params(
             ),
         ),
         (
-            4.2,
-            None,
-            pytest.raises(
-                TypeError,
-                match="argument 'window_size': 'float' object cannot be interpreted as an integer",
-            ),
-        ),
-        (
             2,
             -1,
             pytest.raises(
                 ValueError, match="min_samples must be greater or equal than 1"
-            ),
-        ),
-        (
-            2,
-            4.2,
-            pytest.raises(
-                TypeError,
-                match="argument 'min_samples': 'float' object cannot be interpreted as an integer",
             ),
         ),
         (
@@ -273,6 +251,16 @@ def test_rolling_sum_expr_invalid_params(
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
         ),
     ],
 )
