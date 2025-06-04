@@ -420,8 +420,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> s_native = pd.Series(["+1", "-23", "456", "123456"])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.zfill(5).to_native()
-            0    000+1
-            1    00-23
+            0    +0001
+            1    -0023
             2    00456
             3   123456
             dtype: object
