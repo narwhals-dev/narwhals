@@ -19,13 +19,13 @@ def test_interchange() -> None:
 
     with pytest.raises(
         NotImplementedError,
-        match="Cannot access native namespace for metadata-only dataframes with unknown backend",
+        match="Cannot access native namespace for interchange-level dataframes with unknown backend",
     ):
         df.__native_namespace__()
 
     with pytest.raises(
         NotImplementedError,
-        match="Cannot access native namespace for metadata-only series with unknown backend",
+        match="Cannot access native namespace for interchange-level series with unknown backend",
     ):
         series.__native_namespace__()
 
