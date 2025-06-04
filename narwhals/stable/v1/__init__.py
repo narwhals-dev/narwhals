@@ -121,6 +121,7 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 class DataFrame(NwDataFrame[IntoDataFrameT]):
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -171,7 +172,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
-        return super().lazy(backend=backend)  # type: ignore[return-value]
+        return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -189,10 +190,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
-        return super().is_duplicated()  # type: ignore[return-value]
+        return _stableify(super().is_duplicated())
 
     def is_unique(self) -> Series[Any]:
-        return super().is_unique()  # type: ignore[return-value]
+        return _stableify(super().is_unique())
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -206,6 +207,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 class LazyFrame(NwLazyFrame[IntoFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     @property
@@ -243,7 +245,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     def collect(
         self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
-        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
+        return _stableify(super().collect(backend=backend, **kwargs))
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -253,7 +255,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return self.select(all()._l1_norm())
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+    def tail(self, n: int = 5) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -284,6 +286,7 @@ class Series(NwSeries[IntoSeriesT]):
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
+        assert series._version is Version.V1  # noqa: S101
         super().__init__(series, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -294,7 +297,7 @@ class Series(NwSeries[IntoSeriesT]):
         return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
-        return super().to_frame()  # type: ignore[return-value]
+        return _stableify(super().to_frame())
 
     def value_counts(
         self,
@@ -304,8 +307,10 @@ class Series(NwSeries[IntoSeriesT]):
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        return super().value_counts(  # type: ignore[return-value]
-            sort=sort, parallel=parallel, name=name, normalize=normalize
+        return _stableify(
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
         )
 
     def hist(
@@ -323,8 +328,10 @@ class Series(NwSeries[IntoSeriesT]):
             "an unstable feature."
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().hist(  # type: ignore[return-value]
-            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+        return _stableify(
+            super().hist(
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
         )
 
 
@@ -462,16 +469,13 @@ def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
-@overload
-def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
     obj: NwDataFrame[IntoFrameT]
     | NwLazyFrame[IntoFrameT]
     | NwSeries[IntoSeriesT]
-    | NwExpr
-    | Any,
+    | NwExpr,
 ) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
@@ -481,7 +485,8 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    return obj
+    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 @overload
@@ -962,7 +967,7 @@ def from_native(  # noqa: D417
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
 
-    result = _from_native_impl(
+    return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
@@ -971,7 +976,6 @@ def from_native(  # noqa: D417
         allow_series=allow_series,
         version=Version.V1,
     )
-    return _stableify(result)  # type: ignore[no-any-return]
 
 
 @overload
@@ -1510,7 +1514,7 @@ def new_series(
         A new Series
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
+    return _stableify(
         _new_series_impl(name, values, dtype, backend=backend, version=Version.V1)
     )
 
@@ -1546,9 +1550,7 @@ def from_arrow(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
-    )
+    return _stableify(_from_arrow_impl(native_frame, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace()
@@ -1592,9 +1594,7 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
-    )
+    return _stableify(_from_dict_impl(data, schema, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace(required=True)
@@ -1636,7 +1636,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
+    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))
 
 
 @deprecate_native_namespace(required=True)
@@ -1673,9 +1673,7 @@ def read_csv(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_read_csv_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1715,9 +1713,7 @@ def scan_csv(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_scan_csv_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1754,9 +1750,7 @@ def read_parquet(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_read_parquet_impl(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1810,9 +1804,7 @@ def scan_parquet(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(_scan_parquet_impl(source, backend=backend, **kwargs))
 
 
 __all__ = [

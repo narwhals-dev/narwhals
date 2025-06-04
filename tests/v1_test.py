@@ -156,6 +156,13 @@ def test_to_dict(constructor_eager: ConstructorEager) -> None:
     assert result == expected
 
 
+def test_tail(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).lazy()
+    result = df.tail(3)
+    expected = {"a": [1, 2, 3]}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.filterwarnings(
     "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
 )
