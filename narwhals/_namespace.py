@@ -203,7 +203,9 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
-    def from_backend(cls, backend: ModuleType, /) -> Namespace[CompliantNamespaceAny]: ...
+    def from_backend(
+        cls, backend: IntoBackend, /
+    ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence, TypeVar, cast
 
 import pytest
 
@@ -14,11 +14,16 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, assert_type
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
+    from narwhals._compliant import CompliantNamespace
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._namespace import BackendName, _EagerAllowed
+    from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
     from narwhals.typing import _2DArray
     from tests.utils import Constructor
+
+ExprT = TypeVar("ExprT", bound="CompliantExprAny")
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
 
@@ -30,6 +35,30 @@ _BACKENDS = (*_EAGER_ALLOWED, *_LAZY_ONLY)
 eager_allowed = pytest.mark.parametrize("backend", _EAGER_ALLOWED)
 lazy_allowed = pytest.mark.parametrize("backend", _LAZY_ALLOWED)
 backends = pytest.mark.parametrize("backend", _BACKENDS)
+
+
+def _compliant_len(ns: CompliantNamespace[Any, ExprT]) -> ExprT:
+    return ns.len()
+
+
+@backends
+def test_preserve_type_var(backend: BackendName) -> None:
+    # If we have multiple *potential* backends and together they don't hit an `@overload`
+    # we should fall back to `Any`.
+    # However when we have a *single* backend, we should be able to yoink it's `TypeVar`s
+    # out for use elsewhere.
+    pytest.importorskip(backend)
+    from_backend = Version.MAIN.namespace.from_backend
+    namespace_any = from_backend(backend).compliant
+    expr_any = _compliant_len(namespace_any)
+    assert expr_any
+    if TYPE_CHECKING:
+        # NOTE: If this `Any` fails due to (future) improved inference in a type-checker,
+        # the detail of this being `Any` can be swapped out for the new type
+        assert_type(expr_any, Any)
+        namespace_pandas = from_backend("pandas").compliant
+        expr_pandas = _compliant_len(namespace_pandas)
+        assert_type(expr_pandas, PandasLikeExpr)
 
 
 @backends
