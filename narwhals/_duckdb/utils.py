@@ -284,12 +284,3 @@ def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     else:
         by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
     return f"order by {by_sql}"
-
-
-def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
-    # Use this for extra (possibly redundant) validation in places where we
-    # use SQLExpression, as an extra guard against unsafe inputs.
-    if not isinstance(obj, valid_types):  # pragma: no cover
-        tp_names = " | ".join(tp.__name__ for tp in valid_types)
-        msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
-        raise TypeError(msg)

@@ -652,13 +652,13 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
     if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
         raise TypeError(msg)
     if (pl := get_polars()) is not None and isinstance(
         arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
     ):
         msg = (
-            f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
+            f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
             "- forgot a `nw.from_native` somewhere?\n"
             "- used `pl.col` instead of `nw.col`?"
@@ -1438,30 +1438,18 @@ def deprecate_native_namespace(
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
+    ensure_type(window_size, int, param_name="window_size")
+    ensure_type(min_samples, int, type(None), param_name="min_samples")
+
     if window_size < 1:
         msg = "window_size must be greater or equal than 1"
         raise ValueError(msg)
-
-    if not isinstance(window_size, int):
-        _type = window_size.__class__.__name__
-        msg = (
-            f"argument 'window_size': '{_type}' object cannot be "
-            "interpreted as an integer"
-        )
-        raise TypeError(msg)
 
     if min_samples is not None:
         if min_samples < 1:
             msg = "min_samples must be greater or equal than 1"
             raise ValueError(msg)
 
-        if not isinstance(min_samples, int):
-            _type = min_samples.__class__.__name__
-            msg = (
-                f"argument 'min_samples': '{_type}' object cannot be "
-                "interpreted as an integer"
-            )
-            raise TypeError(msg)
         if min_samples > window_size:
             msg = "`min_samples` must be less or equal than `window_size`"
             raise InvalidOperationError(msg)
@@ -1675,7 +1663,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
-        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
+        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
         raise ModuleNotFoundError(msg)
 
 
@@ -1920,6 +1908,59 @@ def inherit_doc(
             raise TypeError(msg)
 
     return decorate
+
+
+def qualified_type_name(obj: object | type[Any], /) -> str:
+    tp = obj if isinstance(obj, type) else type(obj)
+    module = tp.__module__ if tp.__module__ != "builtins" else ""
+    return f"{module}.{tp.__name__}".lstrip(".")
+
+
+def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> None:
+    """Validate that an object is an instance of one or more specified types.
+
+    Parameters:
+        obj: The object to validate.
+        *valid_types: One or more valid types that `obj` is expected to match.
+        param_name: The name of the parameter being validated.
+            Used to improve error message clarity.
+
+    Raises:
+        TypeError: If `obj` is not an instance of any of the provided `valid_types`.
+
+    Examples:
+        >>> from narwhals.utils import ensure_type
+        >>> ensure_type(42, int, float)
+        >>> ensure_type("hello", str)
+
+        >>> ensure_type("hello", int, param_name="test")
+        Traceback (most recent call last):
+            ...
+        TypeError: Expected 'int', got: 'str'
+            test='hello'
+                 ^^^^^^^
+        >>> import polars as pl
+        >>> import pandas as pd
+        >>> df = pl.DataFrame([[1], [2], [3], [4], [5]], schema=[*"abcde"])
+        >>> ensure_type(df, pd.DataFrame, param_name="df")
+        Traceback (most recent call last):
+            ...
+        TypeError: Expected 'pandas.core.frame.DataFrame', got: 'polars.dataframe.frame.DataFrame'
+            df=polars.dataframe.frame.DataFrame(...)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    """
+    if not isinstance(obj, valid_types):  # pragma: no cover
+        tp_names = " | ".join(qualified_type_name(tp) for tp in valid_types)
+        msg = f"Expected {tp_names!r}, got: {qualified_type_name(obj)!r}"
+        if param_name:
+            left_pad = " " * 4
+            val = repr(obj)
+            if len(val) > 40:  # truncate long reprs
+                val = f"{qualified_type_name(obj)}(...)"
+            assign = f"{left_pad}{param_name}="
+            underline = (" " * len(assign)) + ("^" * len(val))
+            msg = f"{msg}\n{assign}{val}\n{underline}"
+        raise TypeError(msg)
 
 
 class _DeferredIterable(Generic[_T]):
