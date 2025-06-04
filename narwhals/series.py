@@ -25,6 +25,7 @@ from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
 from narwhals.utils import (
     _validate_rolling_arguments,
+    ensure_type,
     generate_repr,
     is_compliant_series,
     is_index_selector,
@@ -72,13 +73,9 @@ class Series(Generic[IntoSeriesT]):
             ```
 
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
-            create a series via [`narwhals.new_series`][]:
+            create a series via [`narwhals.new_series`][], e.g.:
             ```py
-            narwhals.new_series(
-                name=name,
-                values=values,
-                backend=narwhals.get_native_namespace(another_object),
-            )
+            narwhals.new_series(name="price", values=[10.5, 9.4, 1.2], backend="pandas")
             ```
     """
 
@@ -1021,6 +1018,8 @@ class Series(Generic[IntoSeriesT]):
             2    4.0
             dtype: float64
         """
+        ensure_type(n, int, param_name="n")
+
         return self._with_compliant(self._compliant_series.shift(n))
 
     def sample(

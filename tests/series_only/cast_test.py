@@ -115,7 +115,7 @@ def test_cast_to_enum_vmain(
     # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
-        for backend in ["pyarrow_table", "sqlframe", "pyspark", "modin", "ibis"]
+        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
