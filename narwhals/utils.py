@@ -685,13 +685,13 @@ def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
     if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {type(arg)}. Perhaps you forgot a `nw.from_native` somewhere?"
+        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
         raise TypeError(msg)
     if (pl := get_polars()) is not None and isinstance(
         arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
     ):
         msg = (
-            f"Expected Narwhals class or scalar, got: {type(arg)}.\n\n"
+            f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
             "- forgot a `nw.from_native` somewhere?\n"
             "- used `pl.col` instead of `nw.col`?"
@@ -1698,7 +1698,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
-        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
+        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
         raise ModuleNotFoundError(msg)
 
 
@@ -1945,6 +1945,12 @@ def inherit_doc(
     return decorate
 
 
+def qualified_type_name(obj: object | type[Any], /) -> str:
+    tp = obj if isinstance(obj, type) else type(obj)
+    module = tp.__module__ if tp.__module__ != "builtins" else ""
+    return f"{module}.{tp.__name__}".lstrip(".")
+
+
 def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> None:
     """Validate that an object is an instance of one or more specified types.
 
@@ -1978,19 +1984,14 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
             df=polars.dataframe.frame.DataFrame(...)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     """
-
-    def import_path(tp: type[Any]) -> str:
-        module = tp.__module__ if tp.__module__ != "builtins" else ""
-        return f"{module}.{tp.__name__}".lstrip(".")
-
     if not isinstance(obj, valid_types):  # pragma: no cover
-        tp_names = " | ".join(import_path(tp) for tp in valid_types)
-        msg = f"Expected {tp_names!r}, got: {import_path(type(obj))!r}"
+        tp_names = " | ".join(qualified_type_name(tp) for tp in valid_types)
+        msg = f"Expected {tp_names!r}, got: {qualified_type_name(obj)!r}"
         if param_name:
             left_pad = " " * 4
             val = repr(obj)
             if len(val) > 40:  # truncate long reprs
-                val = f"{import_path(type(obj))}(...)"
+                val = f"{qualified_type_name(obj)}(...)"
             assign = f"{left_pad}{param_name}="
             underline = (" " * len(assign)) + ("^" * len(val))
             msg = f"{msg}\n{assign}{val}\n{underline}"
