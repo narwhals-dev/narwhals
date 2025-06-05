@@ -180,6 +180,11 @@ def new_series(
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
+    Warning:
+        `LazyFrame.gather_every` is deprecated and will be removed in a future version.
+        Note: this will remain available in `narwhals.stable.v1`.
+        See [stable api](../backcompat.md/) for more information.
+
     Arguments:
         name: Name of resulting Series.
         values: Values of make Series from.
@@ -206,7 +211,7 @@ def new_series(
 
     Examples:
         >>> import pandas as pd
-        >>> import narwhals as nw
+        >>> import narwhals.stable.v1 as nw
         >>>
         >>> values = [4, 1, 2, 3]
         >>> nw.new_series(name="a", values=values, dtype=nw.Int32, backend=pd)

@@ -109,6 +109,43 @@ class Series(Generic[IntoSeriesT]):
         *,
         backend: ModuleType | Implementation | str,
     ) -> Series[Any]:
+        """Instantiate Narwhals Series from iterable (e.g. list or array).
+
+        Arguments:
+            name: Name of resulting Series.
+            values: Values of make Series from.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> values = [4, 1, 2, 3]
+            >>> nw.Series.from_iterable(
+            ...     name="a", values=values, dtype=nw.Int32, backend=pd
+            ... )
+            ┌─────────────────────┐
+            |   Narwhals Series   |
+            |---------------------|
+            |0    4               |
+            |1    1               |
+            |2    2               |
+            |3    3               |
+            |Name: a, dtype: int32|
+            └─────────────────────┘
+        """
         return _new_series_impl(name, values, dtype, backend=backend)
 
     @property
