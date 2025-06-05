@@ -248,7 +248,7 @@ def _new_series_impl(
     msg = (
         f"{implementation} support in Narwhals is lazy-only, but `new_series` is an eager-only function.\n\n"
         "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.new_series('a', [1,2,3], backend='pyarrow').lazy('{implementation}')"
+        f"    nw.new_series('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
     )
     raise ValueError(msg)
 
