@@ -45,7 +45,5 @@ def test_new_series_dask() -> None:
     import dask.dataframe as dd
 
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
-    with pytest.raises(
-        NotImplementedError, match="Dask support in Narwhals is lazy-only"
-    ):
+    with pytest.raises(ValueError, match="lazy-only"):
         nw.new_series("a", [1, 2, 3], backend=nw.get_native_namespace(df))
