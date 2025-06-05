@@ -43,6 +43,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 from narwhals._plan.common import Immutable
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -270,12 +271,29 @@ def replace_wildcard_with_column(origin: ExprIR, /, column_name: str) -> ExprIR:
     raise NotImplementedError
 
 
+# TODO @dangotbanned: `meta.get_single_leaf_name`
 def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
     """`KeepName` and `RenameAlias`.
 
     Reuses some of the `meta` functions to traverse the names.
     """
-    raise NotImplementedError
+    from narwhals._plan import expr, meta
+
+    if meta.has_expr_ir(origin, expr.KeepName, expr.RenameAlias):
+        if isinstance(origin, expr.KeepName):
+            parent = origin.expr
+            roots = parent.meta.root_names()
+            alias = next(iter(roots))
+            return expr.Alias(expr=parent, name=alias)
+        elif isinstance(origin, expr.RenameAlias):
+            parent = origin.expr
+            leaf_name = meta.get_single_leaf_name(parent)
+            alias = origin.function(leaf_name)
+            return expr.Alias(expr=parent, name=alias)
+        else:
+            msg = "`keep`, `suffix`, `prefix` should be last expression"
+            raise InvalidOperationError(msg)
+    return origin
 
 
 def replace_dtype_or_index_with_column(

@@ -176,6 +176,25 @@ def _has_multiple_outputs(ir: ExprIR) -> bool:
     return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.SelectorIR, expr.All))
 
 
+def has_expr_ir(ir: ExprIR, *matches: type[ExprIR]) -> bool:
+    """Return True if any node in the tree is in type `matches`.
+
+    Based on [`polars_plan::utils::has_expr`]
+
+    [`polars_plan::utils::has_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L70-L77
+    """
+    return any(isinstance(e, matches) for e in ir.iter_right())
+
+
+# TODO @dangotbanned: Adapt this one for `rewrite_special_aliases`
+def get_single_leaf_name(ir: ExprIR) -> str:
+    """Not yet implemented!
+
+    https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168.
+    """
+    raise NotImplementedError
+
+
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     from narwhals._plan import expr
     from narwhals._plan.literal import ScalarLiteral
