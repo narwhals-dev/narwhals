@@ -61,7 +61,7 @@ def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None
 def test_from_numpy_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.from_numpy(arr, backend="duckdb")  # type: ignore[arg-type]
+        nw.from_numpy(arr, backend="duckdb")
 
 
 def test_from_numpy_v1(constructor_eager: ConstructorEager) -> None:
