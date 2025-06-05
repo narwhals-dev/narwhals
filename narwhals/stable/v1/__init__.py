@@ -1474,6 +1474,12 @@ def new_series(
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
+    Warning:
+        `new_series` is deprecated and will be removed in a future version.
+        Please use `Series.from_iterable` instead.
+        Note: this will remain available in `narwhals.stable.v1`.
+        See [stable api](../backcompat.md/) for more information.
+
     Arguments:
         name: Name of resulting Series.
         values: Values of make Series from.

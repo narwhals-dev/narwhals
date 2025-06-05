@@ -181,7 +181,8 @@ def new_series(
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
     Warning:
-        `LazyFrame.gather_every` is deprecated and will be removed in a future version.
+        `new_series` is deprecated and will be removed in a future version.
+        Please use `Series.from_iterable` instead.
         Note: this will remain available in `narwhals.stable.v1`.
         See [stable api](../backcompat.md/) for more information.
 
