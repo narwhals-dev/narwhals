@@ -80,31 +80,6 @@ class IRMetaNamespace(IRNamespace):
         """Get the root column names."""
         return _expr_to_leaf_column_names(self._ir)
 
-    # NOTE: Seems too complex to do whilst keeping things immutable
-    def undo_aliases(self) -> ExprIR:
-        """Investigate components.
-
-        Seems like it unnests each of these:
-        - `Alias.expr`
-        - `KeepName.expr`
-        - `RenameAlias.expr`
-
-        Notes:
-        - [`meta.undo_aliases`]
-        - [`Expr.map_expr`]
-        - [`TreeWalker.rewrite`]
-
-        [`Expr.map_expr`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/iterator.rs#L146-L149
-        [`meta.undo_aliases`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L45-L53
-        [`TreeWalker.rewrite`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/plans/visitor/visitors.rs#L46-L68
-        """
-        raise NotImplementedError
-
-    # NOTE: Less important for us, but maybe nice to have
-    def pop(self) -> list[ExprIR]:
-        """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L14-L25."""
-        raise NotImplementedError
-
 
 def _expr_to_leaf_column_names(ir: ExprIR) -> list[str]:
     """After a lot of indirection, [root_names] resolves [here].
