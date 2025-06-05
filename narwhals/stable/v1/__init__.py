@@ -21,7 +21,7 @@ from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFram
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import concat, get_level, show_versions
+from narwhals.functions import _new_series_impl, concat, get_level, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -106,6 +106,7 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 class DataFrame(NwDataFrame[IntoDataFrameT]):
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -191,6 +192,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 class LazyFrame(NwLazyFrame[IntoFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     @property
@@ -269,6 +271,7 @@ class Series(NwSeries[IntoSeriesT]):
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
+        assert series._version is Version.V1  # noqa: S101
         super().__init__(series, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -467,7 +470,7 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    msg = f"unreachable code, got: {type(obj)}"  # pragma: no cover
+    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
     raise AssertionError(msg)
 
 
@@ -1496,7 +1499,7 @@ def new_series(
         A new Series
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(nw_f.new_series(name, values, dtype, backend=backend))
+    return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
 @deprecate_native_namespace(required=True)

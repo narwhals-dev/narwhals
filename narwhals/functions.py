@@ -220,6 +220,16 @@ def new_series(
         └─────────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
+    return _new_series_impl(name, values, dtype, backend=backend)
+
+
+def _new_series_impl(
+    name: str,
+    values: Any,
+    dtype: DType | type[DType] | None = None,
+    *,
+    backend: ModuleType | Implementation | str,
+) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
