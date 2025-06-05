@@ -329,7 +329,7 @@ def from_dict(
     msg = (
         f"{implementation} support in Narwhals is lazy-only, but `from_dict` is an eager-only function.\n\n"
         "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_dict({'a': [1, 2]}, backend='pyarrow').lazy('{implementation}')"
+        f"    nw.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
     )
     raise ValueError(msg)
 
