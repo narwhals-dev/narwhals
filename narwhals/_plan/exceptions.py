@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals.exceptions import (
+    ColumnNotFoundError,
     ComputeError,
     DuplicateError,
     InvalidIntoExprError,
@@ -163,3 +164,16 @@ def is_iterable_polars_error(
 def alias_duplicate_error(expr: ExprIR, name: str) -> DuplicateError:
     msg = f"Cannot apply alias {name!r} to multi-output expression:\n{expr!r}"
     return DuplicateError(msg)
+
+
+def column_not_found_error(
+    subset: Iterable[str], /, available: Iterable[str]
+) -> ColumnNotFoundError:
+    """Similar to `utils.check_columns_exist`, but when we already know there are missing.
+
+    Signature differs to allow passing in a schema to `available`.
+    That form is what we're working with here.
+    """
+    available = tuple(available)
+    missing = set(subset).difference(available)
+    return ColumnNotFoundError.from_missing_and_available_column_names(missing, available)

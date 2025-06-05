@@ -10,6 +10,7 @@ from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import ExprIR, SelectorIR, _field_str, is_non_nested_literal
 from narwhals._plan.exceptions import (
     alias_duplicate_error,
+    column_not_found_error,
     function_expr_invalid_operation_error,
 )
 from narwhals._plan.name import KeepName, RenameAlias
@@ -30,7 +31,7 @@ from narwhals._plan.typing import (
 from narwhals.utils import flatten
 
 if t.TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches  # noqa: F401
@@ -68,6 +69,12 @@ __all__ = [
     "Ternary",
     "WindowExpr",
 ]
+
+_Schema: TypeAlias = "t.Mapping[str, DType]"
+"""Equivalent to `expr_expansion.FrozenSchema`.
+
+Using temporarily before adding caching into the mix.
+"""
 
 
 class Alias(ExprIR):
@@ -110,7 +117,23 @@ class Column(ExprIR):
         return plx.col(self.name)
 
 
-class Columns(ExprIR):
+def _col(name: str, /) -> Column:
+    return Column(name=name)
+
+
+def _cols(names: t.Iterable[str], /) -> Seq[Column]:
+    return tuple(_col(name) for name in names)
+
+
+class _ColumnSelection(ExprIR):
+    """Nodes which can resolve to `Column`(s) with a `Schema`."""
+
+    def expand_columns(self, schema: _Schema, /) -> Seq[Column]:
+        """Transform selection in context of `schema` into simpler nodes."""
+        raise NotImplementedError
+
+
+class Columns(_ColumnSelection):
     __slots__ = ("names",)
 
     names: Seq[str]
@@ -120,6 +143,83 @@ class Columns(ExprIR):
 
     def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
         return plx.col(*self.names)
+
+    def expand_columns(self, schema: _Schema) -> Seq[Column]:
+        if set(schema).issuperset(self.names):
+            return _cols(self.names)
+        raise column_not_found_error(self.names, schema)
+
+
+class Nth(_ColumnSelection):
+    __slots__ = ("index",)
+
+    index: int
+
+    def __repr__(self) -> str:
+        return f"nth({self.index})"
+
+    def expand_columns(self, schema: _Schema) -> Seq[Column]:
+        name = tuple(schema)[self.index]
+        return (_col(name),)
+
+
+class IndexColumns(_ColumnSelection):
+    """Renamed from `IndexColumn`.
+
+    `Nth` provides the singular variant.
+
+    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
+    """
+
+    __slots__ = ("indices",)
+
+    indices: Seq[int]
+
+    def __repr__(self) -> str:
+        return f"index_columns({self.indices!r})"
+
+    def expand_columns(self, schema: _Schema) -> Seq[Column]:
+        names = tuple(schema)
+        return _cols(names[index] for index in self.indices)
+
+
+class All(_ColumnSelection):
+    """Aka Wildcard (`pl.all()` or `pl.col("*")`).
+
+    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L137
+    """
+
+    def __repr__(self) -> str:
+        return "all()"
+
+    def expand_columns(self, schema: _Schema) -> Seq[Column]:
+        return _cols(schema)
+
+
+class Exclude(_ColumnSelection):
+    __slots__ = ("expr", "names")
+
+    expr: ExprIR
+    """Default is `all()`."""
+    names: Seq[str]
+    """Excluded names.
+
+    - We're using a `frozenset` in main.
+    - Might want to switch to that later.
+    """
+
+    @staticmethod
+    def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
+        return Exclude(expr=expr, names=tuple(flatten(names)))
+
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.exclude({list(self.names)!r})"
+
+    def expand_columns(self, schema: _Schema) -> Seq[Column]:
+        if not isinstance(self.expr, All):
+            msg = f"Only {All()!r} is currently supported with `exclude()`"
+            raise NotImplementedError(msg)
+        return _cols(name for name in schema if name not in self.names)
 
 
 class Literal(ExprIR, t.Generic[LiteralT]):
@@ -440,60 +540,6 @@ class Len(ExprIR):
 
     def __repr__(self) -> str:
         return "len()"
-
-
-class Exclude(ExprIR):
-    __slots__ = ("expr", "names")
-
-    expr: ExprIR
-    """Default is `all()`."""
-    names: Seq[str]
-    """We're using a `frozenset` in main.
-
-    Might want to switch to that later.
-    """
-
-    @staticmethod
-    def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        return Exclude(expr=expr, names=tuple(flatten(names)))
-
-    def __repr__(self) -> str:
-        return f"{self.expr!r}.exclude({list(self.names)!r})"
-
-
-class Nth(ExprIR):
-    __slots__ = ("index",)
-
-    index: int
-
-    def __repr__(self) -> str:
-        return f"nth({self.index})"
-
-
-class IndexColumns(ExprIR):
-    """Renamed from `IndexColumn`.
-
-    `Nth` provides the singular variant.
-
-    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
-    """
-
-    __slots__ = ("indices",)
-
-    indices: Seq[int]
-
-    def __repr__(self) -> str:
-        return f"index_columns({self.indices!r})"
-
-
-class All(ExprIR):
-    """Aka Wildcard (`pl.all()` or `pl.col("*")`).
-
-    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L137
-    """
-
-    def __repr__(self) -> str:
-        return "all()"
 
 
 class RootSelector(SelectorIR):

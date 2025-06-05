@@ -196,18 +196,7 @@ def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
 def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     from narwhals._plan import expr
 
-    if isinstance(
-        ir,
-        (
-            expr.Column,
-            expr.Columns,
-            expr.Exclude,
-            expr.Nth,
-            expr.IndexColumns,
-            expr.SelectorIR,
-            expr.All,
-        ),
-    ):
+    if isinstance(ir, (expr.Column, expr._ColumnSelection, expr.SelectorIR)):
         return True
     if isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias)):
         return allow_aliasing
