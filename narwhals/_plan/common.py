@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import FunctionExpr
-    from narwhals._plan.lists import IRListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.dtypes import DType
@@ -233,12 +232,6 @@ class ExprIR(Immutable):
         from narwhals._plan.meta import IRMetaNamespace
 
         return IRMetaNamespace(_ir=self)
-
-    @property
-    def list(self) -> IRListNamespace:
-        from narwhals._plan.lists import IRListNamespace
-
-        return IRListNamespace(_ir=self)
 
 
 class SelectorIR(ExprIR):
