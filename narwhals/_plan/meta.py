@@ -13,9 +13,7 @@ from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator
-
-    import polars as pl
+    from typing import Iterator
 
     from narwhals._plan.common import ExprIR
 
@@ -195,38 +193,3 @@ def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     if isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias)):
         return allow_aliasing
     return False
-
-
-def polars_expr_metadata(expr: pl.Expr) -> dict[str, Any]:
-    """Gather all metadata for a native `Expr`.
-
-    Eventual goal would be that a `nw.Expr` matches a `pl.Expr` in as much of this as possible.
-    """
-    return {
-        "has_multiple_outputs": expr.meta.has_multiple_outputs(),
-        "is_column": expr.meta.is_column(),
-        "is_regex_projection": expr.meta.is_regex_projection(),
-        "is_column_selection": expr.meta.is_column_selection(),
-        "is_column_selection(allow_aliasing=True)": expr.meta.is_column_selection(
-            allow_aliasing=True
-        ),
-        "is_literal": expr.meta.is_literal(),
-        "is_literal(allow_aliasing=True)": expr.meta.is_literal(allow_aliasing=True),
-        "output_name": expr.meta.output_name(raise_if_undetermined=False),
-        "root_names": expr.meta.root_names(),
-        "pop": expr.meta.pop(),
-        "undo_aliases": expr.meta.undo_aliases(),
-        "expr": expr,
-    }
-
-
-def polars_expr_to_dict(expr: pl.Expr) -> dict[str, Any]:
-    """Serialize a native `Expr`, roundtrip back to `dict`.
-
-    Using to inspect [`FunctionOptions`] and ensure we combine them in a similar way.
-
-    [`FunctionOptions`]: https://github.com/narwhals-dev/narwhals/pull/2572#issuecomment-2891577685
-    """
-    import json
-
-    return json.loads(expr.meta.serialize(format="json"))  # type: ignore[no-any-return]
