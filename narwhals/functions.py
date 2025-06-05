@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from importlib.metadata import version
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
 
 from narwhals._expression_parsing import (
@@ -1769,6 +1770,27 @@ def concat_str(
             ),
             *flat_exprs,
             str_as_lit=False,
+        ),
+        combine_metadata(
+            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
+        ),
+    )
+
+
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr] | NonNestedLiteral,
+    *more_exprs: IntoExpr | NonNestedLiteral,
+) -> Expr:
+    flat_exprs = flatten(
+        [
+            expr if isinstance(expr, Expr) else lit(expr)
+            for expr in chain(flatten([exprs]), more_exprs)
+        ]
+    )
+
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
         ),
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True

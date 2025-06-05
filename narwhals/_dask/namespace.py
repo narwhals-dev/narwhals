@@ -276,6 +276,23 @@ class DaskNamespace(
             version=self._version,
         )
 
+    def coalesce(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [reduce(lambda x, y: x.fillna(y), series)]
+
+        return self._expr(
+            call=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
 
 class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
     @property

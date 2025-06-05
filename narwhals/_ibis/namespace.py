@@ -203,6 +203,19 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             version=self._version,
         )
 
+    def coalesce(self, *exprs: IbisExpr) -> IbisExpr:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            cols = chain.from_iterable(expr(df) for expr in exprs)
+            return [ibis.coalesce(*cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
 
 class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
     lit = lit
