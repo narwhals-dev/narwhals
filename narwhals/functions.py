@@ -223,7 +223,7 @@ def new_series(
     issue_deprecation_warning(
         "`new_series` is deprecated in the main `narwhals` namespace.\n\n"
         "You may want to:\n"
-        " - Use `Series.from_arraylike` instead.\n"
+        " - Use `Series.from_iterable` instead.\n"
         " - Use `narwhals.stable.v1`, where it is still supported.\n"
         "    - See https://narwhals-dev.github.io/narwhals/backcompat\n",
         "1.42.0",

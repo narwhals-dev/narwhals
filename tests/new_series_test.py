@@ -25,7 +25,7 @@ def test_new_series(constructor_eager: ConstructorEager) -> None:
     expected = {"b": [4, 1, 2]}
     assert result.dtype == nw.Int32
     assert_equal_data(result.to_frame(), expected)
-    result = nw.Series.from_arraylike(
+    result = nw.Series.from_iterable(
         "b", [4, 1, 2], nw.Int32, backend=nw.get_native_namespace(s)
     )
     assert result.dtype == nw.Int32

@@ -78,7 +78,7 @@ class Series(Generic[IntoSeriesT]):
             ```py
             import narwhals as nw
 
-            nw.Series.from_arraylike(name="price", values=[10.5, 9.4], backend="pandas")
+            nw.Series.from_iterable(name="price", values=[10.5, 9.4], backend="pandas")
             ```
     """
 
@@ -101,7 +101,7 @@ class Series(Generic[IntoSeriesT]):
             raise AssertionError(msg)
 
     @classmethod
-    def from_arraylike(
+    def from_iterable(
         cls,
         name: str,
         values: Any,

@@ -115,7 +115,7 @@ Which should you use? In general we recommend:
 
     - The DataFrame Interchange Protocol is no longer supported in the
       main Narwhals namespace.
-    - `nw.new_series` is deprecated in favour of `nw.Series.from_arraylike`.
+    - `nw.new_series` is deprecated in favour of `nw.Series.from_iterable`.
 
 - Since Narwhals 1.35:
 
