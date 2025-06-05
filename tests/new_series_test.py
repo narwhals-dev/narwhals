@@ -17,8 +17,16 @@ def test_new_series(constructor_eager: ConstructorEager) -> None:
     assert result.dtype == nw.Int64
     assert_equal_data(result.to_frame(), expected)
 
-    result = nw.new_series("b", [4, 1, 2], nw.Int32, backend=nw.get_native_namespace(s))
+    with pytest.deprecated_call():
+        result = nw.new_series(
+            "b", [4, 1, 2], nw.Int32, backend=nw.get_native_namespace(s)
+        )
     expected = {"b": [4, 1, 2]}
+    assert result.dtype == nw.Int32
+    assert_equal_data(result.to_frame(), expected)
+    result = nw.Series.from_arraylike(
+        "b", [4, 1, 2], nw.Int32, backend=nw.get_native_namespace(s)
+    )
     assert result.dtype == nw.Int32
     assert_equal_data(result.to_frame(), expected)
 
@@ -46,4 +54,4 @@ def test_new_series_dask() -> None:
 
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.new_series("a", [1, 2, 3], backend=nw.get_native_namespace(df))
+        nw_v1.new_series("a", [1, 2, 3], backend=nw.get_native_namespace(df))

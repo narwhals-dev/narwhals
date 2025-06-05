@@ -31,6 +31,7 @@ from narwhals.utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
+    issue_deprecation_warning,
     parse_version,
     supports_arrow_c_stream,
     validate_laziness,
@@ -219,6 +220,14 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
+    issue_deprecation_warning(
+        "`new_series` is deprecated in the main `narwhals` namespace.\n\n"
+        "You may want to:\n"
+        " - Use `Series.from_arraylike` instead.\n"
+        " - Use `narwhals.stable.v1`, where it is still supported.\n"
+        "    - See https://narwhals-dev.github.io/narwhals/backcompat\n",
+        "1.42.0",
+    )
     backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend)
 

@@ -16,6 +16,7 @@ from typing import (
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError
+from narwhals.functions import _new_series_impl
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -75,7 +76,9 @@ class Series(Generic[IntoSeriesT]):
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
             create a series via [`narwhals.new_series`][], e.g.:
             ```py
-            narwhals.new_series(name="price", values=[10.5, 9.4, 1.2], backend="pandas")
+            import narwhals as nw
+
+            nw.Series.from_arraylike(name="price", values=[10.5, 9.4], backend="pandas")
             ```
     """
 
@@ -96,6 +99,17 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @classmethod
+    def from_arraylike(
+        cls,
+        name: str,
+        values: Any,
+        dtype: DType | type[DType] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        return _new_series_impl(name, values, dtype, backend=backend)
 
     @property
     def implementation(self) -> Implementation:

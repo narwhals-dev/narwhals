@@ -111,6 +111,12 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
+- Since Narwhals 1.42.0:
+
+    - The DataFrame Interchange Protocol is no longer supported in the
+      main Narwhals namespace.
+    - `nw.new_series` is deprecated in favour of `nw.Series.from_arraylike`.
+
 - Since Narwhals 1.35:
 
     - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
