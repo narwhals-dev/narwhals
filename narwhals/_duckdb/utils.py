@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
-from narwhals.utils import Version, isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression

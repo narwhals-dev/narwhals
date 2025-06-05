@@ -10,7 +10,7 @@ from typing import Any, Iterator
 import polars as pl
 
 import narwhals as nw
-from narwhals.utils import remove_prefix
+from narwhals._utils import remove_prefix
 
 LOWERCASE = tuple(string.ascii_lowercase)
 

@@ -13,7 +13,7 @@ from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
-from narwhals.utils import Implementation, not_implemented
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import RankMethod, RollingInterpolationMethod
-    from narwhals.utils import Version, _FullContext
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[ir.Value]

@@ -9,26 +9,26 @@ import pandas as pd
 
 from narwhals._compliant import CompliantThen, CompliantWhen, LazyNamespace
 from narwhals._compliant.namespace import DepthTrackingNamespace
-from narwhals._dask.dataframe import DaskLazyFrame
-from narwhals._dask.expr import DaskExpr
-from narwhals._dask.selectors import DaskSelectorNamespace
-from narwhals._dask.utils import (
+from narwhals._dask._utils import (
     align_series_full_broadcast,
     narwhals_to_native_dtype,
     validate_comparand,
 )
+from narwhals._dask.dataframe import DaskLazyFrame
+from narwhals._dask.expr import DaskExpr
+from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod, NonNestedLiteral
-    from narwhals.utils import Version
 
 
 class DaskNamespace(

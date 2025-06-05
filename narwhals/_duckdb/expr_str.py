@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import lit
-from narwhals.utils import not_implemented
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression

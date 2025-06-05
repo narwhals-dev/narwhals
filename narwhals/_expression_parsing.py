@@ -7,6 +7,7 @@ from enum import Enum, auto
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeVar, cast
 
+from narwhals._utils import is_compliant_expr
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
 from narwhals.exceptions import (
     InvalidOperationError,
@@ -14,7 +15,6 @@ from narwhals.exceptions import (
     MultiOutputExpressionError,
     ShapeError,
 )
-from narwhals.utils import is_compliant_expr
 
 if TYPE_CHECKING:
     from typing_extensions import Never, TypeIs

@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Sequence
 
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import get_pandas, get_pyarrow
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     isinstance_or_issubclass,
     parse_version,
 )
+from narwhals.dependencies import get_pandas, get_pyarrow
 
 if TYPE_CHECKING:
     import dask.dataframe as dd

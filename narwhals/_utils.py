@@ -1711,7 +1711,7 @@ def unstable(fn: _Fn, /) -> _Fn:
         Decorated function (unchanged).
 
     Examples:
-        >>> from narwhals.utils import unstable
+        >>> from narwhals._utils import unstable
         >>> @unstable
         ... def a_work_in_progress_feature(*args):
         ...     return args
@@ -1757,7 +1757,7 @@ class not_implemented:  # noqa: N801
         - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
 
     Examples:
-        >>> from narwhals.utils import not_implemented
+        >>> from narwhals._utils import not_implemented
         >>> class Thing:
         ...     def totally_ready(self) -> str:
         ...         return "I'm ready!"
@@ -1843,7 +1843,7 @@ class requires:  # noqa: N801
         _hint: Optional suggested alternative.
 
     Examples:
-        >>> from narwhals.utils import requires, Implementation
+        >>> from narwhals._utils import requires, Implementation
         >>> class SomeBackend:
         ...     _implementation = Implementation.PYARROW
         ...     _backend_version = 20, 0, 0
@@ -1961,7 +1961,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         TypeError: If `obj` is not an instance of any of the provided `valid_types`.
 
     Examples:
-        >>> from narwhals.utils import ensure_type
+        >>> from narwhals._utils import ensure_type
         >>> ensure_type(42, int, float)
         >>> ensure_type("hello", str)
 
