@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import string
+from itertools import repeat
 from typing import Any
 
 import pytest
@@ -131,3 +133,17 @@ def test_immutable_invalid_constructor() -> None:
         OneSlot(1, 2, 3)  # type: ignore[call-arg, misc]
     with pytest.raises(TypeError):
         OneSlot(1, a=1)  # type: ignore[misc]
+
+
+def test_immutable_hash_cache() -> None:
+    int_long = 9999999999999999999999999999999999999999999999999999999999
+    str_long = "\n".join(repeat(string.printable, 100))
+    obj = TwoSlot(a=int_long, b=str_long)
+
+    with pytest.raises(AttributeError):
+        uncached = obj.__immutable_hash_value__  # noqa: F841
+
+    hash_cache_miss = hash(obj)
+    cached = obj.__immutable_hash_value__
+    hash_cache_hit = hash(obj)
+    assert hash_cache_miss == cached == hash_cache_hit

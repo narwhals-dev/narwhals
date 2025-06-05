@@ -8,7 +8,7 @@ from narwhals._plan.typing import ExprT, IRNamespaceT, Ns
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Iterator
+    from typing import Any, Callable, Iterator, Literal
 
     from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
@@ -62,10 +62,38 @@ Udf: TypeAlias = "Callable[[Any], Any]"
 IntoExprColumn: TypeAlias = "DummyExpr | DummySeries | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 
+_IMMUTABLE_HASH_NAME: Literal["__immutable_hash_value__"] = "__immutable_hash_value__"
+
 
 @dataclass_transform(kw_only_default=True, frozen_default=True)
 class Immutable:
-    __slots__ = ()
+    __slots__ = (_IMMUTABLE_HASH_NAME,)
+    __immutable_hash_value__: int
+
+    @property
+    def __immutable_keys__(self) -> Iterator[str]:
+        slots: tuple[str, ...] = self.__slots__
+        for name in slots:
+            if name != _IMMUTABLE_HASH_NAME:
+                yield name
+
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:
+        for name in self.__immutable_keys__:
+            yield getattr(self, name)
+
+    @property
+    def __immutable_items__(self) -> Iterator[tuple[str, Any]]:
+        for name in self.__immutable_keys__:
+            yield name, getattr(self, name)
+
+    @property
+    def __immutable_hash__(self) -> int:
+        if hasattr(self, _IMMUTABLE_HASH_NAME):
+            return self.__immutable_hash_value__
+        hash_value = hash((self.__class__, *self.__immutable_values__))
+        object.__setattr__(self, _IMMUTABLE_HASH_NAME, hash_value)
+        return self.__immutable_hash_value__
 
     def __setattr__(self, name: str, value: Never) -> Never:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
@@ -79,45 +107,43 @@ class Immutable:
             cls.__slots__ = ()
 
     def __hash__(self) -> int:
-        slots: tuple[str, ...] = self.__slots__
-        it = (getattr(self, name) for name in slots)
-        return hash((self.__class__, *it))
+        return self.__immutable_hash__
 
     def __eq__(self, other: object) -> bool:
         if self is other:
             return True
         elif type(self) is not type(other):
             return False
-        slots: tuple[str, ...] = self.__slots__
-        return all(getattr(self, name) == getattr(other, name) for name in slots)
+        return all(
+            getattr(self, key) == getattr(other, key) for key in self.__immutable_keys__
+        )
 
     def __str__(self) -> str:
         # NOTE: Debug repr, closer to constructor
-        slots: tuple[str, ...] = self.__slots__
-        fields = ", ".join(f"{_field_str(name, getattr(self, name))}" for name in slots)
+        fields = ", ".join(f"{_field_str(k, v)}" for k, v in self.__immutable_items__)
         return f"{type(self).__name__}({fields})"
 
     def __init__(self, **kwds: Any) -> None:
         # NOTE: DUMMY CONSTRUCTOR - don't use beyond prototyping!
         # Just need a quick way to demonstrate `ExprIR` and interactions
-        slots: set[str] = set(self.__slots__)
-        if not slots and not kwds:
+        required: set[str] = set(self.__immutable_keys__)
+        if not required and not kwds:
             # NOTE: Fastpath for empty slots
             ...
-        elif slots == set(kwds):
+        elif required == set(kwds):
             # NOTE: Everything is as expected
             for name, value in kwds.items():
                 object.__setattr__(self, name, value)
-        elif missing := slots.difference(kwds):
+        elif missing := required.difference(kwds):
             msg = (
-                f"{type(self).__name__!r} requires attributes {sorted(slots)!r}, \n"
+                f"{type(self).__name__!r} requires attributes {sorted(required)!r}, \n"
                 f"but missing values for {sorted(missing)!r}"
             )
             raise TypeError(msg)
         else:
-            extra = set(kwds).difference(slots)
+            extra = set(kwds).difference(required)
             msg = (
-                f"{type(self).__name__!r} only supports attributes {sorted(slots)!r}, \n"
+                f"{type(self).__name__!r} only supports attributes {sorted(required)!r}, \n"
                 f"but got unknown arguments {sorted(extra)!r}"
             )
             raise TypeError(msg)
