@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals.utils import parse_version
+from narwhals.utils import Version, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
     from narwhals.typing import DataFrameLike
-    from narwhals.utils import Version
 
 
 class DtypeKind(enum.IntEnum):
@@ -28,9 +27,9 @@ class DtypeKind(enum.IntEnum):
 
 
 def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
-    interchange_dtype: tuple[DtypeKind, int, Any, Any], version: Version
+    interchange_dtype: tuple[DtypeKind, int, Any, Any],
 ) -> DType:
-    dtypes = version.dtypes
+    dtypes = Version.V1.dtypes
     if interchange_dtype[0] == DtypeKind.INT:
         if interchange_dtype[1] == 64:
             return dtypes.Int64()
@@ -74,16 +73,17 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
 
 
 class InterchangeFrame:
-    def __init__(self, df: DataFrameLike, version: Version) -> None:
+    _version = Version.V1
+
+    def __init__(self, df: DataFrameLike) -> None:
         self._interchange_frame = df.__dataframe__()
-        self._version = version
 
     def __narwhals_dataframe__(self) -> Self:
         return self
 
     def __native_namespace__(self) -> NoReturn:
         msg = (
-            "Cannot access native namespace for metadata-only dataframes with unknown backend."
+            "Cannot access native namespace for interchange-level dataframes with unknown backend."
             "If you would like to see this kind of object supported in Narwhals, please "
             "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
         )
@@ -92,9 +92,7 @@ class InterchangeFrame:
     def get_column(self, name: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
-        return InterchangeSeries(
-            self._interchange_frame.get_column_by_name(name), version=self._version
-        )
+        return InterchangeSeries(self._interchange_frame.get_column_by_name(name))
 
     def to_pandas(self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
@@ -119,8 +117,7 @@ class InterchangeFrame:
     def schema(self) -> dict[str, DType]:
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._interchange_frame.get_column_by_name(column_name).dtype,
-                self._version,
+                self._interchange_frame.get_column_by_name(column_name).dtype
             )
             for column_name in self._interchange_frame.column_names()
         }
@@ -131,7 +128,7 @@ class InterchangeFrame:
 
     def __getattr__(self, attr: str) -> NoReturn:
         msg = (
-            f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
+            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
             "Hint: you probably called `nw.from_native` on an object which isn't fully "
             "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
             "see this kind of object supported in Narwhals, please open a feature request "
@@ -147,7 +144,7 @@ class InterchangeFrame:
                 "See https://github.com/data-apis/dataframe-api/issues/360."
             )
             raise NotImplementedError(msg)
-        return self.__class__(frame._df, version=self._version)
+        return self.__class__(frame._df)
 
     def select(self, *exprs: str) -> Self:  # pragma: no cover
         msg = (

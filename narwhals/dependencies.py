@@ -160,11 +160,9 @@ def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
-def is_modin_index(index: Any) -> TypeIs[mpd.Index]:
+def is_modin_index(index: Any) -> TypeIs[mpd.Index[Any]]:  # pragma: no cover
     """Check whether `index` is a modin Index without importing modin."""
-    return (mpd := get_modin()) is not None and isinstance(
-        index, mpd.Index
-    )  # pragma: no cover
+    return (mpd := get_modin()) is not None and isinstance(index, mpd.Index)
 
 
 def is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
