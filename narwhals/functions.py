@@ -235,10 +235,7 @@ def _new_series_impl(
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return series.to_narwhals()
-    elif implementation is Implementation.DASK:  # pragma: no cover
-        msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
-        raise NotImplementedError(msg)
-    else:  # pragma: no cover
+    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             native_series: NativeSeries = _native_namespace.new_series(
@@ -248,6 +245,12 @@ def _new_series_impl(
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `new_series` constructor."
             raise AttributeError(msg) from e
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `new_series` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    nw.new_series('a', [1,2,3], backend='pyarrow').lazy('{implementation}')"
+    )
+    raise ValueError(msg)
 
 
 @deprecate_native_namespace(warn_version="1.26.0")
@@ -324,9 +327,9 @@ def from_dict(
             raise AttributeError(msg) from e
         return from_native(native_frame, eager_only=True)
     msg = (
-        f"Unsupported `backend` value.\nExpected one of "
-        f"{Implementation.POLARS, Implementation.PANDAS, Implementation.PYARROW, Implementation.MODIN, Implementation.CUDF} "
-        f"or None, got: {implementation}."
+        f"{implementation} support in Narwhals is lazy-only, but `from_dict` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    nw.from_dict({'a': [1, 2]}, backend='pyarrow').lazy('{implementation}')"
     )
     raise ValueError(msg)
 
@@ -419,7 +422,7 @@ def from_numpy(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns.from_numpy(data, schema).to_narwhals()
-    else:  # pragma: no cover
+    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -429,6 +432,12 @@ def from_numpy(
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
         return from_native(native_frame, eager_only=True)
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `from_numpy` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    nw.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
+    )
+    raise ValueError(msg)
 
 
 def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
@@ -498,7 +507,7 @@ def from_arrow(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
-    else:  # pragma: no cover
+    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -508,6 +517,12 @@ def from_arrow(
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
         return from_native(native, eager_only=True)
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `from_arrow` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    nw.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
+    )
+    raise ValueError(msg)
 
 
 def _get_sys_info() -> dict[str, str]:
