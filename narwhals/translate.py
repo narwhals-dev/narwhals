@@ -556,9 +556,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             if pass_through:
                 return native_object
             msg = (
-                "The Dataframe Interchange Protocol is no longer supported in Narwhals.\n\n"
+                "The Dataframe Interchange Protocol is no longer supported in the main `narwhals` namespace.\n\n"
                 "You may want to:\n"
                 " - Use `narwhals.stable.v1`, where it is still supported.\n"
+                "    - See https://narwhals-dev.github.io/narwhals/backcompat\n"
                 " - Use `pass_through=True` to pass the object through without raising."
             )
             raise TypeError(msg)
