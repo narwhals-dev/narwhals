@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.expr import DepthTrackingExpr
-from narwhals._dask._utils import (
+from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
+from narwhals._dask.expr_str import DaskExprStringNamespace
+from narwhals._dask.utils import (
     add_row_index,
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
-from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
-from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._utils import (

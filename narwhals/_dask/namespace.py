@@ -9,14 +9,14 @@ import pandas as pd
 
 from narwhals._compliant import CompliantThen, CompliantWhen, LazyNamespace
 from narwhals._compliant.namespace import DepthTrackingNamespace
-from narwhals._dask._utils import (
+from narwhals._dask.dataframe import DaskLazyFrame
+from narwhals._dask.expr import DaskExpr
+from narwhals._dask.selectors import DaskSelectorNamespace
+from narwhals._dask.utils import (
     align_series_full_broadcast,
     narwhals_to_native_dtype,
     validate_comparand,
 )
-from narwhals._dask.dataframe import DaskLazyFrame
-from narwhals._dask.expr import DaskExpr
-from narwhals._dask.selectors import DaskSelectorNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,

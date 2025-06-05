@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._dask._utils import add_row_index, evaluate_exprs
+from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._utils import (
     Implementation,
