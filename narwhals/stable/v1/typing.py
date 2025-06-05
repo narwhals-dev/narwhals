@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
-from narwhals.stable.v1 import DataFrame, LazyFrame
-
 if TYPE_CHECKING:
     import sys
+
+    from narwhals.stable.v1 import DataFrame, LazyFrame
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
@@ -126,7 +126,7 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
-FrameT = TypeVar("FrameT", DataFrame[Any], LazyFrame[Any])
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns

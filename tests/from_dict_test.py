@@ -61,7 +61,7 @@ def test_from_dict_without_backend_invalid(constructor: Constructor) -> None:
 
 def test_from_dict_with_backend_invalid() -> None:
     pytest.importorskip("duckdb")
-    with pytest.raises(ValueError, match="Unsupported `backend` value"):
+    with pytest.raises(ValueError, match="lazy-only"):
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 

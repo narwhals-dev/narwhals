@@ -552,9 +552,18 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        return version.dataframe(
-            InterchangeFrame(native_object, version=version), level="interchange"
-        )
+        if version is not Version.V1:
+            if pass_through:
+                return native_object
+            msg = (
+                "The Dataframe Interchange Protocol is no longer supported in the main `narwhals` namespace.\n\n"
+                "You may want to:\n"
+                " - Use `narwhals.stable.v1`, where it is still supported.\n"
+                "    - See https://narwhals-dev.github.io/narwhals/backcompat\n"
+                " - Use `pass_through=True` to pass the object through without raising."
+            )
+            raise TypeError(msg)
+        return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
     elif not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
