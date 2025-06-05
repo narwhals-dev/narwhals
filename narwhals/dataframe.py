@@ -30,6 +30,7 @@ from narwhals.exceptions import (
     OrderDependentExprError,
 )
 from narwhals.schema import Schema
+from narwhals.series import Series
 from narwhals.translate import to_native
 from narwhals.utils import (
     Implementation,
@@ -60,7 +61,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals.group_by import GroupBy, LazyGroupBy
-    from narwhals.series import Series
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
@@ -454,8 +454,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @property
     def _series(self) -> type[Series[Any]]:
-        from narwhals.series import Series
-
         return Series
 
     @property

@@ -220,7 +220,7 @@ def new_series(
         └─────────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _new_series_impl(name, values, dtype, backend=backend, version=Version.MAIN)
+    return _new_series_impl(name, values, dtype, backend=backend)
 
 
 def _new_series_impl(
@@ -229,20 +229,21 @@ def _new_series_impl(
     dtype: DType | type[DType] | None = None,
     *,
     backend: ModuleType | Implementation | str,
-    version: Version,
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = version.namespace.from_backend(implementation).compliant
+        ns = Version.MAIN.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return series.to_narwhals()
     elif implementation is Implementation.DASK:  # pragma: no cover
         msg = "Dask support in Narwhals is lazy-only, so `new_series` is not supported"
         raise NotImplementedError(msg)
     else:  # pragma: no cover
-        native_namespace = implementation.to_native_namespace()
+        _native_namespace = implementation.to_native_namespace()
         try:
-            native_series: NativeSeries = native_namespace.new_series(name, values, dtype)
+            native_series: NativeSeries = _native_namespace.new_series(
+                name, values, dtype
+            )
             return from_native(native_series, series_only=True).alias(name)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `new_series` constructor."
@@ -303,16 +304,6 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    return _from_dict_impl(data, schema, backend=backend, version=Version.MAIN)
-
-
-def _from_dict_impl(
-    data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None,
-    *,
-    backend: ModuleType | Implementation | str | None,
-    version: Version,
-) -> DataFrame[Any]:
     if not data:
         msg = "from_dict cannot be called with empty dictionary"
         raise ValueError(msg)
@@ -320,14 +311,14 @@ def _from_dict_impl(
         data, backend = _from_dict_no_backend(data)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = version.namespace.from_backend(implementation).compliant
+        ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
     elif implementation is Implementation.UNKNOWN:  # pragma: no cover
-        native_namespace = implementation.to_native_namespace()
+        _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame: NativeFrame = native_namespace.from_dict(data, schema=schema)
+            native_frame: NativeFrame = _native_namespace.from_dict(data, schema=schema)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
@@ -414,16 +405,6 @@ def from_numpy(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _from_numpy_impl(data, schema, backend=backend, version=Version.MAIN)
-
-
-def _from_numpy_impl(
-    data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
-    *,
-    backend: ModuleType | Implementation | str,
-    version: Version,
-) -> DataFrame[Any]:
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
@@ -436,14 +417,14 @@ def _from_numpy_impl(
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = version.namespace.from_backend(implementation).compliant
+        ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns.from_numpy(data, schema).to_narwhals()
     else:  # pragma: no cover
-        native_namespace = implementation.to_native_namespace()
+        _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_numpy` function in the top-level namespace.
-            native_frame: NativeFrame = native_namespace.from_numpy(data, schema=schema)
+            native_frame: NativeFrame = _native_namespace.from_numpy(data, schema=schema)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
@@ -510,29 +491,23 @@ def from_arrow(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _from_arrow_impl(native_frame, backend=backend, version=Version.MAIN)
-
-
-def _from_arrow_impl(
-    data: IntoArrowTable, *, backend: ModuleType | Implementation | str, version: Version
-) -> DataFrame[Any]:
-    if not (supports_arrow_c_stream(data) or is_pyarrow_table(data)):
-        msg = f"Given object of type {type(data)} does not support PyCapsule interface"
+    if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
+        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        ns = version.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_arrow(data, context=ns).to_narwhals()
+        ns = Version.MAIN.namespace.from_backend(implementation).compliant
+        return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
     else:  # pragma: no cover
-        native_namespace = implementation.to_native_namespace()
+        _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native_frame: NativeFrame = native_namespace.DataFrame(data)
+            native: NativeFrame = _native_namespace.DataFrame(native_frame)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
+        return from_native(native, eager_only=True)
 
 
 def _get_sys_info() -> dict[str, str]:
@@ -627,7 +602,7 @@ def read_csv(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_namespace: ModuleType | None = None,
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
@@ -667,12 +642,6 @@ def read_csv(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _read_csv_impl(source, backend=backend, **kwargs)
-
-
-def _read_csv_impl(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> DataFrame[Any]:
     eager_backend = Implementation.from_backend(backend)
     native_namespace = eager_backend.to_native_namespace()
     native_frame: NativeFrame
@@ -703,7 +672,7 @@ def scan_csv(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_namespace: ModuleType | None = None,
     **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
@@ -749,12 +718,6 @@ def scan_csv(
         └─────────┴───────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _scan_csv_impl(source, backend=backend, **kwargs)
-
-
-def _scan_csv_impl(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> LazyFrame[Any]:
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
@@ -803,7 +766,7 @@ def read_parquet(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_namespace: ModuleType | None = None,
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
@@ -848,12 +811,6 @@ def read_parquet(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _read_parquet_impl(source, backend=backend, **kwargs)
-
-
-def _read_parquet_impl(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> DataFrame[Any]:
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame
@@ -886,7 +843,7 @@ def scan_parquet(
     source: str,
     *,
     backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_namespace: ModuleType | None = None,
     **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
@@ -959,12 +916,6 @@ def scan_parquet(
         └──────────────────┘
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _scan_parquet_impl(source, backend=backend, **kwargs)
-
-
-def _scan_parquet_impl(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> LazyFrame[Any]:
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
