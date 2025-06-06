@@ -46,7 +46,8 @@ def test_shift_lazy(constructor: Constructor) -> None:
 def test_shift_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
