@@ -34,7 +34,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprT,
     NativeExprT,
-    WindowFunction,
 )
 from narwhals._typing_compat import Protocol38, deprecated
 from narwhals.dependencies import get_numpy, is_numpy_array
@@ -885,10 +884,6 @@ class LazyExpr(
             return [name]
 
         return self._with_alias_output_names(fn)
-
-    def _default_window_function(
-        self, call: EvalSeries[EagerDataFrameT, EagerSeriesT]
-    ) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
     @classmethod
     def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
