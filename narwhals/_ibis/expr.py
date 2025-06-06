@@ -455,7 +455,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def shift(self, n: int) -> Self:
         def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
             return [
-                expr.lag(n).over(  # type: ignore[attr-defined]
+                expr.lag(n).over(  # type: ignore[attr-defined, unused-ignore]
                     ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by)
                 )
                 for expr in self(df)
@@ -507,7 +507,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
             return [
                 expr
-                - expr.lag().over(  # type: ignore[attr-defined]
+                - expr.lag().over(  # type: ignore[attr-defined, unused-ignore]
                     ibis.window(
                         following=0,
                         group_by=inputs.partition_by,
