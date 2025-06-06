@@ -56,21 +56,23 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
+        self._window_function: IbisWindowFunction = (
+            window_function or self._default_window_function(call)
+        )
 
-        if window_function is not None:
-            self._window_function: IbisWindowFunction = window_function
-        else:
+    def _default_window_function(
+        self, call: EvalSeries[IbisLazyFrame, ir.Value]
+    ) -> IbisWindowFunction:
+        def window_func(
+            df: IbisLazyFrame, window_inputs: IbisWindowInputs
+        ) -> list[ir.Value]:
+            assert not window_inputs.order_by  # noqa: S101
+            return [
+                expr.over(ibis.window(group_by=window_inputs.partition_by))
+                for expr in call(df)
+            ]
 
-            def window_func(
-                df: IbisLazyFrame, window_inputs: IbisWindowInputs
-            ) -> list[ir.Value]:
-                assert not window_inputs.order_by  # noqa: S101
-                return [
-                    expr.over(ibis.window(group_by=window_inputs.partition_by))
-                    for expr in self._call(df)
-                ]
-
-            self._window_function = window_func
+        return window_func
 
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
