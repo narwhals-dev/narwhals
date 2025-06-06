@@ -60,6 +60,10 @@ class DummyExpr:
     def __repr__(self) -> str:
         return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!r}"
 
+    def __str__(self) -> str:
+        """Use `print(self)` for formatting."""
+        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!s}"
+
     @classmethod
     def _from_ir(cls, ir: ExprIR, /) -> Self:
         obj = cls.__new__(cls)
