@@ -242,15 +242,14 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     def _with_window_function(self, window_function: IbisWindowFunction) -> Self:
-        result = self.__class__(
+        return self.__class__(
             self._call,
+            window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
-        result._window_function = window_function
-        return result
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
