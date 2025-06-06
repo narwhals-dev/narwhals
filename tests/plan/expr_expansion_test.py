@@ -206,7 +206,7 @@ def test_rewrite_special_aliases_single(expr: DummyExpr, expected: str) -> None:
     assert actual == expected
 
 
-def alias_replace_guarded(name: str) -> MapIR:
+def alias_replace_guarded(name: str) -> MapIR:  # pragma: no cover
     """Guards against repeatedly creating the same alias."""
 
     def fn(ir: ExprIR) -> ExprIR:
@@ -217,7 +217,7 @@ def alias_replace_guarded(name: str) -> MapIR:
     return fn
 
 
-def alias_replace_unguarded(name: str) -> MapIR:
+def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
     """**Does not guard against recursion**!
 
     Handling the recursion stopping **should be** part of the impl of `ExprIR.map_ir`.
@@ -262,4 +262,4 @@ def test_map_ir_recursive(
     ir = expr._ir
     expected = into_expected._ir
     actual = ir.map_ir(function)
-    assert actual == expected
+    assert actual == expected  # pragma: no cover
