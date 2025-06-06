@@ -7,7 +7,8 @@ import pytest
 import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan.expr import Column, _ColumnSelection
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals._plan.expr_expansion import rewrite_special_aliases
+from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -142,3 +143,61 @@ def test_invalid_expand_columns(expr: DummyExpr, schema_1: dict[str, DType]) -> 
     assert is_column_selection(selection)
     with pytest.raises(ColumnNotFoundError):
         selection.expand_columns(schema_1)
+
+
+def udf_name_map(name: str) -> str:
+    original = name
+    upper = name.upper()
+    lower = name.lower()
+    title = name.title()
+    return f"{original=} | {upper=} | {lower=} | {title=}"
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nwd.col("a").name.to_uppercase(), "A"),
+        (nwd.col("B").name.to_lowercase(), "b"),
+        (nwd.col("c").name.suffix("_after"), "c_after"),
+        (nwd.col("d").name.prefix("before_"), "before_d"),
+        (
+            nwd.col("aBcD EFg hi").name.map(udf_name_map),
+            "original='aBcD EFg hi' | upper='ABCD EFG HI' | lower='abcd efg hi' | title='Abcd Efg Hi'",
+        ),
+        (nwd.col("a").min().alias("b").over("c").alias("d").max().name.keep(), "a"),
+        (
+            (
+                nwd.col("hello")
+                .sort_by(nwd.col("ignore me"))
+                .max()
+                .over("ignore me as well")
+                .first()
+                .name.to_uppercase()
+            ),
+            "HELLO",
+        ),
+        (
+            (
+                nwd.col("start")
+                .alias("next")
+                .sort()
+                .round()
+                .fill_null(5)
+                .alias("noise")
+                .name.suffix("_end")
+            ),
+            "start_end",
+        ),
+    ],
+)
+def test_rewrite_special_aliases_single(expr: DummyExpr, expected: str) -> None:
+    # NOTE: We can't use `output_name()` without resolving these rewrites
+    # Once they're done, `output_name()` just peeks into `Alias(name=...)`
+    ir_input = expr._ir
+    with pytest.raises(ComputeError):
+        ir_input.meta.output_name()
+
+    ir_output = rewrite_special_aliases(ir_input)
+    assert ir_input != ir_output
+    actual = ir_output.meta.output_name()
+    assert actual == expected

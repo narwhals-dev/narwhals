@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan.common import IRNamespace
 from narwhals.exceptions import ComputeError
@@ -40,6 +40,10 @@ class IRMetaNamespace(IRNamespace):
             _is_literal(e, allow_aliasing=allow_aliasing) for e in self._ir.iter_left()
         )
 
+    @overload
+    def output_name(self, *, raise_if_undetermined: Literal[True] = True) -> str: ...
+    @overload
+    def output_name(self, *, raise_if_undetermined: Literal[False]) -> str | None: ...
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
         """Get the output name of this expression.
 
@@ -143,6 +147,27 @@ def _expr_output_name(ir: ExprIR) -> str | ComputeError:
     return ComputeError(msg)
 
 
+def get_single_leaf_name(ir: ExprIR) -> str | ComputeError:
+    """Find the name at the start of an expression.
+
+    Normal iteration would just return the first root column it found.
+
+    Based on [`polars_plan::utils::get_single_leaf`]
+
+    [`polars_plan::utils::get_single_leaf`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168
+    """
+    from narwhals._plan import expr
+
+    for e in ir.iter_right():
+        if isinstance(e, (expr.WindowExpr, expr.SortBy, expr.Filter)):
+            return get_single_leaf_name(e.expr)
+        # NOTE: `polars` doesn't include `Literal` here
+        if isinstance(e, (expr.Column, expr.Len)):
+            return e.name
+    msg = f"unable to find a single leaf column in expr '{ir!r}'"
+    return ComputeError(msg)
+
+
 def _has_multiple_outputs(ir: ExprIR) -> bool:
     from narwhals._plan import expr
 
@@ -157,15 +182,6 @@ def has_expr_ir(ir: ExprIR, *matches: type[ExprIR]) -> bool:
     [`polars_plan::utils::has_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L70-L77
     """
     return any(isinstance(e, matches) for e in ir.iter_right())
-
-
-# TODO @dangotbanned: Adapt this one for `rewrite_special_aliases`
-def get_single_leaf_name(ir: ExprIR) -> str:
-    """Not yet implemented!
-
-    https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168.
-    """
-    raise NotImplementedError
 
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:

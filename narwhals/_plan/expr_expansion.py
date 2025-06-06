@@ -271,11 +271,13 @@ def replace_wildcard_with_column(origin: ExprIR, /, column_name: str) -> ExprIR:
     raise NotImplementedError
 
 
-# TODO @dangotbanned: `meta.get_single_leaf_name`
 def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
-    """`KeepName` and `RenameAlias`.
+    """Expand `KeepName` and `RenameAlias` into `Alias`.
 
-    Reuses some of the `meta` functions to traverse the names.
+    Warning:
+        Only valid **after**
+        - Expanding all selections into `Column`
+        - Dealing with `FunctionExpr.input`
     """
     from narwhals._plan import expr, meta
 
@@ -287,8 +289,10 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
             return expr.Alias(expr=parent, name=alias)
         elif isinstance(origin, expr.RenameAlias):
             parent = origin.expr
-            leaf_name = meta.get_single_leaf_name(parent)
-            alias = origin.function(leaf_name)
+            leaf_name_or_err = meta.get_single_leaf_name(parent)
+            if not isinstance(leaf_name_or_err, str):
+                raise leaf_name_or_err
+            alias = origin.function(leaf_name_or_err)
             return expr.Alias(expr=parent, name=alias)
         else:
             msg = "`keep`, `suffix`, `prefix` should be last expression"
