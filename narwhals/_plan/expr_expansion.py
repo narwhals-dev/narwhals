@@ -38,6 +38,7 @@ Their dependencies are **quite** complex, with the main ones being:
 # ruff: noqa: A002
 from __future__ import annotations
 
+from collections import deque
 from copy import deepcopy
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Mapping, Sequence
@@ -64,6 +65,8 @@ Inplace: TypeAlias = Any
 
 Very likely that **we won't** do this in `narwhals`, instead return a new object.
 """
+
+ResultIRs: TypeAlias = "deque[ExprIR]"
 
 
 # NOTE: Both `_freeze` functions will probably want to be cached
@@ -134,6 +137,15 @@ class ExpansionFlags(Immutable):
     def from_expr(cls, expr: DummyExpr, /) -> ExpansionFlags:
         return cls.from_ir(expr._ir)
 
+    def with_multiple_columns(self) -> ExpansionFlags:
+        return ExpansionFlags(
+            multiple_columns=True,
+            has_nth=self.has_nth,
+            has_wildcard=self.has_wildcard,
+            has_selector=self.has_selector,
+            has_exclude=self.has_exclude,
+        )
+
 
 def prepare_projection(
     exprs: Sequence[ExprIR], schema: Mapping[str, DType]
@@ -155,18 +167,44 @@ def prepare_projection(
 # - `exclude` is the return of `prepare_excluded`
 
 
+# NOTE: The inner function is ready
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
-    raise NotImplementedError
+    from narwhals._plan import expr
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if not (
+            isinstance(child, expr.FunctionExpr)
+            and child.options.is_input_wildcard_expansion()
+        ):
+            return child
+        return child.with_input(rewrite_projections(child.input, keys=(), schema=schema))
+
+    return origin.map_ir(fn)
 
 
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
-    keys: Seq[ExprIR],
-    *,
+    keys: Seq[
+        ExprIR
+    ],  # NOTE: Mutable (empty) array initialized on call (except in `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`)
+    *,  # NOTE: Represents group_by keys
     schema: FrozenSchema,
 ) -> Seq[ExprIR]:
-    raise NotImplementedError
+    # NOTE: This is where the mutable `result` is initialized
+    result_length = len(input) + len(schema)
+    result: deque[ExprIR] = deque(maxlen=result_length)
+    for expr in input:
+        expanded = expand_function_inputs(expr, schema=schema)
+        flags = ExpansionFlags.from_ir(expanded)
+        if flags.has_selector:
+            expanded = replace_selector(expanded, keys, schema=schema)
+            flags = flags.with_multiple_columns()
+        # NOTE: `result` is what I'd want as a return, rather than inplace
+        replace_and_add_to_results(
+            expanded, result, keys=keys, schema=schema, flags=flags
+        )
+    return tuple(result)
 
 
 def replace_selector(
@@ -201,7 +239,7 @@ def replace_selector_inner(
 def replace_and_add_to_results(
     origin: ExprIR,
     /,
-    result: Seq[ExprIR],
+    result: ResultIRs,
     keys: Seq[ExprIR],
     *,
     schema: FrozenSchema,
@@ -227,7 +265,7 @@ def prepare_excluded(
 def expand_columns(
     origin: ExprIR,
     /,
-    result: Seq[ExprIR],
+    result: ResultIRs,
     columns: expr.Columns,  # `polars` uses columns.names
     *,
     col_names: FrozenColumns,
@@ -239,7 +277,7 @@ def expand_columns(
 def expand_dtypes(
     origin: ExprIR,
     /,
-    result: Seq[ExprIR],
+    result: ResultIRs,
     dtypes: selectors.ByDType,  # we haven't got `DtypeColumn`
     *,
     schema: FrozenSchema,
@@ -251,7 +289,7 @@ def expand_dtypes(
 def expand_indices(
     origin: ExprIR,
     /,
-    result: Seq[ExprIR],
+    result: ResultIRs,
     indices: expr.IndexColumns,
     *,
     schema: FrozenSchema,
@@ -261,7 +299,7 @@ def expand_indices(
 
 
 def replace_wildcard(
-    origin: ExprIR, /, result: Seq[ExprIR], *, col_names: FrozenColumns, exclude: Excluded
+    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
 ) -> Inplace:
     raise NotImplementedError
 
@@ -313,7 +351,7 @@ def dtypes_match(left: DType, right: DType | type[DType]) -> bool:
 def replace_regex(
     origin: ExprIR,
     /,
-    result: Seq[ExprIR],
+    result: ResultIRs,
     pattern: selectors.Matches,
     *,
     col_names: FrozenColumns,
@@ -323,6 +361,6 @@ def replace_regex(
 
 
 def expand_regex(
-    origin: ExprIR, /, result: Seq[ExprIR], *, col_names: FrozenColumns, exclude: Excluded
+    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
 ) -> Inplace:
     raise NotImplementedError

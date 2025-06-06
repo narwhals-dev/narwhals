@@ -174,6 +174,17 @@ class ExprIR(Immutable):
     def is_scalar(self) -> bool:
         return False
 
+    def map_ir(self, function: Callable[[ExprIR], ExprIR], /) -> ExprIR:
+        """Apply `function` to each child node, returning a new `ExprIR`.
+
+        See [`polars_plan::plans::iterator::Expr.map_expr`] and [`polars_plan::plans::visitor::visitors`].
+
+        [`polars_plan::plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/iterator.rs#L152-L159
+        [`polars_plan::plans::visitor::visitors`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/visitor/visitors.rs
+        """
+        msg = "Need to handle recursive visiting first!"
+        raise NotImplementedError(msg)
+
     def iter_left(self) -> Iterator[ExprIR]:
         """Yield nodes root->leaf.
 

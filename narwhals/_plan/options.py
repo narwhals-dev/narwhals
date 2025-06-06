@@ -47,6 +47,9 @@ class FunctionFlags(enum.Flag):
     def is_row_separable(self) -> bool:
         return FunctionFlags.ROW_SEPARABLE in self
 
+    def is_input_wildcard_expansion(self) -> bool:
+        return FunctionFlags.INPUT_WILDCARD_EXPANSION in self
+
     @staticmethod
     def default() -> FunctionFlags:
         return FunctionFlags.ALLOW_GROUP_AWARE
@@ -80,6 +83,9 @@ class FunctionOptions(Immutable):
 
     def is_row_separable(self) -> bool:
         return self.flags.is_row_separable()
+
+    def is_input_wildcard_expansion(self) -> bool:
+        return self.flags.is_input_wildcard_expansion()
 
     def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:

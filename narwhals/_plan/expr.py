@@ -393,6 +393,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
         options = self.options.with_flags(options.flags)
         return type(self)(input=self.input, function=self.function, options=options)
 
+    def with_input(self, input: t.Iterable[ExprIR], /) -> Self:  # noqa: A002
+        if not isinstance(input, tuple):
+            input = tuple(input)
+        return type(self)(input=input, function=self.function, options=self.options)
+
     def __repr__(self) -> str:
         if self.input:
             first = self.input[0]
