@@ -111,7 +111,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 f"{func_name} ({inputs.expr}) over ({partition_by_sql} {order_by_sql} "
                 "rows between unbounded preceding and current row)"
             )
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql)
 
         return func
 
@@ -549,7 +549,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             order_by_sql = generate_order_by_sql(*inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*inputs.partition_by)
             sql = f"lag({inputs.expr}, {n}) over ({partition_by_sql} {order_by_sql})"
-            return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql)
 
         return self._with_window_function(func)
 
@@ -564,7 +564,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             else:
                 partition_by_sql = f"partition by {inputs.expr}"
             sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
-            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql) == lit(1)
 
         return self._with_window_function(func)
 
@@ -579,7 +579,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             else:
                 partition_by_sql = f"partition by {inputs.expr}"
             sql = f"{FunctionExpression('row_number')} over({partition_by_sql} {order_by_sql})"
-            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql) == lit(1)
 
         return self._with_window_function(func)
 
@@ -589,7 +589,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             order_by_sql = generate_order_by_sql(*inputs.order_by, ascending=True)
             partition_by_sql = generate_partition_by_sql(*inputs.partition_by)
             sql = f"lag({inputs.expr}) over ({partition_by_sql} {order_by_sql})"
-            return inputs.expr - SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+            return inputs.expr - SQLExpression(sql)
 
         return self._with_window_function(func)
 
@@ -699,7 +699,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                     f"{fill_func}({inputs.expr} ignore nulls) over "
                     f"({partition_by_sql} {order_by_sql} rows between {rows_between})"
                 )
-                return SQLExpression(sql)  # type: ignore[no-any-return, unused-ignore]
+                return SQLExpression(sql)
 
             return self._with_window_function(_fill_with_strategy)
 
@@ -719,7 +719,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def is_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
             sql = f"count(*) over (partition by {expr})"
-            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql) == lit(1)
 
         return self._with_callable(func)
 
