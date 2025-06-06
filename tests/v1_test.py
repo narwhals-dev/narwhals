@@ -44,7 +44,7 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
         first=nw_v1.nth(0),
         no_first=nw_v1.exclude("a", "c"),
-        coalesce=nw_v1.coalesce(nw.col("c"), nw.col("a")),
+        coalesce=nw_v1.coalesce("c", "a"),
     )
     expected = {
         "min": [1, 1, 1],

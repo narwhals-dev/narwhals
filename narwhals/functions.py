@@ -1802,11 +1802,7 @@ def coalesce(
     ...     (None, None, None),
     ... ]
     >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
-    >>> (
-    ...     nw.from_native(df).select(
-    ...         nw.coalesce(nw.col("a"), nw.col("b"), nw.col("c"), -1)
-    ...     )
-    ... )
+    >>> (nw.from_native(df).select(nw.coalesce("a", "b", "c", -1)))
     ┌──────────────────┐
     |Narwhals DataFrame|
     |------------------|
@@ -1826,7 +1822,7 @@ def coalesce(
     """
     flat_exprs = flatten(
         [
-            expr if isinstance(expr, Expr) else lit(expr)
+            expr if isinstance(expr, (Expr, str)) else lit(expr)
             for expr in chain(flatten([exprs]), more_exprs)
         ]
     )
@@ -1835,7 +1831,5 @@ def coalesce(
         lambda plx: apply_n_ary_operation(
             plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
         ),
-        combine_metadata(
-            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )

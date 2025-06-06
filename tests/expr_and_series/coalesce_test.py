@@ -10,8 +10,6 @@ def test_coalesce(constructor: Constructor) -> None:
         "b": [1, None, None, 5, 3],
         "c": [5, None, 3, 2, 1],
     }
-    result = nw.from_native(constructor(data)).select(
-        result=nw.coalesce(*(nw.col(k) for k in data), -1)
-    )
+    result = nw.from_native(constructor(data)).select(result=nw.coalesce(*data, -1))
 
     assert_equal_data(result, {"result": [0, -1, 3, 5, 3]})
