@@ -452,8 +452,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.round(decimals))
 
     def shift(self, n: int) -> Self:
-        def _func(inputs: IbisWindowInputs) -> ir.Column:
-            return cast("ir.Column", inputs.expr).lag(n)
+        def _func(inputs: IbisWindowInputs) -> ir.Value:
+            return (
+                cast("ir.Column", inputs.expr)
+                .lag(n)
+                .over(ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by))
+            )
 
         return self._with_window_function(_func)
 
@@ -485,7 +489,14 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def _func(inputs: IbisWindowInputs) -> ir.NumericValue:
             expr = cast("ir.NumericColumn", inputs.expr)
             return expr - cast(
-                "ir.NumericColumn", expr.lag().over(ibis.window(following=0))
+                "ir.NumericColumn",
+                expr.lag().over(
+                    ibis.window(
+                        order_by=inputs.order_by,
+                        group_by=inputs.partition_by,
+                        following=0,
+                    )
+                ),
             )
 
         return self._with_window_function(_func)

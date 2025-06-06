@@ -43,6 +43,27 @@ def test_shift_lazy(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_shift_lazy_grouped(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        # https://github.com/dask/dask/issues/11806
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(nw.col("a").shift(1).over("b", order_by="i")).sort("i")
+    expected = {
+        "i": [0, 1, 2, 3, 4],
+        "a": [None, None, None, None, 2],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_shift_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(df["a"].shift(2), df["b"].shift(2), df["c"].shift(2)).filter(
