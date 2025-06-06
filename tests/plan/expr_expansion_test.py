@@ -1,21 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Callable, Sequence
 
 import pytest
 
 import narwhals as nw
 import narwhals._plan.demo as nwd
-from narwhals._plan.expr import Column, _ColumnSelection
+from narwhals._plan.expr import Alias, Column, _ColumnSelection
 from narwhals._plan.expr_expansion import rewrite_special_aliases
 from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummyExpr
     from narwhals.dtypes import DType
+
+
+MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 
 
 @pytest.fixture
@@ -200,4 +203,63 @@ def test_rewrite_special_aliases_single(expr: DummyExpr, expected: str) -> None:
     ir_output = rewrite_special_aliases(ir_input)
     assert ir_input != ir_output
     actual = ir_output.meta.output_name()
+    assert actual == expected
+
+
+def alias_replace_guarded(name: str) -> MapIR:
+    """Guards against repeatedly creating the same alias."""
+
+    def fn(ir: ExprIR) -> ExprIR:
+        if isinstance(ir, Alias) and ir.name != name:
+            return Alias(expr=ir.expr, name=name)
+        return ir
+
+    return fn
+
+
+def alias_replace_unguarded(name: str) -> MapIR:
+    """**Does not guard against recursion**!
+
+    Handling the recursion stopping **should be** part of the impl of `ExprIR.map_ir`.
+
+    - *Ideally*, return an identical result to `alias_replace_guarded` (after the same number of iterations)
+    - *Pragmatically*, it might require an extra iteration to detect a cycle
+    """
+
+    def fn(ir: ExprIR) -> ExprIR:
+        if isinstance(ir, Alias):
+            return Alias(expr=ir.expr, name=name)
+        return ir
+
+    return fn
+
+
+@pytest.mark.xfail(
+    reason="Not implemented `ExprIR.map_ir` yet", raises=NotImplementedError
+)
+@pytest.mark.parametrize(
+    ("expr", "function", "into_expected"),
+    [
+        (nwd.col("a"), alias_replace_guarded("never"), nwd.col("a")),
+        (nwd.col("a"), alias_replace_unguarded("never"), nwd.col("a")),
+        (nwd.col("a").alias("b"), alias_replace_guarded("c"), nwd.col("a").alias("c")),
+        (nwd.col("a").alias("b"), alias_replace_unguarded("c"), nwd.col("a").alias("c")),
+        (
+            nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
+            alias_replace_guarded("d"),
+            nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+        ),
+        (
+            nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
+            alias_replace_unguarded("d"),
+            nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+        ),
+    ],
+)
+def test_map_ir_recursive(
+    expr: DummyExpr, function: MapIR, into_expected: DummyExpr
+) -> None:
+    ir = expr._ir
+    expected = into_expected._ir
+    actual = ir.map_ir(function)
     assert actual == expected
