@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+from typing import Any
+
 import pyarrow as pa
 import pytest
 
@@ -65,3 +68,36 @@ def test_shift_multi_chunk_pyarrow() -> None:
     result = df.select(nw.col("a").shift(0))
     expected = {"a": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("n", "context"),
+    [
+        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (1, nullcontext()),
+        (0, nullcontext()),
+    ],
+)
+def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
+    with context:
+        nw.col("a").shift(n)
+
+
+@pytest.mark.parametrize(
+    ("n", "context"),
+    [
+        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
+        (1, nullcontext()),
+        (0, nullcontext()),
+    ],
+)
+def test_shift_series_invalid_params(
+    constructor_eager: ConstructorEager, n: Any, context: Any
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with context:
+        df["a"].shift(n)

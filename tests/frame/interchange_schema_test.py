@@ -236,7 +236,7 @@ def test_interchange_schema_duckdb() -> None:
 def test_invalid() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
     with pytest.raises(
-        NotImplementedError, match="is not supported for metadata-only dataframes"
+        NotImplementedError, match="is not supported for interchange-level dataframes"
     ):
         nw_v1.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
     with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):

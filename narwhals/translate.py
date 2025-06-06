@@ -387,7 +387,9 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `series_only` with dataframe"
                 raise TypeError(msg)
             return native_object
-        return DataFrame(native_object.__narwhals_dataframe__(), level="full")
+        return version.dataframe(
+            native_object.__narwhals_dataframe__()._with_version(version), level="full"
+        )
     elif is_compliant_lazyframe(native_object):
         if series_only:
             if not pass_through:
@@ -399,14 +401,18 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
                 raise TypeError(msg)
             return native_object
-        return LazyFrame(native_object.__narwhals_lazyframe__(), level="full")
+        return version.lazyframe(
+            native_object.__narwhals_lazyframe__()._with_version(version), level="full"
+        )
     elif is_compliant_series(native_object):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
                 raise TypeError(msg)
             return native_object
-        return Series(native_object.__narwhals_series__(), level="full")
+        return version.series(
+            native_object.__narwhals_series__()._with_version(version), level="full"
+        )
 
     # Polars
     elif is_native_polars(native_object):
@@ -546,9 +552,18 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        return DataFrame(
-            InterchangeFrame(native_object, version=version), level="interchange"
-        )
+        if version is not Version.V1:
+            if pass_through:
+                return native_object
+            msg = (
+                "The Dataframe Interchange Protocol is no longer supported in the main `narwhals` namespace.\n\n"
+                "You may want to:\n"
+                " - Use `narwhals.stable.v1`, where it is still supported.\n"
+                "    - See https://narwhals-dev.github.io/narwhals/backcompat\n"
+                " - Use `pass_through=True` to pass the object through without raising."
+            )
+            raise TypeError(msg)
+        return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
     elif not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"

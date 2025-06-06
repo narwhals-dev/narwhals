@@ -36,7 +36,7 @@ class DuckDBInterchangeSeries:
 
     def __getattr__(self, attr: str) -> Never:
         msg = (  # pragma: no cover
-            f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
+            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
             "If you would like to see this kind of object better supported in "
             "Narwhals, please open a feature request "
             "at https://github.com/narwhals-dev/narwhals/issues."

@@ -31,34 +31,42 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals.utils import Version
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
     from _pytest.mark import ParameterSet
     from typing_extensions import assert_type
 
-    from narwhals.utils import Version
-
 
 class MockDataFrame:
-    def _with_version(self, _version: Version) -> MockDataFrame:
-        return self
+    def __init__(self, version: Version) -> None:
+        self._version = version
+
+    def _with_version(self, version: Version) -> MockDataFrame:
+        return self.__class__(version)
 
     def __narwhals_dataframe__(self) -> Any:
         return self
 
 
 class MockLazyFrame:
-    def _with_version(self, _version: Version) -> MockLazyFrame:
-        return self
+    def __init__(self, version: Version) -> None:
+        self._version = version
+
+    def _with_version(self, version: Version) -> MockLazyFrame:
+        return self.__class__(version)
 
     def __narwhals_lazyframe__(self) -> Any:
         return self
 
 
 class MockSeries:
-    def _with_version(self, _version: Version) -> MockSeries:
-        return self
+    def __init__(self, version: Version) -> None:
+        self._version = version
+
+    def _with_version(self, version: Version) -> MockSeries:
+        return self.__class__(version)
 
     def __narwhals_series__(self) -> Any:
         return self
@@ -66,9 +74,9 @@ class MockSeries:
 
 data: dict[str, Any] = {"a": [1, 2, 3]}
 
-eager_frames: list[Any] = [MockDataFrame()]
-lazy_frames: list[Any] = [MockLazyFrame()]
-all_series: list[Any] = [MockSeries()]
+eager_frames: list[Any] = [MockDataFrame(Version.MAIN)]
+lazy_frames: list[Any] = [MockLazyFrame(Version.MAIN)]
+all_series: list[Any] = [MockSeries(Version.MAIN)]
 
 if find_spec("pandas") is not None:
     import pandas as pd
@@ -202,7 +210,7 @@ def test_invalid_series_combination() -> None:
         ValueError,
         match="Invalid parameter combination: `series_only=True` and `allow_series=False`",
     ):
-        nw_v1.from_native(MockSeries(), series_only=True, allow_series=False)  # type: ignore[call-overload]
+        nw_v1.from_native(MockSeries(Version.V1), series_only=True, allow_series=False)  # type: ignore[call-overload]
 
 
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")
@@ -335,6 +343,18 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
     assert result is mockdf
 
 
+def test_interchange_protocol_non_v1() -> None:
+    class MockDf:
+        def __dataframe__(self) -> None:  # pragma: no cover
+            pass
+
+    mockdf = MockDf()
+    result = nw.from_native(mockdf, pass_through=True)
+    assert result is mockdf
+    with pytest.raises(TypeError):
+        nw.from_native(mockdf)
+
+
 def test_from_native_strict_native_series() -> None:
     obj: list[int] = [1, 2, 3, 4]
     array_like = cast("Iterable[Any]", obj)
@@ -420,7 +440,7 @@ def test_dataframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]})
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AssertionError):
+    with pytest.raises(AttributeError):
         nw_v1.DataFrame(nw_frame, level="full")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
@@ -445,7 +465,7 @@ def test_lazyframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AssertionError):
+    with pytest.raises(AttributeError):
         nw_v1.LazyFrame(nw_frame, level="lazy")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
@@ -489,7 +509,7 @@ def test_series_recursive_v1() -> None:
 
     pl_series = pl.Series(name="test", values=[1, 2, 3])
     nw_series = nw_v1.from_native(pl_series, series_only=True)
-    with pytest.raises(AssertionError):
+    with pytest.raises(AttributeError):
         nw_v1.Series(nw_series, level="full")
 
     nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
