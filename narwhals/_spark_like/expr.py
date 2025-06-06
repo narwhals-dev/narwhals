@@ -14,7 +14,7 @@ from typing import (
 )
 
 from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
+from narwhals._compliant.window import WindowInputs
 from narwhals._expression_parsing import ExprKind
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
@@ -27,7 +27,6 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals.dependencies import get_pyspark
-from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation, not_implemented, parse_version
 
 if TYPE_CHECKING:
@@ -39,7 +38,6 @@ if TYPE_CHECKING:
         AliasNames,
         EvalNames,
         EvalSeries,
-        UnorderableWindowFunction,
         WindowFunction,
     )
     from narwhals._expression_parsing import ExprMetadata
@@ -62,9 +60,7 @@ if TYPE_CHECKING:
     NullsLast: TypeAlias = Literal[True]
 
     SparkWindowInputs = WindowInputs[Column]
-    SparkUnorderableWindowInputs = UnorderableWindowInputs[Column]
-    SparkWindowFunction = WindowFunction[Column]
-    SparkUnorderableWindowFunction = UnorderableWindowFunction[Column]
+    SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
 
 ASC_NULLS_FIRST: tuple[Asc, NullsFirst] = False, False
 ASC_NULLS_LAST: tuple[Asc, NullsLast] = False, True
@@ -84,6 +80,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __init__(
         self,
         call: EvalSeries[SparkLikeLazyFrame, Column],
+        window_function: SparkWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         alias_output_names: AliasNames | None,
@@ -99,12 +96,20 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._implementation = implementation
         self._metadata: ExprMetadata | None = None
 
-        # This can only be set by `_with_window_function`.
-        self._window_function: SparkWindowFunction | None = None
+        if window_function is not None:
+            self._window_function: SparkWindowFunction = window_function
+        else:
 
-        # These can only be set by `_with_unorderable_window_function`
-        self._unorderable_window_function: SparkUnorderableWindowFunction | None = None
-        self._previous_call: EvalSeries[SparkLikeLazyFrame, Column] | None = None
+            def window_func(
+                df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+            ) -> list[Column]:
+                assert not window_inputs.order_by  # noqa: S101
+                return [
+                    expr.over(self.partition_by(*window_inputs.partition_by))
+                    for expr in self._call(df)
+                ]
+
+            self._window_function = window_func
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -181,33 +186,15 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def _with_window_function(self, window_function: SparkWindowFunction) -> Self:
-        result = self.__class__(
+        return self.__class__(
             self._call,
+            window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
-        result._window_function = window_function
-        return result
-
-    def _with_unorderable_window_function(
-        self,
-        unorderable_window_function: SparkUnorderableWindowFunction,
-        previous_call: EvalSeries[SparkLikeLazyFrame, Column],
-    ) -> Self:
-        result = self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-        result._unorderable_window_function = unorderable_window_function
-        result._previous_call = previous_call
-        return result
 
     @classmethod
     def _alias_native(cls, expr: Column, name: str) -> Column:
@@ -219,7 +206,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> SparkWindowFunction:
-        def func(inputs: SparkWindowInputs) -> Column:
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(
@@ -227,7 +214,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 )
                 .rowsBetween(self._Window.unboundedPreceding, 0)
             )
-            return getattr(self._F, func_name)(inputs.expr).over(window)
+            return [
+                getattr(self._F, func_name)(expr).over(window) for expr in self._call(df)
+            ]
 
         return func
 
@@ -250,7 +239,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             start = self._Window.currentRow - window_size + 1
             end = self._Window.currentRow
 
-        def func(inputs: SparkWindowInputs) -> Column:
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(*self._sort(*inputs.order_by))
@@ -272,10 +261,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             else:  # pragma: no cover
                 msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
                 raise ValueError(msg)
-            return self._F.when(
-                self._F.count(inputs.expr).over(window) >= min_samples,
-                getattr(self._F, func_)(inputs.expr).over(window),
-            )
+            return [
+                self._F.when(
+                    self._F.count(expr).over(window) >= min_samples,
+                    getattr(self._F, func_)(expr).over(window),
+                )
+                for expr in self._call(df)
+            ]
 
         return func
 
@@ -588,32 +580,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_n_unique)
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
-        partition = partition_by
-        if (fn := self._window_function) is not None:
-            if order_by is None:  # pragma: no cover
-                msg = (
-                    f"Order-dependent expressions must be immediately followed by `over(order_by=...)`"
-                    f" for {self._implementation!r}.\n\n"
-                    f"_window_function={fn!r}\npartition_by={partition_by!r}\norder_by={order_by!r}"
-                )
-                raise InvalidOperationError(msg)
-
-            def func(df: SparkLikeLazyFrame) -> list[Column]:
-                return [fn(WindowInputs(expr, partition, order_by)) for expr in self(df)]
-        elif (fn_unorderable := self._unorderable_window_function) is not None:
-            assert order_by is None  # noqa: S101
-
-            def func(df: SparkLikeLazyFrame) -> list[Column]:
-                assert self._previous_call is not None  # noqa: S101
-                return [
-                    fn_unorderable(UnorderableWindowInputs(expr, partition))
-                    for expr in self._previous_call(df)
-                ]
-        else:
-
-            def func(df: SparkLikeLazyFrame) -> list[Column]:
-                return [expr.over(self.partition_by(*partition)) for expr in self(df)]
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+            assert self._window_function is not None  # noqa: S101
+            return self._window_function(df, WindowInputs(partition_by, order_by))
 
         return self.__class__(
             func,
@@ -634,39 +604,48 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_is_nan)
 
     def shift(self, n: int) -> Self:
-        def func(inputs: SparkWindowInputs) -> Column:
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
             window = self.partition_by(*inputs.partition_by).orderBy(
                 *self._sort(*inputs.order_by)
             )
-            return self._F.lag(inputs.expr, n).over(window)
+            return [self._F.lag(expr, n).over(window) for expr in self(df)]
 
         return self._with_window_function(func)
 
     def is_first_distinct(self) -> Self:
-        def func(inputs: SparkWindowInputs) -> Column:
-            window = self.partition_by(*inputs.partition_by, inputs.expr).orderBy(
-                *self._sort(*inputs.order_by)
-            )
-            return self._F.row_number().over(window) == 1
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+            return [
+                self._F.row_number().over(
+                    self.partition_by(*inputs.partition_by, expr).orderBy(
+                        *self._sort(*inputs.order_by)
+                    )
+                )
+                == 1
+                for expr in self(df)
+            ]
 
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(inputs: SparkWindowInputs) -> Column:
-            order_by = self._sort(*inputs.order_by, descending=True, nulls_last=True)
-            window = self.partition_by(*inputs.partition_by, inputs.expr).orderBy(
-                *order_by
-            )
-            return self._F.row_number().over(window) == 1
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+            return [
+                self._F.row_number().over(
+                    self.partition_by(*inputs.partition_by, expr).orderBy(
+                        *self._sort(*inputs.order_by, descending=True)
+                    )
+                )
+                == 1
+                for expr in self(df)
+            ]
 
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def func(inputs: SparkWindowInputs) -> Column:
+        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
             window = self.partition_by(*inputs.partition_by).orderBy(
                 *self._sort(*inputs.order_by)
             )
-            return inputs.expr - self._F.lag(inputs.expr).over(window)
+            return [expr - self._F.lag(expr).over(window) for expr in self(df)]
 
         return self._with_window_function(func)
 
@@ -703,7 +682,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     ) -> Self:
         if strategy is not None:
 
-            def _fill_with_strategy(inputs: SparkWindowInputs) -> Column:
+            def _fill_with_strategy(
+                df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+            ) -> Sequence[Column]:
                 fn = self._F.last_value if strategy == "forward" else self._F.first_value
                 if strategy == "forward":
                     start = self._Window.unboundedPreceding if limit is None else -limit
@@ -711,11 +692,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
                 else:
                     start = self._Window.currentRow
                     end = self._Window.unboundedFollowing if limit is None else limit
-                return fn(inputs.expr, ignoreNulls=True).over(
-                    self.partition_by(*inputs.partition_by)
-                    .orderBy(*self._sort(*inputs.order_by))
-                    .rowsBetween(start, end)
-                )
+                return [
+                    fn(expr, ignoreNulls=True).over(
+                        self.partition_by(*inputs.partition_by)
+                        .orderBy(*self._sort(*inputs.order_by))
+                        .rowsBetween(start, end)
+                    )
+                    for expr in self(df)
+                ]
 
             return self._with_window_function(_fill_with_strategy)
 
@@ -806,13 +790,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _unpartitioned_rank(expr: Column) -> Column:
             return _rank(expr, descending=descending)
 
-        def _partitioned_rank(inputs: SparkUnorderableWindowInputs) -> Column:
-            return _rank(
-                inputs.expr, descending=descending, partition_by=inputs.partition_by
-            )
+        def _partitioned_rank(
+            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+        ) -> Sequence[Column]:
+            assert not inputs.order_by  # noqa: S101
+            return [
+                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                for expr in self(df)
+            ]
 
-        return self._with_callable(_unpartitioned_rank)._with_unorderable_window_function(
-            _partitioned_rank, self._call
+        return self._with_callable(_unpartitioned_rank)._with_window_function(
+            _partitioned_rank
         )
 
     def log(self, base: float) -> Self:

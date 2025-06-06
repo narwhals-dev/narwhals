@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
-    from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
+    from narwhals._compliant.window import WindowInputs
     from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
 
     class ScalarKwargs(TypedDict, total=False):
@@ -146,9 +146,7 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
 
-WindowFunction: TypeAlias = "Callable[[WindowInputs[NativeExprT]], NativeExprT]"
-"""A function evaluated with `over(partition_by=..., order_by=...)`."""
-UnorderableWindowFunction: TypeAlias = (
-    "Callable[[UnorderableWindowInputs[NativeExprT]], NativeExprT]"
+WindowFunction: TypeAlias = (
+    "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
 )
-"""A function evaluated with `over(partition_by=...)`, without `order_by` (e.g. `is_unique`, `rank`)."""
+"""A function evaluated with `over(partition_by=..., order_by=...)`."""
