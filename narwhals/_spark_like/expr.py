@@ -59,7 +59,6 @@ if TYPE_CHECKING:
     NullsFirst: TypeAlias = Literal[False]
     NullsLast: TypeAlias = Literal[True]
 
-    SparkWindowInputs = WindowInputs[Column]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
 
 ASC_NULLS_FIRST: tuple[Asc, NullsFirst] = False, False
@@ -103,7 +102,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self, call: EvalSeries[SparkLikeLazyFrame, Column]
     ) -> SparkWindowFunction:
         def window_func(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+            df: SparkLikeLazyFrame, window_inputs: WindowInputs
         ) -> list[Column]:
             assert not window_inputs.order_by  # noqa: S101
             return [
@@ -208,7 +207,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         reverse: bool,
         func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> SparkWindowFunction:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(
@@ -241,7 +240,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             start = self._Window.currentRow - window_size + 1
             end = self._Window.currentRow
 
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(*self._sort(*inputs.order_by))
@@ -606,7 +605,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_is_nan)
 
     def shift(self, n: int) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             window = self.partition_by(*inputs.partition_by).orderBy(
                 *self._sort(*inputs.order_by)
             )
@@ -615,7 +614,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_window_function(func)
 
     def is_first_distinct(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
@@ -629,7 +628,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
@@ -643,7 +642,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
+        def func(df: SparkLikeLazyFrame, inputs: WindowInputs) -> Sequence[Column]:
             window = self.partition_by(*inputs.partition_by).orderBy(
                 *self._sort(*inputs.order_by)
             )
@@ -685,7 +684,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         if strategy is not None:
 
             def _fill_with_strategy(
-                df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+                df: SparkLikeLazyFrame, inputs: WindowInputs
             ) -> Sequence[Column]:
                 fn = self._F.last_value if strategy == "forward" else self._F.first_value
                 if strategy == "forward":
@@ -793,7 +792,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return _rank(expr, descending=descending)
 
         def _partitioned_rank(
-            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+            df: SparkLikeLazyFrame, inputs: WindowInputs
         ) -> Sequence[Column]:
             assert not inputs.order_by  # noqa: S101
             return [

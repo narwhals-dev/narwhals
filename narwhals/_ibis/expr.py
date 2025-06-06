@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
-    IbisWindowInputs = WindowInputs[ir.Value]
 
 
 class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
@@ -63,9 +62,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def _default_window_function(
         self, call: EvalSeries[IbisLazyFrame, ir.Value]
     ) -> IbisWindowFunction:
-        def window_func(
-            df: IbisLazyFrame, window_inputs: IbisWindowInputs
-        ) -> list[ir.Value]:
+        def window_func(df: IbisLazyFrame, window_inputs: WindowInputs) -> list[ir.Value]:
             assert not window_inputs.order_by  # noqa: S101
             return [
                 expr.over(ibis.window(group_by=window_inputs.partition_by))
@@ -88,7 +85,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def _cum_window_func(
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
     ) -> IbisWindowFunction:
-        def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             if reverse:
                 order_by_cols = [
                     ibis.desc(getattr(col, x), nulls_first=False) for x in inputs.order_by
@@ -127,7 +124,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             preceding = window_size - 1
             following = 0
 
-        def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
             ]
@@ -454,7 +451,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.round(decimals))
 
     def shift(self, n: int) -> Self:
-        def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
+        def _func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             return [
                 expr.lag(n).over(  # type: ignore[attr-defined, unused-ignore]
                     ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by)
@@ -465,9 +462,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_window_function(_func)
 
     def is_first_distinct(self) -> Self:
-        def func(
-            df: IbisLazyFrame, inputs: IbisWindowInputs
-        ) -> Sequence[ir.BooleanValue]:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.BooleanValue]:
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
             ]
@@ -485,9 +480,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(
-            df: IbisLazyFrame, inputs: IbisWindowInputs
-        ) -> Sequence[ir.BooleanValue]:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.BooleanValue]:
             order_by_cols = [
                 ibis.desc(getattr(col, x), nulls_first=True) for x in inputs.order_by
             ]
@@ -505,7 +498,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
+        def _func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             return [
                 expr
                 - expr.lag().over(  # type: ignore[attr-defined, unused-ignore]
