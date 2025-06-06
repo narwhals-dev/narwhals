@@ -61,7 +61,7 @@ def test_diff_lazy_grouped(
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask",)):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
     data = {"i": [0, 1, 2, 3, 4], "b": [1, 1, 1, 2, 2], "c": [5, 4, 3, 2, 1]}
