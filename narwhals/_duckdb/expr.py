@@ -116,7 +116,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 f"{func_name} ({{expr}}) over ({partition_by_sql} {order_by_sql} "
                 "rows between unbounded preceding and current row)"
             )
-            return [SQLExpression(sql.format(expr=expr)) for expr in self(df)]  # type: ignore[no-any-return, unused-ignore]
+            return [SQLExpression(sql.format(expr=expr)) for expr in self(df)]
 
         return func
 
@@ -533,7 +533,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 f"{FunctionExpression('row_number')} "
                 f"over({partition_by_sql} {order_by_sql})"
             )
-            return [SQLExpression(sql.format(expr=expr)) == lit(1) for expr in self(df)]  # type: ignore[no-any-return, unused-ignore]
+            return [SQLExpression(sql.format(expr=expr)) == lit(1) for expr in self(df)]
 
         return self._with_window_function(func)
 
@@ -551,7 +551,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 f"{FunctionExpression('row_number')} "
                 f"over({partition_by_sql} {order_by_sql})"
             )
-            return [SQLExpression(sql.format(expr=expr)) == lit(1) for expr in self(df)]  # type: ignore[no-any-return, unused-ignore]
+            return [SQLExpression(sql.format(expr=expr)) == lit(1) for expr in self(df)]
 
         return self._with_window_function(func)
 
@@ -693,7 +693,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def is_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
             sql = f"count(*) over (partition by {expr})"
-            return SQLExpression(sql) == lit(1)  # type: ignore[no-any-return, unused-ignore]
+            return SQLExpression(sql) == lit(1)
 
         return self._with_callable(func)
 
