@@ -51,7 +51,9 @@ def test_diff_lazy(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_diff_lazy_grouped(constructor: Constructor) -> None:
+def test_diff_lazy_grouped(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         pytest.skip()
@@ -59,6 +61,9 @@ def test_diff_lazy_grouped(constructor: Constructor) -> None:
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
+    if any(x in str(constructor) for x in ("dask",)):
+        # https://github.com/dask/dask/issues/11806
+        request.applymarker(pytest.mark.xfail)
     data = {"i": [0, 1, 2, 3, 4], "b": [1, 1, 1, 2, 2], "c": [5, 4, 3, 2, 1]}
     df = nw.from_native(constructor(data))
     result = (
