@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals import _dependencies as _deps
-from narwhals.exceptions import module_not_found
+from narwhals.exceptions import ModuleUpgradeRequiredError
+from narwhals.utils import Implementation, import_optional_dependency
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrameT
@@ -32,7 +32,7 @@ def test_import_polars(data: dict[str, Any]) -> None:
     # NOTE: Can't do `monkeypatch.delitem` safely
     #     ImportError: PyO3 modules compiled for CPython 3.8 or older may only be initialized once per interpreter process
     pytest.importorskip("polars")
-    df = _deps.import_polars().DataFrame(data)
+    df = Implementation.POLARS.to_native_namespace().DataFrame(data)
     result = _roundtrip_query(df)
     import polars as pl
 
@@ -41,7 +41,7 @@ def test_import_polars(data: dict[str, Any]) -> None:
 
 def test_import_dask(data: dict[str, Any]) -> None:
     pytest.importorskip("dask")
-    df = _deps.import_dask().from_dict(data, npartitions=1)
+    df = Implementation.DASK.to_native_namespace().from_dict(data, npartitions=1)
     result = _roundtrip_query(df)
     import dask.dataframe as dd
 
@@ -55,7 +55,7 @@ def test_import_pandas(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) ->
     else:  # pragma: no cover
         # NOTE: AttributeError: partially initialized module 'pandas' has no attribute 'compat' (most likely due to a circular import)
         ...
-    df = _deps.import_pandas().DataFrame(data)
+    df = Implementation.PANDAS.to_native_namespace().DataFrame(data)
     result = _roundtrip_query(df)
     import pandas as pd
 
@@ -65,7 +65,7 @@ def test_import_pandas(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) ->
 def test_import_pyarrow(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -> None:
     pytest.importorskip("pyarrow")
     monkeypatch.delitem(sys.modules, "pyarrow")
-    df = _deps.import_pyarrow().table(data)
+    df = Implementation.PYARROW.to_native_namespace().table(data)
     result = _roundtrip_query(df)
     import pyarrow as pa
 
@@ -74,4 +74,9 @@ def test_import_pyarrow(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -
 
 def test_module_not_found() -> None:
     with pytest.raises(ModuleNotFoundError, match="not_a_real_package"):
-        raise module_not_found(module_name="not_a_real_package")
+        import_optional_dependency(module_name="not_a_real_package")
+
+
+def test_module_not_min_version() -> None:
+    with pytest.raises(ModuleUpgradeRequiredError, match="requires min version"):
+        import_optional_dependency(module_name="pandas", min_version=(999, 999, 999))

@@ -27,7 +27,6 @@ from typing import (
 )
 from warnings import warn
 
-from narwhals import _dependencies as _deps
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
@@ -55,7 +54,12 @@ from narwhals.dependencies import (
     is_polars_series,
     is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    ModuleUpgradeRequiredError,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -352,10 +356,14 @@ class Implementation(NoAutoEnum):
         Returns:
             Native module.
         """
-        if importer := _IMPORT_FUNCTIONS.get(self):
-            return importer()
-        msg = f"Not supported Implementation: {self}"  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
+        if self is Implementation.UNKNOWN:  # pragma: no cover
+            msg = f"Not supported Implementation: {self}"
+            raise AssertionError(msg)
+
+        importer = _IMPORT_FUNCTIONS.get(
+            self, lambda: import_optional_dependency(self.value, MIN_VERSIONS[self])
+        )
+        return importer()
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -603,18 +611,20 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
+
 _IMPORT_FUNCTIONS: Mapping[Implementation, Callable[[], ModuleType]] = {
-    Implementation.PANDAS: _deps.import_pandas,
-    Implementation.MODIN: _deps.import_modin,
-    Implementation.CUDF: _deps.import_cudf,
-    Implementation.PYARROW: _deps.import_pyarrow,
-    Implementation.PYSPARK: _deps.import_pyspark,
-    Implementation.POLARS: _deps.import_polars,
-    Implementation.DASK: _deps.import_dask,
-    Implementation.DUCKDB: _deps.import_duckdb,
-    Implementation.SQLFRAME: _deps.import_sqlframe,
-    Implementation.IBIS: _deps.import_ibis,
-    Implementation.PYSPARK_CONNECT: _deps.import_pyspark_connect,
+    Implementation.DASK: lambda: import_optional_dependency(
+        "dask.dataframe", MIN_VERSIONS[Implementation.DASK]
+    ),
+    Implementation.MODIN: lambda: import_optional_dependency(
+        "modin.pandas", MIN_VERSIONS[Implementation.MODIN]
+    ),
+    Implementation.PYSPARK: lambda: import_optional_dependency(
+        "pyspark.sql", MIN_VERSIONS[Implementation.PYSPARK]
+    ),
+    Implementation.PYSPARK_CONNECT: lambda: import_optional_dependency(
+        "pyspark.sql.connect", MIN_VERSIONS[Implementation.PYSPARK_CONNECT]
+    ),
 }
 
 
@@ -1976,3 +1986,42 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+def import_optional_dependency(
+    module_name: str, min_version: tuple[int, ...] | None = None
+) -> ModuleType:
+    """Import an optional dependency, returning the module.
+
+    Arguments:
+        module_name: Name of the dependency to import.
+        min_version: If a minimum module version is required, specify it here.
+
+    Returns:
+        Module
+
+    Info:
+
+        Adapted from [`polars.dependencies.import_optional`](https://github.com/pola-rs/polars/blob/0ca485a88a217eab2d55efbd981dfd68709e63be/py-polars/polars/dependencies.py#L225-L287)
+
+    """
+    from importlib import import_module
+
+    module_root = module_name.split(".", 1)[0]
+    try:
+        module = import_module(module_name)
+    except ImportError:
+        msg = f"Package '{module_root}' not found"
+        raise ModuleNotFoundError(msg) from None
+
+    if min_version:
+        from importlib.metadata import version
+
+        if (mod_version := parse_version(version(module_root))) < min_version:
+            msg = (
+                f"Package '{module_root}' requires min version {min_version}, "
+                f" found {'.'.join(str(v) for v in mod_version)}"
+            )
+            raise ModuleUpgradeRequiredError(msg)
+
+    return module
