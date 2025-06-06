@@ -103,7 +103,9 @@ class PolarsExpr:
                 raise NotImplementedError(msg)
             native = self.native.over(partition_by or pl.lit(1))
         else:
-            native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
+            native = self.native.over(
+                partition_by or pl.lit(1), order_by=order_by or None
+            )
         return self._with_native(native)
 
     @requires.backend_version((1,))
