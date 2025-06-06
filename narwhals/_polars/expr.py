@@ -96,7 +96,7 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
         return self._with_native(native)
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"

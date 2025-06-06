@@ -162,9 +162,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(
-        self, partition_by: Sequence[str], order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
     def sample(
         self,
         n: int | None,

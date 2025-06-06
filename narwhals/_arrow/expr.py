@@ -122,7 +122,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def shift(self, n: int) -> Self:
         return self._reuse_series("shift", n=n)
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         assert self._metadata is not None  # noqa: S101
         if partition_by and not self._metadata.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
@@ -131,7 +131,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         if not partition_by:
             # e.g. `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
-            assert order_by is not None  # help type checkers  # noqa: S101
+            assert order_by  # noqa: S101
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 token = generate_temporary_column_name(8, df.columns)
