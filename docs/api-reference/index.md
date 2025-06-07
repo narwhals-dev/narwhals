@@ -25,3 +25,4 @@
 - [narwhals.exceptions](exceptions.md)
 - [narwhals.selectors](selectors.md)
 - [narwhals.typing](typing.md)
+- [narwhals.utils](utils.md)

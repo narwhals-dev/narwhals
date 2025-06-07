@@ -10,7 +10,7 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals.utils import Implementation, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 class PolarsExpr:

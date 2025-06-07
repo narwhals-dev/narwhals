@@ -3,6 +3,16 @@ from __future__ import annotations
 import typing as _t
 
 from narwhals import dependencies, dtypes, exceptions, selectors
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+)
 from narwhals.dataframe import DataFrame, LazyFrame
 from narwhals.dtypes import (
     Array,
@@ -75,16 +85,6 @@ from narwhals.translate import (
     narwhalify,
     to_native,
     to_py_scalar,
-)
-from narwhals.utils import (
-    Implementation,
-    generate_temporary_column_name,
-    is_ordered_categorical,
-    maybe_align_index,
-    maybe_convert_dtypes,
-    maybe_get_index,
-    maybe_reset_index,
-    maybe_set_index,
 )
 
 __version__: str

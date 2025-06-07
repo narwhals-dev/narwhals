@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import EvalSeries, ScalarKwargs
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation, Version, _FullContext
 
 
 __all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyThen", "LazyWhen"]

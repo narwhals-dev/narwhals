@@ -22,7 +22,7 @@ from narwhals._duckdb.utils import (
     when,
 )
 from narwhals._expression_parsing import ExprKind
-from narwhals.utils import Implementation, not_implemented, requires
+from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
     from duckdb import Expression
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -46,7 +47,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-    from narwhals.utils import Version, _FullContext
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
