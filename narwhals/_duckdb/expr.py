@@ -74,22 +74,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
-        self._window_function: DuckDBWindowFunction = (
-            window_function or self._default_window_function(call)
-        )
+        self._window_function: DuckDBWindowFunction | None = window_function
 
-    def _default_window_function(
-        self, call: EvalSeries[DuckDBLazyFrame, Expression]
-    ) -> DuckDBWindowFunction:
-        def window_func(
+    @property
+    def window_function(self) -> DuckDBWindowFunction:
+        def default_window_func(
             df: DuckDBLazyFrame, window_inputs: WindowInputs
         ) -> list[Expression]:
             assert not window_inputs.order_by  # noqa: S101
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             template = f"{{expr}} over ({partition_by_sql})"
-            return [SQLExpression(template.format(expr=expr)) for expr in call(df)]
+            return [SQLExpression(template.format(expr=expr)) for expr in self(df)]
 
-        return window_func
+        return self._window_function or default_window_func
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)
@@ -481,7 +478,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     @requires.backend_version((1, 3))
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
-            return self._window_function(df, WindowInputs(partition_by, order_by))
+            return self.window_function(df, WindowInputs(partition_by, order_by))
 
         return self.__class__(
             func,

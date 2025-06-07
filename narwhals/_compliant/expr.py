@@ -47,7 +47,13 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        ScalarKwargs,
+        WindowFunction,
+    )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -869,6 +875,9 @@ class LazyExpr(
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+
+    @property
+    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
