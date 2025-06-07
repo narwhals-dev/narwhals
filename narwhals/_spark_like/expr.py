@@ -28,7 +28,6 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
-from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation, not_implemented, parse_version
 
 if TYPE_CHECKING:
