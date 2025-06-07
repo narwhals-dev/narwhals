@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from importlib.metadata import version
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
 
 from narwhals._expression_parsing import (
@@ -1773,4 +1774,62 @@ def concat_str(
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
         ),
+    )
+
+
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr] | NonNestedLiteral,
+    *more_exprs: IntoExpr | NonNestedLiteral,
+) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals.
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Returns:
+        A new expression.
+
+    Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> data = [
+    ...     (1, 5, None),
+    ...     (None, 6, None),
+    ...     (None, None, 9),
+    ...     (4, 8, 10),
+    ...     (None, None, None),
+    ... ]
+    >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
+    >>> (nw.from_native(df).select(nw.coalesce("a", "b", "c", -1)))
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |  shape: (5, 1)   |
+    |  ┌─────┐         |
+    |  │ a   │         |
+    |  │ --- │         |
+    |  │ i64 │         |
+    |  ╞═════╡         |
+    |  │ 1   │         |
+    |  │ 6   │         |
+    |  │ 9   │         |
+    |  │ 4   │         |
+    |  │ -1  │         |
+    |  └─────┘         |
+    └──────────────────┘
+    """
+    flat_exprs = flatten(
+        [
+            expr if isinstance(expr, (Expr, str)) else lit(expr)
+            for expr in chain(flatten([exprs]), more_exprs)
+        ]
+    )
+
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
+        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
