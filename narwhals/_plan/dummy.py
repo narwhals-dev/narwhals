@@ -24,9 +24,9 @@ from narwhals._plan.options import (
 )
 from narwhals._plan.selectors import by_name
 from narwhals._plan.window import Over
+from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
-from narwhals.utils import Version, _hasattr_static
 
 if TYPE_CHECKING:
     from typing_extensions import Never, Self

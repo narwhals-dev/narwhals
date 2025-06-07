@@ -21,9 +21,9 @@ from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals._plan.when_then import When
+from narwhals._utils import Version, flatten
 from narwhals.dtypes import DType
 from narwhals.exceptions import OrderDependentExprError
-from narwhals.utils import Version, flatten
 
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs

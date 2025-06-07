@@ -28,7 +28,7 @@ from narwhals._plan.typing import (
     SelectorOperatorT,
     SelectorT,
 )
-from narwhals.utils import flatten
+from narwhals._utils import flatten
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias

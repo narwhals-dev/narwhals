@@ -10,7 +10,7 @@ import re
 from typing import TYPE_CHECKING, Iterable
 
 from narwhals._plan.common import Immutable, is_iterable_reject
-from narwhals.utils import _parse_time_unit_and_time_zone
+from narwhals._utils import _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
     from datetime import timezone
