@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     LazyExprAny,
     NativeExprT,
     NativeSeriesT,
+    WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
 
@@ -40,7 +41,6 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 
 
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
-    _window_function: None
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT]
@@ -60,11 +60,6 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     @classmethod
     def from_expr(cls, condition: ExprT, /, *, context: _FullContext) -> Self:
         obj = cls.__new__(cls)
-
-        # This may require more complicated logic if we want to push down the
-        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
-        obj._window_function = None
-
         obj._condition = condition
         obj._then_value = None
         obj._otherwise_value = None
@@ -154,6 +149,7 @@ class LazyWhen(
 ):
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
+    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
     def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
@@ -169,3 +165,19 @@ class LazyWhen(
             otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
             result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
         return [result]
+
+    @classmethod
+    def from_expr(cls, condition: LazyExprT, /, *, context: _FullContext) -> Self:
+        obj = cls.__new__(cls)
+        obj._condition = condition
+
+        # This may require more complicated logic if we want to push down the
+        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
+        obj._window_function = None
+
+        obj._then_value = None
+        obj._otherwise_value = None
+        obj._implementation = context._implementation
+        obj._backend_version = context._backend_version
+        obj._version = context._version
+        return obj
