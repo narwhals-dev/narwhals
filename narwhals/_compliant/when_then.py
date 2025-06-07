@@ -20,7 +20,7 @@ from narwhals._typing_compat import Protocol38
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import EvalSeries, ScalarKwargs, WindowFunction
+    from narwhals._compliant.typing import EvalSeries, ScalarKwargs
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation, Version, _FullContext
 
@@ -76,7 +76,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
 
 class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
     _call: EvalSeries[FrameT, SeriesT]
-    _window_function: WindowFunction[FrameT, Any] | None
+    _window_function: None
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
     _depth: int
@@ -95,7 +95,11 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         when._then_value = then
         obj = cls.__new__(cls)
         obj._call = when
+
+        # This may require more complicated logic if we want to push down the
+        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
         obj._window_function = None
+
         obj._when_value = when
         obj._depth = 0
         obj._function_name = "whenthen"
