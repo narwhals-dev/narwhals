@@ -746,6 +746,18 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
+    ) and PANDAS_VERSION >= (3,):
+        from pandas.errors import MergeError
+
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="Passing suffixes which cause duplicate column names is not allowed.",
+                raises=MergeError,
+            )
+        )
     if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
         pytest.skip()
     if (
