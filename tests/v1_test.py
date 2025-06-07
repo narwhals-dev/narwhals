@@ -78,7 +78,9 @@ def test_constructors() -> None:
     pytest.importorskip("pyarrow")
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
-    assert nw_v1.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
+    result_s = nw_v1.new_series("a", [1, 2, 3], backend="pandas")
+    assert result_s.to_list() == [1, 2, 3]
+    assert isinstance(result_s, nw_v1.Series)
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
     result = nw_v1.from_numpy(arr, schema=["a", "b"], backend="pandas")
     assert_equal_data(result, {"a": [1, 3], "b": [2, 4]})

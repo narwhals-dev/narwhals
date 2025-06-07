@@ -22,6 +22,7 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
+    issue_deprecation_warning,
     parse_version,
     supports_arrow_c_stream,
     validate_laziness,
@@ -179,6 +180,12 @@ def new_series(
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
+    Warning:
+        `new_series` is deprecated and will be removed in a future version.
+        Please use `Series.from_iterable` instead.
+        Note: this will remain available in `narwhals.stable.v1`.
+        See [stable api](../backcompat.md/) for more information.
+
     Arguments:
         name: Name of resulting Series.
         values: Values of make Series from.
@@ -205,7 +212,7 @@ def new_series(
 
     Examples:
         >>> import pandas as pd
-        >>> import narwhals as nw
+        >>> import narwhals.stable.v1 as nw
         >>>
         >>> values = [4, 1, 2, 3]
         >>> nw.new_series(name="a", values=values, dtype=nw.Int32, backend=pd)
@@ -219,6 +226,14 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
+    issue_deprecation_warning(
+        "`new_series` is deprecated in the main `narwhals` namespace.\n\n"
+        "You may want to:\n"
+        " - Use `Series.from_iterable` instead.\n"
+        " - Use `narwhals.stable.v1`, where it is still supported.\n"
+        "    - See https://narwhals-dev.github.io/narwhals/backcompat\n",
+        "1.42.0",
+    )
     backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend)
 
