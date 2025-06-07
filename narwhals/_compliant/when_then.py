@@ -60,7 +60,11 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     @classmethod
     def from_expr(cls, condition: ExprT, /, *, context: _FullContext) -> Self:
         obj = cls.__new__(cls)
+
+        # This may require more complicated logic if we want to push down the
+        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
         obj._window_function = None
+
         obj._condition = condition
         obj._then_value = None
         obj._otherwise_value = None

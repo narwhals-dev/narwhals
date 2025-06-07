@@ -369,7 +369,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
-            return CoalesceOperator(FunctionExpression("bool_and", expr), lit(True))
+            return CoalesceOperator(FunctionExpression("bool_and", expr), lit(True))  # noqa: FBT003
 
         def window_f(
             df: DuckDBLazyFrame, window_inputs: WindowInputs
@@ -387,7 +387,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def any(self) -> Self:
         def f(expr: Expression) -> Expression:
-            return CoalesceOperator(FunctionExpression("bool_or", expr), lit(False))
+            return CoalesceOperator(FunctionExpression("bool_or", expr), lit(False))  # noqa: FBT003
 
         def window_f(
             df: DuckDBLazyFrame, window_inputs: WindowInputs

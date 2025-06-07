@@ -339,10 +339,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.median())
 
     def all(self) -> Self:
-        return self._with_callable(lambda expr: expr.all())
+        return self._with_callable(lambda expr: expr.all().fill_null(lit(True)))  # noqa: FBT003
 
     def any(self) -> Self:
-        return self._with_callable(lambda expr: expr.any())
+        return self._with_callable(lambda expr: expr.any().fill_null(lit(False)))  # noqa: FBT003
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
@@ -359,7 +359,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def sum(self) -> Self:
-        return self._with_callable(lambda expr: expr.sum())
+        return self._with_callable(lambda expr: expr.sum().fill_null(lit(0)))
 
     def n_unique(self) -> Self:
         return self._with_callable(
