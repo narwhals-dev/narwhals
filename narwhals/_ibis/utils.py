@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, Mapping
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
 
-from narwhals.utils import isinstance_or_issubclass
+from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 lit = ibis.literal
 """Alias for `ibis.literal`."""

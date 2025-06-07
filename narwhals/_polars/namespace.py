@@ -17,9 +17,9 @@ import polars as pl
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
+from narwhals._utils import Implementation, requires
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
-from narwhals.utils import Implementation, requires
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
+    from narwhals._utils import Version, _FullContext
     from narwhals.schema import Schema
     from narwhals.typing import Into1DArray, TimeUnit, _2DArray
-    from narwhals.utils import Version, _FullContext
 
 
 class PolarsNamespace:

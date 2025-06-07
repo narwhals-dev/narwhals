@@ -14,8 +14,12 @@ from narwhals._dask.utils import (
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    not_implemented,
+)
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -25,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -33,7 +38,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-    from narwhals.utils import Version, _FullContext
 
 
 class DaskExpr(
@@ -558,12 +562,12 @@ class DaskExpr(
             lambda expr: expr.isna().sum().to_series(), "null_count"
         )
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         if not partition_by:
-            assert order_by is not None  # help type checkers  # noqa: S101
+            assert order_by  # noqa: S101
 
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
@@ -661,3 +665,4 @@ class DaskExpr(
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
     _alias_native = not_implemented()
+    window_function = not_implemented()  # pyright: ignore[reportAssignmentType]

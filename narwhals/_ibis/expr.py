@@ -13,7 +13,7 @@ from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
-from narwhals.utils import Implementation, not_implemented
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -25,18 +25,15 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._compliant.window import UnorderableWindowInputs
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import RankMethod, RollingInterpolationMethod
-    from narwhals.utils import Version, _FullContext
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
-    IbisWindowFunction = WindowFunction[ir.Value]
-    IbisWindowInputs = WindowInputs[ir.Value]
-    IbisUnorderableWindowInputs = UnorderableWindowInputs[ir.Value]
+    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
 
 
 class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
@@ -45,6 +42,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def __init__(
         self,
         call: EvalSeries[IbisLazyFrame, ir.Value],
+        window_function: IbisWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
         alias_output_names: AliasNames | None,
@@ -57,9 +55,20 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
+        self._window_function: IbisWindowFunction | None = window_function
 
-        # This can only be set by `_with_window_function`.
-        self._window_function: IbisWindowFunction | None = None
+    @property
+    def window_function(self) -> IbisWindowFunction:
+        def default_window_func(
+            df: IbisLazyFrame, window_inputs: WindowInputs
+        ) -> list[ir.Value]:
+            assert not window_inputs.order_by  # noqa: S101
+            return [
+                expr.over(ibis.window(group_by=window_inputs.partition_by))
+                for expr in self(df)
+            ]
+
+        return self._window_function or default_window_func
 
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
@@ -75,7 +84,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def _cum_window_func(
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
     ) -> IbisWindowFunction:
-        def func(inputs: IbisWindowInputs) -> ir.Value:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             if reverse:
                 order_by_cols = [
                     ibis.desc(getattr(col, x), nulls_first=False) for x in inputs.order_by
@@ -92,7 +101,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                 following=0,
             )
 
-            return getattr(inputs.expr, func_name)().over(window)
+            return [getattr(expr, func_name)().over(window) for expr in self(df)]
 
         return func
 
@@ -114,7 +123,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             preceding = window_size - 1
             following = 0
 
-        def func(inputs: IbisWindowInputs) -> ir.Value:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
             ]
@@ -125,33 +134,32 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                 following=following,
             )
 
-            expr: ir.NumericColumn = cast("ir.NumericColumn", inputs.expr)
+            def inner_f(expr: ir.NumericColumn) -> ir.Value:
+                if func_name in {"sum", "mean"}:
+                    func_ = getattr(expr, func_name)()
+                elif func_name == "var" and ddof == 0:
+                    func_ = expr.var(how="pop")
+                elif func_name in "var" and ddof == 1:
+                    func_ = expr.var(how="sample")
+                elif func_name == "std" and ddof == 0:
+                    func_ = expr.std(how="pop")
+                elif func_name == "std" and ddof == 1:
+                    func_ = expr.std(how="sample")
+                elif func_name in {"var", "std"}:  # pragma: no cover
+                    msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
+                    raise ValueError(msg)
+                else:  # pragma: no cover
+                    msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                    raise ValueError(msg)
 
-            func_: ir.NumericScalar
+                rolling_calc = func_.over(window)
+                valid_count = expr.count().over(window)
+                return ibis.cases(
+                    (valid_count >= ibis.literal(min_samples), rolling_calc),
+                    else_=ibis.null(),
+                )
 
-            if func_name in {"sum", "mean"}:
-                func_ = getattr(expr, func_name)()
-            elif func_name == "var" and ddof == 0:
-                func_ = expr.var(how="pop")
-            elif func_name in "var" and ddof == 1:
-                func_ = expr.var(how="sample")
-            elif func_name == "std" and ddof == 0:
-                func_ = expr.std(how="pop")
-            elif func_name == "std" and ddof == 1:
-                func_ = expr.std(how="sample")
-            elif func_name in {"var", "std"}:  # pragma: no cover
-                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                raise ValueError(msg)
-            else:  # pragma: no cover
-                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                raise ValueError(msg)
-
-            rolling_calc = func_.over(window)
-            valid_count = expr.count().over(window)
-            return ibis.cases(
-                (valid_count >= ibis.literal(min_samples), rolling_calc),
-                else_=ibis.null(),
-            )
+            return [inner_f(cast("ir.NumericColumn", expr)) for expr in self(df)]
 
         return func
 
@@ -232,15 +240,14 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     def _with_window_function(self, window_function: IbisWindowFunction) -> Self:
-        result = self.__class__(
+        return self.__class__(
             self._call,
+            window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
-        result._window_function = window_function
-        return result
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
@@ -411,18 +418,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isnull().sum())
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
-        if (fn := self._window_function) is not None:
-            assert order_by is not None  # noqa: S101
-
-            def func(df: IbisLazyFrame) -> list[ir.Value]:
-                return [
-                    fn(WindowInputs(expr, partition_by, order_by)) for expr in self(df)
-                ]
-        else:
-
-            def func(df: IbisLazyFrame) -> list[ir.Value]:
-                return [expr.over(group_by=partition_by) for expr in self(df)]
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        def func(df: IbisLazyFrame) -> Sequence[ir.Value]:
+            return self.window_function(df, WindowInputs(partition_by, order_by))
 
         return self.__class__(
             func,
@@ -452,52 +450,65 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.round(decimals))
 
     def shift(self, n: int) -> Self:
-        def _func(inputs: IbisWindowInputs) -> ir.Value:
-            return (
-                cast("ir.Column", inputs.expr)
-                .lag(n)
-                .over(ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by))
-            )
+        def _func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
+            return [
+                expr.lag(n).over(  # type: ignore[attr-defined, unused-ignore]
+                    ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by)
+                )
+                for expr in self(df)
+            ]
 
         return self._with_window_function(_func)
 
     def is_first_distinct(self) -> Self:
-        def func(inputs: IbisWindowInputs) -> ir.BooleanValue:
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.BooleanValue]:
             order_by_cols = [
                 ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
             ]
-            window = ibis.window(
-                group_by=[*inputs.partition_by, inputs.expr], order_by=order_by_cols
-            )
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return ibis.row_number().over(window) == lit(0)
+            return [
+                ibis.row_number().over(
+                    ibis.window(
+                        group_by=[*inputs.partition_by, expr], order_by=order_by_cols
+                    )
+                )
+                == lit(0)
+                for expr in self(df)
+            ]
 
         return self._with_window_function(func)
 
     def is_last_distinct(self) -> Self:
-        def func(inputs: IbisWindowInputs) -> ir.Value:
-            order_by_cols = [ibis.desc(getattr(col, x)) for x in inputs.order_by]
-            window = ibis.window(
-                group_by=[*inputs.partition_by, inputs.expr], order_by=order_by_cols
-            )
+        def func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.BooleanValue]:
+            order_by_cols = [
+                ibis.desc(getattr(col, x), nulls_first=True) for x in inputs.order_by
+            ]
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return ibis.row_number().over(window) == lit(0)
+            return [
+                ibis.row_number().over(
+                    ibis.window(
+                        group_by=[*inputs.partition_by, expr], order_by=order_by_cols
+                    )
+                )
+                == lit(0)
+                for expr in self(df)
+            ]
 
         return self._with_window_function(func)
 
     def diff(self) -> Self:
-        def _func(inputs: IbisWindowInputs) -> ir.NumericValue:
-            expr = cast("ir.NumericColumn", inputs.expr)
-            return expr - cast(
-                "ir.NumericColumn",
-                expr.lag().over(
+        def _func(df: IbisLazyFrame, inputs: WindowInputs) -> Sequence[ir.Value]:
+            return [
+                expr
+                - expr.lag().over(  # type: ignore[attr-defined, unused-ignore]
                     ibis.window(
-                        order_by=inputs.order_by,
-                        group_by=inputs.partition_by,
                         following=0,
+                        group_by=inputs.partition_by,
+                        order_by=inputs.order_by,
                     )
-                ),
-            )
+                )
+                for expr in self(df)
+            ]
 
         return self._with_window_function(_func)
 

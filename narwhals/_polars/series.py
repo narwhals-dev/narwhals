@@ -20,8 +20,8 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
+from narwhals._utils import Implementation, requires, validate_backend_version
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.utils import Implementation, requires, validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -34,10 +34,10 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import Into1DArray, MultiIndexSelector, _1DArray
-    from narwhals.utils import Version, _FullContext
 
     T = TypeVar("T")
 
