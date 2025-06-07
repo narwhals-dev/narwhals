@@ -30,7 +30,6 @@ from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
     get_cudf,
-    get_dask,
     get_dask_dataframe,
     get_duckdb,
     get_ibis,
@@ -38,7 +37,6 @@ from narwhals.dependencies import (
     get_pandas,
     get_polars,
     get_pyarrow,
-    get_pyspark,
     get_pyspark_connect,
     get_pyspark_sql,
     get_sqlframe,
@@ -344,63 +342,24 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
+    def to_native_namespace(self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
             Native module.
         """
-        if self is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
+        if self is Implementation.UNKNOWN:  # pragma: no cover
+            msg = f"Not supported Implementation: {self}"
+            raise AssertionError(msg)
 
-            return pd
-        if self is Implementation.MODIN:
-            import modin.pandas
+        from importlib import import_module
 
-            return modin.pandas
-        if self is Implementation.CUDF:  # pragma: no cover
-            import cudf  # ignore-banned-import
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        module = import_module(module_name)
 
-            return cudf
-        if self is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
+        validate_backend_version(self, self._backend_version())
 
-            return pa
-        if self is Implementation.PYSPARK:  # pragma: no cover
-            import pyspark.sql
-
-            return pyspark.sql
-        if self is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
-            return pl
-        if self is Implementation.DASK:
-            import dask.dataframe  # ignore-banned-import
-
-            return dask.dataframe
-
-        if self is Implementation.DUCKDB:
-            import duckdb  # ignore-banned-import
-
-            return duckdb
-
-        if self is Implementation.SQLFRAME:
-            import sqlframe  # ignore-banned-import
-
-            return sqlframe
-
-        if self is Implementation.IBIS:
-            import ibis  # ignore-banned-import
-
-            return ibis
-
-        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql.connect  # ignore-banned-import
-
-            return pyspark.sql.connect
-
-        msg = "Not supported Implementation"  # pragma: no cover
-        raise AssertionError(msg)
+        return module
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -615,24 +574,10 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        native = self.to_native_namespace()
-        into_version: Any
-        if self not in {
-            Implementation.PYSPARK,
-            Implementation.PYSPARK_CONNECT,
-            Implementation.DASK,
-            Implementation.SQLFRAME,
-        }:
-            into_version = native
-        elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
-            into_version = get_pyspark()  # pragma: no cover
-        elif self is Implementation.DASK:
-            into_version = get_dask()
-        else:
-            import sqlframe._version
+        from importlib.metadata import version
 
-            into_version = sqlframe._version
-        return parse_version(into_version)
+        distribution_name = _IMPLEMENTATION_TO_DISTRIBUTION_NAME.get(self, self.value)
+        return parse_version(version=version(distribution_name))
 
 
 MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
@@ -648,6 +593,20 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
+
+_IMPLEMENTATION_TO_MODULE_NAME: dict[Implementation, str] = {
+    Implementation.DASK: "dask.dataframe",
+    Implementation.MODIN: "modin.pandas",
+    Implementation.PYSPARK: "pyspark.sql",
+    Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
+}
+"""Stores non default mapping from Implementation to module name"""
+
+_IMPLEMENTATION_TO_DISTRIBUTION_NAME: dict[Implementation, str] = {
+    Implementation.IBIS: "ibis-framework",
+    Implementation.PYSPARK_CONNECT: "pyspark",
+}
+"""Stores non default mapping from Implementation to distribution name"""
 
 
 def validate_backend_version(
