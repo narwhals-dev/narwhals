@@ -183,10 +183,6 @@ builtins-ignorelist = ["format"]
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
-# NOTE: Intentionally omitted to get `Module(...)` inferred
-"narwhals/_dependencies.py" = [
-  "ANN202",  # missing-return-type-private-function
-]
 "tests/*" = [
   "S101", 
   "C901",    # complex-structure
@@ -327,12 +323,6 @@ module = [
   "narwhals._spark_like.*",
 ]
 warn_return_any = false
-
-[[tool.mypy.overrides]]
-module = ["*._dependencies"]
-# NOTE: Intentionally omitted to get `Module(...)` inferred
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
 
 [tool.pyright]
 pythonPlatform = "All"

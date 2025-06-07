@@ -26,7 +26,6 @@ ALLOWED_IMPORTS = {
     "_polars": {"polars"},
     "_duckdb": {"duckdb"},
     "_ibis": {"ibis", "ibis._", "ibis.expr.types"},
-    "_dependencies": BANNED_IMPORTS,
 }
 
 
