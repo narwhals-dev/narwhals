@@ -521,7 +521,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     @requires.backend_version((1, 3))
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+    def over(
+        self, partition_by: Sequence[str | Expression], order_by: Sequence[str]
+    ) -> Self:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             return self.window_function(df, WindowInputs(partition_by, order_by))
 

@@ -232,7 +232,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
-            call=self._call,
+            self._call,
+            self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
             backend_version=self._backend_version,

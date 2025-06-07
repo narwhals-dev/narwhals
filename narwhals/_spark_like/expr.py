@@ -115,7 +115,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
-        return self._with_callable(lambda expr: expr.over(self.partition_by()))
+        return self.over([self._F.lit(1)], [])
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
@@ -330,7 +330,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
-            call=self._call,
+            self._call,
+            self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
             backend_version=self._backend_version,
@@ -422,10 +423,42 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(self._F.abs)
 
     def all(self) -> Self:
-        return self._with_callable(self._F.bool_and)
+        def f(expr: Column) -> Column:
+            return self._F.coalesce(self._F.bool_and(expr), self._F.lit(True))  # noqa: FBT003
+
+        def window_f(
+            df: SparkLikeLazyFrame, window_inputs: WindowInputs
+        ) -> Sequence[Column]:
+            return [
+                self._F.coalesce(
+                    self._F.bool_and(expr).over(
+                        self.partition_by(*window_inputs.partition_by)
+                    ),
+                    self._F.lit(True),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def any(self) -> Self:
-        return self._with_callable(self._F.bool_or)
+        def f(expr: Column) -> Column:
+            return self._F.coalesce(self._F.bool_or(expr), self._F.lit(False))  # noqa: FBT003
+
+        def window_f(
+            df: SparkLikeLazyFrame, window_inputs: WindowInputs
+        ) -> Sequence[Column]:
+            return [
+                self._F.coalesce(
+                    self._F.bool_or(expr).over(
+                        self.partition_by(*window_inputs.partition_by)
+                    ),
+                    self._F.lit(False),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def cast(self, dtype: DType | type[DType]) -> Self:
         def _cast(expr: Column) -> Column:
@@ -470,7 +503,23 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_null_count)
 
     def sum(self) -> Self:
-        return self._with_callable(self._F.sum)
+        def f(expr: Column) -> Column:
+            return self._F.coalesce(self._F.sum(expr), self._F.lit(0))
+
+        def window_f(
+            df: SparkLikeLazyFrame, window_inputs: WindowInputs
+        ) -> Sequence[Column]:
+            return [
+                self._F.coalesce(
+                    self._F.sum(expr).over(
+                        self.partition_by(*window_inputs.partition_by)
+                    ),
+                    self._F.lit(0),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def std(self, ddof: int) -> Self:
         F = self._F  # noqa: N806
