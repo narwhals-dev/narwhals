@@ -74,22 +74,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
-        self._window_function: DuckDBWindowFunction = (
-            window_function or self._default_window_function(call)
-        )
+        self._window_function: DuckDBWindowFunction | None = window_function
 
-    def _default_window_function(
-        self, call: EvalSeries[DuckDBLazyFrame, Expression]
-    ) -> DuckDBWindowFunction:
-        def window_func(
+    @property
+    def window_function(self) -> DuckDBWindowFunction:
+        def default_window_func(
             df: DuckDBLazyFrame, window_inputs: WindowInputs
         ) -> list[Expression]:
             assert not window_inputs.order_by  # noqa: S101
             partition_by_sql = generate_partition_by_sql(*window_inputs.partition_by)
             template = f"{{expr}} over ({partition_by_sql})"
-            return [SQLExpression(template.format(expr=expr)) for expr in call(df)]
+            return [SQLExpression(template.format(expr=expr)) for expr in self(df)]
 
-        return window_func
+        return self._window_function or default_window_func
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)
@@ -371,20 +368,40 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_callable(lambda expr: FunctionExpression("median", expr))
 
     def all(self) -> Self:
-        def f(expr):
-            return CoalesceOperator(FunctionExpression('bool_and', expr), lit(True))
-        def wf(df, window_inputs):
+        def f(expr: Expression) -> Expression:
+            return CoalesceOperator(FunctionExpression("bool_and", expr), lit(True))
+
+        def window_f(
+            df: DuckDBLazyFrame, window_inputs: WindowInputs
+        ) -> list[Expression]:
             pb = generate_partition_by_sql(*window_inputs.partition_by)
-            return [CoalesceOperator(SQLExpression(f"{FunctionExpression('bool_and', expr)} over ({pb})"), lit(True)) for expr in self(df)]
-        return self._with_callable(f)._with_window_function(wf)
+            return [
+                CoalesceOperator(
+                    SQLExpression(f"{FunctionExpression('bool_and', expr)} over ({pb})"),
+                    lit(True),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def any(self) -> Self:
-        def f(expr):
-            return CoalesceOperator(FunctionExpression('bool_or', expr), lit(False))
-        def wf(df, window_inputs):
+        def f(expr: Expression) -> Expression:
+            return CoalesceOperator(FunctionExpression("bool_or", expr), lit(False))
+
+        def window_f(
+            df: DuckDBLazyFrame, window_inputs: WindowInputs
+        ) -> list[Expression]:
             pb = generate_partition_by_sql(*window_inputs.partition_by)
-            return [CoalesceOperator(SQLExpression(f"{FunctionExpression('bool_or', expr)} over ({pb})"), lit(False)) for expr in self(df)]
-        return self._with_callable(f)._with_window_function(wf)
+            return [
+                CoalesceOperator(
+                    SQLExpression(f"{FunctionExpression('bool_or', expr)} over ({pb})"),
+                    lit(False),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
@@ -424,12 +441,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def sum(self) -> Self:
-        def f(expr):
-            return CoalesceOperator(FunctionExpression('sum', expr), lit(0))
-        def wf(df, window_inputs):
+        def f(expr: Expression) -> Expression:
+            return CoalesceOperator(FunctionExpression("sum", expr), lit(0))
+
+        def window_f(
+            df: DuckDBLazyFrame, window_inputs: WindowInputs
+        ) -> list[Expression]:
             pb = generate_partition_by_sql(*window_inputs.partition_by)
-            return [CoalesceOperator(SQLExpression(f"{FunctionExpression('sum', expr)} over ({pb})"), lit(0)) for expr in self(df)]
-        return self._with_callable(f)._with_window_function(wf)
+            return [
+                CoalesceOperator(
+                    SQLExpression(f"{FunctionExpression('sum', expr)} over ({pb})"),
+                    lit(0),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def n_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
@@ -496,7 +523,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     @requires.backend_version((1, 3))
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
-            return self._window_function(df, WindowInputs(partition_by, order_by))
+            return self.window_function(df, WindowInputs(partition_by, order_by))
 
         return self.__class__(
             func,

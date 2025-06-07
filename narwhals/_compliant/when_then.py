@@ -20,7 +20,7 @@ from narwhals._typing_compat import Protocol38
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import EvalSeries, ScalarKwargs, WindowFunction
     from narwhals.typing import NonNestedLiteral
     from narwhals.utils import Implementation, Version, _FullContext
 
@@ -40,6 +40,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 
 
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
+    _window_function: WindowFunction[FrameT, Any] | None
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT]
@@ -59,6 +60,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     @classmethod
     def from_expr(cls, condition: ExprT, /, *, context: _FullContext) -> Self:
         obj = cls.__new__(cls)
+        obj._window_function = None
         obj._condition = condition
         obj._then_value = None
         obj._otherwise_value = None
@@ -70,6 +72,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
 
 class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
     _call: EvalSeries[FrameT, SeriesT]
+    _window_function: WindowFunction[FrameT, Any] | None
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
     _depth: int
@@ -88,6 +91,7 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         when._then_value = then
         obj = cls.__new__(cls)
         obj._call = when
+        obj._window_function = None
         obj._when_value = when
         obj._depth = 0
         obj._function_name = "whenthen"
