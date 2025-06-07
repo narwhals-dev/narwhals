@@ -117,8 +117,8 @@ class LazyThen(
     @classmethod
     def from_when(
         cls,
-        when: CompliantWhen[FrameT, SeriesT, ExprT],
-        then: IntoExpr[SeriesT, ExprT],
+        when: CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
+        then: IntoExpr[NativeExprT, LazyExprT],
         /,
     ) -> Self:
         when._then_value = then
