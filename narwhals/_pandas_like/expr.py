@@ -201,12 +201,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         return self._reuse_series("shift", scalar_kwargs={"n": n})
 
     def over(  # noqa: C901, PLR0915
-        self, partition_by: Sequence[str], order_by: Sequence[str] | None
+        self, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> Self:
         if not partition_by:
             # e.g. `nw.col('a').cum_sum().order_by(key)`
             # We can always easily support this as it doesn't require grouping.
-            assert order_by is not None  # noqa: S101  # help type-check
+            assert order_by  # noqa: S101
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 token = generate_temporary_column_name(8, df.columns)

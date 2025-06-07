@@ -1549,7 +1549,7 @@ class Expr:
             └────────────────────────────┘
         """
         flat_partition_by = flatten(partition_by)
-        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
         if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)

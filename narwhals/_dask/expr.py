@@ -558,12 +558,12 @@ class DaskExpr(
             lambda expr: expr.isna().sum().to_series(), "null_count"
         )
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         # pandas is a required dependency of dask so it's safe to import this
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
         if not partition_by:
-            assert order_by is not None  # help type checkers  # noqa: S101
+            assert order_by  # noqa: S101
 
             # This is something like `nw.col('a').cum_sum().order_by(key)`
             # which we can always easily support, as it doesn't require grouping.
@@ -661,3 +661,4 @@ class DaskExpr(
     struct = not_implemented()  # pyright: ignore[reportAssignmentType]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
     _alias_native = not_implemented()
+    window_function = not_implemented()  # pyright: ignore[reportAssignmentType]
