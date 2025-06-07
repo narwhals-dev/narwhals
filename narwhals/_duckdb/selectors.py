@@ -23,6 +23,7 @@ class DuckDBSelector(  # type: ignore[misc]
     def _to_expr(self) -> DuckDBExpr:
         return DuckDBExpr(
             self._call,
+            self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

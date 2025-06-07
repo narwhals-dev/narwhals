@@ -62,16 +62,7 @@ def test_scalar_reduction_with_columns(
     assert_equal_data(result, expected)
 
 
-def test_empty_scalar_reduction_select(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    # pyspark doesn't necessarely fails, but returns all None's
-    if (
-        "pyspark" in str(constructor)
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        request.applymarker(pytest.mark.xfail)
+def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
     data = {
         "str": [*"abcde"],
         "int": [0, 1, 2, 3, 4],

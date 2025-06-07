@@ -211,6 +211,7 @@ class CompliantSelector(
     CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
+    _window_function: None
     _function_name: str
     _depth: int
     _implementation: Implementation
@@ -228,6 +229,7 @@ class CompliantSelector(
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
+        obj._window_function = None
         obj._depth = 0
         obj._function_name = "selector"
         obj._evaluate_output_names = evaluate_output_names

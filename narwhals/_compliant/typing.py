@@ -147,6 +147,6 @@ EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
 
 WindowFunction: TypeAlias = (
-    "Callable[[CompliantFrameT, WindowInputs], Sequence[NativeExprT]]"
+    "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
 )
 """A function evaluated with `over(partition_by=..., order_by=...)`."""

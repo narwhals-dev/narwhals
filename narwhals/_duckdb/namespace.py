@@ -9,7 +9,7 @@ import duckdb
 from duckdb import CoalesceOperator, Expression, FunctionExpression
 from duckdb.typing import BIGINT, VARCHAR
 
-from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
@@ -219,6 +219,4 @@ class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
         return super().__call__(df)
 
 
-class DuckDBThen(
-    CompliantThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr
-): ...
+class DuckDBThen(LazyThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...
