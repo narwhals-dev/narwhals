@@ -447,3 +447,25 @@ class ExprStringNamespace(Generic[ExprT]):
         return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
         )
+
+    def zfill(self, width: int) -> ExprT:
+        """Transform string to zero-padded variant.
+
+        Warning:
+            Different backends handle strings that start with "+" and "-" signs differently:
+
+            - Pandas preserves both "+" and "-" signs, padding the rest of the string with zeros
+            - Polars only preserves the "-" sign, and prefixes "+" signs with zeros
+
+        Arguments:
+            width: The desired length of the string after padding. If the length of the
+                string is greater than `width`, no padding is applied.
+                If `width` is less than 0, no padding is applied.
+
+        Returns:
+            A new expression.
+
+        """
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.zfill(width)
+        )

@@ -18,5 +18,6 @@
         - to_datetime
         - to_lowercase
         - to_uppercase
+        - zfill
       show_source: false
       show_bases: false
