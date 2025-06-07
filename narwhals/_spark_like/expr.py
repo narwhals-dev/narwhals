@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
         RankMethod,
         TemporalLiteral,
     )
-    from narwhals.utils import Version, _FullContext
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     Asc: TypeAlias = Literal[False]
