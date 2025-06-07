@@ -10,7 +10,7 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals.utils import Implementation, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 class PolarsExpr:
@@ -96,14 +96,16 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
         return self._with_native(native)
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
             native = self.native.over(partition_by or pl.lit(1))
         else:
-            native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
+            native = self.native.over(
+                partition_by or pl.lit(1), order_by=order_by or None
+            )
         return self._with_native(native)
 
     @requires.backend_version((1,))

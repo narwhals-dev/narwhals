@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
-from narwhals.utils import Version
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self

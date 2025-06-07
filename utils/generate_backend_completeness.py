@@ -11,7 +11,7 @@ from typing import Any, Final, Iterator, NamedTuple
 import polars as pl
 from jinja2 import Template
 
-from narwhals.utils import not_implemented
+from narwhals._utils import not_implemented
 
 TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness"

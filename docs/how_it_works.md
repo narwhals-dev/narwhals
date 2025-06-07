@@ -70,7 +70,7 @@ import pandas as pd
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
-from narwhals.utils import parse_version, Version
+from narwhals._utils import parse_version, Version
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
@@ -96,7 +96,7 @@ import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals.utils import parse_version, Version
+from narwhals._utils import parse_version, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
@@ -194,7 +194,7 @@ import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals.utils import parse_version, Version
+from narwhals._utils import parse_version, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(

@@ -17,6 +17,21 @@ from warnings import warn
 import narwhals as nw
 from narwhals import dependencies, exceptions, functions as nw_f, selectors
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import (
+    Implementation,
+    Version,
+    deprecate_native_namespace,
+    find_stacklevel,
+    generate_temporary_column_name,
+    inherit_doc,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+    validate_strict_and_pass_though,
+)
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
@@ -57,21 +72,6 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
-from narwhals.utils import (
-    Implementation,
-    Version,
-    deprecate_native_namespace,
-    find_stacklevel,
-    generate_temporary_column_name,
-    inherit_doc,
-    is_ordered_categorical,
-    maybe_align_index,
-    maybe_convert_dtypes,
-    maybe_get_index,
-    maybe_reset_index,
-    maybe_set_index,
-    validate_strict_and_pass_though,
-)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -305,8 +305,8 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
+        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
 
         msg = (
             "`Series.hist` is being called from the stable API although considered "
@@ -1023,9 +1023,9 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
+    from narwhals._utils import validate_strict_and_pass_though
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
-    from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False

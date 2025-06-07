@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ModuleUpgradeRequiredError
-from narwhals.utils import Implementation, import_optional_dependency
+from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoFrameT
@@ -70,13 +69,3 @@ def test_import_pyarrow(monkeypatch: pytest.MonkeyPatch, data: dict[str, Any]) -
     import pyarrow as pa
 
     assert isinstance(result, pa.Table)
-
-
-def test_module_not_found() -> None:
-    with pytest.raises(ModuleNotFoundError, match="not_a_real_package"):
-        import_optional_dependency(module_name="not_a_real_package")
-
-
-def test_module_not_min_version() -> None:
-    with pytest.raises(ModuleUpgradeRequiredError, match="requires min version"):
-        import_optional_dependency(module_name="pandas", min_version=(999, 999, 999))

@@ -16,9 +16,7 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     not_implemented,
@@ -26,6 +24,8 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -40,11 +40,11 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals._utils import _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import _FullContext
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 

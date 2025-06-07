@@ -13,7 +13,7 @@ from tests.utils import PYARROW_VERSION, assert_equal_data
 pytest.importorskip("pyarrow")
 import pyarrow as pa
 
-from narwhals.utils import Implementation, Version
+from narwhals._utils import Implementation, Version
 
 
 @dataclass

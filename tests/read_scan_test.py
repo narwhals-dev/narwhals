@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 pytest.importorskip("polars")

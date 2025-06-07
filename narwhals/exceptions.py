@@ -123,7 +123,3 @@ class UnsupportedDTypeError(NarwhalsError):
 
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
-
-
-class ModuleUpgradeRequiredError(ModuleNotFoundError):
-    """Exception raised when a module is installed but needs to be upgraded."""

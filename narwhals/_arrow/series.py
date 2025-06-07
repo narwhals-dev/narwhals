@@ -32,9 +32,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
     is_list_of,
@@ -42,6 +40,8 @@ from narwhals.utils import (
     requires,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -64,6 +64,7 @@ if TYPE_CHECKING:
         _AsPyType,
         _BasicDataType,
     )
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -80,7 +81,6 @@ if TYPE_CHECKING:
         _2DArray,
         _SliceIndex,
     )
-    from narwhals.utils import Version, _FullContext
 
 
 # TODO @dangotbanned: move into `_arrow.utils`
