@@ -10,7 +10,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import TYPE_CHECKING, Iterable, Mapping, cast
 
-from narwhals.utils import Implementation, Version, parse_version
+from narwhals._utils import Implementation, Version, parse_version
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar

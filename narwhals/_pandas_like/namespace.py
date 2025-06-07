@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from narwhals._pandas_like.typing import NDFrameT
+    from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
-    from narwhals.utils import Implementation, Version
 
 VERTICAL: Literal[0] = 0
 HORIZONTAL: Literal[1] = 1

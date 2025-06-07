@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
+    from narwhals._utils import Implementation, Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
-    from narwhals.utils import Implementation, Version
 
 
 class SparkLikeNamespace(

@@ -14,8 +14,12 @@ from narwhals._dask.utils import (
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    not_implemented,
+)
 from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -25,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._utils import Version, _FullContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -33,7 +38,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-    from narwhals.utils import Version, _FullContext
 
 
 class DaskExpr(

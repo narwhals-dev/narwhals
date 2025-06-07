@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals.utils import Version, parse_version
+from narwhals._utils import Version, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd

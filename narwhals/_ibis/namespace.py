@@ -17,11 +17,11 @@ from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import lit, narwhals_to_native_dtype
-from narwhals.utils import Implementation, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
+    from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType
-    from narwhals.utils import Version
 
 
 class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):

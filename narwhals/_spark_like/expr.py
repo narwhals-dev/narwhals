@@ -26,8 +26,8 @@ from narwhals._spark_like.utils import (
     import_window,
     narwhals_to_native_dtype,
 )
+from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
-from narwhals.utils import Implementation, not_implemented, parse_version
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
         RankMethod,
         TemporalLiteral,
     )
-    from narwhals.utils import Version, _FullContext
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     Asc: TypeAlias = Literal[False]

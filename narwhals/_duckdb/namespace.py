@@ -18,11 +18,11 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
-    from narwhals.utils import Version
 
 
 class DuckDBNamespace(

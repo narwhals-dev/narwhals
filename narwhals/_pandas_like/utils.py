@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
-from narwhals.exceptions import DuplicateError, ShapeError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
     check_columns_exist,
     isinstance_or_issubclass,
 )
+from narwhals.exceptions import DuplicateError, ShapeError
 
 T = TypeVar("T", bound=Sized)
 

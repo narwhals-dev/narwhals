@@ -7,7 +7,11 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.utils import Implementation, generate_temporary_column_name, not_implemented
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    not_implemented,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -16,8 +20,8 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._utils import Version, _FullContext
     from narwhals.typing import RankMethod
-    from narwhals.utils import Version, _FullContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):

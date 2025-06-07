@@ -9,6 +9,12 @@ from narwhals._expression_parsing import (
     combine_metadata,
     extract_compliant,
 )
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    issue_deprecation_warning,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -18,12 +24,6 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import (
-    _validate_rolling_arguments,
-    ensure_type,
-    flatten,
-    issue_deprecation_warning,
-)
 
 if TYPE_CHECKING:
     from typing import TypeVar

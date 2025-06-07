@@ -6,7 +6,7 @@ from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING, Iterable, Mapping
 
-from narwhals.utils import _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing import Iterator, Sequence
@@ -62,7 +62,7 @@ class DType:
         return issubclass(cls, NestedType)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        from narwhals.utils import isinstance_or_issubclass
+        from narwhals._utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
 

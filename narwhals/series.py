@@ -13,6 +13,15 @@ from typing import (
     overload,
 )
 
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    generate_repr,
+    is_compliant_series,
+    is_index_selector,
+    parse_version,
+    supports_arrow_c_stream,
+)
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError
@@ -23,15 +32,6 @@ from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
 from narwhals.typing import IntoSeriesT
-from narwhals.utils import (
-    _validate_rolling_arguments,
-    ensure_type,
-    generate_repr,
-    is_compliant_series,
-    is_index_selector,
-    parse_version,
-    supports_arrow_c_stream,
-)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._utils import Implementation
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -56,7 +57,6 @@ if TYPE_CHECKING:
         TemporalLiteral,
         _1DArray,
     )
-    from narwhals.utils import Implementation
 
 
 class Series(Generic[IntoSeriesT]):
