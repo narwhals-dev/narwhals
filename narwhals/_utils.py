@@ -354,20 +354,8 @@ class Implementation(NoAutoEnum):
 
         from importlib import import_module
 
-        name: str
-
-        if self is Implementation.DASK:
-            name = "dask.dataframe"
-        elif self is Implementation.MODIN:
-            name = "modin.pandas"
-        elif self is Implementation.PYSPARK:
-            name = "pyspark.sql"
-        elif self is Implementation.PYSPARK_CONNECT:
-            name = "pyspark.sql.connect"
-        else:
-            name = self.value
-
-        module = import_module(name)
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        module = import_module(module_name)
 
         validate_backend_version(self, self._backend_version())
 
@@ -588,20 +576,7 @@ class Implementation(NoAutoEnum):
     def _backend_version(self) -> tuple[int, ...]:
         from importlib.metadata import version
 
-        distribution_name: str
-
-        if self in {
-            Implementation.PYSPARK,
-            Implementation.PYSPARK_CONNECT,
-        }:  # pragma: no cover
-            distribution_name = "pyspark"
-        elif self is Implementation.DASK:
-            distribution_name = "dask"
-        elif self is Implementation.IBIS:
-            distribution_name = "ibis-framework"
-        else:
-            distribution_name = self.value
-
+        distribution_name = _IMPLEMENTATION_TO_DISTRIBUTION_NAME.get(self, self.value)
         return parse_version(version=version(distribution_name))
 
 
@@ -618,6 +593,20 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
 }
+
+_IMPLEMENTATION_TO_MODULE_NAME: dict[Implementation, str] = {
+    Implementation.DASK: "dask.dataframe",
+    Implementation.MODIN: "modin.pandas",
+    Implementation.PYSPARK: "pyspark.sql",
+    Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
+}
+"""Stores non default mapping from Implementation to module name"""
+
+_IMPLEMENTATION_TO_DISTRIBUTION_NAME: dict[Implementation, str] = {
+    Implementation.IBIS: "ibis-framework",
+    Implementation.PYSPARK_CONNECT: "pyspark",
+}
+"""Stores non default mapping from Implementation to distribution name"""
 
 
 def validate_backend_version(
