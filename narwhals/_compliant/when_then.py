@@ -40,7 +40,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 
 
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
-    _window_function: WindowFunction[FrameT, Any] | None
+    _window_function: None
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT]

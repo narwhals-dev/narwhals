@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Generic, Sequence
+
+from narwhals._compliant.typing import NativeExprT_co
 
 
-class WindowInputs:
+class WindowInputs(Generic[NativeExprT_co]):
     __slots__ = ("order_by", "partition_by")
 
     def __init__(
-        self, partition_by: Sequence[str | Any], order_by: Sequence[str]
+        self, partition_by: Sequence[str | NativeExprT_co], order_by: Sequence[str]
     ) -> None:
         self.partition_by = partition_by
         self.order_by = order_by

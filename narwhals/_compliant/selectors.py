@@ -211,6 +211,7 @@ class CompliantSelector(
     CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
+    _window_function: None
     _function_name: str
     _depth: int
     _implementation: Implementation
