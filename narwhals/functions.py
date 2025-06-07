@@ -14,16 +14,7 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
-from narwhals.dependencies import (
-    is_narwhals_series,
-    is_numpy_array,
-    is_numpy_array_2d,
-    is_pyarrow_table,
-)
-from narwhals.exceptions import InvalidOperationError
-from narwhals.expr import Expr
-from narwhals.translate import from_native, to_native
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
@@ -35,6 +26,15 @@ from narwhals.utils import (
     supports_arrow_c_stream,
     validate_laziness,
 )
+from narwhals.dependencies import (
+    is_narwhals_series,
+    is_numpy_array,
+    is_numpy_array_2d,
+    is_pyarrow_table,
+)
+from narwhals.exceptions import InvalidOperationError
+from narwhals.expr import Expr
+from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
     from types import ModuleType

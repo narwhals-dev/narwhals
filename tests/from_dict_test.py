@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
 TEST_EAGER_BACKENDS: list[Implementation | str] = []

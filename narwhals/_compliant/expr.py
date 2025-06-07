@@ -36,9 +36,9 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _StoresCompliant, not_implemented
 
 if TYPE_CHECKING:
     from typing import Mapping
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         WindowFunction,
     )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -65,7 +66,6 @@ if TYPE_CHECKING:
         TemporalLiteral,
         TimeUnit,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 

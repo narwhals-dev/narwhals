@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from narwhals.utils import CompliantT_co, _StoresCompliant
+from narwhals._utils import CompliantT_co, _StoresCompliant
 
 if TYPE_CHECKING:
     from typing import Callable

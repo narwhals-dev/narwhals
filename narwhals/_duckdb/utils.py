@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
-from narwhals.utils import Version, isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
@@ -159,7 +159,7 @@ def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
         "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
     ).fetchone()
     assert result is not None  # noqa: S101
-    return result[0]
+    return result[0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)

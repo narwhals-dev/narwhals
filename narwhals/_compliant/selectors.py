@@ -17,7 +17,7 @@ from typing import (
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._typing_compat import Protocol38
-from narwhals.utils import (
+from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     dtype_matches_time_unit_and_time_zone,
     get_column_names,
@@ -41,9 +41,9 @@ if TYPE_CHECKING:
         EvalSeries,
         ScalarKwargs,
     )
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = [
     "CompliantSelector",

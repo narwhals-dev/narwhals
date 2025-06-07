@@ -20,9 +20,7 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import ShapeError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     check_column_names_are_unique,
@@ -35,6 +33,8 @@ from narwhals.utils import (
     supports_arrow_c_stream,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -68,7 +69,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Version, _FullContext
 
     JoinType: TypeAlias = Literal[
         "left semi",

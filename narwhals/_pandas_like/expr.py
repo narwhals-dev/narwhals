@@ -6,7 +6,7 @@ from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
-from narwhals.utils import generate_temporary_column_name
+from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,13 +15,13 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.typing import (
         FillNullStrategy,
         NonNestedLiteral,
         PythonLiteral,
         RankMethod,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_sum": "cumsum",

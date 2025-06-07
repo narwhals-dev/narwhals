@@ -21,14 +21,14 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod, NonNestedLiteral
-    from narwhals.utils import Version
 
 
 class DaskNamespace(
