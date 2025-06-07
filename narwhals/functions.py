@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
+        IntoDType,
         IntoExpr,
         IntoSeriesT,
         NativeFrame,
@@ -172,7 +173,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -226,7 +227,7 @@ def new_series(
 def _new_series_impl(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str,
 ) -> Series[Any]:
@@ -1581,7 +1582,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:

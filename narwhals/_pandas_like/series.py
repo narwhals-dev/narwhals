@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -179,7 +180,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
         index: Any = None,
     ) -> Self:
         implementation = context._implementation
@@ -296,7 +297,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             self.native.iloc[indices.native] = values_native
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
@@ -619,7 +620,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)

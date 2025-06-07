@@ -39,7 +39,13 @@ if TYPE_CHECKING:
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import ConcatMethod, Into1DArray, NonNestedLiteral, _2DArray
+    from narwhals.typing import (
+        ConcatMethod,
+        Into1DArray,
+        IntoDType,
+        NonNestedLiteral,
+        _2DArray,
+    )
     from narwhals.utils import Implementation, Version
 
     Incomplete: TypeAlias = Any
@@ -69,9 +75,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         return self._expr.from_column_indices(*column_indices, context=self)
 
     def len(self) -> CompliantExprT: ...
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> CompliantExprT: ...
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
     def all_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def any_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def sum_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...

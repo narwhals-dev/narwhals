@@ -28,8 +28,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals.dtypes import DType
-    from narwhals.typing import RankMethod, RollingInterpolationMethod
+    from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
     from narwhals.utils import Version, _FullContext
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
@@ -593,7 +592,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_fill_null, value=value)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def _func(expr: ir.Column) -> ir.Value:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             # ibis `cast` overloads do not include DataType, only literals

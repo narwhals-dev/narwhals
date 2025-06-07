@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
     from narwhals.utils import Version, _FullContext
 
 
@@ -154,7 +154,7 @@ class PolarsNamespace:
             )
         return self._lazyframe.from_native(result, context=self)
 
-    def lit(self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
+    def lit(self, value: Any, dtype: IntoDType | None) -> PolarsExpr:
         if dtype is not None:
             return self._expr(
                 pl.lit(

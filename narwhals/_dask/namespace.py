@@ -26,8 +26,7 @@ from narwhals.utils import Implementation
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -53,7 +52,7 @@ class DaskNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self, value: NonNestedLiteral, dtype: DType | type[DType] | None) -> DaskExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)

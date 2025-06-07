@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
     from narwhals.utils import Version
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
@@ -165,7 +165,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # 
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."

@@ -21,8 +21,7 @@ from narwhals._expression_parsing import (
 from narwhals.utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
     from narwhals.utils import Version
 
 
@@ -175,9 +174,7 @@ class DuckDBNamespace(
     def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> DuckDBExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[Expression]:
             if dtype is not None:
                 return [

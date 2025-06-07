@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
     from narwhals.utils import Version
 
 lit = ibis.literal
@@ -157,7 +158,7 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version
+    dtype: IntoDType, version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes
 

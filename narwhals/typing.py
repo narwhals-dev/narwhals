@@ -359,7 +359,7 @@ NonNestedLiteral: TypeAlias = (
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
-NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Unknown | dtypes.Object"
+NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
 """Any Narwhals DType that does not have required arguments."""
 
 IntoDType: TypeAlias = "dtypes.DType | type[NonNestedDType]"

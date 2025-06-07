@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
     from narwhals.utils import _StoresNative
 
     T = TypeVar("T")
@@ -148,7 +149,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+    dtype: IntoDType, version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
     dtypes = version.dtypes
     if dtype == dtypes.Float64:

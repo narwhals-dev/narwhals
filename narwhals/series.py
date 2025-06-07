@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -473,7 +474,7 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Cast between data types.
 
         Arguments:
@@ -1164,7 +1165,7 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 

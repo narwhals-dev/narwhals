@@ -82,6 +82,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrameT,
@@ -1216,7 +1217,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -1467,7 +1468,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
