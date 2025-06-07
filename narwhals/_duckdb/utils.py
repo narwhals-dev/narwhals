@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 UNITS_DICT = {
     "y": "year",
@@ -189,7 +190,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: C901, PLR0912, PLR0915
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa: C901, PLR0912, PLR0915
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."

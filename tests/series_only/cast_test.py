@@ -125,7 +125,7 @@ def test_cast_to_enum_vmain(
     with pytest.raises(
         ValueError, match="Can not cast / initialize Enum without categories present"
     ):
-        df_nw.select(col_a.cast(nw.Enum))
+        df_nw.select(col_a.cast(nw.Enum))  # type: ignore[arg-type]
 
     df_nw = df_nw.select(col_a.cast(nw.Enum(["a", "b"])))
     assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}

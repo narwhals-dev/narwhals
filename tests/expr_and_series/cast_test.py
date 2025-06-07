@@ -360,3 +360,20 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
         "c": nw.String(),
     }
     assert_equal_data(result.select("c"), {"c": data["a"]})
+
+
+def test_cast_typing_invalid() -> None:
+    # NOTE: Make sure we warn early when a cast will fail at runtime
+    a = nw.col("a")
+    a.cast(nw.Struct)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        a.cast(nw.Field)  # type: ignore[arg-type]
+    a.cast(nw.List)  # type: ignore[arg-type]
+    a.cast(nw.Array)  # type: ignore[arg-type]
+    a.cast(nw.Enum)  # type: ignore[arg-type]
+    a.cast(nw.Struct([nw.Field]))  # type: ignore[list-item]
+    a.cast(nw.Struct({"a": nw.Int16, "b": nw.Enum}))  # type: ignore[dict-item]
+    with pytest.raises(TypeError):
+        a.cast(nw.Field("a", nw.Array))  # type: ignore[arg-type]
+    a.cast(nw.List(nw.Struct))  # type: ignore[arg-type]
+    a.cast(nw.Array(nw.List, 2))  # type: ignore[arg-type]

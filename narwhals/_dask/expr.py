@@ -30,9 +30,9 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -633,7 +633,7 @@ class DaskExpr(
             version=self._version,
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return expr.astype(native_dtype)

@@ -21,8 +21,7 @@ from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from narwhals._utils import Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
+    from narwhals.typing import ConcatMethod, IntoDType
 
 
 class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
@@ -178,7 +177,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     def when(self, predicate: IbisExpr) -> IbisWhen:
         return IbisWhen.from_expr(predicate, context=self)
 
-    def lit(self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
+    def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
             return [lit(value, ibis_dtype)]

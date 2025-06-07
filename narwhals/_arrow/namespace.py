@@ -26,8 +26,7 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._utils import Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 
 class ArrowNamespace(
@@ -65,9 +64,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> ArrowExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
