@@ -23,16 +23,7 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals.dependencies import get_polars, is_numpy_array
-from narwhals.exceptions import (
-    InvalidIntoExprError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
-from narwhals.schema import Schema
-from narwhals.series import Series
-from narwhals.translate import to_native
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     find_stacklevel,
     flatten,
@@ -47,6 +38,15 @@ from narwhals.utils import (
     parse_version,
     supports_arrow_c_stream,
 )
+from narwhals.dependencies import get_polars, is_numpy_array
+from narwhals.exceptions import (
+    InvalidIntoExprError,
+    LengthChangingExprError,
+    OrderDependentExprError,
+)
+from narwhals.schema import Schema
+from narwhals.series import Series
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from io import BytesIO

@@ -20,14 +20,14 @@ from narwhals._pandas_like.utils import (
     select_columns_by_name,
     set_index,
 )
-from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
-from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     is_list_of,
     parse_version,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -56,7 +57,6 @@ if TYPE_CHECKING:
         _AnyDArray,
         _SliceIndex,
     )
-    from narwhals.utils import Version, _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",

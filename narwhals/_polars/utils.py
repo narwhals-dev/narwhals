@@ -14,6 +14,7 @@ from typing import (
 
 import polars as pl
 
+from narwhals._utils import Version, _DeferredIterable, isinstance_or_issubclass
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
@@ -22,13 +23,12 @@ from narwhals.exceptions import (
     NarwhalsError,
     ShapeError,
 )
-from narwhals.utils import Version, _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
+    from narwhals._utils import _StoresNative
     from narwhals.dtypes import DType
-    from narwhals.utils import _StoresNative
 
     T = TypeVar("T")
     NativeT = TypeVar(

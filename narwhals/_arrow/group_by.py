@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.utils import generate_temporary_column_name
+from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame

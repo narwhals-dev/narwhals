@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._utils import inherit_doc
 from narwhals.dtypes import (
     Array,
     Binary,
@@ -39,7 +40,6 @@ from narwhals.dtypes import (
     Unknown,
     UnsignedIntegerType,
 )
-from narwhals.utils import inherit_doc
 
 if TYPE_CHECKING:
     from datetime import timezone

@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     import duckdb
     from typing_extensions import Never, Self
 
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 class DuckDBInterchangeSeries:

@@ -9,7 +9,7 @@ from narwhals._pandas_like.utils import (
     calculate_timestamp_datetime,
     native_to_narwhals_dtype,
 )
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
