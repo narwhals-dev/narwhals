@@ -49,9 +49,8 @@ def test_round_trip(
         reason = f"{module_name} not installed"
         pytest.skip(reason=reason)
 
-    if impl in {Implementation.DASK, Implementation.PYARROW} or (
-        sys.version_info >= (3, 10) and impl is Implementation.PANDAS
-    ):
+    if impl.is_pyarrow() or (sys.version_info >= (3, 10) and impl.is_pandas()):
+        # NOTE: Can't do `monkeypatch.delitem` safely for other implementations
         monkeypatch.delitem(sys.modules, module_name)
 
     module = impl.to_native_namespace()
