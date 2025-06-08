@@ -362,7 +362,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_binary(lambda expr, other: expr * other, other)
 
     def __pow__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self**other, other)
+        return self._with_binary(lambda expr, other: expr**other, other)
 
     def __rpow__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(lambda expr, other: other.__pow__(expr), other).alias(
