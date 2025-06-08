@@ -174,6 +174,11 @@ If you add code that should be tested, please add tests.
 - DuckDB / PySpark / anything lazy-only:
 
   - Never assume that your data is ordered in any pre-defined way.
+  - Never materialise your data (only exception: `collect`).
+  - Avoid calling the schema / column names unnecessarily.
+  - For DuckDB, use the Python API as much as possible, only falling
+    back to SQL as the last resort for operations not yet supported
+    in their Python API (e.g. `over`).
 
 ### Test Failure Patterns
 

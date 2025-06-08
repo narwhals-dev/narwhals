@@ -31,7 +31,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Version
+from narwhals._utils import Version
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:

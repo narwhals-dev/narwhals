@@ -25,7 +25,7 @@ from narwhals._compliant.typing import (
     NativeSeriesT_co,
 )
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
-from narwhals.utils import (
+from narwhals._utils import (
     _StoresCompliant,
     _StoresNative,
     is_compliant_series,
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -60,7 +61,6 @@ if TYPE_CHECKING:
         _1DArray,
         _SliceIndex,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantSeries", "EagerSeries"]
 

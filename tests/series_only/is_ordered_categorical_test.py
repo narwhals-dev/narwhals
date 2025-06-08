@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.utils import Version
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeries

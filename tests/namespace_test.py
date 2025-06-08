@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._namespace import Namespace
-from narwhals.utils import Version
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, assert_type
