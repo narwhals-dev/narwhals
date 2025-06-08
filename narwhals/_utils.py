@@ -348,8 +348,8 @@ class Implementation(NoAutoEnum):
         Returns:
             Native module.
         """
-        if self is Implementation.UNKNOWN:  # pragma: no cover
-            msg = f"Not supported Implementation: {self}"
+        if self is Implementation.UNKNOWN:
+            msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
 
         from importlib import import_module

@@ -285,7 +285,6 @@ exclude_also = [
   'if "pyspark" in str\(constructor',
   'if "pyspark_connect" in str\(constructor',
   'pytest.skip\(',
-  'raise module_not_found\('
 ]
 
 [tool.mypy]
