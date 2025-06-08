@@ -746,7 +746,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return _is_unique(expr)
 
         def _partitioned_is_unique(
-            df: DuckDBLazyFrame, inputs: WindowInputs
+            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
         ) -> Sequence[Expression]:
             assert not inputs.order_by  # noqa: S101
             return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]

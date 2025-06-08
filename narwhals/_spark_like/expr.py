@@ -605,7 +605,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return _is_unique(expr)
 
         def _partitioned_is_unique(
-            df: SparkLikeLazyFrame, inputs: WindowInputs
+            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
             assert not inputs.order_by  # noqa: S101
             return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
