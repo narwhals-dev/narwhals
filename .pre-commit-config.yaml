@@ -36,6 +36,8 @@ repos:
                 narwhals/dataframe\.py|
                 # TODO: gradually enable
                 narwhals/dependencies\.py|
+                # TODO: gradually enable
+                narwhals/stable/v1/dependencies\.py|
                 # private, so less urgent to document too well
                 narwhals/_.*|
                 ^utils/.*
