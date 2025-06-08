@@ -689,19 +689,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def is_unique(self) -> Self:
-        def _unique(expr: Expression, *partition_by: str | Expression) -> Expression:
+        def _is_unique(expr: Expression, *partition_by: str | Expression) -> Expression:
             pb = generate_partition_by_sql(expr, *partition_by)
             sql = f"{FunctionExpression('count', col('*'))} over ({pb})"
             return SQLExpression(sql) == lit(1)
 
         def _unpartitioned_is_unique(expr: Expression) -> Expression:
-            return _unique(expr)
+            return _is_unique(expr)
 
         def _partitioned_is_unique(
             df: DuckDBLazyFrame, inputs: WindowInputs
         ) -> Sequence[Expression]:
             assert not inputs.order_by  # noqa: S101
-            return [_unique(expr, *inputs.partition_by) for expr in self(df)]
+            return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
 
         return self._with_callable(_unpartitioned_is_unique)._with_window_function(
             _partitioned_is_unique
