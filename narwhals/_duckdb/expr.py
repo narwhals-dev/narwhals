@@ -229,7 +229,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def _push_down_window_function(
         self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> WindowFunction[DuckDBLazyFrame, Expression]:
+    ) -> DuckDBWindowFunction:
         def window_f(
             df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
         ) -> list[Expression]:
