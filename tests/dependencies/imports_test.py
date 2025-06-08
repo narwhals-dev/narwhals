@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from importlib.util import find_spec
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
@@ -37,11 +38,21 @@ def _roundtrip_query(frame: IntoFrameT) -> IntoFrameT:
     ],
 )
 def test_round_trip(
-    impl: Implementation, frame_constructor: str, frame_type: str, kwargs: dict[str, Any]
+    monkeypatch: pytest.MonkeyPatch,
+    impl: Implementation,
+    frame_constructor: str,
+    frame_type: str,
+    kwargs: dict[str, Any],
 ) -> None:
-    if not find_spec(impl.value):
-        reason = f"{impl.value} not installed"
+    module_name = impl.value
+    if not find_spec(module_name):
+        reason = f"{module_name} not installed"
         pytest.skip(reason=reason)
+
+    if impl in {Implementation.DASK, Implementation.PYARROW} or (
+        sys.version_info >= (3, 10) and impl is Implementation.PANDAS
+    ):
+        monkeypatch.delitem(sys.modules, module_name)
 
     module = impl.to_native_namespace()
     df = getattr(module, frame_constructor)(data, **kwargs)
