@@ -206,6 +206,23 @@ def remove_exclude(origin: ExprIR, /) -> ExprIR:
     return origin.map_ir(fn)
 
 
+def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
+    """Based on the anonymous function in [`polars_plan::plans::conversion::expr_expansion::expand_columns`].
+
+    [`polars_plan::plans::conversion::expr_expansion::expand_columns`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L187-L191
+    """
+    from narwhals._plan.expr import Column, Columns, Exclude
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, Columns):
+            return Column(name=name)
+        if isinstance(child, Exclude):
+            return child.expr
+        return child
+
+    return origin.map_ir(fn)
+
+
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
@@ -253,7 +270,8 @@ def replace_and_add_to_results(
         if e := next(it, None):
             if isinstance(e, expr.Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
-                expand_columns(
+                # NOTE: Transitioned to return result
+                result = expand_columns(
                     origin, result, e, col_names=_freeze_columns(schema), exclude=exclude
                 )
             else:
@@ -268,7 +286,7 @@ def replace_and_add_to_results(
         )
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        # NOTE: First case transitioned to return result!
+        # NOTE: Transitioned to return result
         result = replace_regex(
             origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
@@ -332,17 +350,30 @@ def prepare_excluded(
     return frozenset(exclude)
 
 
-# TODO @dangotbanned: Priority High
+def _all_columns_match(origin: ExprIR, /, columns: expr.Columns) -> bool:
+    from narwhals._plan.expr import Columns
+
+    it = (e == columns if isinstance(e, Columns) else True for e in origin.iter_left())
+    return all(it)
+
+
 def expand_columns(
     origin: ExprIR,
     /,
     result: ResultIRs,
-    columns: expr.Columns,  # `polars` uses columns.names
+    columns: expr.Columns,
     *,
     col_names: FrozenColumns,
     exclude: Excluded,
-) -> Inplace:
-    raise NotImplementedError
+) -> ResultIRs:
+    if not _all_columns_match(origin, columns):
+        msg = "expanding more than one `col` is not allowed"
+        raise ComputeError(msg)
+    for name in columns.names:
+        if name not in exclude:
+            new_expr = _replace_columns_exclude(origin, name)
+            result = replace_regex(new_expr, result, col_names=col_names, exclude=exclude)
+    return result
 
 
 # TODO @dangotbanned: Priority Low
@@ -358,7 +389,7 @@ def expand_dtypes(
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Priority Mid
+# TODO @dangotbanned: Priority High
 def expand_indices(
     origin: ExprIR,
     /,
@@ -371,7 +402,7 @@ def expand_indices(
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Priority Mid
+# TODO @dangotbanned: Priority High
 def replace_wildcard(
     origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
 ) -> Inplace:
