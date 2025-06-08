@@ -318,16 +318,16 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return expr.alias(name)
 
     def __and__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self & other, other)
+        return self._with_binary(lambda expr, other: expr & other, other)
 
     def __or__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self | other, other)
+        return self._with_binary(lambda expr, other: expr | other, other)
 
     def __add__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self + other, other)
+        return self._with_binary(lambda expr, other: expr + other, other)
 
     def __truediv__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self / other, other)
+        return self._with_binary(lambda expr, other: expr / other, other)
 
     def __rtruediv__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(
@@ -335,7 +335,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         ).alias("literal")
 
     def __floordiv__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self // other, other)
+        return self._with_binary(lambda expr, other: expr // other, other)
 
     def __rfloordiv__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(
@@ -343,7 +343,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         ).alias("literal")
 
     def __mod__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self % other, other)
+        return self._with_binary(lambda expr, other: expr % other, other)
 
     def __rmod__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(lambda expr, other: other.__mod__(expr), other).alias(
@@ -351,7 +351,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def __sub__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self - other, other)
+        return self._with_binary(lambda expr, other: expr - other, other)
 
     def __rsub__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(lambda expr, other: other.__sub__(expr), other).alias(
@@ -359,7 +359,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def __mul__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self * other, other)
+        return self._with_binary(lambda expr, other: expr * other, other)
 
     def __pow__(self, other: DuckDBExpr) -> Self:
         return self._with_binary(lambda self, other: self**other, other)
@@ -370,22 +370,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def __lt__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self < other, other)
+        return self._with_binary(lambda expr, other: expr < other, other)
 
     def __gt__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self > other, other)
+        return self._with_binary(lambda expr, other: expr > other, other)
 
     def __le__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self <= other, other)
+        return self._with_binary(lambda expr, other: expr <= other, other)
 
     def __ge__(self, other: DuckDBExpr) -> Self:
-        return self._with_binary(lambda self, other: self >= other, other)
+        return self._with_binary(lambda expr, other: expr >= other, other)
 
     def __eq__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda self, other: self == other, other)
+        return self._with_binary(lambda expr, other: expr == other, other)
 
     def __ne__(self, other: DuckDBExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda self, other: self != other, other)
+        return self._with_binary(lambda expr, other: expr != other, other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Expression]", operator.invert)
