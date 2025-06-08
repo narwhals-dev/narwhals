@@ -253,6 +253,16 @@ class SelectorIR(ExprIR):
             return dummy.DummySelector._from_ir(self)
         return dummy.DummySelectorV1._from_ir(self)
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        """Return True if we can select this column.
+
+        - Thinking that we could get more cache hits on an individual column basis.
+        - May also be more efficient to not iterate over the schema for every selector
+          - Instead do one pass, evaluating every selector against a single column at a time
+          - Is that possible?
+        """
+        raise NotImplementedError(type(self))
+
 
 class IRNamespace(Immutable):
     __slots__ = ("_ir",)

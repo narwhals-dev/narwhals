@@ -43,7 +43,7 @@ from copy import deepcopy
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
-from narwhals._plan.common import Immutable, is_regex_projection
+from narwhals._plan.common import ExprIR, Immutable, SelectorIR, is_regex_projection
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expr, selectors
-    from narwhals._plan.common import ExprIR, Seq
+    from narwhals._plan.common import Seq
     from narwhals._plan.dummy import DummyExpr
     from narwhals.dtypes import DType
 
@@ -169,7 +169,6 @@ def prepare_projection(
 # - `exclude` is the return of `prepare_excluded`
 
 
-# NOTE: The inner function is ready
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     from narwhals._plan import expr
 
@@ -256,6 +255,25 @@ def replace_wildcard_with_column(origin: ExprIR, /, name: str) -> ExprIR:
     return origin.map_ir(fn)
 
 
+def replace_selector(
+    ir: ExprIR,
+    /,
+    keys: Seq[ExprIR],  # noqa: ARG001
+    *,
+    schema: FrozenSchema,
+) -> ExprIR:
+    """Fully diverging from `polars`, we'll see how that goes."""
+    from narwhals._plan import expr
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, SelectorIR):
+            cols = (k for k, v in schema.items() if child.matches_column(k, v))
+            return expr.Columns(names=tuple(cols))
+        return child
+
+    return ir.map_ir(fn)
+
+
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
@@ -275,7 +293,7 @@ def rewrite_projections(
             expanded = replace_selector(expanded, keys, schema=schema)
             flags = flags.with_multiple_columns()
         # NOTE: `result` is what I'd want as a return, rather than inplace
-        replace_and_add_to_results(
+        result = replace_and_add_to_results(
             expanded, result, keys=keys, schema=schema, flags=flags
         )
     return tuple(result)
@@ -322,38 +340,6 @@ def replace_and_add_to_results(
             origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
     return result
-
-
-# TODO @dangotbanned: Priority high (entry, called by `rewrite_projections`)
-def replace_selector(
-    ir: ExprIR,  # an element of `FunctionExpr.input`
-    /,
-    keys: Seq[ExprIR],
-    *,
-    schema: FrozenSchema,
-) -> ExprIR:
-    raise NotImplementedError
-
-
-# TODO @dangotbanned: Huge, called by `replace_selector`
-def expand_selector(
-    s: expr.SelectorIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema
-) -> Seq[str]:
-    """Converts into input of `Columns(...)`."""
-    raise NotImplementedError
-
-
-# TODO @dangotbanned: Huge, called by `expand_selector`
-def replace_selector_inner(
-    s: expr.SelectorIR,
-    /,
-    keys: Seq[ExprIR],
-    members: Any,  # mutable, insertion order preserving set `PlIndexSet<Expr>`
-    scratch: Seq[ExprIR],  # passed as `result` into `replace_and_add_to_results`
-    *,
-    schema: FrozenSchema,
-) -> Inplace:
-    raise NotImplementedError
 
 
 def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:

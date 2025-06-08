@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Iterable
 
+from narwhals import dtypes
 from narwhals._plan.common import Immutable, is_iterable_reject
 from narwhals._utils import _parse_time_unit_and_time_zone
 
@@ -30,10 +31,16 @@ class Selector(Immutable):
 
         return RootSelector(selector=self)
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        raise NotImplementedError(type(self))
+
 
 class All(Selector):
     def __repr__(self) -> str:
         return "ncs.all()"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return True
 
 
 class ByDType(Selector):
@@ -53,15 +60,24 @@ class ByDType(Selector):
         )
         return f"ncs.by_dtype(dtypes=[{els}])"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return dtype in self.dtypes
+
 
 class Boolean(Selector):
     def __repr__(self) -> str:
         return "ncs.boolean()"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return isinstance(dtype, dtypes.Boolean)
+
 
 class Categorical(Selector):
     def __repr__(self) -> str:
         return "ncs.categorical()"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return isinstance(dtype, dtypes.Categorical)
 
 
 class Datetime(Selector):
@@ -89,6 +105,16 @@ class Datetime(Selector):
     def __repr__(self) -> str:
         return f"ncs.datetime(time_unit={list(self.time_units)}, time_zone={list(self.time_zones)})"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        units, zones = self.time_units, self.time_zones
+        return (
+            isinstance(dtype, dtypes.Datetime)
+            and (dtype.time_unit in units)
+            and (
+                dtype.time_zone in zones or ("*" in zones and dtype.time_zone is not None)
+            )
+        )
+
 
 class Matches(Selector):
     __slots__ = ("pattern",)
@@ -109,15 +135,24 @@ class Matches(Selector):
     def __repr__(self) -> str:
         return f"ncs.matches(pattern={self.pattern.pattern!r})"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return bool(self.pattern.search(name))
+
 
 class Numeric(Selector):
     def __repr__(self) -> str:
         return "ncs.numeric()"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return dtype.is_numeric()
+
 
 class String(Selector):
     def __repr__(self) -> str:
         return "ncs.string()"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return isinstance(dtype, dtypes.String)
 
 
 def all() -> DummySelector:

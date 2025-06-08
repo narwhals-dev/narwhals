@@ -571,6 +571,9 @@ class RootSelector(SelectorIR):
     def __repr__(self) -> str:
         return f"{self.selector!r}"
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return self.selector.matches_column(name, dtype)
+
 
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
@@ -583,6 +586,11 @@ class BinarySelector(
         `left` and `right` may also nest other `BinarySelector`s.
     """
 
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        left = self.left.matches_column(name, dtype)
+        right = self.right.matches_column(name, dtype)
+        return bool(self.op(left, right))
+
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
@@ -592,6 +600,9 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def __repr__(self) -> str:
         return f"~{self.selector!r}"
+
+    def matches_column(self, name: str, dtype: DType) -> bool:
+        return not self.selector.matches_column(name, dtype)
 
 
 class Ternary(ExprIR):
