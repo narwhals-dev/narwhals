@@ -159,16 +159,6 @@ def prepare_projection(
     return rewritten, frozen_schema
 
 
-# NOTE: Parameters have been re-ordered, renamed, changed types
-# - `origin` is the `Expr` that's being iterated over
-# - `result` *haven't got to yet*
-#    - Couldn't this just be the return type?
-#    - Certainly less complicated in python
-# - `<third_param>` is the current child of `origin`
-# - `col_names: FrozenColumns` is used when we don't need the dtypes
-# - `exclude` is the return of `prepare_excluded`
-
-
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     from narwhals._plan import expr
 
@@ -222,14 +212,8 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
     return origin.map_ir(fn)
 
 
-def replace_dtype_or_index_with_column(
-    origin: ExprIR, /, name: str, *, replace_dtype: bool = False
-) -> ExprIR:
+def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
     from narwhals._plan.expr import Column, Exclude, IndexColumns
-
-    if replace_dtype:
-        msg = "We don't have a `Expr::DtypeColumn` node yet, may need to add one for the selectors lift?"
-        raise NotImplementedError(msg)
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, IndexColumns):
@@ -292,7 +276,6 @@ def rewrite_projections(
         if flags.has_selector:
             expanded = replace_selector(expanded, keys, schema=schema)
             flags = flags.with_multiple_columns()
-        # NOTE: `result` is what I'd want as a return, rather than inplace
         result = replace_and_add_to_results(
             expanded, result, keys=keys, schema=schema, flags=flags
         )
@@ -396,19 +379,6 @@ def expand_columns(
     return result
 
 
-# TODO @dangotbanned: Priority Low
-def expand_dtypes(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    dtypes: selectors.ByDType,  # we haven't got `DtypeColumn`
-    *,
-    schema: FrozenSchema,
-    exclude: Excluded,
-) -> Inplace:
-    raise NotImplementedError
-
-
 def expand_indices(
     origin: ExprIR,
     /,
@@ -427,7 +397,7 @@ def expand_indices(
             raise ComputeError(msg)
         name = names[idx]
         if name not in exclude:
-            new_expr = replace_dtype_or_index_with_column(origin, name)
+            new_expr = replace_index_with_column(origin, name)
             new_expr = rewrite_special_aliases(new_expr)
             result.append(new_expr)
     return result
@@ -471,10 +441,6 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
             msg = "`keep`, `suffix`, `prefix` should be last expression"
             raise InvalidOperationError(msg)
     return origin
-
-
-def dtypes_match(left: DType, right: DType | type[DType]) -> bool:
-    return left == right
 
 
 def into_pattern(obj: str | re.Pattern[str] | selectors.Matches, /) -> re.Pattern[str]:
