@@ -9,9 +9,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Iterable
 
-from narwhals import dtypes
 from narwhals._plan.common import Immutable, is_iterable_reject
-from narwhals._utils import _parse_time_unit_and_time_zone
+from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
     from datetime import timezone
@@ -23,6 +22,8 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
 
     T = TypeVar("T")
+
+dtypes = Version.MAIN.dtypes
 
 
 class Selector(Immutable):
