@@ -223,6 +223,25 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
     return origin.map_ir(fn)
 
 
+def replace_dtype_or_index_with_column(
+    origin: ExprIR, /, name: str, *, replace_dtype: bool = False
+) -> ExprIR:
+    from narwhals._plan.expr import Column, Exclude, IndexColumns
+
+    if replace_dtype:
+        msg = "We don't have a `Expr::DtypeColumn` node yet, may need to add one for the selectors lift?"
+        raise NotImplementedError(msg)
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, IndexColumns):
+            return Column(name=name)
+        if isinstance(child, Exclude):
+            return child.expr
+        return child
+
+    return origin.map_ir(fn)
+
+
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
@@ -278,7 +297,8 @@ def replace_and_add_to_results(
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
                 )
-                expand_indices(origin, result, e, schema=schema, exclude=exclude)
+                # NOTE: Transitioned to return result
+                result = expand_indices(origin, result, e, schema=schema, exclude=exclude)
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
         replace_wildcard(
@@ -389,7 +409,6 @@ def expand_dtypes(
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Priority High
 def expand_indices(
     origin: ExprIR,
     /,
@@ -398,8 +417,20 @@ def expand_indices(
     *,
     schema: FrozenSchema,
     exclude: Excluded,
-) -> Inplace:
-    raise NotImplementedError
+) -> ResultIRs:
+    n_fields = len(schema)
+    names = tuple(schema)
+    for index in indices.indices:
+        idx = index + n_fields if index < 0 else index
+        if idx < 0 or idx > n_fields:
+            msg = f"invalid column index {idx!r}"
+            raise ComputeError(msg)
+        name = names[idx]
+        if name not in exclude:
+            new_expr = replace_dtype_or_index_with_column(origin, name)
+            new_expr = rewrite_special_aliases(new_expr)
+            result.append(new_expr)
+    return result
 
 
 # TODO @dangotbanned: Priority High
@@ -441,12 +472,6 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
             msg = "`keep`, `suffix`, `prefix` should be last expression"
             raise InvalidOperationError(msg)
     return origin
-
-
-def replace_dtype_or_index_with_column(
-    origin: ExprIR, /, column_name: str, *, replace_dtype: bool
-) -> ExprIR:
-    raise NotImplementedError
 
 
 def dtypes_match(left: DType, right: DType | type[DType]) -> bool:
