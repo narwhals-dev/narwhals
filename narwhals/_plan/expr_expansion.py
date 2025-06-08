@@ -324,6 +324,7 @@ def replace_and_add_to_results(
     return result
 
 
+# TODO @dangotbanned: Priority high (entry, called by `rewrite_projections`)
 def replace_selector(
     ir: ExprIR,  # an element of `FunctionExpr.input`
     /,
@@ -334,7 +335,7 @@ def replace_selector(
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Huge
+# TODO @dangotbanned: Huge, called by `replace_selector`
 def expand_selector(
     s: expr.SelectorIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema
 ) -> Seq[str]:
@@ -342,6 +343,7 @@ def expand_selector(
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Huge, called by `expand_selector`
 def replace_selector_inner(
     s: expr.SelectorIR,
     /,
