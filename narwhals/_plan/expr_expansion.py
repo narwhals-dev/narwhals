@@ -41,7 +41,7 @@ from __future__ import annotations
 from collections import deque
 from copy import deepcopy
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Callable, Iterator, Mapping, Sequence
 
 from narwhals._plan.common import ExprIR, Immutable, SelectorIR, is_regex_projection
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -61,12 +61,6 @@ FrozenSchema: TypeAlias = "MappingProxyType[str, DType]"
 FrozenColumns: TypeAlias = "Seq[str]"
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
-
-Inplace: TypeAlias = Any
-"""Functions where `polars` does in-place mutations on `Expr`.
-
-Very likely that **we won't** do this in `narwhals`, instead return a new object.
-"""
 
 ResultIRs: TypeAlias = "deque[ExprIR]"
 
