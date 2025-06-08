@@ -241,6 +241,79 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             backend_version=self._backend_version,
             version=self._version,
         )
+    
+    def _with_elementwise_func(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ):
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            native_series_list = self(df)
+            other_native_series = {
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+        
+        def window_f(df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs) -> list[Expression]:
+            # If a function `f` is elementwise, and `g` is another function, then
+            # - `f(g) over (window)`
+            # - `f(g over (window))
+            # are equivalent.
+            native_series_list = self.window_function(df, window_inputs)
+            other_native_series = {
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return self.__class__(
+            func,
+            window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+    
+    def _with_binary_func(
+        self, op, other
+    ):
+        expressifiable_args={'other': other}
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            native_series_list = self(df)
+            other_native_series = {
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                op(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+        def window_f(df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs) -> list[Expression]:
+            native_series_list = self.window_function(df, window_inputs)
+            other_native_series = {
+                key: value.window_function(df, window_inputs)[0] if self._is_expr(value) else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                op(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return self.__class__(
+            func,
+            window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+    
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
@@ -273,7 +346,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_callable(lambda expr, other: expr | other, other=other)
 
     def __add__(self, other: DuckDBExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr + other, other=other)
+        return self._with_binary_func(lambda expr, other: expr + other, other=other)
 
     def __truediv__(self, other: DuckDBExpr) -> Self:
         return self._with_callable(lambda expr, other: expr / other, other=other)
@@ -343,7 +416,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_callable(invert)
 
     def abs(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("abs", expr))
+        return self._with_elementwise_func(lambda expr: FunctionExpression("abs", expr))
 
     def mean(self) -> Self:
         return self._with_callable(lambda expr: FunctionExpression("mean", expr))
@@ -551,7 +624,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def round(self, decimals: int) -> Self:
-        return self._with_callable(
+        return self._with_elementwise_func(
             lambda expr: FunctionExpression("round", expr, lit(decimals))
         )
 
