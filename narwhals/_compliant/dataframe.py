@@ -57,6 +57,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
     from narwhals._utils import Implementation, _FullContext
     from narwhals.dataframe import DataFrame
@@ -375,6 +376,13 @@ class CompliantLazyFrame(
     def with_row_index(self, name: str) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
+        assert len(result) == 1  # debug assertion  # noqa: S101
+        return result[0]
+
+    def _evaluate_window_expr(
+        self, expr: CompliantExprT_contra, /, window_inputs: WindowInputs[Any]
+    ) -> Any:
+        result = expr.window_function(self, window_inputs)  # type: ignore[attr-defined]
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 

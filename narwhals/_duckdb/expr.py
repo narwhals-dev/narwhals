@@ -211,6 +211,47 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             version=context._version,
         )
 
+    def _callable_to_eval_series(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ) -> EvalSeries[DuckDBLazyFrame, Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            native_series_list = self(df)
+            other_native_series = {
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return func
+
+    def _push_down_window_function(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ) -> WindowFunction[DuckDBLazyFrame, Expression]:
+        def window_f(
+            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
+        ) -> list[Expression]:
+            # If a function `f` is elementwise, and `g` is another function, then
+            # - `f(g) over (window)`
+            # - `f(g over (window))
+            # are equivalent.
+            # Make sure to only use with if `call` is elementwise!
+            native_series_list = self.window_function(df, window_inputs)
+            other_native_series = {
+                key: df._evaluate_window_expr(value, window_inputs)
+                if self._is_expr(value)
+                else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return window_f
+
     def _with_callable(
         self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
     ) -> Self:
@@ -222,98 +263,36 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             expressifiable_args: arguments pass to expression which should be parsed
                 as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
         """
-
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            native_series_list = self(df)
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
         return self.__class__(
-            func,
+            self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
-    
+
     def _with_elementwise_func(
         self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ):
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            native_series_list = self(df)
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-        
-        def window_f(df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs) -> list[Expression]:
-            # If a function `f` is elementwise, and `g` is another function, then
-            # - `f(g) over (window)`
-            # - `f(g over (window))
-            # are equivalent.
-            native_series_list = self.window_function(df, window_inputs)
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
+    ) -> Self:
         return self.__class__(
-            func,
-            window_f,
+            self._callable_to_eval_series(call, **expressifiable_args),
+            self._push_down_window_function(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
-    
-    def _with_binary_func(
-        self, op, other
-    ):
-        expressifiable_args={'other': other}
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            native_series_list = self(df)
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                op(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-        def window_f(df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs) -> list[Expression]:
-            native_series_list = self.window_function(df, window_inputs)
-            other_native_series = {
-                key: value.window_function(df, window_inputs)[0] if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                op(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
 
+    def _with_binary_func(self, op: Callable[..., Expression], other: Self | Any) -> Self:
+        expressifiable_args = {"other": other}
         return self.__class__(
-            func,
-            window_f,
+            self._callable_to_eval_series(op, **expressifiable_args),
+            self._push_down_window_function(op, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
             version=self._version,
         )
-    
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
