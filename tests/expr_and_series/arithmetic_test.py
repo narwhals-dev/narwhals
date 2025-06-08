@@ -157,58 +157,81 @@ def test_truediv_same_dims(
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
-@pytest.mark.parametrize(("left", "right"), [(-2, 0), (0, 0), (2, 0)])
-def test_series_div_by_zero(
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
+)
+def test_series_truediv_by_zero(
+    left: int, right: int, expected: float | None, constructor_eager: ConstructorEager
+) -> None:
+    data: dict[str, list[int]] = {"a": [left], "b": [right]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    truediv_result = df["a"] / df["b"]
+    assert_equal_data({"a": truediv_result}, {"a": [expected]})
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
+)
+def test_series_floordiv_by_zero(
     left: int,
     right: int,
+    expected: float | None,
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     data: dict[str, list[int]] = {"a": [left], "b": [right]}
-    div_by_zero_results: set[float | None] = {float("inf"), float("-inf"), None}
     df = nw.from_native(constructor_eager(data), eager_only=True)
+    # pyarrow backend raises divide by zero error
     if "pyarrow" in str(constructor_eager):
-        # pyarrow floordiv cannot divide by zero
         request.applymarker(pytest.mark.xfail)
-        truediv_result = df["a"] / df["b"]  # truediv
-        floordiv_result = df["a"] // df["b"]  # floordiv
-        assert truediv_result[0] in div_by_zero_results or truediv_result.is_nan()[0]
-        assert floordiv_result[0] in div_by_zero_results or floordiv_result.is_nan()[0]
-    truediv_result = df["a"] / df["b"]  # truediv
-    floordiv_result = df["a"] // df["b"]  # floordiv
-    assert truediv_result[0] in div_by_zero_results or truediv_result.is_nan()[0]
-    assert floordiv_result[0] in div_by_zero_results or floordiv_result.is_nan()[0]
+    # polars floordiv by zero always returns None
+    if "polars" in str(constructor_eager):
+        floordiv_result = df["a"] // df["b"]
+        assert_equal_data({"a": floordiv_result}, {"a": [None]})
+    else:
+        floordiv_result = df["a"] // df["b"]
+        assert_equal_data({"a": floordiv_result}, {"a": [expected]})
 
 
-@pytest.mark.parametrize(("left", "right"), [(-2, 0), (0, 0), (2, 0)])
-def test_div_by_zero(
-    left: int, right: int, constructor: Constructor, request: pytest.FixtureRequest
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
+)
+def test_truediv_by_zero(
+    left: int, right: int, expected: float | None, constructor: Constructor
 ) -> None:
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))
-    div_by_zero_results: set[float | None] = {float("inf"), float("-inf"), None}
-    if "pyarrow" in str(constructor):
-        # pyarrow floordiv cannot divide by zero
+    truediv_result = df.select(nw.col("a") / right)
+    assert_equal_data(truediv_result, {"a": [expected]})
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
+)
+def test_floordiv_by_zero(
+    left: int,
+    right: int,
+    expected: float | None,
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    data: dict[str, list[int]] = {"a": [left]}
+    df = nw.from_native(constructor(data))
+    # pyarrow backend floordiv raises divide by zero error
+    # ibis backend floordiv cannot cast value to inf or -inf
+    if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
         request.applymarker(pytest.mark.xfail)
-        truediv_result = df.select(nw.col("a") / right)
+    # polars and duckdb floordiv return None
+    if any(x in str(constructor) for x in ["polars", "duckdb"]):
         floordiv_result = df.select(nw.col("a") // right)
-    elif "lazy_constructor" in str(constructor):
-        # if lazy then collect value to enable slicing for comparison
-        truediv_result = df.select(nw.col("a") / right).collect()
-        # ibis floordiv cannot divide by zero
-        if "ibis" in str(constructor):
-            request.applymarker(pytest.mark.xfail)
-            floordiv_result = df.select(nw.col("a") // right).collect()
-        floordiv_result = df.select(nw.col("a") // right).collect()
+        assert_equal_data(floordiv_result, {"a": [None]})
     else:
-        truediv_result = df.select(nw.col("a") / right)
         floordiv_result = df.select(nw.col("a") // right)
-    assert (
-        truediv_result["a"][0] in div_by_zero_results or truediv_result["a"].is_nan()[0]
-    )
-    assert (
-        floordiv_result["a"][0] in div_by_zero_results or floordiv_result["a"].is_nan()[0]
-    )
+        assert_equal_data(floordiv_result, {"a": [expected]})
 
 
 @pytest.mark.slow
