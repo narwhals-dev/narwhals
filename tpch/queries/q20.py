@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(
     part_ds: FrameT,
     partsupp_ds: FrameT,
@@ -29,7 +28,7 @@ def query(
         .with_columns(sum_quantity=nw.col("sum_quantity") * 0.5)
     )
     query2 = nation_ds.filter(nw.col("n_name") == var3)
-    query3 = supplier_ds.join(query2, left_on="s_nationkey", right_on="n_nationkey")
+    query3 = supplier_ds.join(query2, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
 
     return (
         part_ds.filter(nw.col("p_name").str.starts_with(var4))
@@ -37,14 +36,14 @@ def query(
         .unique("p_partkey")
         .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(
-            query1,
+            query1,  # pyright: ignore[reportArgumentType]
             left_on=["ps_suppkey", "p_partkey"],
             right_on=["l_suppkey", "l_partkey"],
         )
         .filter(nw.col("ps_availqty") > nw.col("sum_quantity"))
         .select("ps_suppkey")
         .unique("ps_suppkey")
-        .join(query3, left_on="ps_suppkey", right_on="s_suppkey")
+        .join(query3, left_on="ps_suppkey", right_on="s_suppkey")  # pyright: ignore[reportArgumentType]
         .select("s_name", "s_address")
         .sort("s_name")
     )

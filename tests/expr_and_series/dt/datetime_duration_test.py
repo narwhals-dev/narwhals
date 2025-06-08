@@ -1,27 +1,19 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Literal
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
-    "a": [
-        None,
-        timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1),
-    ],
-    "b": [
-        timedelta(milliseconds=2),
-        timedelta(milliseconds=1, microseconds=300),
-    ],
+    "a": [None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)],
+    "b": [timedelta(milliseconds=2), timedelta(milliseconds=1, microseconds=300)],
     "c": np.array([None, 20], dtype="timedelta64[ns]"),
 }
 
@@ -45,6 +37,10 @@ def test_duration_attributes(
     expected_c: list[int],
 ) -> None:
     if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+        pytest.skip()
+    if "pyspark" in str(constructor) or "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and attribute == "total_nanoseconds":
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -103,7 +99,9 @@ def test_duration_attributes_series(
         ("total_nanoseconds", 70e9),
     ],
 )
-def test_pyarrow_units(unit: str, attribute: str, expected: int) -> None:
+def test_pyarrow_units(
+    unit: Literal["s", "ms", "us", "ns"], attribute: str, expected: int
+) -> None:
     data = [None, timedelta(minutes=1, seconds=10)]
     arr = pc.cast(pa.array(data), pa.duration(unit))
     df = nw.from_native(pa.table({"a": arr}), eager_only=True)

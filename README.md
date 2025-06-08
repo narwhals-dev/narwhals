@@ -9,12 +9,13 @@
 
 [![PyPI version](https://badge.fury.io/py/narwhals.svg)](https://badge.fury.io/py/narwhals)
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
+[![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
+[![PYPI - Types](https://img.shields.io/pypi/types/narwhals)](https://pypi.org/project/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow
-- **Lazy-only support**: Dask
-- **Interchange-level support**: Ibis, Vaex, anything else which implements the DataFrame Interchange Protocol
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
+- **Lazy-only support**: Dask, DuckDB, Ibis, PySpark, SQLFrame. Work in progress: Daft.
 
 Seamlessly support all, without depending on any!
 
@@ -37,27 +38,21 @@ Get started!
 - [Join our community call](https://calendar.google.com/calendar/embed?src=27ff6dc5f598c1d94c1f6e627a1aaae680e2fac88f848bda1f2c7946ae74d5ab%40group.calendar.google.com)
 - [Read the contributing guide](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md)
 
-## Used by
+<details>
+<summary>Table of contents</summary>
 
-Join the party!
+- [Narwhals](#narwhals)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Example](#example)
+  - [Scope](#scope)
+  - [Roadmap](#roadmap)
+  - [Used by](#used-by)
+  - [Sponsors and institutional partners](#sponsors-and-institutional-partners)
+  - [Appears on](#appears-on)
+  - [Why "Narwhals"?](#why-narwhals)
 
-- [altair](https://github.com/vega/altair/)
-- [marimo](https://github.com/marimo-team/marimo)
-- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
-- [plotly](https://plotly.com)
-- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
-- [py-shiny](https://github.com/posit-dev/py-shiny)
-- [rio](https://github.com/rio-labs/rio)
-- [scikit-lego](https://github.com/koaning/scikit-lego)
-- [scikit-playtime](https://github.com/koaning/scikit-playtime)
-- [tabmat](https://github.com/Quantco/tabmat)
-- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
-- [tubular](https://github.com/lvgig/tubular)
-- [vegafusion](https://github.com/vega/vegafusion)
-- [wimsey](https://github.com/benrutter/wimsey)
-
-Feel free to add your project to the list if it's missing, and/or
-[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
+</details>
 
 ## Installation
 
@@ -96,6 +91,65 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
 
 ## Example
 
+Narwhals allows you to define dataframe-agnostic functions. For example:
+
+```python
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+
+
+def agnostic_function(
+    df_native: IntoFrameT,
+    date_column: str,
+    price_column: str,
+) -> IntoFrameT:
+    return (
+        nw.from_native(df_native)
+        .group_by(nw.col(date_column).dt.truncate("1mo"))
+        .agg(nw.col(price_column).mean())
+        .sort(date_column)
+        .to_native()
+    )
+```
+
+You can then pass `pandas.DataFrame`, `polars.DataFrame`, `polars.LazyFrame`, `duckdb.DuckDBPyRelation`,
+`pyspark.sql.DataFrame`, `pyarrow.Table`, and more, to `agnostic_function`. In each case, no additional
+dependencies will be required, and computation will stay native to the input library:
+
+```python
+import pandas as pd
+import polars as pl
+from datetime import datetime
+
+data = {
+    "date": [datetime(2020, 1, 1), datetime(2020, 1, 8), datetime(2020, 2, 3)],
+    "price": [1, 4, 3],
+}
+print("pandas result:")
+print(agnostic_function(pd.DataFrame(data), "date", "price"))
+print()
+print("Polars result:")
+print(agnostic_function(pl.DataFrame(data), "date", "price"))
+```
+
+```terminal
+pandas result:
+        date  price
+0 2020-01-01    2.5
+1 2020-02-01    3.0
+
+Polars result:
+shape: (2, 2)
+┌─────────────────────┬───────┐
+│ date                ┆ price │
+│ ---                 ┆ ---   │
+│ datetime[μs]        ┆ f64   │
+╞═════════════════════╪═══════╡
+│ 2020-01-01 00:00:00 ┆ 2.5   │
+│ 2020-02-01 00:00:00 ┆ 3.0   │
+└─────────────────────┴───────┘
+```
+
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
 
 ## Scope
@@ -104,6 +158,40 @@ See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) fo
 - Do you have a specific Polars function in mind that you would like Narwhals to have in order to make your work easier?
 
 If you said yes to both, we'd love to hear from you!
+
+## Roadmap
+
+See [roadmap discussion on GitHub](https://github.com/narwhals-dev/narwhals/discussions/1370)
+for an up-to-date plan of future work.
+
+## Used by
+
+Join the party!
+
+- [altair](https://github.com/vega/altair/)
+- [bokeh](https://github.com/bokeh/bokeh)
+- [darts](https://github.com/unit8co/darts)
+- [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
+- [marimo](https://github.com/marimo-team/marimo)
+- [metalearners](https://github.com/Quantco/metalearners)
+- [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
+- [plotly](https://plotly.com)
+- [pointblank](https://github.com/posit-dev/pointblank)
+- [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [py-shiny](https://github.com/posit-dev/py-shiny)
+- [rio](https://github.com/rio-labs/rio)
+- [scikit-lego](https://github.com/koaning/scikit-lego)
+- [scikit-playtime](https://github.com/koaning/scikit-playtime)
+- [tabmat](https://github.com/Quantco/tabmat)
+- [tea-tasting](https://github.com/e10v/tea-tasting)
+- [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
+- [tubular](https://github.com/lvgig/tubular)
+- [Validoopsie](https://github.com/akmalsoliev/Validoopsie)
+- [vegafusion](https://github.com/vega/vegafusion)
+- [wimsey](https://github.com/benrutter/wimsey)
+
+Feel free to add your project to the list if it's missing, and/or
+[chat with us on Discord](https://discord.gg/V3PqtB4VA4) if you'd like any support.
 
 ## Sponsors and institutional partners
 

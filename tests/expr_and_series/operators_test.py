@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -50,10 +48,7 @@ def test_comparand_operators_expr(
 
 @pytest.mark.parametrize(
     ("operator", "expected"),
-    [
-        ("__and__", [True, False, False, False]),
-        ("__or__", [True, True, True, False]),
-    ],
+    [("__and__", [True, False, False, False]), ("__or__", [True, True, True, False])],
 )
 def test_logic_operators_expr(
     constructor: Constructor, operator: str, expected: list[bool]
@@ -62,6 +57,34 @@ def test_logic_operators_expr(
     df = nw.from_native(constructor(data))
 
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("operator", "expected"),
+    [
+        ("__and__", [False, False, False, False]),
+        ("__rand__", [False, False, False, False]),
+        ("__or__", [True, True, False, False]),
+        ("__ror__", [True, True, False, False]),
+    ],
+)
+def test_logic_operators_expr_scalar(
+    constructor: Constructor,
+    operator: str,
+    expected: list[bool],
+    request: pytest.FixtureRequest,
+) -> None:
+    if (
+        "dask" in str(constructor)
+        and DASK_VERSION < (2024, 10)
+        and operator in {"__rand__", "__ror__"}
+    ):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False, False]}
+    df = nw.from_native(constructor(data))
+
+    result = df.select(a=getattr(nw.col("a"), operator)(False))  # noqa: FBT003
     assert_equal_data(result, {"a": expected})
 
 
@@ -110,7 +133,9 @@ def test_comparand_operators_series(
     ("operator", "expected"),
     [
         ("__and__", [True, False, False, False]),
+        ("__rand__", [True, False, False, False]),
         ("__or__", [True, True, True, False]),
+        ("__ror__", [True, True, True, False]),
     ],
 )
 def test_logic_operators_series(

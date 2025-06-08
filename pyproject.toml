@@ -1,90 +1,197 @@
+# Reference: https://packaging.python.org/en/latest/guides/writing-pyproject-toml
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.14.2"
+version = "1.41.1"
+dependencies = []
+requires-python = ">=3.8"
 authors = [
-  { name="Marco Gorelli", email="33491632+MarcoGorelli@users.noreply.github.com" },
+  { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
-requires-python = ">=3.8"
+keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Operating System :: OS Independent",
+  "Typing :: Typed",
 ]
-
-[tool.hatch.build]
-exclude = [
-  "/.*",
-  "/docs",
-  "/tests",
-  "/tpch",
-  "/utils",
-  ".gitignore",
-  "CONTRIBUTING.md",
-  "mkdocs.yml",
-  "noxfile.py",
-  "requirements-dev.txt",
-]
-
-[project.optional-dependencies]
-cudf = ["cudf>=23.08.00"]
-modin = ["modin"]
-pandas = ["pandas>=0.25.3"]
-polars = ["polars>=0.20.3"]
-pyarrow = ["pyarrow>=11.0.0"]
-dask = ["dask[dataframe]>=2024.7"]
 
 [project.urls]
-"Homepage" = "https://github.com/narwhals-dev/narwhals"
-"Bug Tracker" = "https://github.com/narwhals-dev/narwhals"
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Documentation = "https://narwhals-dev.github.io/narwhals/"
+Repository = "https://github.com/narwhals-dev/narwhals"
+"Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
+
+[project.optional-dependencies]
+# These should be aligned with MIN_VERSIONS in narwhals/utils.py
+# Exception: modin, because `modin.__version__` isn't aligned with
+# `modin.pandas.__version__`. The latter is the one that we make
+# API decisions based on, so that's the one we track internally.
+# We have yet to determine the minimum Modin version we support
+# https://github.com/narwhals-dev/narwhals/issues/817 
+pandas = ["pandas>=0.25.3"]
+modin = ["modin"]
+cudf = ["cudf>=24.10.0"]
+pyarrow = ["pyarrow>=11.0.0"]
+pyspark = ["pyspark>=3.5.0"]
+pyspark-connect = ["pyspark[connect]>=3.5.0"]
+polars = ["polars>=0.20.3"]
+dask = ["dask[dataframe]>=2024.8"]
+duckdb = ["duckdb>=1.0"]
+ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+sqlframe = ["sqlframe>=3.22.0"]
+
+[dependency-groups]
+core = [
+  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe]"
+] 
+tests = [
+  "covdefaults",
+  "pytest",
+  "pytest-cov",
+  "pytest-randomly",
+  "pytest-env",
+  "hypothesis",
+]
+extra = [  # heavier dependencies we don't necessarily need in every testing job
+  "scikit-learn",
+]
+typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
+  "duckdb==1.3.0",
+  "hypothesis",
+  "pytest",
+  "pandas-stubs==2.2.3.250308",
+  "typing_extensions",
+  "mypy~=1.15.0",
+  "pyright",
+  "pyarrow-stubs==19.2",
+  "sqlframe",
+  "polars==1.30.0",
+  "uv",
+  "narwhals[ibis]",
+]
+docs = [
+  "black",  # required by mkdocstrings_handlers
+  "jinja2",
+  "duckdb",
+  "narwhals[ibis]",
+  "markdown-exec[ansi]",
+  "mkdocs",
+  "mkdocs-autorefs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "mkdocstrings-python>=1.16",
+  "sqlframe",
+  "pandas",
+  "polars>=1.0.0",
+  "pyarrow",
+]
+dev = [
+  "pre-commit",
+  {include-group = "tests"},
+  {include-group = "typing"},
+]
+dev-core = [
+  {include-group = "dev"},
+  {include-group = "core"},
+]
+core-tests = [
+  {include-group = "core"},
+  {include-group = "tests"},
+]
+local-dev = [
+  {include-group = "dev"},
+  {include-group = "core"},
+  {include-group = "docs"}
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "narwhals/*",
+  "tests/*",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "narwhals/*",
+]
 
 [tool.ruff]
 line-length = 90
 fix = true
 target-version = "py38"
+extend-exclude = ["**/this.py"]
 
-lint.select = [
-  "ALL",
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+typing-modules = ["narwhals._typing_compat"]
+
+extend-safe-fixes = [
+  "C419",    # unnecessary-comprehension-in-call
+  "C420",    # unnecessary-dict-comprehension-for-iterable
+  "PLR6201", # literal-membership
+  "TC",      # flake8-type-checking
+  "UP",      # pyupgrade
 ]
-lint.ignore = [
-  "A001",
-  "ARG002",
-  "ANN101",
-  "ANN401",
-  "C901",
-  "COM812",
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D107",
-  "DTZ001",
-  "E501",
-  "FIX",
-  "ISC001",
-  "NPY002",
-  "PD901",  # This is a auxiliary library so dataframe variables have no concrete business meaning
-  "PD010",
-  "PLR0911",
-  "PLR0912",
-  "PLR0913",
-  "PLR2004",
-  "RET505",
-  "SLF001",
-  "TD003",
+extend-select = [
+  "PLR0914", # too-many-locals
+  "PLR0916", # too-many-boolean-expressions
+  "PLR1702", # too-many-nested-blocks
+  "PLR6201", # literal-membership
 ]
+select = ["ALL"]
+ignore = [
+  "A001",    # builtin-variable-shadowing
+  "A004",    # builtin-import-shadowing
+  "A005",    # stdlib-module-shadowing
+  "ARG002",  # unused-method-argument
+  "ANN401",  # any-type
+  "COM812",  # missing-trailing-comma
+  "D100",    # undocumented-public-module
+  "D101",    # undocumented-public-class
+  "D102",    # undocumented-public-method
+  "D103",    # undocumented-public-function
+  "D104",    # undocumented-public-package
+  "D105",    # undocumented-magic-method
+  "D107",    # undocumented-public-init
+  "DTZ001",  # call-datetime-without-tzinfo
+  "E501",    # line-too-long
+  "FIX",     # flake8-fixme
+  "ISC001",  # single-line-implicit-string-concatenation
+  "PD003",   # pandas-use-of-dot-is-null
+  "PD010",   # pandas-use-of-dot-pivot-or-unstack
+  "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
+  "PLR0913", # too-many-arguments
+  "PLR2004", # magic-value-comparison
+  "RET505",  # superfluous-else-return
+  "SLF001",  # private-member-access
+  "TD003",   # missing-todo-link
+  "TD004",   # missing-todo-colon
+]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"narwhals/expr_dt.py" = ["RUF002"]
+"narwhals/_*/utils.py" = [
+  "PLR0911", # too-many-return-statements
+]
+"tests/*" = [
+  "S101", 
+  "C901",    # complex-structure
+  "PLR0912", # too-many-branches
+  "PLR0916", # too-many-boolean-expressions
+]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]
+"utils/bump_version.py" = ["S603", "S607", "T201"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
   "ANN001",
@@ -99,66 +206,136 @@ lint.ignore = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.pylint]
+max-nested-blocks = 4
+
 [tool.ruff.lint.isort]
-force-single-line = true
 required-imports = ["from __future__ import annotations"]
+combine-as-imports = true
+split-on-trailing-comma = false
 
 [tool.ruff.format]
 docstring-code-format = true
+skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
+norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
 testpaths = ["tests"]
 filterwarnings = [
   "error",
-  'ignore:distutils Version classes are deprecated:DeprecationWarning',
-  'ignore:In the future `np.bool`',
-  'ignore:The copy keyword is deprecated and will be removed',
-  'ignore:make_block is deprecated and will be removed',
-  'ignore:np.find_common_type is deprecated',
-  'ignore:is_sparse is deprecated and will be removed',
-  'ignore:Passing a BlockManager to DataFrame is deprecated',
   'ignore:.*defaulting to pandas implementation',
   'ignore:.*implementation has mismatches with pandas',
-  'ignore:.*Do not use the `random` module inside strategies',
   'ignore:.*You are using pyarrow version',
-  'ignore:.*but when imported by',
-  'ignore:Distributing .*This may take some time',
-  'ignore:.*The default coalesce behavior',
+  # This warning was temporarily raised by pandas but then reverted.
+  'ignore:.*Passing a BlockManager to DataFrame:DeprecationWarning',
+  # This warning was temporarily raised by Polars but then reverted.
+  'ignore:.*The default coalesce behavior of left join will change:DeprecationWarning',
+  'ignore: unclosed <socket.socket',
+  'ignore:.*The distutils package is deprecated and slated for removal in Python 3.12:DeprecationWarning:pyspark',
+  'ignore:.*distutils Version classes are deprecated. Use packaging.version instead.*:DeprecationWarning:pyspark',
+  'ignore:.*is_datetime64tz_dtype is deprecated and will be removed in a future version.*:DeprecationWarning:pyspark',
+  # Warning raised by PyArrow nightly just by importing pandas
+  'ignore:.*Python binding for RankQuantileOptions not exposed:RuntimeWarning:pyarrow',
+  'ignore:.*pandas only supports SQLAlchemy:UserWarning:sqlframe',
+  'ignore:.*numpy.core is deprecated and has been renamed to numpy._core.*:DeprecationWarning:sqlframe',
+  "ignore:.*__array__ implementation doesn't accept a copy keyword, so passing copy=False failed:DeprecationWarning:modin",
+  # raised internally by pandas
+  "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+  # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
+  "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 env = [
-    "MODIN_ENGINE=python",
+  "MODIN_ENGINE=python",
+  "PYARROW_IGNORE_TIMEZONE=1",
+  "TZ=UTC",
 ]
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
 
 [tool.coverage.report]
+fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
   'narwhals/this.py',
-  # we can run this in every environment that we measure coverage on due to upper-bound constraits
-  'narwhals/_ibis/*',
+  'narwhals/_arrow/typing.py',
+  'narwhals/_duckdb/typing.py',
+  'narwhals/_spark_like/typing.py',
+  'narwhals/_ibis/typing.py',
+  # Remove after finishing eager sub-protocols
+  'narwhals/_compliant/namespace.py',
 ]
 exclude_also = [
-  "> POLARS_VERSION",
   "if sys.version_info() <",
-  "if (:?self._)?implementation is Implementation.MODIN",
-  "if (:?self._)?implementation is Implementation.CUDF",
-  'request.applymarker\(pytest.mark.xfail\)',
-  'if self._backend_version < '
+  "if .*implementation is Implementation.CUDF",
+  "if .*implementation is Implementation.MODIN",
+  "if .*implementation is Implementation.PYSPARK",
+  "if .*implementation is Implementation.PYSPARK_CONNECT",
+  "if .*implementation.is_cudf",
+  "if .*implementation.is_modin",
+  "if .*implementation.is_pyspark",
+  "if .*implementation.is_pyspark_connect",
+  'request.applymarker\(pytest.mark.xfail',
+  'backend_version <',
+  'if "cudf" in str\(constructor',
+  'if "modin" in str\(constructor',
+  'if "pyspark" in str\(constructor',
+  'if "pyspark_connect" in str\(constructor',
+  'pytest.skip\('
 ]
 
 [tool.mypy]
+files = ["narwhals", "tests"]
+pretty = true
 strict = true
 
 [[tool.mypy.overrides]]
-# the pandas API is just too inconsistent for type hinting to be useful.
 module = [
-    "pandas.*",
-    "cudf.*",
-    "modin.*",
+  "cudf.*",
+  "cupy.*",
+  "dask.*",
+  "dask_expr.*",
+  "duckdb.*",
+  # https://github.com/ibis-project/ibis/issues/6844
+  "ibis.*",
+  "joblib.*",
+  "modin.*",
+  "numpy.*",
+  "pyspark.*",
+  "sklearn.*",
 ]
+# TODO: remove follow_imports
+follow_imports = "skip"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "narwhals._expression_parsing",
+  "narwhals._utils",
+  "narwhals._pandas_like.*",
+  "narwhals._ibis.*",
+  "narwhals._arrow.*",
+  "narwhals._dask.*",
+  "narwhals._spark_like.*",
+]
+warn_return_any = false
+
+[tool.pyright]
+pythonPlatform = "All"
+# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.8"
+reportMissingTypeArgument = "error"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportPrivateImportUsage = "none"
+reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
+typeCheckingMode = "basic"
+include = ["narwhals", "tests"]
+ignore = [
+  "../.venv/",
+  "../../../**/Lib",      # stdlib
+  "../../../**/typeshed*" # typeshed-fallback
+]

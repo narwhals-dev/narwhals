@@ -1,35 +1,39 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals._ibis.dataframe import map_ibis_dtype_to_narwhals_dtype
+from narwhals._ibis.utils import native_to_narwhals_dtype
 from narwhals.dependencies import get_ibis
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from narwhals.typing import DTypes
+    from typing_extensions import Self
+
+    from narwhals._utils import Version
+    from narwhals.dtypes import DType
 
 
 class IbisInterchangeSeries:
-    def __init__(self, df: Any, dtypes: DTypes) -> None:
+    def __init__(self, df: Any, version: Version) -> None:
         self._native_series = df
-        self._dtypes = dtypes
+        self._version = version
 
-    def __narwhals_series__(self) -> Any:
+    def __narwhals_series__(self) -> Self:
         return self
 
     def __native_namespace__(self) -> ModuleType:
-        return get_ibis()  # type: ignore[no-any-return]
+        return get_ibis()
 
-    def __getattr__(self, attr: str) -> Any:
-        if attr == "dtype":
-            return map_ibis_dtype_to_narwhals_dtype(
-                self._native_series.type(), self._dtypes
-            )
+    @property
+    def dtype(self) -> DType:
+        return native_to_narwhals_dtype(
+            self._native_series.schema().types[0], self._version
+        )
+
+    def __getattr__(self, attr: str) -> NoReturn:
         msg = (
-            f"Attribute {attr} is not supported for metadata-only dataframes.\n\n"
+            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
             "If you would like to see this kind of object better supported in "
             "Narwhals, please open a feature request "
             "at https://github.com/narwhals-dev/narwhals/issues."

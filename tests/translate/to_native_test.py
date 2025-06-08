@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

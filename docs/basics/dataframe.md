@@ -17,24 +17,42 @@ Let's explore this with some simple examples.
 
 ## Example 1: descriptive statistics
 
-Just like in Polars, we can pass expressions to
-`DataFrame.select` or `LazyFrame.select`.
+Just like in Polars, we can pass expressions to `DataFrame.select` or `LazyFrame.select`.
 
 Make a Python file with the following content:
 
-```python exec="1" source="above" session="df_ex1"
-import narwhals as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python exec="1" source="above" session="df_ex1"
+    import narwhals as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.select(
-        a_sum=nw.col("a").sum(),
-        a_mean=nw.col("a").mean(),
-        a_std=nw.col("a").std(),
-    )
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return (
+            nw.from_native(df)
+            .select(
+                a_sum=nw.col("a").sum(),
+                a_mean=nw.col("a").mean(),
+                a_std=nw.col("a").std(),
+            )
+            .to_native()
+        )
+    ```
+
+=== "@narwhalify"
+    ```python exec="1" source="above" session="df_ex1"
+    import narwhals as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.select(
+            a_sum=nw.col("a").sum(),
+            a_mean=nw.col("a").mean(),
+            a_std=nw.col("a").std(),
+        )
+    ```
 
 Let's try it out:
 
@@ -70,42 +88,33 @@ Let's try it out:
     print(func(table))
     ```
 
-Alternatively, we could have opted for the more explicit version:
-
-```python
-import narwhals as nw
-from narwhals.typing import IntoFrameT
-
-
-def func(df_native: IntoFrameT) -> IntoFrameT:
-    df = nw.from_native(df_native)
-    df = df.select(
-        a_sum=nw.col("a").sum(),
-        a_mean=nw.col("a").mean(),
-        a_std=nw.col("a").std(),
-    )
-    return nw.to_native(df)
-```
-
-Despite being more verbose, it has the advantage of preserving the type annotation of the native
-object - see [typing](../api-reference/typing.md) for more details.
-
-In general, in this tutorial, we'll use the former.
-
 ## Example 2: group-by and mean
 
 Just like in Polars, we can pass expressions to `GroupBy.agg`.
 Make a Python file with the following content:
 
-```python exec="1" source="above" session="df_ex2"
-import narwhals as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python exec="1" source="above" session="df_ex2"
+    import narwhals as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.group_by("a").agg(nw.col("b").mean()).sort("a")
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return (
+            nw.from_native(df).group_by("a").agg(nw.col("b").mean()).sort("a").to_native()
+        )
+    ```
+
+=== "@narwhalify"
+    ```python exec="1" source="above" session="df_ex2"
+    import narwhals as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.group_by("a").agg(nw.col("b").mean()).sort("a")
+    ```
 
 Let's try it out:
 
@@ -148,15 +157,30 @@ For example, we can compute a horizontal sum using `nw.sum_horizontal`.
 
 Make a Python file with the following content:
 
-```python exec="1" source="above" session="df_ex3"
-import narwhals as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python exec="1" source="above" session="df_ex3"
+    import narwhals as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return (
+            nw.from_native(df)
+            .with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
+            .to_native()
+        )
+    ```
+
+=== "@narwhalify"
+    ```python exec="1" source="above" session="df_ex3"
+    import narwhals as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
+    ```
 
 Let's try it out:
 
@@ -203,13 +227,12 @@ on a series.
 Make a Python file with the following content:
 
 ```python exec="1" source="above" session="df_ex4"
-from typing import Any
-
 import narwhals as nw
+from narwhals.typing import DataFrameT
 
 
 @nw.narwhalify(eager_only=True)
-def func(df: nw.DataFrame[Any], s: nw.Series, col_name: str) -> int:
+def func(df: DataFrameT, s: nw.Series, col_name: str) -> int:
     return df.filter(nw.col(col_name).is_in(s)).shape[0]
 ```
 

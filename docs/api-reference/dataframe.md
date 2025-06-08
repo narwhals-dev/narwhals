@@ -11,15 +11,19 @@
         - columns
         - drop
         - drop_nulls
+        - estimated_size
+        - explode
         - filter
         - gather_every
         - get_column
         - group_by
         - head
+        - implementation
         - is_duplicated
         - is_empty
         - is_unique
         - item
+        - iter_columns
         - iter_rows
         - join
         - join_asof
@@ -41,6 +45,7 @@
         - to_native
         - to_numpy
         - to_pandas
+        - to_polars
         - unique
         - unpivot
         - with_columns

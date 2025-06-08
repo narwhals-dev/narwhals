@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
 
-import narwhals.stable.v1 as nw
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
-data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8, 9]}
+data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}
 
 
@@ -38,7 +37,7 @@ def test_iter_rows(
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
+    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "1": [5, 6, 7]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = list(df.iter_rows(named=named))
     assert result == expected
@@ -94,7 +93,7 @@ def test_rows_eager(
     expected: list[tuple[Any, ...]] | list[dict[str, Any]],
 ) -> None:
     # posit-dev/py-shiny relies on `.rows(named=False)` to return unnamed rows
-    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8, 9], "1": [5, 6, 7]}
+    data = {"a": [1, 3, 2], "_b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "1": [5, 6, 7]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.rows(named=named)
     assert result == expected

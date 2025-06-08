@@ -20,6 +20,6 @@ def test_execute_scripts(query_path: Path) -> None:
         text=True,
         check=False,
     )
-    assert (
-        result.returncode == 0
-    ), f"Script {query_path} failed with error: {result.stderr}"
+    assert result.returncode == 0, (
+        f"Script {query_path} failed with error: {result.stderr}"
+    )

@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Protocol
-from typing import TypeVar
-from typing import Union
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
 if TYPE_CHECKING:
     import sys
+
+    from narwhals.stable.v1 import DataFrame, LazyFrame
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import DataFrame
-    from narwhals.stable.v1 import Expr
-    from narwhals.stable.v1 import LazyFrame
-    from narwhals.stable.v1 import Series
-    from narwhals.stable.v1 import dtypes
+    from narwhals.stable.v1 import Expr, Series, dtypes
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -36,7 +30,7 @@ if TYPE_CHECKING:
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-IntoExpr: TypeAlias = Union["Expr", str, "Series"]
+IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
 
 Use this to mean "either a Narwhals expression, or something
@@ -89,7 +83,7 @@ Examples:
     ...     return df.columns
 """
 
-IntoSeries: TypeAlias = Union["Series", "NativeSeries"]
+IntoSeries: TypeAlias = Union["Series[Any]", "NativeSeries"]
 """Anything which can be converted to a Narwhals Series.
 
 Use this if your function can accept an object which can be converted to `nw.Series`
@@ -121,7 +115,7 @@ Examples:
 IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
 """TypeVar bound to object convertible to Narwhals DataFrame.
 
-Use this if your function accepts a function which can be converted to `nw.DataFrame`
+Use this if your function accepts an object which can be converted to `nw.DataFrame`
 and returns an object of the same class.
 
 Examples:
@@ -132,7 +126,7 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
 
-FrameT = TypeVar("FrameT", bound="Frame")
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns
@@ -163,7 +157,7 @@ Examples:
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
 """TypeVar bound to object convertible to Narwhals Series.
 
-Use this if your function accepts a function which can be converted to `nw.Series`
+Use this if your function accepts an object  which can be converted to `nw.Series`
 and returns an object of the same class.
 
 Examples:
@@ -202,14 +196,14 @@ class DTypes:
 
 
 __all__ = [
-    "IntoExpr",
-    "IntoDataFrame",
-    "IntoDataFrameT",
-    "IntoFrame",
-    "IntoFrameT",
+    "DataFrameT",
     "Frame",
     "FrameT",
-    "DataFrameT",
+    "IntoDataFrame",
+    "IntoDataFrameT",
+    "IntoExpr",
+    "IntoFrame",
+    "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
 ]

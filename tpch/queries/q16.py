@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(part_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
     var1 = "Brand#45"
 
@@ -21,7 +20,7 @@ def query(part_ds: FrameT, partsupp_ds: FrameT, supplier_ds: FrameT) -> FrameT:
         .filter(nw.col("p_brand") != var1)
         .filter(~nw.col("p_type").str.contains("MEDIUM POLISHED*"))
         .filter(nw.col("p_size").is_in([49, 14, 23, 45, 19, 3, 36, 9]))
-        .join(supplier, left_on="ps_suppkey", right_on="s_suppkey", how="left")
+        .join(supplier, left_on="ps_suppkey", right_on="s_suppkey", how="left")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("ps_suppkey_right").is_null())
         .group_by("p_brand", "p_type", "p_size")
         .agg(nw.col("ps_suppkey").n_unique().alias("supplier_cnt"))

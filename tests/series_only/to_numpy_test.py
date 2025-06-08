@@ -7,10 +7,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-import narwhals.stable.v1 as nw
-from tests.utils import PANDAS_VERSION
-from tests.utils import PYARROW_VERSION
-from tests.utils import is_windows
+import narwhals as nw
+from tests.utils import PANDAS_VERSION, PYARROW_VERSION, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -42,10 +40,8 @@ def test_to_numpy_tz_aware(
     if (
         ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
-        or (
-            any(x in str(constructor_eager) for x in ("pyarrow", "modin"))
-            and is_windows()
-        )
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
+        or ("pyarrow" in str(constructor_eager) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)
         request.applymarker(pytest.mark.xfail)

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, assert_equal_data
 
-data = {
-    "a": ["foo", "bars"],
-    "ab": ["foo", "bars"],
-}
+data = {"a": ["foo", "bars"], "ab": ["foo", "bars"]}
 
 
 def test_pipe(constructor: Constructor) -> None:

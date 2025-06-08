@@ -1,19 +1,25 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timedelta
-from typing import Any
+from datetime import datetime, timedelta
+from inspect import getdoc
+from typing import Any, Iterator
 
-import polars as pl
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import Constructor
-from tests.utils import assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
+
+
+def remove_docstring_examples(doc: str) -> str:
+    if "Examples:" in doc:
+        return doc[: doc.find("Examples:")].rstrip()
+    return doc.rstrip()
 
 
 def test_renamed_taxicab_norm(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -30,16 +36,16 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
 
-    df = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    df_v1 = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
     # The newer `_taxicab_norm` can still work in the old API, no issue.
     # It's new, so it couldn't be backwards-incompatible.
-    result = df.with_columns(b=nw_v1.col("a")._taxicab_norm())
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
-    assert_equal_data(result, expected)
+    assert_equal_data(result_v1, expected)
 
     # The older `_l1_norm` still works in the stable api
-    result = df.with_columns(b=nw_v1.col("a")._l1_norm())
-    assert_equal_data(result, expected)
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._l1_norm())
+    assert_equal_data(result_v1, expected)
 
 
 def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
@@ -81,58 +87,73 @@ def test_stable_api_completeness() -> None:
 def test_stable_api_docstrings() -> None:
     main_namespace_api = nw.__all__
     for item in main_namespace_api:
-        if getattr(nw, item).__doc__ is None:
+        if (doc := getdoc(getattr(nw, item))) is None:
             continue
-        v1_doc = getattr(nw_v1, item).__doc__
-        nw_doc = getattr(nw, item).__doc__
-        assert v1_doc == nw_doc, item
+        if item in {"from_native", "narwhalify"}:
+            # `eager_or_interchange` param was removed from main namespace,
+            # but is still present in v1 docstring.
+            continue
+        if item == "Enum":
+            # In v1 this was Polars-only, after that pandas ordered categoricals
+            # started to be mapped to it too, so the docstring changed.
+            continue
+        v1_doc = getdoc(getattr(nw_v1, item))
+        assert v1_doc is not None
+        assert remove_docstring_examples(v1_doc) == remove_docstring_examples(doc), item
+
+
+def _iter_api_method_docs(obj: Any, *exclude: str) -> Iterator[tuple[str, str]]:
+    for name in dir(obj):
+        if (
+            not name.startswith("_")
+            and name not in exclude
+            and (doc := getdoc(getattr(obj, name)))
+        ):
+            yield name, doc
 
 
 def test_dataframe_docstrings() -> None:
-    stable_df = nw_v1.from_native(pl.DataFrame())
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df_v1 = nw_v1.from_native(pl.DataFrame())
     df = nw.from_native(pl.DataFrame())
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        assert (
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-            == getattr(df, item).__doc__
-        ), item
+    for method_name, doc in _iter_api_method_docs(df):
+        doc_v1 = getdoc(getattr(df_v1, method_name))
+        assert doc_v1
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
 def test_lazyframe_docstrings() -> None:
-    stable_df = nw_v1.from_native(pl.LazyFrame())
-    df = nw.from_native(pl.LazyFrame())
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        if item in ("schema", "columns"):
-            # to avoid performance warning
-            continue
-        assert (
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-            == getattr(df, item).__doc__
-        )
+    pytest.importorskip("polars")
+    import polars as pl
+
+    ldf_v1 = nw_v1.from_native(pl.LazyFrame())
+    ldf = nw.from_native(pl.LazyFrame())
+    performance_warning = {"schema", "columns"}
+    deprecated = {"tail", "gather_every"}
+    for method_name, doc in _iter_api_method_docs(ldf, *performance_warning, *deprecated):
+        doc_v1 = getdoc(getattr(ldf_v1, method_name))
+        assert doc_v1
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
 def test_series_docstrings() -> None:
-    stable_df = nw_v1.from_native(pl.Series(), series_only=True)
-    df = nw.from_native(pl.Series(), series_only=True)
-    api = [i for i in df.__dir__() if not i.startswith("_")]
-    for item in api:
-        if getattr(df, item).__doc__ is None:
-            continue
-        assert (
-            getattr(stable_df, item).__doc__.replace(
-                "import narwhals.stable.v1 as nw", "import narwhals as nw"
-            )
-            == getattr(df, item).__doc__
-        ), item
+    pytest.importorskip("polars")
+    import polars as pl
+
+    ser_v1 = nw_v1.from_native(pl.Series(), series_only=True)
+    ser = nw.from_native(pl.Series(), series_only=True)
+    for method_name, doc in _iter_api_method_docs(ser):
+        doc_v1 = getdoc(getattr(ser_v1, method_name))
+        assert doc_v1
+        assert remove_docstring_examples(doc_v1) == remove_docstring_examples(doc)
 
 
-def test_dtypes(constructor: Constructor) -> None:
+def test_dtypes(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if "pyspark" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw_v1.from_native(
         constructor({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )

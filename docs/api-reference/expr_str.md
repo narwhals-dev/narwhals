@@ -11,6 +11,7 @@
         - replace
         - replace_all
         - slice
+        - split
         - starts_with
         - strip_chars
         - tail

@@ -3,20 +3,15 @@ from __future__ import annotations
 import pyarrow as pa
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import PYARROW_VERSION
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import PYARROW_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": ["one", "two", "two"]}
 
 
-def test_get_categories(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_get_categories(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     df = df.select(nw.col("a").cast(nw.Categorical))

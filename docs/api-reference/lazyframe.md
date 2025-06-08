@@ -4,16 +4,17 @@
     handler: python
     options:
       members:
-        - clone
         - collect
         - collect_schema
         - columns
         - drop
         - drop_nulls
+        - explode
         - filter
         - gather_every
         - group_by
         - head
+        - implementation
         - join
         - join_asof
         - lazy

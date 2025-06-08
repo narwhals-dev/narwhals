@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from enum import Enum
-from enum import auto
+from contextlib import suppress
+from enum import Enum, auto
+from itertools import chain
 from pathlib import Path
-from typing import Any
-from typing import Final
-from typing import NamedTuple
+from typing import Any, Final, Iterator, NamedTuple
 
 import polars as pl
 from jinja2 import Template
+
+from narwhals._utils import not_implemented
 
 TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness"
@@ -28,53 +29,93 @@ class Backend(NamedTuple):
     type_: BackendType
 
 
-MODULES = ["dataframe", "series", "expr"]
+MODULES = [
+    "dataframe",
+    "series",
+    "expr",
+    "expr_dt",
+    "expr_cat",
+    "expr_str",
+    "expr_list",
+    "expr_name",
+    "expr_struct",
+    "series_dt",
+    "series_cat",
+    "series_str",
+    "series_list",
+    "series_struct",
+]
 
 BACKENDS = [
-    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
     Backend(name="arrow", module="_arrow", type_=BackendType.EAGER),
     Backend(name="dask", module="_dask", type_=BackendType.LAZY),
+    Backend(name="duckdb", module="_duckdb", type_=BackendType.LAZY),
+    Backend(name="pandas-like", module="_pandas_like", type_=BackendType.EAGER),
+    Backend(name="spark-like", module="_spark_like", type_=BackendType.LAZY),
 ]
 
 EXCLUDE_CLASSES = {"BaseFrame", "Then", "When"}
 
-DIRECTLY_IMPLEMENTED_METHODS = ["pipe"]
+DIRECTLY_IMPLEMENTED_METHODS = ["pipe", "implementation", "to_native"]
+
+EXPR_STR_METHODS = ["tail", "head"]
 
 
 def get_class_methods(kls: type[Any]) -> list[str]:
     return [m[0] for m in inspect.getmembers(kls) if not m[0].startswith("_")]
 
 
+def iter_implemented_methods(tp: type[Any], /) -> Iterator[str]:
+    """Variant of `get_class_methods` to exclude `not_implemented`."""
+    for name, member in inspect.getmembers(tp):
+        if not name.startswith("_") and not isinstance(member, not_implemented):
+            yield name
+
+
 def parse_module(module_name: str, backend: str, nw_class_name: str) -> list[str]:
-    try:
+    methods_ = []
+    with suppress(ModuleNotFoundError):
         module_ = importlib.import_module(f"narwhals.{backend}.{module_name}")
         class_ = inspect.getmembers(
             module_,
-            predicate=lambda c: inspect.isclass(c) and c.__name__.endswith(nw_class_name),
-        )
-        methods_ = (
-            get_class_methods(class_[0][1]) + DIRECTLY_IMPLEMENTED_METHODS
-            if class_
-            else []
+            predicate=lambda c: (
+                inspect.isclass(c)
+                and c.__name__.endswith(nw_class_name)
+                and not c.__name__.startswith("Compliant")  # Exclude protocols
+                and not c.__name__.startswith("DuckDBInterchange")
+            ),
         )
 
-    except ModuleNotFoundError:
-        methods_ = []
-
+        if not class_:
+            return methods_
+        methods_.extend(
+            chain(iter_implemented_methods(class_[0][1]), DIRECTLY_IMPLEMENTED_METHODS)
+        )
+        if module_name == "expr_str":
+            methods_.extend(EXPR_STR_METHODS)
     return methods_
 
 
 def render_table_and_write_to_output(
-    results: list[pl.DataFrame], title: str, output_filename: str
+    results: list[pl.DataFrame],  # pyright: ignore[reportRedeclaration]
+    title: str,
+    output_filename: str,
 ) -> None:
-    results = (
+    results: pl.DataFrame = (
         pl.concat(results)
         .with_columns(supported=pl.lit(":white_check_mark:"))
-        .pivot(on="Backend", values="supported", index=["Class", "Method"])
+        .pivot(
+            on="Backend", values="supported", index=["Method"], aggregate_function="first"
+        )
         .filter(pl.col("narwhals").is_not_null())
         .drop("narwhals")
         .fill_null(":x:")
-        .sort("Class", "Method")
+        .sort("Method")
+    )
+
+    backends = [c for c in results.columns if c != "Method"] + ["polars"]
+    results = results.with_columns(polars=pl.lit(":white_check_mark:")).select(
+        "Method", *sorted(backends)
     )
 
     with pl.Config(
@@ -94,7 +135,7 @@ def render_table_and_write_to_output(
     with (DESTINATION_PATH / f"{output_filename}.md").open(mode="w") as destination:
         destination.write(new_content)
 
-    return table
+    return table  # pyright: ignore[reportReturnType]
 
 
 def get_backend_completeness_table() -> None:
@@ -116,14 +157,11 @@ def get_backend_completeness_table() -> None:
 
             nw_methods = get_class_methods(nw_class)
 
-            narwhals = pl.DataFrame(
-                {"Class": nw_class_name, "Backend": "narwhals", "Method": nw_methods}
-            )
+            narwhals = pl.DataFrame({"Backend": "narwhals", "Method": nw_methods})
 
             backend_methods = [
                 pl.DataFrame(
                     {
-                        "Class": nw_class_name,
                         "Backend": backend.name,
                         "Method": parse_module(
                             module_name,
@@ -150,7 +188,9 @@ def get_backend_completeness_table() -> None:
             continue
 
         render_table_and_write_to_output(
-            results=results, title=module_name.capitalize(), output_filename=module_name
+            results=results,
+            title=module_name.capitalize().replace("_", "."),
+            output_filename=module_name,
         )
 
 

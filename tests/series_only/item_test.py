@@ -4,9 +4,8 @@ import re
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import ConstructorEager, assert_equal_data
 
 data = [1, 3, 2]
 

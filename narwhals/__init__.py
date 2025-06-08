@@ -1,93 +1,115 @@
 from __future__ import annotations
 
-from narwhals import dependencies
-from narwhals import exceptions
-from narwhals import selectors
-from narwhals import stable
-from narwhals.dataframe import DataFrame
-from narwhals.dataframe import LazyFrame
-from narwhals.dtypes import Array
-from narwhals.dtypes import Boolean
-from narwhals.dtypes import Categorical
-from narwhals.dtypes import Date
-from narwhals.dtypes import Datetime
-from narwhals.dtypes import Duration
-from narwhals.dtypes import Enum
-from narwhals.dtypes import Field
-from narwhals.dtypes import Float32
-from narwhals.dtypes import Float64
-from narwhals.dtypes import Int8
-from narwhals.dtypes import Int16
-from narwhals.dtypes import Int32
-from narwhals.dtypes import Int64
-from narwhals.dtypes import List
-from narwhals.dtypes import Object
-from narwhals.dtypes import String
-from narwhals.dtypes import Struct
-from narwhals.dtypes import UInt8
-from narwhals.dtypes import UInt16
-from narwhals.dtypes import UInt32
-from narwhals.dtypes import UInt64
-from narwhals.dtypes import Unknown
+import typing as _t
+
+from narwhals import dependencies, dtypes, exceptions, selectors
+from narwhals._utils import (
+    Implementation,
+    generate_temporary_column_name,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+)
+from narwhals.dataframe import DataFrame, LazyFrame
+from narwhals.dtypes import (
+    Array,
+    Binary,
+    Boolean,
+    Categorical,
+    Date,
+    Datetime,
+    Decimal,
+    Duration,
+    Enum,
+    Field,
+    Float32,
+    Float64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+    List,
+    Object,
+    String,
+    Struct,
+    Time,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    UInt128,
+    Unknown,
+)
 from narwhals.expr import Expr
-from narwhals.expr import all_ as all
-from narwhals.expr import all_horizontal
-from narwhals.expr import any_horizontal
-from narwhals.expr import col
-from narwhals.expr import concat_str
-from narwhals.expr import len_ as len
-from narwhals.expr import lit
-from narwhals.expr import max
-from narwhals.expr import max_horizontal
-from narwhals.expr import mean
-from narwhals.expr import mean_horizontal
-from narwhals.expr import median
-from narwhals.expr import min
-from narwhals.expr import min_horizontal
-from narwhals.expr import nth
-from narwhals.expr import sum
-from narwhals.expr import sum_horizontal
-from narwhals.expr import when
-from narwhals.functions import concat
-from narwhals.functions import from_arrow
-from narwhals.functions import from_dict
-from narwhals.functions import get_level
-from narwhals.functions import new_series
-from narwhals.functions import show_versions
+from narwhals.functions import (
+    all_ as all,
+    all_horizontal,
+    any_horizontal,
+    col,
+    concat,
+    concat_str,
+    exclude,
+    from_arrow,
+    from_dict,
+    from_numpy,
+    get_level,
+    len_ as len,
+    lit,
+    max,
+    max_horizontal,
+    mean,
+    mean_horizontal,
+    median,
+    min,
+    min_horizontal,
+    new_series,
+    nth,
+    read_csv,
+    read_parquet,
+    scan_csv,
+    scan_parquet,
+    show_versions,
+    sum,
+    sum_horizontal,
+    when,
+)
 from narwhals.schema import Schema
 from narwhals.series import Series
-from narwhals.translate import from_native
-from narwhals.translate import get_native_namespace
-from narwhals.translate import narwhalify
-from narwhals.translate import to_native
-from narwhals.translate import to_py_scalar
-from narwhals.utils import generate_temporary_column_name
-from narwhals.utils import is_ordered_categorical
-from narwhals.utils import maybe_align_index
-from narwhals.utils import maybe_convert_dtypes
-from narwhals.utils import maybe_get_index
-from narwhals.utils import maybe_reset_index
-from narwhals.utils import maybe_set_index
+from narwhals.translate import (
+    from_native,
+    get_native_namespace,
+    narwhalify,
+    to_native,
+    to_py_scalar,
+)
 
-__version__ = "1.14.2"
+__version__: str
 
 __all__ = [
     "Array",
+    "Binary",
     "Boolean",
     "Categorical",
     "DataFrame",
     "Date",
     "Datetime",
+    "Decimal",
     "Duration",
     "Enum",
     "Expr",
     "Field",
     "Float32",
     "Float64",
+    "Implementation",
+    "Int8",
     "Int16",
     "Int32",
     "Int64",
-    "Int8",
+    "Int128",
     "LazyFrame",
     "List",
     "Object",
@@ -95,10 +117,12 @@ __all__ = [
     "Series",
     "String",
     "Struct",
+    "Time",
+    "UInt8",
     "UInt16",
     "UInt32",
     "UInt64",
-    "UInt8",
+    "UInt128",
     "Unknown",
     "all",
     "all_horizontal",
@@ -107,11 +131,13 @@ __all__ = [
     "concat",
     "concat_str",
     "dependencies",
+    "dtypes",
     "exceptions",
+    "exclude",
     "from_arrow",
     "from_dict",
-    "from_dict",
     "from_native",
+    "from_numpy",
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
@@ -133,12 +159,28 @@ __all__ = [
     "narwhalify",
     "new_series",
     "nth",
+    "read_csv",
+    "read_parquet",
+    "scan_csv",
+    "scan_parquet",
     "selectors",
     "show_versions",
-    "stable",
     "sum",
     "sum_horizontal",
     "to_native",
     "to_py_scalar",
     "when",
 ]
+
+
+def __getattr__(name: _t.Literal["__version__"]) -> str:  # type: ignore[misc]
+    if name == "__version__":
+        global __version__  # noqa: PLW0603
+
+        from importlib import metadata
+
+        __version__ = metadata.version(__name__)
+        return __version__
+    else:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)

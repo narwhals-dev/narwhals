@@ -8,12 +8,11 @@ if TYPE_CHECKING:
     from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     q1 = (
         customer_ds.with_columns(nw.col("c_phone").str.slice(0, 2).alias("cntrycode"))
         .filter(nw.col("cntrycode").str.contains("13|31|23|29|30|18|17"))
-        .select("c_acctbal", "c_custkey", "cntrycode")
+        .select("c_acctbal", "c_custkey", nw.col("cntrycode").cast(nw.Int64()))
     )
 
     q2 = q1.filter(nw.col("c_acctbal") > 0.0).select(
@@ -27,9 +26,9 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     )
 
     return (
-        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")
+        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("o_custkey").is_null())
-        .join(q2, how="cross")
+        .join(q2, how="cross")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("c_acctbal") > nw.col("avg_acctbal"))
         .group_by("cntrycode")
         .agg(

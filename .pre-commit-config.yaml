@@ -3,28 +3,26 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.7.2'
+  rev: 'v0.11.12'
   hooks:
     # Run the formatter.
     - id: ruff-format
     # Run the linter.
     - id: ruff
       args: [--fix]
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'v1.13.0'
-  hooks:
-    - id: mypy
-      additional_dependencies: ['polars==1.4.1', 'pytest==8.3.2']
-      files: ^(narwhals|tests)/
+    - id: ruff
+      name: check-docstrings
+      alias: check-docstrings
+      entry: python utils/check_docstrings.py
 - repo: https://github.com/codespell-project/codespell
-  rev: 'v2.3.0'
+  rev: 'v2.4.1'
   hooks:
     - id: codespell
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 -   repo: https://github.com/pycqa/flake8
-    rev: '7.1.1'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
+    rev: '7.2.0'  # todo: remove once https://github.com/astral-sh/ruff/issues/458 is addressed
     hooks:
     -   id: flake8
         additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
@@ -33,13 +31,14 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/series\.py$|
+                narwhals/series\.py|
                 # TODO: gradually enable
-                narwhals/dataframe\.py$|
+                narwhals/dataframe\.py|
                 # TODO: gradually enable
-                narwhals/dependencies\.py$|
+                narwhals/dependencies\.py|
                 # private, so less urgent to document too well
-                narwhals/_.*
+                narwhals/_.*|
+                ^utils/.*
             )$
 - repo: local
   hooks:
@@ -55,10 +54,36 @@ repos:
       language: python
       files: ^narwhals/
       exclude: ^narwhals/dependencies\.py
-- repo: https://github.com/kynan/nbstripout
-  rev: 0.8.0
-  hooks:
-    - id: nbstripout
+    - id: self-self
+      name: don't annotate `self` argument using `Self`
+      entry: "self: Self"
+      language: pygrep
+      files: ^narwhals/
+    - id: dtypes-import
+      name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
+      entry: |
+          (?x)
+            import\ narwhals.dtypes|
+            from\ narwhals\ import\ dtypes|
+            from\ narwhals.dtypes\ import\ [^D_]+|
+            import\ narwhals.stable.v1.dtypes|
+            from\ narwhals.stable.v1\ import\ dtypes|
+            from\ narwhals.stable.v1.dtypes\ import
+      language: pygrep
+      files: ^narwhals/
+      exclude: |
+        (?x)
+          ^(
+            narwhals/_utils\.py|
+            narwhals/stable/v1/_dtypes.py|
+            narwhals/.*__init__.py|
+            narwhals/.*typing\.py
+          )
+    - id: pull-request-target
+      name: don't use `pull_request_target`
+      entry: pull_request_target
+      language: pygrep
+      files: ^\.github/workflows/
 - repo: https://github.com/adamchainz/blacken-docs
   rev: "1.19.1"  # replace with latest tag on GitHub
   hooks:
@@ -71,3 +96,6 @@ repos:
   hooks:
   -   id: name-tests-test
       exclude: ^tests/utils\.py
+  -   id: no-commit-to-branch
+  -   id: end-of-file-fixer
+      exclude: .svg$

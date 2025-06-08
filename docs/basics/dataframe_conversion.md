@@ -14,6 +14,7 @@ To illustrate, we create dataframes in various formats:
 ```python exec="1" source="above" session="conversion"
 import narwhals as nw
 from narwhals.typing import IntoDataFrame
+from typing import Any
 
 import duckdb
 import polars as pl
@@ -45,17 +46,23 @@ print(df_to_pandas(df_polars))
 
 ### Via PyCapsule Interface
 
-Similarly, if your library uses Polars internally, you can convert any user-supplied dataframe to Polars format using Narwhals.
+Similarly, if your library uses Polars internally, you can convert any user-supplied dataframe
+which implements `__arrow_c_stream__`:
 
 ```python exec="1" source="above" session="conversion" result="python"
-def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
-    return nw.from_arrow(nw.from_native(df), native_namespace=pl).to_native()
+def df_to_polars(df_native: Any) -> pl.DataFrame:
+    if hasattr(df_native, "__arrow_c_stream__"):
+        return nw.from_arrow(df_native, backend=pl).to_native()
+    msg = (
+        f"Expected object which implements '__arrow_c_stream__' got: {type(df_native)}"
+    )
+    raise TypeError(msg)
 
 
 print(df_to_polars(df_duckdb))  # You can only execute this line of code once.
 ```
 
-It works to pass Polars to `native_namespace` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
+It works to pass Polars to `backend` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
 
 Note that the PyCapsule Interface makes no guarantee that you can call it repeatedly, so the approach above only works if you
 only expect to perform the conversion a single time on each input object.
@@ -66,8 +73,9 @@ If you need to ingest the same dataframe multiple times, then you may want to go
 This may be less efficient than the PyCapsule approach above (and always requires PyArrow!), but is more forgiving:
 
 ```python exec="1" source="above" session="conversion" result="python"
-def df_to_polars(df: IntoDataFrame) -> pl.DataFrame:
-    return pl.DataFrame(nw.from_native(df).to_arrow())
+def df_to_polars(df_native: IntoDataFrame) -> pl.DataFrame:
+    df = nw.from_native(df_native).lazy().collect()
+    return pl.DataFrame(nw.from_native(df, eager_only=True).to_arrow())
 
 
 df_duckdb = duckdb.sql("SELECT * FROM df_polars")

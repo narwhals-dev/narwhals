@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import pytest
-
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "i": [0, 1, 2, 3, 4],
@@ -15,10 +11,8 @@ data = {
 }
 
 
-def test_filter(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+def test_filter(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {"a": [0]}
     assert_equal_data(result, expected)

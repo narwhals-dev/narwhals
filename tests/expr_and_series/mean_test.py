@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw
-from tests.utils import Constructor
-from tests.utils import ConstructorEager
-from tests.utils import assert_equal_data
+import narwhals as nw
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": [1, 3, 2], "b": [4, 4, 7], "z": [7.0, 8, 9]}
+data = {"a": [1, 3, 2], "b": [4, 4, 7], "z": [7.0, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").mean(), nw.mean("a", "b", "z")])

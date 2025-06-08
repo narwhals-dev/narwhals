@@ -10,7 +10,7 @@ DESTINATION_PATH: Final[Path] = Path("docs") / "this.md"
 content = f"""
 # The Zen of Narwhals
 
-The well famous Python easter egg `import this` will reveal The Zen of Python, by Tim Peters.
+The well famous Python easter egg `import this` will reveal The Zen of Python (PEP 20).
 
 Narwhals took inspiration from _this_ and created its own Zen.
 
@@ -23,5 +23,5 @@ import narwhals.this
 ```
 """
 
-with DESTINATION_PATH.open(mode="w") as destination:
+with DESTINATION_PATH.open(mode="w", encoding="utf-8", newline="\n") as destination:
     destination.write(content)

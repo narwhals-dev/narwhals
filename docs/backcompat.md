@@ -47,15 +47,26 @@ and deprecate the old one? The answer is...no!
 Narwhals offers a `stable` namespace, which allows you to write your code once and forget about
 it. That is to say, if you write your code like this:
 
-```python
-import narwhals.stable.v1 as nw
-from narwhals.typing import FrameT
+=== "from/to_native"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import IntoFrameT
 
 
-@nw.narwhalify
-def func(df: FrameT) -> FrameT:
-    return df.with_columns(nw.col("a").cum_sum())
-```
+    def func(df: IntoFrameT) -> IntoFrameT:
+        return nw.from_native(df).with_columns(nw.col("a").cum_sum()).to_native()
+    ```
+
+=== "@narwhalify"
+    ```python
+    import narwhals.stable.v1 as nw
+    from narwhals.typing import FrameT
+
+
+    @nw.narwhalify
+    def func(df: FrameT) -> FrameT:
+        return df.with_columns(nw.col("a").cum_sum())
+    ```
 
 then we, in Narwhals, promise that your code will keep working, even in newer versions of Polars
 after they have renamed their method.
@@ -69,15 +80,7 @@ Concretely, we would do the following:
 So, although Narwhals' main API (and `narwhals.stable.v2`) will have introduced a breaking change,
 users of `narwhals.stable.v1` will have their code unaffected.
 
-## `import narwhals as nw` or `import narwhals.stable.v1 as nw`?
-
-Which should you use? In general we recommend:
-
-- When prototyping, use `import narwhals as nw`, so you can iterate quickly.
-- Once you're happy with what you've got and want to release something production-ready and stable,
-  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
-
-## Exceptions
+### Exceptions
 
 Are we really promising perfect backwards compatibility in all cases, without exceptions? Not quite.
 There are some exceptions, which we'll now list. But we'll never intentionally break your code.
@@ -85,19 +88,64 @@ Anything currently in `narwhals.stable.v1` will not be changed or removed in fut
 
 Here are exceptions to our backwards compatibility policy:
 
-- unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
+- Unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
   considering that to be a breaking change.
-- radical changes in backends. Suppose that Polars was to remove
+- Radical changes in backends. Suppose that Polars was to remove
   expressions, or pandas were to remove support for categorical data. At that point, we might
   need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.
-- we may consider making some type hints more precise.
+- We may consider making some type hints more precise.
+- Anything labelled "unstable".
+- We may sometimes need to bump the minimum versions of supported backends.
 
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
 
-## Breaking changes carried out so far
 
-### After `stable.v1`
+### `import narwhals as nw` or `import narwhals.stable.v1 as nw`?
+
+Which should you use? In general we recommend:
+
+- When prototyping, use `import narwhals as nw`, so you can iterate quickly.
+- Once you're happy with what you've got and want to release something production-ready and stable,
+  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
+
+## `main` vs `stable.v1`
+
+- Since Narwhals 1.35:
+
+    - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.
+    - `nw.Enum` must be provided `categories` at instantiation.
+
+- Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
+
+- Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
+  be of dtype `String`. Previously, it would have been inferred as `Object`.
+
+- Since Narwhals 1.23:
+
+    - Passing an `ibis.Table` to `from_native` returns a `LazyFrame`. In
+      `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
+    - `eager_or_interchange_only` has been removed from `from_native` and `narwhalify`.
+    - Order-dependent expressions can no longer be used with `narwhals.LazyFrame`.
+    - The following expressions have been deprecated from the main namespace: `Expr.head`,
+      `Expr.tail`, `Expr.gather_every`, `Expr.sample`, `Expr.arg_true`, `Expr.sort`.
+
+- Since Narwhals 1.21, passing a `DuckDBPyRelation` to `from_native` returns a `LazyFrame`. In
+  `narwhals.stable.v1`, it returns a `DataFrame` with `level='interchange'`.
+
+- Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
+  write:
+  ```python
+  import narwhals as nw
+  import polars as pl
+
+  s_pl = pl.Series([1, 2, 3])
+  s = nw.from_native(s, series_only=True)
+  # mypy infers `s.to_native()` to be `polars.Series`
+  reveal_type(s.to_native())
+  ```
+  Previously, `Series` was not generic, so in the above example
+  `s.to_native()` would have been inferred as `Any`.
 
 - Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
     has been deprecated in favour of `pass_through`. This is because several users expressed
