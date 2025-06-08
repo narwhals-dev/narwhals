@@ -284,10 +284,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def _with_binary_func(self, op: Callable[..., Expression], other: Self | Any) -> Self:
-        expressifiable_args = {"other": other}
         return self.__class__(
-            self._callable_to_eval_series(op, **expressifiable_args),
-            self._push_down_window_function(op, **expressifiable_args),
+            self._callable_to_eval_series(op, other=other),
+            self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,

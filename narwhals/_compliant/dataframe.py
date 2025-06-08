@@ -21,6 +21,8 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
+    LazyExprAny,
+    NativeExprT,
     NativeFrameT,
     NativeSeriesT,
 )
@@ -380,9 +382,9 @@ class CompliantLazyFrame(
         return result[0]
 
     def _evaluate_window_expr(
-        self, expr: CompliantExprT_contra, /, window_inputs: WindowInputs[Any]
-    ) -> Any:
-        result = expr.window_function(self, window_inputs)  # type: ignore[attr-defined]
+        self, expr: LazyExprAny, /, window_inputs: WindowInputs[NativeExprT]
+    ) -> NativeExprT:
+        result = expr.window_function(self, window_inputs)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
