@@ -41,12 +41,14 @@ from __future__ import annotations
 from collections import deque
 from copy import deepcopy
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
 from narwhals._plan.common import Immutable
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
+    import re
+
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expr, selectors
@@ -182,6 +184,28 @@ def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR
     return origin.map_ir(fn)
 
 
+def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
+    from narwhals._plan import expr
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, expr.Nth):
+            return expr.Column(name=_freeze_columns(schema)[child.index])
+        return child
+
+    return origin.map_ir(fn)
+
+
+def remove_exclude(origin: ExprIR, /) -> ExprIR:
+    from narwhals._plan import expr
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, expr.Exclude):
+            return child.expr
+        return child
+
+    return origin.map_ir(fn)
+
+
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
@@ -207,6 +231,52 @@ def rewrite_projections(
     return tuple(result)
 
 
+def replace_and_add_to_results(
+    origin: ExprIR,
+    /,
+    result: ResultIRs,
+    keys: Seq[ExprIR],
+    *,
+    schema: FrozenSchema,
+    flags: ExpansionFlags,
+) -> Inplace:
+    from narwhals._plan import expr
+
+    if flags.has_nth:
+        origin = replace_nth(origin, schema)
+    if flags.expands:
+        it = (
+            e
+            for e in origin.iter_left()
+            if isinstance(e, (expr.Columns, expr.IndexColumns))
+        )
+        if e := next(it, None):
+            if isinstance(e, expr.Columns):
+                exclude = prepare_excluded(
+                    origin, keys=(), schema=schema, has_exclude=flags.has_exclude
+                )
+                expand_columns(
+                    origin, result, e, col_names=_freeze_columns(schema), exclude=exclude
+                )
+            else:
+                exclude = prepare_excluded(
+                    origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
+                )
+                expand_indices(origin, result, e, schema=schema, exclude=exclude)
+    elif flags.has_wildcard:
+        exclude = prepare_excluded(
+            origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
+        )
+        replace_wildcard(
+            origin, result, col_names=_freeze_columns(schema), exclude=exclude
+        )
+    else:
+        exclude = prepare_excluded(
+            origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
+        )
+        replace_regex(origin, result, col_names=_freeze_columns(schema), exclude=exclude)
+
+
 def replace_selector(
     ir: ExprIR,  # an element of `FunctionExpr.input`
     /,
@@ -217,6 +287,7 @@ def replace_selector(
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Huge
 def expand_selector(
     s: expr.SelectorIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema
 ) -> Seq[str]:
@@ -236,32 +307,14 @@ def replace_selector_inner(
     raise NotImplementedError
 
 
-def replace_and_add_to_results(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    keys: Seq[ExprIR],
-    *,
-    schema: FrozenSchema,
-    flags: ExpansionFlags,
-) -> Inplace:
-    raise NotImplementedError
-
-
-# NOTE: See how far we can get with just the direct node replacements
-# - `polars` is using `map_expr`, but I haven't implemented that (yet?)
-def replace_nth(nth: expr.Nth, /, col_names: FrozenColumns) -> expr.Column:
-    from narwhals._plan import expr
-
-    return expr.Column(name=col_names[nth.index])
-
-
+# TODO @dangotbanned: Priority High
 def prepare_excluded(
     origin: ExprIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema, has_exclude: bool
 ) -> Excluded:
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Priority High
 def expand_columns(
     origin: ExprIR,
     /,
@@ -274,6 +327,7 @@ def expand_columns(
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Priority Low
 def expand_dtypes(
     origin: ExprIR,
     /,
@@ -286,6 +340,7 @@ def expand_dtypes(
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Priority Mid
 def expand_indices(
     origin: ExprIR,
     /,
@@ -298,6 +353,7 @@ def expand_indices(
     raise NotImplementedError
 
 
+# TODO @dangotbanned: Priority Mid
 def replace_wildcard(
     origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
 ) -> Inplace:
@@ -348,19 +404,75 @@ def dtypes_match(left: DType, right: DType | type[DType]) -> bool:
     return left == right
 
 
+def into_pattern(obj: str | re.Pattern[str] | selectors.Matches, /) -> re.Pattern[str]:
+    import re
+
+    from narwhals._plan import selectors
+
+    if isinstance(obj, str):
+        return re.compile(obj)
+    elif isinstance(obj, selectors.Matches):
+        return obj.pattern
+    elif isinstance(obj, re.Pattern):
+        return obj
+    else:
+        msg = f"Cannot convert {type(obj).__name__!r} into a regular expression"
+        raise TypeError(msg)
+
+
+def is_regex_projection(name: str) -> bool:
+    return name.startswith("^") and name.endswith("$")
+
+
+# NOTE: Will likely be using `selectors.Matches` for this
+# Doing a direct translation from `rust` *first*, to make replacing
+# the deviations *later* not as daunting
 def replace_regex(
+    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
+) -> Inplace:
+    regex: str | None = None
+    for name in origin.meta.root_names():
+        if is_regex_projection(name):
+            if regex is None:
+                regex = name
+                expand_regex(
+                    origin,
+                    result,
+                    into_pattern(name),
+                    col_names=col_names,
+                    exclude=exclude,
+                )
+            elif regex != name:
+                msg = "an expression is not allowed to have different regexes"
+                raise ComputeError(msg)
+    if regex is None:
+        origin = rewrite_special_aliases(origin)
+        result.append(origin)
+
+
+def expand_regex(
     origin: ExprIR,
     /,
     result: ResultIRs,
-    pattern: selectors.Matches,
+    pattern: re.Pattern[str],
     *,
     col_names: FrozenColumns,
     exclude: Excluded,
 ) -> Inplace:
-    raise NotImplementedError
+    for name in col_names:
+        if pattern.match(name) and name not in exclude:
+            expanded = remove_exclude(origin)
+            expanded = expanded.map_ir(_replace_regex(pattern, name))
+            expanded = rewrite_special_aliases(expanded)
+            result.append(expanded)
 
 
-def expand_regex(
-    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
-) -> Inplace:
-    raise NotImplementedError
+def _replace_regex(pattern: re.Pattern[str], name: str, /) -> Callable[[ExprIR], ExprIR]:
+    from narwhals._plan.meta import is_column
+
+    pat = pattern.pattern
+
+    def fn(ir: ExprIR, /) -> ExprIR:
+        return ir.with_name(name) if is_column(ir) and ir.name == pat else ir
+
+    return fn

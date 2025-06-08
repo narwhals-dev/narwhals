@@ -116,6 +116,9 @@ class Column(ExprIR):
     def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
         return plx.col(self.name)
 
+    def with_name(self, name: str, /) -> Column:
+        return self if name == self.name else Column(name=name)
+
 
 def _col(name: str, /) -> Column:
     return Column(name=name)

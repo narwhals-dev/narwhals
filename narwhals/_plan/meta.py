@@ -15,7 +15,10 @@ from narwhals.utils import Version
 if TYPE_CHECKING:
     from typing import Iterator
 
+    from typing_extensions import TypeIs
+
     from narwhals._plan.common import ExprIR
+    from narwhals._plan.expr import Column
 
 
 class IRMetaNamespace(IRNamespace):
@@ -25,9 +28,7 @@ class IRMetaNamespace(IRNamespace):
         return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
-        from narwhals._plan.expr import Column
-
-        return isinstance(self._ir, Column)
+        return is_column(self._ir)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
         return all(
@@ -182,6 +183,12 @@ def has_expr_ir(ir: ExprIR, *matches: type[ExprIR]) -> bool:
     [`polars_plan::utils::has_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L70-L77
     """
     return any(isinstance(e, matches) for e in ir.iter_right())
+
+
+def is_column(ir: ExprIR) -> TypeIs[Column]:
+    from narwhals._plan.expr import Column
+
+    return isinstance(ir, Column)
 
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
