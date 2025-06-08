@@ -41,6 +41,7 @@ from narwhals._compliant.when_then import (
     CompliantThen,
     CompliantWhen,
     EagerWhen,
+    LazyThen,
     LazyWhen,
 )
 
@@ -76,6 +77,7 @@ __all__ = [
     "LazyGroupBy",
     "LazyNamespace",
     "LazySelectorNamespace",
+    "LazyThen",
     "LazyWhen",
     "NativeFrameT_co",
     "NativeSeriesT_co",
