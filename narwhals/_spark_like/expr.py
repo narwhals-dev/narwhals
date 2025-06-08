@@ -351,20 +351,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def _with_callable(
         self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
     ) -> Self:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            native_series_list = self(df)
-            lit = df._F.lit
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
         return self.__class__(
-            func,
+            self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
