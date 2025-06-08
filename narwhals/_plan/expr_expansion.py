@@ -242,6 +242,20 @@ def replace_dtype_or_index_with_column(
     return origin.map_ir(fn)
 
 
+def replace_wildcard_with_column(origin: ExprIR, /, name: str) -> ExprIR:
+    """`expr.All` and `Exclude`."""
+    from narwhals._plan.expr import All, Column, Exclude
+
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, All):
+            return Column(name=name)
+        if isinstance(child, Exclude):
+            return child.expr
+        return child
+
+    return origin.map_ir(fn)
+
+
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
@@ -275,7 +289,7 @@ def replace_and_add_to_results(
     *,
     schema: FrozenSchema,
     flags: ExpansionFlags,
-) -> Inplace:
+) -> ResultIRs:
     from narwhals._plan import expr
 
     if flags.has_nth:
@@ -289,7 +303,6 @@ def replace_and_add_to_results(
         if e := next(it, None):
             if isinstance(e, expr.Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
-                # NOTE: Transitioned to return result
                 result = expand_columns(
                     origin, result, e, col_names=_freeze_columns(schema), exclude=exclude
                 )
@@ -297,19 +310,18 @@ def replace_and_add_to_results(
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
                 )
-                # NOTE: Transitioned to return result
                 result = expand_indices(origin, result, e, schema=schema, exclude=exclude)
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        replace_wildcard(
+        result = replace_wildcard(
             origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        # NOTE: Transitioned to return result
         result = replace_regex(
             origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
+    return result
 
 
 def replace_selector(
@@ -433,16 +445,15 @@ def expand_indices(
     return result
 
 
-# TODO @dangotbanned: Priority High
 def replace_wildcard(
     origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
-) -> Inplace:
-    raise NotImplementedError
-
-
-def replace_wildcard_with_column(origin: ExprIR, /, column_name: str) -> ExprIR:
-    """`expr.All` and `Exclude`."""
-    raise NotImplementedError
+) -> ResultIRs:
+    for name in col_names:
+        if name not in exclude:
+            new_expr = replace_wildcard_with_column(origin, name)
+            new_expr = rewrite_special_aliases(new_expr)
+            result.append(new_expr)
+    return result
 
 
 def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
