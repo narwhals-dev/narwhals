@@ -598,11 +598,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_is_in)
 
     def is_unique(self) -> Self:
-        def _is_unique(expr: Column) -> Column:
-            # Create a window spec that treats each value separately
-            return self._F.count("*").over(self.partition_by(expr)) == 1
+        def _is_unique(expr: Column, *partition_by: str | Column) -> Column:
+            return self._F.count("*").over(self.partition_by(expr, *partition_by)) == 1
 
-        return self._with_callable(_is_unique)
+        def _unpartitioned_is_unique(expr: Column) -> Column:
+            return _is_unique(expr)
+
+        def _partitioned_is_unique(
+            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+        ) -> Sequence[Column]:
+            assert not inputs.order_by  # noqa: S101
+            return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
+
+        return self._with_callable(_unpartitioned_is_unique)._with_window_function(
+            _partitioned_is_unique
+        )
 
     def len(self) -> Self:
         def _len(_expr: Column) -> Column:
