@@ -7,7 +7,13 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import Agg, OrderableAgg
-from narwhals._plan.common import ExprIR, SelectorIR, _field_str, is_non_nested_literal
+from narwhals._plan.common import (
+    ExprIR,
+    SelectorIR,
+    _field_str,
+    is_non_nested_literal,
+    is_regex_projection,
+)
 from narwhals._plan.exceptions import (
     alias_duplicate_error,
     column_not_found_error,
@@ -213,7 +219,11 @@ class Exclude(_ColumnSelection):
 
     @staticmethod
     def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        return Exclude(expr=expr, names=tuple(flatten(names)))
+        flat = flatten(names)
+        if any(is_regex_projection(nm) for nm in flat):
+            msg = f"Using regex in `exclude(...)` is not yet supported.\nnames={flat!r}"
+            raise NotImplementedError(msg)
+        return Exclude(expr=expr, names=tuple(flat))
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"

@@ -350,6 +350,10 @@ def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | DummySeries]:
     return isinstance(obj, (str, bytes, DummySeries))
 
 
+def is_regex_projection(name: str) -> bool:
+    return name.startswith("^") and name.endswith("$")
+
+
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
     dtypes = version.dtypes
     mapping: dict[type[NonNestedLiteral], type[DType]] = {

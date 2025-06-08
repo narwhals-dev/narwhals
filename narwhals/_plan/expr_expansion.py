@@ -41,9 +41,9 @@ from __future__ import annotations
 from collections import deque
 from copy import deepcopy
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Mapping, Sequence
 
-from narwhals._plan.common import Immutable
+from narwhals._plan.common import Immutable, is_regex_projection
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
@@ -196,10 +196,10 @@ def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
 
 
 def remove_exclude(origin: ExprIR, /) -> ExprIR:
-    from narwhals._plan import expr
+    from narwhals._plan.expr import Exclude
 
     def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, expr.Exclude):
+        if isinstance(child, Exclude):
             return child.expr
         return child
 
@@ -252,29 +252,26 @@ def replace_and_add_to_results(
         )
         if e := next(it, None):
             if isinstance(e, expr.Columns):
-                exclude = prepare_excluded(
-                    origin, keys=(), schema=schema, has_exclude=flags.has_exclude
-                )
+                exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
                 expand_columns(
                     origin, result, e, col_names=_freeze_columns(schema), exclude=exclude
                 )
             else:
                 exclude = prepare_excluded(
-                    origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
+                    origin, keys=keys, has_exclude=flags.has_exclude
                 )
                 expand_indices(origin, result, e, schema=schema, exclude=exclude)
     elif flags.has_wildcard:
-        exclude = prepare_excluded(
-            origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
-        )
+        exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
         replace_wildcard(
             origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
     else:
-        exclude = prepare_excluded(
-            origin, keys=keys, schema=schema, has_exclude=flags.has_exclude
+        exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
+        # NOTE: First case transitioned to return result!
+        result = replace_regex(
+            origin, result, col_names=_freeze_columns(schema), exclude=exclude
         )
-        replace_regex(origin, result, col_names=_freeze_columns(schema), exclude=exclude)
 
 
 def replace_selector(
@@ -307,11 +304,32 @@ def replace_selector_inner(
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Priority High
+def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
+    """Yield all excluded names in `origin`."""
+    from narwhals._plan.expr import Exclude
+
+    for e in origin.iter_left():
+        if isinstance(e, Exclude):
+            yield from e.names
+
+
 def prepare_excluded(
-    origin: ExprIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema, has_exclude: bool
+    origin: ExprIR, /, keys: Seq[ExprIR], *, has_exclude: bool
 ) -> Excluded:
-    raise NotImplementedError
+    """Huge simplification of [`polars_plan::plans::conversion::expr_expansion::prepare_excluded`].
+
+    - `DTypes` are not allowed
+    - regex in `exclude(...)` is not allowed
+
+    [`polars_plan::plans::conversion::expr_expansion::prepare_excluded`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555
+    """
+    exclude: set[str] = set()
+    if has_exclude:
+        exclude.update(_iter_exclude_names(origin))
+    for group_by_key in keys:
+        if name := group_by_key.meta.output_name(raise_if_undetermined=False):
+            exclude.add(name)
+    return frozenset(exclude)
 
 
 # TODO @dangotbanned: Priority High
@@ -420,22 +438,18 @@ def into_pattern(obj: str | re.Pattern[str] | selectors.Matches, /) -> re.Patter
         raise TypeError(msg)
 
 
-def is_regex_projection(name: str) -> bool:
-    return name.startswith("^") and name.endswith("$")
-
-
 # NOTE: Will likely be using `selectors.Matches` for this
 # Doing a direct translation from `rust` *first*, to make replacing
 # the deviations *later* not as daunting
 def replace_regex(
     origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
-) -> Inplace:
+) -> ResultIRs:
     regex: str | None = None
     for name in origin.meta.root_names():
         if is_regex_projection(name):
             if regex is None:
                 regex = name
-                expand_regex(
+                result = expand_regex(
                     origin,
                     result,
                     into_pattern(name),
@@ -448,6 +462,7 @@ def replace_regex(
     if regex is None:
         origin = rewrite_special_aliases(origin)
         result.append(origin)
+    return result
 
 
 def expand_regex(
@@ -458,13 +473,14 @@ def expand_regex(
     *,
     col_names: FrozenColumns,
     exclude: Excluded,
-) -> Inplace:
+) -> ResultIRs:
     for name in col_names:
         if pattern.match(name) and name not in exclude:
             expanded = remove_exclude(origin)
             expanded = expanded.map_ir(_replace_regex(pattern, name))
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
+    return result
 
 
 def _replace_regex(pattern: re.Pattern[str], name: str, /) -> Callable[[ExprIR], ExprIR]:
