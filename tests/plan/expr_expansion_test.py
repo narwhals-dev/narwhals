@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan.demo as nwd
+from narwhals._plan.common import is_expr
 from narwhals._plan.expr import Alias, Column, _ColumnSelection
 from narwhals._plan.expr_expansion import rewrite_special_aliases
 from narwhals.exceptions import ColumnNotFoundError, ComputeError
@@ -43,6 +44,12 @@ def schema_1() -> dict[str, DType]:
         "s": nw.List(nw.String()),
         "u": nw.Struct({"a": nw.Int64(), "k": nw.String()}),
     }
+
+
+def assert_expr_ir_equal(left: DummyExpr | ExprIR, right: DummyExpr | ExprIR) -> None:
+    lhs = left._ir if is_expr(left) else left
+    rhs = right._ir if is_expr(right) else right
+    assert lhs == rhs
 
 
 # NOTE: The meta check doesn't provide typing and describes a superset of `_ColumnSelection`
@@ -276,7 +283,5 @@ xfail_function_expr_map_ir = pytest.mark.xfail(
 def test_map_ir_recursive(
     expr: DummyExpr, function: MapIR, into_expected: DummyExpr
 ) -> None:
-    ir = expr._ir
-    expected = into_expected._ir
-    actual = ir.map_ir(function)
-    assert actual == expected
+    actual = expr._ir.map_ir(function)
+    assert_expr_ir_equal(actual, into_expected)
