@@ -5,17 +5,21 @@ from typing import TYPE_CHECKING, Sequence
 import pytest
 
 import narwhals as nw
-import narwhals._plan.demo as nwd
+from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
-from narwhals._plan.expr import Alias, Column, _ColumnSelection
-from narwhals._plan.expr_expansion import rewrite_special_aliases
+from narwhals._plan.expr import Alias, Column, Columns, _ColumnSelection
+from narwhals._plan.expr_expansion import (
+    FrozenSchema,
+    replace_selector,
+    rewrite_special_aliases,
+)
 from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import DummyExpr, DummySelector
     from narwhals._plan.typing import MapIR
     from narwhals.dtypes import DType
 
@@ -248,7 +252,7 @@ xfail_function_expr_map_ir = pytest.mark.xfail(
 
 
 @pytest.mark.parametrize(
-    ("expr", "function", "into_expected"),
+    ("expr", "function", "expected"),
     [
         (nwd.col("a"), alias_replace_guarded("never"), nwd.col("a")),
         (nwd.col("a"), alias_replace_unguarded("never"), nwd.col("a")),
@@ -280,8 +284,46 @@ xfail_function_expr_map_ir = pytest.mark.xfail(
         ),
     ],
 )
-def test_map_ir_recursive(
-    expr: DummyExpr, function: MapIR, into_expected: DummyExpr
-) -> None:
+def test_map_ir_recursive(expr: DummyExpr, function: MapIR, expected: DummyExpr) -> None:
     actual = expr._ir.map_ir(function)
-    assert_expr_ir_equal(actual, into_expected)
+    assert_expr_ir_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nwd.col("a"), nwd.col("a")),
+        (nwd.col("a").max().alias("z"), nwd.col("a").max().alias("z")),
+        (ndcs.string(), Columns(names=("k",))),
+        (
+            ndcs.by_dtype(nw.Datetime("ms"), nw.Date, nw.List(nw.String)),
+            nwd.col("n", "s"),
+        ),
+        (ndcs.string() | ndcs.boolean(), nwd.col("k", "m")),
+        (
+            ~(ndcs.numeric() | ndcs.string()),
+            nwd.col("l", "m", "n", "o", "p", "q", "r", "s", "u"),
+        ),
+        (
+            (
+                ndcs.all()
+                - (ndcs.categorical() | ndcs.by_name("a", "b") | ndcs.matches("[fqohim]"))
+                ^ ndcs.by_name("u", "a", "b", "d", "e", "f", "g")
+            ).name.suffix("_after"),
+            nwd.col("a", "b", "c", "f", "j", "k", "l", "n", "r", "s").name.suffix(
+                "_after"
+            ),
+        ),
+        (
+            (ndcs.matches("[a-m]") & ~ndcs.numeric()).sort(nulls_last=True).first()
+            != nwd.lit(None),
+            nwd.col("k", "l", "m").sort(nulls_last=True).first() != nwd.lit(None),
+        ),
+    ],
+)
+def test_replace_selector(
+    expr: DummySelector | DummyExpr, expected: DummyExpr | ExprIR, schema_1: FrozenSchema
+) -> None:
+    group_by_keys = ()
+    actual = replace_selector(expr._ir, group_by_keys, schema=schema_1)
+    assert_expr_ir_equal(actual, expected)
