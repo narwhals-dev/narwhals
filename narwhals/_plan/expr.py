@@ -659,7 +659,7 @@ class RootSelector(SelectorIR):
         return function(self)
 
 
-# NOTE: selectors don't make sense to have recusrive mapping *for now* `(Binary|Invert)Selector`
+# NOTE: selectors don't make sense to have recursive mapping *for now* `(Binary|Invert)Selector`
 # If a function replaces the inner type with a non-selector, the other methods will break
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
