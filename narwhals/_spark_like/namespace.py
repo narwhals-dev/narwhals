@@ -4,7 +4,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Iterable, Sequence
 
-from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -280,5 +280,5 @@ class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
 
 
 class SparkLikeThen(
-    CompliantThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
+    LazyThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
 ): ...

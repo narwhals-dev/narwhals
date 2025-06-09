@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Sequence, cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -224,4 +224,4 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
         return [result]
 
 
-class IbisThen(CompliantThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...
+class IbisThen(LazyThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...

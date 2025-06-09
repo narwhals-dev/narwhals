@@ -621,8 +621,10 @@ class Series(Generic[IntoSeriesT]):
     def any(self) -> bool:
         """Return whether any of the values in the Series are True.
 
+        If there are no non-null elements, the result is `False`.
+
         Notes:
-          Only works on Series of data type Boolean.
+            Only works on Series of data type Boolean.
 
         Returns:
             A boolean indicating if any values in the Series are True.
@@ -639,6 +641,8 @@ class Series(Generic[IntoSeriesT]):
 
     def all(self) -> bool:
         """Return whether all values in the Series are True.
+
+        If there are no non-null elements, the result is `True`.
 
         Returns:
             A boolean indicating if all values in the Series are True.
@@ -713,6 +717,8 @@ class Series(Generic[IntoSeriesT]):
 
     def sum(self) -> float:
         """Reduce this Series to the sum value.
+
+        If there are no non-null elements, the result is zero.
 
         Returns:
             The sum of all elements in the Series.

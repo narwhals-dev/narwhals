@@ -373,6 +373,8 @@ class Expr:
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
+        If there are no non-null elements, the result is `False`.
+
         Returns:
             A new expression.
 
@@ -393,6 +395,8 @@ class Expr:
 
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
+
+        If there are no non-null elements, the result is `True`.
 
         Returns:
             A new expression.
@@ -678,6 +682,8 @@ class Expr:
 
     def sum(self) -> Expr:
         """Return the sum value.
+
+        If there are no non-null elements, the result is zero.
 
         Returns:
             A new expression.
