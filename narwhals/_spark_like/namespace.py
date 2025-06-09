@@ -4,7 +4,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Iterable, Sequence
 
-from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -18,9 +18,9 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod, NonNestedLiteral
-    from narwhals.utils import Implementation, Version
 
 
 class SparkLikeNamespace(
@@ -283,5 +283,5 @@ class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
 
 
 class SparkLikeThen(
-    CompliantThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
+    LazyThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
 ): ...

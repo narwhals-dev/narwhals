@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from ibis.expr.datatypes import Timestamp
 
-from narwhals.utils import _is_naive_format, not_implemented
+from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir

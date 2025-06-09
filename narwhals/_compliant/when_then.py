@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     LazyExprAny,
     NativeExprT,
     NativeSeriesT,
+    WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
 
@@ -21,11 +22,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import EvalSeries, ScalarKwargs
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.typing import NonNestedLiteral
-    from narwhals.utils import Implementation, Version, _FullContext
 
 
-__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyWhen"]
+__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyThen", "LazyWhen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
@@ -107,6 +108,41 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         return cast("ExprT", self)
 
 
+class LazyThen(
+    CompliantThen[CompliantLazyFrameT, NativeExprT, LazyExprT],
+    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
+):
+    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
+
+    @classmethod
+    def from_when(
+        cls,
+        when: CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
+        then: IntoExpr[NativeExprT, LazyExprT],
+        /,
+    ) -> Self:
+        when._then_value = then
+        obj = cls.__new__(cls)
+        obj._call = when
+
+        # This may require more complicated logic if we want to push down the
+        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
+        obj._window_function = None
+
+        obj._when_value = when
+        obj._depth = 0
+        obj._function_name = "whenthen"
+        obj._evaluate_output_names = getattr(
+            then, "_evaluate_output_names", lambda _df: ["literal"]
+        )
+        obj._alias_output_names = getattr(then, "_alias_output_names", None)
+        obj._implementation = when._implementation
+        obj._backend_version = when._backend_version
+        obj._version = when._version
+        obj._scalar_kwargs = {}
+        return obj
+
+
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
     Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
@@ -142,6 +178,7 @@ class LazyWhen(
 ):
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
+    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
     def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
@@ -157,3 +194,19 @@ class LazyWhen(
             otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
             result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
         return [result]
+
+    @classmethod
+    def from_expr(cls, condition: LazyExprT, /, *, context: _FullContext) -> Self:
+        obj = cls.__new__(cls)
+        obj._condition = condition
+
+        # This may require more complicated logic if we want to push down the
+        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
+        obj._window_function = None
+
+        obj._then_value = None
+        obj._otherwise_value = None
+        obj._implementation = context._implementation
+        obj._backend_version = context._backend_version
+        obj._version = context._version
+        return obj

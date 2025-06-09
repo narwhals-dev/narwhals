@@ -36,9 +36,9 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 from narwhals.dtypes import DType
-from narwhals.utils import _StoresCompliant, not_implemented
 
 if TYPE_CHECKING:
     from typing import Mapping
@@ -47,8 +47,15 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        ScalarKwargs,
+        WindowFunction,
+    )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -59,7 +66,6 @@ if TYPE_CHECKING:
         TemporalLiteral,
         TimeUnit,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
@@ -162,9 +168,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         *,
         return_dtype: DType | type[DType] | None,
     ) -> Self: ...
-    def over(
-        self, partition_by: Sequence[str], order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
     def sample(
         self,
         n: int | None,
@@ -871,6 +875,9 @@ class LazyExpr(
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+
+    @property
+    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:

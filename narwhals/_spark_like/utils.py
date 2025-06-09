@@ -4,8 +4,8 @@ from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
 
+from narwhals._utils import Implementation, isinstance_or_issubclass
 from narwhals.exceptions import UnsupportedDTypeError
-from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
     SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]

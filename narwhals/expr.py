@@ -9,6 +9,12 @@ from narwhals._expression_parsing import (
     combine_metadata,
     extract_compliant,
 )
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    issue_deprecation_warning,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -18,7 +24,6 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import _validate_rolling_arguments, flatten, issue_deprecation_warning
 
 if TYPE_CHECKING:
     from typing import TypeVar
@@ -367,6 +372,8 @@ class Expr:
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
+        If there are no non-null elements, the result is `False`.
+
         Returns:
             A new expression.
 
@@ -387,6 +394,8 @@ class Expr:
 
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
+
+        If there are no non-null elements, the result is `True`.
 
         Returns:
             A new expression.
@@ -672,6 +681,8 @@ class Expr:
 
     def sum(self) -> Expr:
         """Return the sum value.
+
+        If there are no non-null elements, the result is zero.
 
         Returns:
             A new expression.
@@ -993,6 +1004,8 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
+        ensure_type(n, int, param_name="n")
+
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).shift(n)
         )
@@ -1542,7 +1555,7 @@ class Expr:
             └────────────────────────────┘
         """
         flat_partition_by = flatten(partition_by)
-        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
         if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)

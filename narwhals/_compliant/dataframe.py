@@ -21,6 +21,7 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
+    NativeExprT,
     NativeFrameT,
     NativeSeriesT,
 )
@@ -33,7 +34,7 @@ from narwhals._translate import (
     ToNarwhalsT_co,
 )
 from narwhals._typing_compat import deprecated
-from narwhals.utils import (
+from narwhals._utils import (
     Version,
     _StoresNative,
     check_columns_exist,
@@ -55,9 +56,12 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Implementation, _FullContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
@@ -78,7 +82,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Implementation, _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -375,6 +378,16 @@ class CompliantLazyFrame(
     def with_row_index(self, name: str) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
+        assert len(result) == 1  # debug assertion  # noqa: S101
+        return result[0]
+
+    def _evaluate_window_expr(
+        self,
+        expr: LazyExpr[Self, NativeExprT],
+        /,
+        window_inputs: WindowInputs[NativeExprT],
+    ) -> NativeExprT:
+        result = expr.window_function(self, window_inputs)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 

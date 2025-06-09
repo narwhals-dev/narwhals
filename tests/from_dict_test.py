@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
 TEST_EAGER_BACKENDS: list[Implementation | str] = []
@@ -61,7 +61,7 @@ def test_from_dict_without_backend_invalid(constructor: Constructor) -> None:
 
 def test_from_dict_with_backend_invalid() -> None:
     pytest.importorskip("duckdb")
-    with pytest.raises(ValueError, match="Unsupported `backend` value"):
+    with pytest.raises(ValueError, match="lazy-only"):
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 

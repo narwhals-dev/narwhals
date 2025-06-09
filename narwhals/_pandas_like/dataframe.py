@@ -29,9 +29,7 @@ from narwhals._pandas_like.utils import (
     select_columns_by_name,
     set_index,
 )
-from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.exceptions import InvalidOperationError, ShapeError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     _into_arrow_table,
     _remap_full_join_keys,
@@ -42,6 +40,8 @@ from narwhals.utils import (
     scale_bytes,
     validate_backend_version,
 )
+from narwhals.dependencies import is_pandas_like_dataframe
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -72,7 +73,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Version, _FullContext
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 

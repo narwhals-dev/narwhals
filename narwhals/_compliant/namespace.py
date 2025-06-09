@@ -25,22 +25,22 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
-from narwhals.dependencies import is_numpy_array_2d
-from narwhals.utils import (
+from narwhals._utils import (
     exclude_column_names,
     get_column_names,
     passthrough_column_names,
 )
+from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, Into1DArray, NonNestedLiteral, _2DArray
-    from narwhals.utils import Implementation, Version
 
     Incomplete: TypeAlias = Any
 

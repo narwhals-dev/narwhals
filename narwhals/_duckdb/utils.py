@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
-from narwhals.utils import Version, isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
@@ -159,7 +159,7 @@ def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
         "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
     ).fetchone()
     assert result is not None  # noqa: S101
-    return result[0]
+    return result[0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -284,12 +284,3 @@ def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     else:
         by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
     return f"order by {by_sql}"
-
-
-def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
-    # Use this for extra (possibly redundant) validation in places where we
-    # use SQLExpression, as an extra guard against unsafe inputs.
-    if not isinstance(obj, valid_types):  # pragma: no cover
-        tp_names = " | ".join(tp.__name__ for tp in valid_types)
-        msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
-        raise TypeError(msg)
