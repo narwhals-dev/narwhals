@@ -552,6 +552,7 @@ class PolarsLazyFrame:
 
     # CompliantLazyFrame
     _evaluate_expr: Any
+    _evaluate_window_expr: Any
     _evaluate_aliases: Any
 
     def __init__(
