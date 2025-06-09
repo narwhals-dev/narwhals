@@ -441,7 +441,6 @@ class SortBy(ExprIR):
         return type(self)(expr=self.expr, by=by, options=self.options)
 
 
-# TODO @dangotbanned: recursive `map_ir` scheme
 class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """**Representing `Expr::Function`**.
 
@@ -479,7 +478,12 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     def with_input(self, input: t.Iterable[ExprIR], /) -> Self:  # noqa: A002
         if not isinstance(input, tuple):
             input = tuple(input)
+        if input == self.input:
+            return self
         return type(self)(input=input, function=self.function, options=self.options)
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self.with_input(ir.map_ir(function) for ir in self.input))
 
     def __repr__(self) -> str:
         if self.input:

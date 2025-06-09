@@ -243,11 +243,6 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
     return fn
 
 
-xfail_function_expr_map_ir = pytest.mark.xfail(
-    reason="Not implemented `FunctionExpr.map_ir` yet", raises=NotImplementedError
-)
-
-
 @pytest.mark.parametrize(
     ("expr", "function", "expected"),
     [
@@ -265,17 +260,15 @@ xfail_function_expr_map_ir = pytest.mark.xfail(
             alias_replace_unguarded("d"),
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
         ),
-        pytest.param(
+        (
             nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
             alias_replace_guarded("e"),
             nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
-            marks=xfail_function_expr_map_ir,
         ),
-        pytest.param(
+        (
             nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
             alias_replace_unguarded("e"),
             nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
-            marks=xfail_function_expr_map_ir,
         ),
     ],
 )
@@ -324,6 +317,24 @@ def test_map_ir_recursive(expr: DummyExpr, function: MapIR, expected: DummyExpr)
                 nwd.col("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
                 .mean()
                 .over(nwd.col("k"), order_by=nwd.col("m", "n"))
+            ),
+        ),
+        (
+            (
+                ndcs.datetime()
+                .dt.timestamp()
+                .min()
+                .over(ndcs.string() | ndcs.boolean())
+                .last()
+                .name.to_uppercase()
+            ),
+            (
+                nwd.col("l", "o")
+                .dt.timestamp("us")
+                .min()
+                .over(nwd.col("k", "m"))
+                .last()
+                .name.to_uppercase()
             ),
         ),
     ],
