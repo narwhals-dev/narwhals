@@ -259,7 +259,6 @@ class SelectorIR(ExprIR):
         - Thinking that we could get more cache hits on an individual column basis.
         - May also be more efficient to not iterate over the schema for every selector
           - Instead do one pass, evaluating every selector against a single column at a time
-          - Is that possible?
         """
         raise NotImplementedError(type(self))
 

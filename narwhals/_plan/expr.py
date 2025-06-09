@@ -445,7 +445,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
-
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
 
@@ -453,19 +452,17 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
 
     input: Seq[ExprIR]
     function: FunctionT
-    """Enum type is named `FunctionExpr` in `polars`.
+    """Operation applied to each element of `input`.
 
-    Mirroring *exactly* doesn't make much sense in OOP.
+    Notes:
+       [Upstream enum type] is named `FunctionExpr` in `rust`.
+       Mirroring *exactly* doesn't make much sense in OOP.
 
-    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
+    [Upstream enum type]: https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
     """
 
     options: FunctionOptions
-    """Assuming this is **either**:
-
-    1. `function.function_options`
-    2. The union of (1) and any `FunctionOptions` in `inputs`
-    """
+    """Combined flags from chained operations."""
 
     @property
     def is_scalar(self) -> bool:
@@ -586,12 +583,7 @@ class WindowExpr(ExprIR):
     """
 
     options: Window
-    """Little confused on the nesting.
-
-    - We don't allow choosing `WindowMapping` kinds
-    - Haven't ventured into rolling much yet
-      - Turns out this is for `Expr.rolling` (not `Expr.rolling_<agg>`)
-      - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L879-L888
+    """Currently **always** represents over.
 
     Expr::Window { options: WindowType::Over(WindowMapping) }
     Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
@@ -723,8 +715,6 @@ class RootSelector(SelectorIR):
         return function(self)
 
 
-# NOTE: selectors don't make sense to have recursive mapping *for now* `(Binary|Invert)Selector`
-# If a function replaces the inner type with a non-selector, the other methods will break
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
     SelectorIR,
