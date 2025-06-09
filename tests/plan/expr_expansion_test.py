@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 import pytest
 
@@ -11,14 +11,12 @@ from narwhals._plan.expr_expansion import rewrite_special_aliases
 from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.typing import MapIR
     from narwhals.dtypes import DType
-
-
-MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 
 
 @pytest.fixture
@@ -234,9 +232,14 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
     return fn
 
 
-@pytest.mark.xfail(
-    reason="Not implemented `ExprIR.map_ir` yet", raises=NotImplementedError
+xfail_window_expr_map_ir = pytest.mark.xfail(
+    reason="Not implemented `WindowExpr.map_ir` yet", raises=NotImplementedError
 )
+xfail_function_expr_map_ir = pytest.mark.xfail(
+    reason="Not implemented `FunctionExpr.map_ir` yet", raises=NotImplementedError
+)
+
+
 @pytest.mark.parametrize(
     ("expr", "function", "into_expected"),
     [
@@ -244,15 +247,29 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
         (nwd.col("a"), alias_replace_unguarded("never"), nwd.col("a")),
         (nwd.col("a").alias("b"), alias_replace_guarded("c"), nwd.col("a").alias("c")),
         (nwd.col("a").alias("b"), alias_replace_unguarded("c"), nwd.col("a").alias("c")),
-        (
+        pytest.param(
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_guarded("d"),
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+            marks=xfail_window_expr_map_ir,
         ),
-        (
+        pytest.param(
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_unguarded("d"),
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+            marks=xfail_window_expr_map_ir,
+        ),
+        pytest.param(
+            nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
+            alias_replace_guarded("e"),
+            nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
+            marks=xfail_function_expr_map_ir,
+        ),
+        pytest.param(
+            nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
+            alias_replace_unguarded("e"),
+            nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
+            marks=xfail_function_expr_map_ir,
         ),
     ],
 )
@@ -262,4 +279,4 @@ def test_map_ir_recursive(
     ir = expr._ir
     expected = into_expected._ir
     actual = ir.map_ir(function)
-    assert actual == expected  # pragma: no cover
+    assert actual == expected

@@ -17,8 +17,14 @@ if t.TYPE_CHECKING:
 
 __all__ = [
     "FunctionT",
+    "LeftSelectorT",
     "LeftT",
+    "LiteralT",
+    "MapIR",
+    "NonNestedLiteralT",
+    "OperatorFn",
     "OperatorT",
+    "RightSelectorT",
     "RightT",
     "RollingT",
     "SelectorOperatorT",
@@ -29,8 +35,10 @@ __all__ = [
 FunctionT = TypeVar("FunctionT", bound="Function")
 RollingT = TypeVar("RollingT", bound="RollingWindow")
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
+LeftT2 = TypeVar("LeftT2", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
+RightT2 = TypeVar("RightT2", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
@@ -45,6 +53,8 @@ NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | DummySeries", default=t.Any)
+MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
+"""A function to apply to all nodes in this tree."""
 
 # NOTE: Shorter aliases of `_compliant.typing`
 # - Aiming to try and preserve the types as much as possible

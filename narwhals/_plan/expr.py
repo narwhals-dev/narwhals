@@ -25,11 +25,14 @@ from narwhals._plan.typing import (
     FunctionT,
     LeftSelectorT,
     LeftT,
+    LeftT2,
     LiteralT,
+    MapIR,
     Ns,
     OperatorT,
     RightSelectorT,
     RightT,
+    RightT2,
     RollingT,
     SelectorOperatorT,
     SelectorT,
@@ -110,6 +113,12 @@ class Alias(ExprIR):
         kwds = {"expr": expr, "name": name}
         super().__init__(**kwds)
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self.with_expr(self.expr.map_ir(function)))
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        return self if expr == self.expr else type(self)(expr=expr, name=self.name)
+
 
 class Column(ExprIR):
     __slots__ = ("name",)
@@ -124,6 +133,9 @@ class Column(ExprIR):
 
     def with_name(self, name: str, /) -> Column:
         return self if name == self.name else Column(name=name)
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
 
 
 def _col(name: str, /) -> Column:
@@ -140,6 +152,9 @@ class _ColumnSelection(ExprIR):
     def expand_columns(self, schema: _Schema, /) -> Seq[Column]:
         """Transform selection in context of `schema` into simpler nodes."""
         raise NotImplementedError
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
 
 
 class Columns(_ColumnSelection):
@@ -234,6 +249,12 @@ class Exclude(_ColumnSelection):
             raise NotImplementedError(msg)
         return _cols(name for name in schema if name not in self.names)
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self.with_expr(self.expr.map_ir(function)))
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        return self if expr == self.expr else type(self)(expr=expr, names=self.names)
+
 
 class Literal(ExprIR, t.Generic[LiteralT]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
@@ -266,6 +287,9 @@ class Literal(ExprIR, t.Generic[LiteralT]):
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
+
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     __slots__ = ("left", "op", "right")
@@ -297,6 +321,23 @@ class BinaryExpr(
         yield from self.right.iter_right()
         yield from self.left.iter_right()
 
+    def with_left(self, left: LeftT2, /) -> BinaryExpr[LeftT2, OperatorT, RightT]:
+        if left == self.left:
+            return t.cast("BinaryExpr[LeftT2, OperatorT, RightT]", self)
+        return BinaryExpr(left=left, op=self.op, right=self.right)
+
+    def with_right(self, right: RightT2, /) -> BinaryExpr[LeftT, OperatorT, RightT2]:
+        if right == self.right:
+            return t.cast("BinaryExpr[LeftT, OperatorT, RightT2]", self)
+        return BinaryExpr(left=self.left, op=self.op, right=right)
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(
+            self.with_left(self.left.map_ir(function)).with_right(
+                self.right.map_ir(function)
+            )
+        )
+
 
 class Cast(ExprIR):
     __slots__ = ("dtype", "expr")
@@ -318,6 +359,12 @@ class Cast(ExprIR):
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self.with_expr(self.expr.map_ir(function)))
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        return self if expr == self.expr else type(self)(expr=expr, dtype=self.dtype)
 
 
 class Sort(ExprIR):
@@ -341,6 +388,12 @@ class Sort(ExprIR):
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self.with_expr(self.expr.map_ir(function)))
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        return self if expr == self.expr else type(self)(expr=expr, options=self.options)
 
 
 class SortBy(ExprIR):
@@ -371,7 +424,23 @@ class SortBy(ExprIR):
             yield from e.iter_right()
         yield from self.expr.iter_right()
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        by = (ir.map_ir(function) for ir in self.by)
+        return function(self.with_expr(self.expr.map_ir(function)).with_by(by))
 
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        if expr == self.expr:
+            return self
+        return type(self)(expr=expr, by=self.by, options=self.options)
+
+    def with_by(self, by: t.Iterable[ExprIR], /) -> Self:
+        by = tuple(by) if not isinstance(by, tuple) else by
+        if by == self.by:
+            return self
+        return type(self)(expr=self.expr, by=by, options=self.options)
+
+
+# TODO @dangotbanned: recursive `map_ir` scheme
 class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """**Representing `Expr::Function`**.
 
@@ -451,6 +520,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
 
+# TODO @dangotbanned: add `DummyExpr.filter`
 class Filter(ExprIR):
     __slots__ = ("by", "expr")
 
@@ -474,7 +544,15 @@ class Filter(ExprIR):
         yield from self.by.iter_right()
         yield from self.expr.iter_right()
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        expr = self.expr.map_ir(function)
+        by = self.by.map_ir(function)
+        expr = self.expr if self.expr == expr else expr
+        by = self.by if self.by == by else by
+        return function(Filter(expr=expr, by=by))
 
+
+# TODO @dangotbanned: recursive `map_ir` scheme
 class WindowExpr(ExprIR):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -559,6 +637,9 @@ class Len(ExprIR):
     def __repr__(self) -> str:
         return "len()"
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
+
 
 class RootSelector(SelectorIR):
     """A single selector expression."""
@@ -574,7 +655,12 @@ class RootSelector(SelectorIR):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
 
+
+# NOTE: selectors don't make sense to have recusrive mapping *for now* `(Binary|Invert)Selector`
+# If a function replaces the inner type with a non-selector, the other methods will break
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
     SelectorIR,
@@ -591,6 +677,9 @@ class BinarySelector(
         right = self.right.matches_column(name, dtype)
         return bool(self.op(left, right))
 
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
+
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
@@ -603,6 +692,9 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        return function(self)
 
 
 class Ternary(ExprIR):
@@ -627,3 +719,24 @@ class Ternary(ExprIR):
         return (
             f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
         )
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.truthy.iter_left()
+        yield from self.falsy.iter_left()
+        yield from self.predicate.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.predicate.iter_right()
+        yield from self.falsy.iter_right()
+        yield from self.truthy.iter_right()
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        predicate = self.predicate.map_ir(function)
+        truthy = self.truthy.map_ir(function)
+        falsy = self.falsy.map_ir(function)
+        predicate = self.predicate if self.predicate == predicate else predicate
+        truthy = self.truthy if self.truthy == truthy else truthy
+        falsy = self.falsy if self.falsy == falsy else falsy
+        return function(Ternary(predicate=predicate, truthy=truthy, falsy=falsy))
