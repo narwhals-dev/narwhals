@@ -186,10 +186,10 @@ def test_series_floordiv_by_zero(
     # pyarrow backend raises divide by zero error
     if "pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    # polars floordiv by zero always returns None
+    # polars floordiv by zero always returns null
     if "polars" in str(constructor_eager):
         floordiv_result = df["a"] // df["b"]
-        assert_equal_data({"a": floordiv_result}, {"a": [None]})
+        assert all(floordiv_result.is_null())
     else:
         floordiv_result = df["a"] // df["b"]
         assert_equal_data({"a": floordiv_result}, {"a": [expected]})
@@ -225,10 +225,14 @@ def test_floordiv_by_zero(
     # ibis backend floordiv cannot cast value to inf or -inf
     if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
         request.applymarker(pytest.mark.xfail)
-    # polars and duckdb floordiv return None
-    if any(x in str(constructor) for x in ["polars", "duckdb"]):
+    # duckdb floordiv return None
+    if "duckdb" in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
+    # polars floordiv returns null
+    elif "polars" in str(constructor):
+        floordiv_result = df.select(nw.col("a") // right)
+        assert all(floordiv_result["a"].is_null())
     else:
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [expected]})
