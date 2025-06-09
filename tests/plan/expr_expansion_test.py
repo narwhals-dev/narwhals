@@ -243,9 +243,6 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
     return fn
 
 
-xfail_window_expr_map_ir = pytest.mark.xfail(
-    reason="Not implemented `WindowExpr.map_ir` yet", raises=NotImplementedError
-)
 xfail_function_expr_map_ir = pytest.mark.xfail(
     reason="Not implemented `FunctionExpr.map_ir` yet", raises=NotImplementedError
 )
@@ -258,17 +255,15 @@ xfail_function_expr_map_ir = pytest.mark.xfail(
         (nwd.col("a"), alias_replace_unguarded("never"), nwd.col("a")),
         (nwd.col("a").alias("b"), alias_replace_guarded("c"), nwd.col("a").alias("c")),
         (nwd.col("a").alias("b"), alias_replace_unguarded("c"), nwd.col("a").alias("c")),
-        pytest.param(
+        (
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_guarded("d"),
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
-            marks=xfail_window_expr_map_ir,
         ),
-        pytest.param(
+        (
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_unguarded("d"),
             nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
-            marks=xfail_window_expr_map_ir,
         ),
         pytest.param(
             nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
@@ -318,6 +313,18 @@ def test_map_ir_recursive(expr: DummyExpr, function: MapIR, expected: DummyExpr)
             (ndcs.matches("[a-m]") & ~ndcs.numeric()).sort(nulls_last=True).first()
             != nwd.lit(None),
             nwd.col("k", "l", "m").sort(nulls_last=True).first() != nwd.lit(None),
+        ),
+        (
+            (
+                ndcs.numeric()
+                .mean()
+                .over("k", order_by=ndcs.by_dtype(nw.Date()) | ndcs.boolean())
+            ),
+            (
+                nwd.col("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+                .mean()
+                .over(nwd.col("k"), order_by=nwd.col("m", "n"))
+            ),
         ),
     ],
 )

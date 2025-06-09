@@ -20,6 +20,7 @@ from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
 )
 from narwhals._plan.name import KeepName, RenameAlias
+from narwhals._plan.options import SortOptions
 from narwhals._plan.typing import (
     ExprT,
     FunctionT,
@@ -45,7 +46,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
-    from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.options import FunctionOptions, SortMultipleOptions
     from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
@@ -552,7 +553,8 @@ class Filter(ExprIR):
         return function(Filter(expr=expr, by=by))
 
 
-# TODO @dangotbanned: recursive `map_ir` scheme
+# NOTE: Probably need to split out `order_by`
+# Really frustrating to handle the `None` case everywhere
 class WindowExpr(ExprIR):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -591,6 +593,13 @@ class WindowExpr(ExprIR):
     Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
     """
 
+    @property
+    def sort_options(self) -> SortOptions:
+        if self.order_by:
+            _, opt = self.order_by
+            return opt
+        return SortOptions.default()
+
     def __repr__(self) -> str:
         if self.order_by is None:
             return f"{self.expr!r}.over({list(self.partition_by)!r})"
@@ -623,6 +632,57 @@ class WindowExpr(ExprIR):
         for e in reversed(self.partition_by):
             yield from e.iter_right()
         yield from self.expr.iter_right()
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
+            ir.map_ir(function) for ir in self.partition_by
+        )
+        if self.order_by:
+            by, _ = self.order_by
+            over = over.with_order_by(ir.map_ir(function) for ir in by)
+        return function(over)
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        if expr == self.expr:
+            return self
+        return type(self)(
+            expr=expr,
+            partition_by=self.partition_by,
+            order_by=self.order_by,
+            options=self.options,
+        )
+
+    def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
+        by = tuple(partition_by) if not isinstance(partition_by, tuple) else partition_by
+        if by == self.partition_by:
+            return self
+        return type(self)(
+            expr=self.expr, partition_by=by, order_by=self.order_by, options=self.options
+        )
+
+    def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
+        # NOTE: Not thrilled about this but there's complexity to solve
+        next_order_by: tuple[Seq[ExprIR], SortOptions] | None
+        if by := (tuple(order_by) if not isinstance(order_by, tuple) else order_by):
+            if prev := self.order_by:
+                prev_by, prev_sort = prev
+                # NOTE: Very hidden check for no-op possibility
+                if by == prev_by:
+                    return self
+                next_order_by = by, prev_sort
+            else:
+                next_order_by = by, self.sort_options
+        elif prev := self.order_by:
+            # NOTE: Unsure if we'd ever want to do this, but need to be exhaustive
+            next_order_by = None
+        else:
+            return self
+        return type(self)(
+            expr=self.expr,
+            partition_by=self.partition_by,
+            order_by=next_order_by,
+            options=self.options,
+        )
 
 
 class Len(ExprIR):

@@ -137,6 +137,10 @@ class SortOptions(Immutable):
         args = f"descending={self.descending!r}, nulls_last={self.nulls_last!r}"
         return f"{type(self).__name__}({args})"
 
+    @staticmethod
+    def default() -> SortOptions:
+        return SortOptions(descending=False, nulls_last=False)
+
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
