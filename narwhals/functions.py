@@ -9,7 +9,6 @@ from narwhals._expression_parsing import (
     ExprKind,
     ExprMetadata,
     apply_n_ary_operation,
-    check_expressions_preserve_length,
     combine_metadata,
     extract_compliant,
     is_scalar_like,
@@ -1449,7 +1448,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
-        check_expressions_preserve_length(self._predicate, function_name="when")
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then(
