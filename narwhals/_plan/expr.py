@@ -687,20 +687,13 @@ class OrderedWindowExpr(WindowExpr):
         return function(over)
 
     def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
-        # NOTE: Not thrilled about this but there's complexity to solve
-        if by := (tuple(order_by) if not isinstance(order_by, tuple) else order_by):
-            if by == self.order_by:
-                return self
-            next_order_by = by
-        elif not self.order_by:
+        by = tuple(order_by) if not isinstance(order_by, tuple) else order_by
+        if by == self.order_by:
             return self
-        else:
-            # NOTE: Unsure if we'd ever want to do this, but need to be exhaustive
-            next_order_by = ()
         return type(self)(
             expr=self.expr,
             partition_by=self.partition_by,
-            order_by=next_order_by,
+            order_by=by,
             sort_options=self.sort_options,
             options=self.options,
         )
