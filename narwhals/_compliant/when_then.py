@@ -13,7 +13,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprAny,
     NativeExprT,
-    NativeSeriesT,
     WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
@@ -145,11 +144,11 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     def _if_then_else(
         self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
-    ) -> NativeSeriesT: ...
+    ) -> EagerSeriesT: ...
 
     def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
         is_expr = self._condition._is_expr
@@ -167,8 +166,7 @@ class EagerWhen(
             otherwise._broadcast = True
         else:
             otherwise = self._otherwise_value
-        result = self._if_then_else(when, then, otherwise)
-        return [then._with_native(result)]
+        return [self._if_then_else(when, then, otherwise)]
 
 
 class LazyWhen(

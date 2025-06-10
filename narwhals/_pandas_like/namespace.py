@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Literal, Sequence
+from typing import TYPE_CHECKING, Literal, Sequence
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -315,9 +315,7 @@ class PandasLikeNamespace(
         )
 
 
-class PandasWhen(
-    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, "pd.Series[Any]"]
-):
+class PandasWhen(EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]):
     @property
     def _then(self) -> type[PandasThen]:
         return PandasThen
@@ -328,12 +326,14 @@ class PandasWhen(
         then: PandasLikeSeries,
         otherwise: PandasLikeSeries | None,
         /,
-    ) -> pd.Series[Any]:
+    ) -> PandasLikeSeries:
         if otherwise is None:
             when, then = align_series_full_broadcast(when, then)
-            return then.native.where(when.native)
-        when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
-        return then.native.where(when.native, otherwise.native)
+            res_native = then.native.where(when.native)
+        else:
+            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+            res_native = then.native.where(when.native, otherwise.native)
+        return then._with_native(res_native)
 
 
 class PandasThen(

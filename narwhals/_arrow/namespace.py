@@ -24,7 +24,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import Incomplete
     from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
@@ -266,21 +266,23 @@ class ArrowNamespace(
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
         self, when: ArrowSeries, then: ArrowSeries, otherwise: ArrowSeries | None, /
-    ) -> ChunkedArrayAny:
+    ) -> ArrowSeries:
         if otherwise is None:
             when, then = align_series_full_broadcast(when, then)
-            return pc.if_else(
+            res_native = pc.if_else(
                 when.native, then.native, pa.nulls(len(when.native), then.native.type)
             )
-        when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
-        return pc.if_else(when.native, then.native, otherwise.native)
+        else:
+            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+            res_native = pc.if_else(when.native, then.native, otherwise.native)
+        return then._with_native(res_native)
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...
