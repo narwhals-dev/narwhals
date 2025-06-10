@@ -8,7 +8,7 @@ from narwhals._plan.typing import ExprT, IRNamespaceT, MapIR, Ns
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Iterator, Literal
+    from typing import Any, Callable, Iterable, Iterator, Literal
 
     from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
@@ -387,3 +387,8 @@ def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN)
         type(None): dtypes.Unknown,
     }
     return mapping.get(type(obj), dtypes.Unknown)()
+
+
+def collect(iterable: Seq[T] | Iterable[T], /) -> Seq[T]:
+    """Collect `iterable` into a `tuple`, *iff* it is not one already."""
+    return iterable if isinstance(iterable, tuple) else tuple(iterable)

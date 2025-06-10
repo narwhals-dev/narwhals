@@ -11,6 +11,7 @@ from narwhals._plan.common import (
     ExprIR,
     SelectorIR,
     _field_str,
+    collect,
     is_non_nested_literal,
     is_regex_projection,
 )
@@ -442,7 +443,7 @@ class SortBy(ExprIR):
         return type(self)(expr=expr, by=self.by, options=self.options)
 
     def with_by(self, by: t.Iterable[ExprIR], /) -> Self:
-        by = tuple(by) if not isinstance(by, tuple) else by
+        by = collect(by)
         if by == self.by:
             return self
         return type(self)(expr=self.expr, by=by, options=self.options)
@@ -480,8 +481,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
         return type(self)(input=self.input, function=self.function, options=options)
 
     def with_input(self, input: t.Iterable[ExprIR], /) -> Self:  # noqa: A002
-        if not isinstance(input, tuple):
-            input = tuple(input)
+        input = collect(input)
         if input == self.input:
             return self
         return type(self)(input=input, function=self.function, options=self.options)
@@ -623,7 +623,7 @@ class WindowExpr(ExprIR):
         return type(self)(expr=expr, partition_by=self.partition_by, options=self.options)
 
     def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
-        by = tuple(partition_by) if not isinstance(partition_by, tuple) else partition_by
+        by = collect(partition_by)
         if by == self.partition_by:
             return self
         return type(self)(expr=self.expr, partition_by=by, options=self.options)
@@ -687,7 +687,7 @@ class OrderedWindowExpr(WindowExpr):
         return function(over)
 
     def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
-        by = tuple(order_by) if not isinstance(order_by, tuple) else order_by
+        by = collect(order_by)
         if by == self.order_by:
             return self
         return type(self)(
@@ -710,7 +710,7 @@ class OrderedWindowExpr(WindowExpr):
         )
 
     def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
-        by = tuple(partition_by) if not isinstance(partition_by, tuple) else partition_by
+        by = collect(partition_by)
         if by == self.partition_by:
             return self
         return type(self)(
