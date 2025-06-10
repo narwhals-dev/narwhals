@@ -12,6 +12,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
+from narwhals._arrow.typing import ChunkedArrayAny
 from narwhals._arrow.utils import (
     align_series_full_broadcast,
     cast_to_comparable_string_types,
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
 
 
 class ArrowNamespace(
-    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ChunkedArrayAny"]
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, ChunkedArrayAny]
 ):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
