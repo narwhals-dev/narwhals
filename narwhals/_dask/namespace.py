@@ -23,6 +23,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation
+from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -303,9 +304,7 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         )
 
         if self._otherwise_value is None:
-            from dask.dataframe.dask_expr._expr import Where
-
-            otherwise_value = Where._defaults["other"]
+            otherwise_value = get_dask_expr()._expr.Where._defaults["other"]
 
         condition = self._condition(df)[0]
         if (
