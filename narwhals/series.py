@@ -1179,7 +1179,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
-                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+                `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
