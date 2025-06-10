@@ -130,7 +130,8 @@ class LazyNamespace(
             raise TypeError(msg)
 
 
-class EagerNamespace(
+# Invariant type variable "NativeSeriesT" used in protocol where covariant one is expected
+class EagerNamespace(  # type: ignore[misc]
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
