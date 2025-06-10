@@ -11,8 +11,9 @@ from narwhals._plan.exceptions import (
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR, Seq
-    from narwhals._plan.expr import WindowExpr
+    from narwhals._plan.expr import OrderedWindowExpr, WindowExpr
     from narwhals._plan.options import SortOptions
+    from narwhals.exceptions import InvalidOperationError
 
 
 class Window(Immutable):
@@ -22,28 +23,53 @@ class Window(Immutable):
     """
 
 
-# TODO @dangotbanned: What are all the variants we have code paths for?
-# - Over has *at least* (partition_by,), (order_by,), (partition_by, order_by), + options
-# - `_plan.expr.WindowExpr` has:
-#    - expr (last node)
-#    - partition_by, optional order_by, `options` which is one of these classes?
 class Over(Window):
-    def to_window_expr(
-        self,
+    @staticmethod
+    def _validate_over(
         expr: ExprIR,
         partition_by: Seq[ExprIR],
-        order_by: tuple[Seq[ExprIR], SortOptions] | None,
+        order_by: Seq[ExprIR] = (),
+        sort_options: SortOptions | None = None,
         /,
-    ) -> WindowExpr:
+    ) -> InvalidOperationError | None:
         from narwhals._plan.expr import FunctionExpr, WindowExpr
 
         if isinstance(expr, WindowExpr):
-            raise over_nested_error(expr, partition_by, order_by)
+            return over_nested_error(expr, partition_by, order_by, sort_options)
         if isinstance(expr, FunctionExpr):
             if expr.options.is_elementwise():
-                raise over_elementwise_error(expr, partition_by, order_by)
+                return over_elementwise_error(expr, partition_by, order_by, sort_options)
             if expr.options.is_row_separable():
-                raise over_row_separable_error(expr, partition_by, order_by)
-        return WindowExpr(
-            expr=expr, partition_by=partition_by, order_by=order_by, options=self
+                return over_row_separable_error(
+                    expr, partition_by, order_by, sort_options
+                )
+        return None
+
+    def to_window_expr(self, expr: ExprIR, partition_by: Seq[ExprIR], /) -> WindowExpr:
+        from narwhals._plan.expr import WindowExpr
+
+        if err := self._validate_over(expr, partition_by):
+            raise err
+        return WindowExpr(expr=expr, partition_by=partition_by, options=self)
+
+
+class OrderedOver(Over):
+    def to_ordered_window_expr(
+        self,
+        expr: ExprIR,
+        partition_by: Seq[ExprIR],
+        order_by: Seq[ExprIR],
+        sort_options: SortOptions,
+        /,
+    ) -> OrderedWindowExpr:
+        from narwhals._plan.expr import OrderedWindowExpr
+
+        if err := self._validate_over(expr, partition_by, order_by, sort_options):
+            raise err
+        return OrderedWindowExpr(
+            expr=expr,
+            partition_by=partition_by,
+            order_by=order_by,
+            sort_options=sort_options,
+            options=self,
         )

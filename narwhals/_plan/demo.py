@@ -29,7 +29,7 @@ if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._plan.dummy import DummyExpr
-    from narwhals._plan.expr import SortBy, WindowExpr
+    from narwhals._plan.expr import SortBy
     from narwhals.typing import NonNestedLiteral
 
 
@@ -178,13 +178,6 @@ def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
 
     allowed = (SortBy,)
     return isinstance(obj, allowed)
-
-
-def _is_order_enforcing_next(obj: t.Any) -> TypeIs[WindowExpr]:
-    """Not sure how this one would work."""
-    from narwhals._plan.expr import WindowExpr
-
-    return isinstance(obj, WindowExpr) and obj.order_by is not None
 
 
 def _order_dependent_error(node: agg.OrderableAgg) -> OrderDependentExprError:

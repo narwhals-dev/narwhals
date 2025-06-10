@@ -101,7 +101,8 @@ def binary_expr_length_changing_error(
 def over_nested_error(
     expr: WindowExpr,  # noqa: ARG001
     partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: tuple[Seq[ExprIR], SortOptions] | None,  # noqa: ARG001
+    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = "Cannot nest `over` statements."
     return InvalidOperationError(msg)
@@ -111,7 +112,8 @@ def over_nested_error(
 def over_elementwise_error(
     expr: FunctionExpr[Function],
     partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: tuple[Seq[ExprIR], SortOptions] | None,  # noqa: ARG001
+    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = f"Cannot use `over` on expressions which are elementwise.\n{expr!r}"
     return InvalidOperationError(msg)
@@ -121,7 +123,8 @@ def over_elementwise_error(
 def over_row_separable_error(
     expr: FunctionExpr[Function],
     partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: tuple[Seq[ExprIR], SortOptions] | None,  # noqa: ARG001
+    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = f"Cannot use `over` on expressions which change length.\n{expr!r}"
     return InvalidOperationError(msg)

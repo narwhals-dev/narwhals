@@ -23,7 +23,7 @@ from narwhals._plan.options import (
     SortOptions,
 )
 from narwhals._plan.selectors import by_name
-from narwhals._plan.window import Over
+from narwhals._plan.window import OrderedOver, Over
 from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
@@ -140,8 +140,8 @@ class DummyExpr:
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
+        node: expr.WindowExpr | expr.OrderedWindowExpr
         partition: Seq[ExprIR] = ()
-        order: tuple[Seq[ExprIR], SortOptions] | None = None
         if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
@@ -150,8 +150,10 @@ class DummyExpr:
         if order_by is not None:
             by = parse.parse_into_seq_of_expr_ir(order_by)
             options = SortOptions(descending=descending, nulls_last=nulls_last)
-            order = by, options
-        return self._from_ir(Over().to_window_expr(self._ir, partition, order))
+            node = OrderedOver().to_ordered_window_expr(self._ir, partition, by, options)
+        else:
+            node = Over().to_window_expr(self._ir, partition)
+        return self._from_ir(node)
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         options = SortOptions(descending=descending, nulls_last=nulls_last)

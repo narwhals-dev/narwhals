@@ -20,7 +20,6 @@ from narwhals._plan.exceptions import (
     function_expr_invalid_operation_error,
 )
 from narwhals._plan.name import KeepName, RenameAlias
-from narwhals._plan.options import SortOptions
 from narwhals._plan.typing import (
     ExprT,
     FunctionT,
@@ -46,7 +45,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
-    from narwhals._plan.options import FunctionOptions, SortMultipleOptions
+    from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
     from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
@@ -562,7 +561,7 @@ class Filter(ExprIR):
         return function(Filter(expr=expr, by=by))
 
 
-# NOTE: Probably need to split out `order_by`
+# TODO @dangotbanned: 100% split out `order_by` to a subclass
 # Really frustrating to handle the `None` case everywhere
 class WindowExpr(ExprIR):
     """A fully specified `.over()`, that occurred after another expression.
@@ -575,7 +574,7 @@ class WindowExpr(ExprIR):
     - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
     """
 
-    __slots__ = ("expr", "options", "order_by", "partition_by")
+    __slots__ = ("expr", "options", "partition_by")
 
     expr: ExprIR
     """Renamed from `function`.
@@ -584,11 +583,6 @@ class WindowExpr(ExprIR):
     """
 
     partition_by: Seq[ExprIR]
-    order_by: tuple[Seq[ExprIR], SortOptions] | None
-    """Deviates from the `polars` version.
-
-    - `order_by` starts the same as here, but `polars` reduces into a struct - becoming a single (nested) node.
-    """
 
     options: Window
     """Currently **always** represents over.
@@ -597,17 +591,62 @@ class WindowExpr(ExprIR):
     Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
     """
 
-    @property
-    def sort_options(self) -> SortOptions:
-        if self.order_by:
-            _, opt = self.order_by
-            return opt
-        return SortOptions.default()
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.over({list(self.partition_by)!r})"
+
+    def __str__(self) -> str:
+        args = (
+            f"expr={self.expr}, partition_by={self.partition_by}, options={self.options}"
+        )
+        return f"{type(self).__name__}({args})"
+
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        for e in self.partition_by:
+            yield from e.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        for e in reversed(self.partition_by):
+            yield from e.iter_right()
+        yield from self.expr.iter_right()
+
+    def map_ir(self, function: MapIR, /) -> ExprIR:
+        over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
+            ir.map_ir(function) for ir in self.partition_by
+        )
+        return function(over)
+
+    def with_expr(self, expr: ExprIR, /) -> Self:
+        if expr == self.expr:
+            return self
+        return type(self)(expr=expr, partition_by=self.partition_by, options=self.options)
+
+    def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
+        by = tuple(partition_by) if not isinstance(partition_by, tuple) else partition_by
+        if by == self.partition_by:
+            return self
+        return type(self)(expr=self.expr, partition_by=by, options=self.options)
+
+
+class OrderedWindowExpr(WindowExpr):
+    # `order_by` is required, only stores the `Seq[ExprIR]`
+    # `sort_options` is an attribute, not a property
+    __slots__ = ("expr", "options", "order_by", "partition_by", "sort_options")
+
+    expr: ExprIR
+    partition_by: Seq[ExprIR]
+    order_by: Seq[ExprIR]
+    """Deviates from the `polars` version.
+
+    - `order_by` starts the same as here, but `polars` reduces into a struct - becoming a single (nested) node.
+    """
+    sort_options: SortOptions
+    options: Window
 
     def __repr__(self) -> str:
-        if self.order_by is None:
-            return f"{self.expr!r}.over({list(self.partition_by)!r})"
-        order, _ = self.order_by
+        order = self.order_by
         if not self.partition_by:
             args = f"order_by={list(order)!r}"
         else:
@@ -615,11 +654,7 @@ class WindowExpr(ExprIR):
         return f"{self.expr!r}.over({args})"
 
     def __str__(self) -> str:
-        if self.order_by is None:
-            order_by = "None"
-        else:
-            order, opts = self.order_by
-            order_by = f"({order}, {opts})"
+        order_by = f"({self.order_by}, {self.sort_options})"
         args = f"expr={self.expr}, partition_by={self.partition_by}, order_by={order_by}, options={self.options}"
         return f"{type(self).__name__}({args})"
 
@@ -641,10 +676,27 @@ class WindowExpr(ExprIR):
         over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
             ir.map_ir(function) for ir in self.partition_by
         )
-        if self.order_by:
-            by, _ = self.order_by
-            over = over.with_order_by(ir.map_ir(function) for ir in by)
+        over = over.with_order_by(ir.map_ir(function) for ir in self.order_by)
         return function(over)
+
+    def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
+        # NOTE: Not thrilled about this but there's complexity to solve
+        if by := (tuple(order_by) if not isinstance(order_by, tuple) else order_by):
+            if by == self.order_by:
+                return self
+            next_order_by = by
+        elif not self.order_by:
+            return self
+        else:
+            # NOTE: Unsure if we'd ever want to do this, but need to be exhaustive
+            next_order_by = ()
+        return type(self)(
+            expr=self.expr,
+            partition_by=self.partition_by,
+            order_by=next_order_by,
+            sort_options=self.sort_options,
+            options=self.options,
+        )
 
     def with_expr(self, expr: ExprIR, /) -> Self:
         if expr == self.expr:
@@ -653,6 +705,7 @@ class WindowExpr(ExprIR):
             expr=expr,
             partition_by=self.partition_by,
             order_by=self.order_by,
+            sort_options=self.sort_options,
             options=self.options,
         )
 
@@ -661,30 +714,10 @@ class WindowExpr(ExprIR):
         if by == self.partition_by:
             return self
         return type(self)(
-            expr=self.expr, partition_by=by, order_by=self.order_by, options=self.options
-        )
-
-    def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
-        # NOTE: Not thrilled about this but there's complexity to solve
-        next_order_by: tuple[Seq[ExprIR], SortOptions] | None
-        if by := (tuple(order_by) if not isinstance(order_by, tuple) else order_by):
-            if prev := self.order_by:
-                prev_by, prev_sort = prev
-                # NOTE: Very hidden check for no-op possibility
-                if by == prev_by:
-                    return self
-                next_order_by = by, prev_sort
-            else:
-                next_order_by = by, self.sort_options
-        elif prev := self.order_by:
-            # NOTE: Unsure if we'd ever want to do this, but need to be exhaustive
-            next_order_by = None
-        else:
-            return self
-        return type(self)(
             expr=self.expr,
-            partition_by=self.partition_by,
-            order_by=next_order_by,
+            partition_by=by,
+            order_by=self.order_by,
+            sort_options=self.sort_options,
             options=self.options,
         )
 
