@@ -6,13 +6,15 @@ import pytest
 
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
-from narwhals._plan.common import is_expr
+from narwhals._plan.common import IntoExpr, is_expr
 from narwhals._plan.expr import Alias, Column, Columns, _ColumnSelection
 from narwhals._plan.expr_expansion import (
     FrozenSchema,
+    prepare_projection,
     replace_selector,
     rewrite_special_aliases,
 )
+from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals.exceptions import ColumnNotFoundError, ComputeError
 
 if TYPE_CHECKING:
@@ -345,3 +347,177 @@ def test_replace_selector(
     group_by_keys = ()
     actual = replace_selector(expr._ir, group_by_keys, schema=schema_1)
     assert_expr_ir_equal(actual, expected)
+
+
+BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
+
+
+@pytest.mark.parametrize(
+    ("into_exprs", "expected"),
+    [
+        ("a", [nwd.col("a")]),
+        (nwd.col("b", "c", "d"), [nwd.col("b"), nwd.col("c"), nwd.col("d")]),
+        (nwd.nth(6), [nwd.col("g")]),
+        (nwd.nth(9, 8, -5), [nwd.col("j"), nwd.col("i"), nwd.col("p")]),
+        (
+            [nwd.nth(2).alias("c again"), nwd.nth(-1, -2).name.to_uppercase()],
+            [
+                nwd.col("c").alias("c again"),
+                nwd.col("u").alias("U"),
+                nwd.col("s").alias("S"),
+            ],
+        ),
+        (
+            nwd.all(),
+            [
+                nwd.col("a"),
+                nwd.col("b"),
+                nwd.col("c"),
+                nwd.col("d"),
+                nwd.col("e"),
+                nwd.col("f"),
+                nwd.col("g"),
+                nwd.col("h"),
+                nwd.col("i"),
+                nwd.col("j"),
+                nwd.col("k"),
+                nwd.col("l"),
+                nwd.col("m"),
+                nwd.col("n"),
+                nwd.col("o"),
+                nwd.col("p"),
+                nwd.col("q"),
+                nwd.col("r"),
+                nwd.col("s"),
+                nwd.col("u"),
+            ],
+        ),
+        (
+            (ndcs.numeric() - ndcs.by_dtype(nw.Float32(), nw.Float64()))
+            .cast(nw.Int64())
+            .mean()
+            .name.suffix("_mean"),
+            [
+                nwd.col("a").cast(nw.Int64()).mean().alias("a_mean"),
+                nwd.col("b").cast(nw.Int64()).mean().alias("b_mean"),
+                nwd.col("c").cast(nw.Int64()).mean().alias("c_mean"),
+                nwd.col("d").cast(nw.Int64()).mean().alias("d_mean"),
+                nwd.col("e").cast(nw.Int64()).mean().alias("e_mean"),
+                nwd.col("f").cast(nw.Int64()).mean().alias("f_mean"),
+                nwd.col("g").cast(nw.Int64()).mean().alias("g_mean"),
+                nwd.col("h").cast(nw.Int64()).mean().alias("h_mean"),
+            ],
+        ),
+        (
+            nwd.col("u").alias("1").alias("2").alias("3").alias("4").name.keep(),
+            # NOTE: Would be nice to rewrite with less intermediate steps
+            # but retrieving the root name is enough for now
+            [nwd.col("u").alias("1").alias("2").alias("3").alias("4").alias("u")],
+        ),
+        (
+            (
+                (ndcs.numeric() ^ (ndcs.matches(r"[abcdg]") | ndcs.by_name("i", "f")))
+                * 100
+            ).name.suffix("_mult_100"),
+            [
+                (nwd.col("e") * nwd.lit(100)).alias("e_mult_100"),
+                (nwd.col("h") * nwd.lit(100)).alias("h_mult_100"),
+                (nwd.col("j") * nwd.lit(100)).alias("j_mult_100"),
+            ],
+        ),
+        (
+            ndcs.by_dtype(nw.Duration())
+            .dt.total_minutes()
+            .name.map(lambda nm: f"total_mins: {nm!r} ?"),
+            [nwd.col("q").dt.total_minutes().alias("total_mins: 'q' ?")],
+        ),
+        (
+            nwd.col("f", "g")
+            .cast(nw.String())
+            .str.starts_with("1")
+            .all()
+            .name.suffix("_all_starts_with_1"),
+            [
+                nwd.col("f")
+                .cast(nw.String())
+                .str.starts_with("1")
+                .all()
+                .alias("f_all_starts_with_1"),
+                nwd.col("g")
+                .cast(nw.String())
+                .str.starts_with("1")
+                .all()
+                .alias("g_all_starts_with_1"),
+            ],
+        ),
+        (
+            nwd.col("a", "b")
+            .first()
+            .over("c", "e", order_by="d")
+            .name.suffix("_first_over_part_order_1"),
+            [
+                nwd.col("a")
+                .first()
+                .over(nwd.col("c"), nwd.col("e"), order_by=[nwd.col("d")])
+                .alias("a_first_over_part_order_1"),
+                nwd.col("b")
+                .first()
+                .over(nwd.col("c"), nwd.col("e"), order_by=[nwd.col("d")])
+                .alias("b_first_over_part_order_1"),
+            ],
+        ),
+        pytest.param(
+            nwd.exclude(BIG_EXCLUDE),
+            [
+                nwd.col("c"),
+                nwd.col("d"),
+                nwd.col("f"),
+                nwd.col("g"),
+                nwd.col("h"),
+                nwd.col("i"),
+                nwd.col("j"),
+            ],
+            marks=pytest.mark.xfail(reason="Exclude seems to be skipping expansion"),
+        ),
+        pytest.param(
+            nwd.exclude(BIG_EXCLUDE).name.suffix("_2"),
+            [
+                nwd.col("c").alias("c_2"),
+                nwd.col("d").alias("d_2"),
+                nwd.col("f").alias("f_2"),
+                nwd.col("g").alias("g_2"),
+                nwd.col("h").alias("h_2"),
+                nwd.col("i").alias("i_2"),
+                nwd.col("j").alias("j_2"),
+            ],
+            marks=pytest.mark.xfail(
+                reason="Probably the same issue as bare `exclude(...)`, but is showing the effect after chaining:\n"
+                "'unable to find a single leaf column in expr' ",
+                raises=ComputeError,
+            ),
+        ),
+        pytest.param(
+            nwd.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
+            [
+                nwd.col("c")
+                .alias("c_min_over_order_by")
+                .min()
+                .over(order_by=[nwd.col("k")])
+            ],
+            marks=pytest.mark.xfail(
+                reason="BUG: `order_by` wasn't visited when collecting flags and failed to expand.\n"
+                "This slipped through as it *does* get visited if `partition_by` or `expr` contain selectors **as well**."
+            ),
+        ),
+    ],
+)
+def test_prepare_projection(
+    into_exprs: IntoExpr | Sequence[IntoExpr],
+    expected: Sequence[DummyExpr],
+    schema_1: FrozenSchema,
+) -> None:
+    irs_in = parse_into_seq_of_expr_ir(into_exprs)
+    actual, _ = prepare_projection(irs_in, schema_1)
+    assert len(actual) == len(expected)
+    for lhs, rhs in zip(actual, expected):
+        assert_expr_ir_equal(lhs, rhs)
