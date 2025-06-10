@@ -154,11 +154,18 @@ class EagerWhen(
         is_expr = self._condition._is_expr
         when: EagerSeriesT = self._condition(df)[0]
         then: EagerSeriesT
+        if (
+            self._condition._metadata is not None
+            and self._condition._metadata.is_scalar_like
+        ):
+            when._broadcast = True
+
         if is_expr(self._then_value):
             then = self._then_value(df)[0]
         else:
             then = when.alias("literal")._from_scalar(self._then_value)
             then._broadcast = True
+
         if is_expr(self._otherwise_value):
             otherwise = self._otherwise_value(df)[0]
         elif self._otherwise_value is not None:
