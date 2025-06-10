@@ -561,8 +561,7 @@ class Filter(ExprIR):
         return function(Filter(expr=expr, by=by))
 
 
-# TODO @dangotbanned: 100% split out `order_by` to a subclass
-# Really frustrating to handle the `None` case everywhere
+# TODO @dangotbanned: Clean up docs/notes
 class WindowExpr(ExprIR):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -630,9 +629,8 @@ class WindowExpr(ExprIR):
         return type(self)(expr=self.expr, partition_by=by, options=self.options)
 
 
+# TODO @dangotbanned: Reduce repetition from `WindowExpr`
 class OrderedWindowExpr(WindowExpr):
-    # `order_by` is required, only stores the `Seq[ExprIR]`
-    # `sort_options` is an attribute, not a property
     __slots__ = ("expr", "options", "order_by", "partition_by", "sort_options")
 
     expr: ExprIR
