@@ -466,7 +466,7 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
                 .alias("b_first_over_part_order_1"),
             ],
         ),
-        pytest.param(
+        (
             nwd.exclude(BIG_EXCLUDE),
             [
                 nwd.col("c"),
@@ -477,9 +477,8 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
                 nwd.col("i"),
                 nwd.col("j"),
             ],
-            marks=pytest.mark.xfail(reason="Exclude seems to be skipping expansion"),
         ),
-        pytest.param(
+        (
             nwd.exclude(BIG_EXCLUDE).name.suffix("_2"),
             [
                 nwd.col("c").alias("c_2"),
@@ -490,11 +489,6 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
                 nwd.col("i").alias("i_2"),
                 nwd.col("j").alias("j_2"),
             ],
-            marks=pytest.mark.xfail(
-                reason="Probably the same issue as bare `exclude(...)`, but is showing the effect after chaining:\n"
-                "'unable to find a single leaf column in expr' ",
-                raises=ComputeError,
-            ),
         ),
         pytest.param(
             nwd.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),

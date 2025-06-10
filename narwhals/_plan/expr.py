@@ -250,6 +250,14 @@ class Exclude(_ColumnSelection):
             raise NotImplementedError(msg)
         return _cols(name for name in schema if name not in self.names)
 
+    def iter_left(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_left()
+        yield self
+
+    def iter_right(self) -> t.Iterator[ExprIR]:
+        yield self
+        yield from self.expr.iter_right()
+
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))
 
