@@ -274,8 +274,6 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
     def _if_then_else(
         self, when: ArrowSeries, then: ArrowSeries, otherwise: ArrowSeries | None, /
     ) -> ChunkedArrayAny:
-        from narwhals._arrow.utils import align_series_full_broadcast
-
         if otherwise is not None:
             _when, _then, _otherwise = align_series_full_broadcast(when, then, otherwise)
             _when = _when.native

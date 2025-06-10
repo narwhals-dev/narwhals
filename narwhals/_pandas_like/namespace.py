@@ -329,8 +329,6 @@ class PandasWhen(
         otherwise: PandasLikeSeries | None,
         /,
     ) -> pd.Series[Any]:
-        from narwhals._pandas_like.utils import align_series_full_broadcast
-
         if otherwise is None:
             when, then = align_series_full_broadcast(when, then)
             return then.native.where(when.native)
