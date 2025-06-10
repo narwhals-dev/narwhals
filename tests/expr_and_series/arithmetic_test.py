@@ -174,6 +174,7 @@ def test_series_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_series_floordiv_by_zero(
     left: int,
     right: int,
@@ -212,6 +213,7 @@ def test_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_floordiv_by_zero(
     left: int,
     right: int,
@@ -230,9 +232,13 @@ def test_floordiv_by_zero(
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
     # polars floordiv returns null
-    elif "polars" in str(constructor):
+    elif "polars" in str(constructor) and "lazy" not in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert all(floordiv_result["a"].is_null())
+    # polars lazy floordiv cannot be sliced and returns None
+    elif all(x in str(constructor) for x in ["polars", "lazy"]):
+        floordiv_result = df.select(nw.col("a") // right)
+        assert_equal_data(floordiv_result, {"a": [None]})
     else:
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [expected]})
