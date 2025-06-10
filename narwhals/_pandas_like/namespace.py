@@ -324,12 +324,18 @@ class PandasWhen(
 
     def _if_then_else(
         self,
-        when: pd.Series[Any],
-        then: pd.Series[Any],
-        otherwise: pd.Series[Any] | NonNestedLiteral,
+        when: PandasLikeSeries,
+        then: PandasLikeSeries,
+        otherwise: PandasLikeSeries | None,
         /,
     ) -> pd.Series[Any]:
-        return then.where(when) if otherwise is None else then.where(when, otherwise)
+        from narwhals._pandas_like.utils import align_series_full_broadcast
+
+        if otherwise is None:
+            when, then = align_series_full_broadcast(when, then)
+            return then.native.where(when.native)
+        when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+        return then.native.where(when.native, otherwise.native)
 
 
 class PandasThen(

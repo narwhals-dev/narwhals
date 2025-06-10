@@ -165,10 +165,11 @@ class EagerWhen(
             then = when.alias("literal")._from_scalar(self._then_value)
             then._broadcast = True
         if is_expr(self._otherwise_value):
-            otherwise = df._extract_comparand(self._otherwise_value(df)[0])
+            otherwise = self._otherwise_value(df)[0]
         else:
-            otherwise = self._otherwise_value
-        result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
+            otherwise = when._from_scalar(self._otherwise_value)
+            otherwise._broadcast = True
+        result = self._if_then_else(when, then, otherwise)
         return [then._with_native(result)]
 
 
