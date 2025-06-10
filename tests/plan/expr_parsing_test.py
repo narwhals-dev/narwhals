@@ -321,3 +321,19 @@ def test_invalid_alias(expr: DummyExpr) -> None:
     pattern = re.compile(r"alias.+dupe.+multi\-output")
     with pytest.raises(DuplicateError, match=pattern):
         expr.alias("dupe")
+
+
+@pytest.mark.xfail(
+    reason="BUG: Giving a false positive for horizontal reductions:\n"
+    "'Cannot apply alias 'abc' to multi-output expression'",
+    raises=DuplicateError,
+)
+def test_alias_horizontal() -> None:  # pragma: no cover
+    assert nwd.sum_horizontal("a", "b", "c").alias("abc")
+    assert nwd.sum_horizontal(["a", "b", "c"]).alias("abc")
+    assert nwd.sum_horizontal("a", "b", nwd.col("c")).alias("abc")
+    assert nwd.sum_horizontal(nwd.col("a"), "b", "c").alias("abc")
+    # NOTE: Fails starting here, but all the others should be equivalent
+    assert nwd.sum_horizontal(nwd.col("a", "b"), "c").alias("abc")
+    assert nwd.sum_horizontal("a", nwd.col("b", "c")).alias("abc")
+    assert nwd.sum_horizontal(nwd.col("a", "b", "c")).alias("abc")
