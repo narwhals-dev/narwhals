@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Literal, Sequence
+from typing import TYPE_CHECKING, Literal, Sequence
 
 import pandas as pd
 
@@ -34,7 +34,7 @@ class PandasLikeNamespace(
         PandasLikeSeries,
         PandasLikeExpr,
         pd.DataFrame,
-        pd.Series[Any],
+        "pd.Series[Any]",
     ]
 ):
     @property
