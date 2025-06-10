@@ -490,7 +490,7 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
                 nwd.col("j").alias("j_2"),
             ],
         ),
-        pytest.param(
+        (
             nwd.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
             [
                 nwd.col("c")
@@ -498,10 +498,6 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
                 .min()
                 .over(order_by=[nwd.col("k")])
             ],
-            marks=pytest.mark.xfail(
-                reason="BUG: `order_by` wasn't visited when collecting flags and failed to expand.\n"
-                "This slipped through as it *does* get visited if `partition_by` or `expr` contain selectors **as well**."
-            ),
         ),
     ],
 )

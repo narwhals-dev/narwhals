@@ -103,7 +103,7 @@ def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
 def _expr_to_leaf_column_exprs_iter(ir: ExprIR) -> Iterator[ExprIR]:
     from narwhals._plan import expr
 
-    for outer in ir.iter_left():
+    for outer in ir.iter_root_names():
         if isinstance(outer, (expr.Column, expr.All)):
             yield outer
 

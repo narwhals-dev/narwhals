@@ -659,18 +659,27 @@ class OrderedWindowExpr(WindowExpr):
         return f"{type(self).__name__}({args})"
 
     def iter_left(self) -> t.Iterator[ExprIR]:
-        # NOTE: `order_by` is never considered in `polars`
-        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
         yield from self.expr.iter_left()
         for e in self.partition_by:
+            yield from e.iter_left()
+        for e in self.order_by:
             yield from e.iter_left()
         yield self
 
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
+        for e in reversed(self.order_by):
+            yield from e.iter_right()
         for e in reversed(self.partition_by):
             yield from e.iter_right()
         yield from self.expr.iter_right()
+
+    def iter_root_names(self) -> t.Iterator[ExprIR]:
+        # NOTE: `order_by` is never considered in `polars`
+        # To match that behavior for `root_names` - but still expand in all other cases
+        # - this little escape hatch exists
+        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
+        yield from super().iter_left()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
