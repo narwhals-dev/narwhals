@@ -39,15 +39,31 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
-from copy import deepcopy
+from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Callable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, TypeVar, overload
 
-from narwhals._plan.common import ExprIR, Immutable, SelectorIR, is_regex_projection
+from narwhals._plan.common import (
+    _IMMUTABLE_HASH_NAME,
+    ExprIR,
+    Immutable,
+    SelectorIR,
+    is_regex_projection,
+)
+from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     import re
+    from typing import (
+        Callable,
+        ItemsView,
+        Iterator,
+        KeysView,
+        Mapping,
+        Sequence,
+        ValuesView,
+    )
 
     from typing_extensions import TypeAlias
 
@@ -57,22 +73,88 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-FrozenSchema: TypeAlias = "MappingProxyType[str, DType]"
 FrozenColumns: TypeAlias = "Seq[str]"
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
 ResultIRs: TypeAlias = "deque[ExprIR]"
+_FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
+_T2 = TypeVar("_T2")
 
 
 # NOTE: Both `_freeze` functions will probably want to be cached
 # In the traversal/expand/replacement functions, their returns will be hashable -> safe to cache those as well
-def _freeze_schema(**schema: DType) -> FrozenSchema:
-    copied = deepcopy(schema)
-    return MappingProxyType(copied)
+class FrozenSchema(Immutable):
+    """Use `freeze_schema(...)` constructor to trigger caching!"""
+
+    __slots__ = ("_mapping",)
+    _mapping: MappingProxyType[str, DType]
+
+    @property
+    def __immutable_hash__(self) -> int:
+        if hasattr(self, _IMMUTABLE_HASH_NAME):
+            return self.__immutable_hash_value__
+        hash_value = hash((self.__class__, *tuple(self._mapping.items())))
+        object.__setattr__(self, _IMMUTABLE_HASH_NAME, hash_value)
+        return self.__immutable_hash_value__
+
+    @property
+    def names(self) -> FrozenColumns:
+        """Get the column names of the schema."""
+        return freeze_columns(self)
+
+    @staticmethod
+    def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
+        return FrozenSchema(_mapping=mapping)
+
+    @staticmethod
+    def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
+        clone = MappingProxyType(dict(items))
+        return FrozenSchema._from_mapping(clone)
+
+    def items(self) -> ItemsView[str, DType]:
+        return self._mapping.items()
+
+    def keys(self) -> KeysView[str]:
+        return self._mapping.keys()
+
+    def values(self) -> ValuesView[DType]:
+        return self._mapping.values()
+
+    @overload
+    def get(self, key: str, /) -> DType | None: ...
+    @overload
+    def get(self, key: str, default: DType | _T2, /) -> DType | _T2: ...
+    def get(self, key: str, default: DType | _T2 | None = None, /) -> DType | _T2 | None:
+        if default is not None:
+            return self._mapping.get(key, default)
+        return self._mapping.get(key)
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self._mapping
+
+    def __contains__(self, key: object) -> bool:
+        return self._mapping.__contains__(key)
+
+    def __getitem__(self, key: str, /) -> DType:
+        return self._mapping.__getitem__(key)
+
+    def __len__(self) -> int:
+        return self._mapping.__len__()
 
 
-def _freeze_columns(schema: FrozenSchema, /) -> FrozenColumns:
+def freeze_schema(**schema: DType) -> FrozenSchema:
+    schema_hash = tuple(schema.items())
+    return _freeze_schema_cache(schema_hash)
+
+
+@lru_cache(maxsize=100)
+def _freeze_schema_cache(schema: _FrozenSchemaHash, /) -> FrozenSchema:
+    return FrozenSchema._from_hash_safe(schema)
+
+
+@lru_cache(maxsize=100)
+def freeze_columns(schema: FrozenSchema, /) -> FrozenColumns:
     return tuple(schema)
 
 
@@ -144,9 +226,11 @@ class ExpansionFlags(Immutable):
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], schema: Mapping[str, DType]
+    exprs: Sequence[ExprIR], schema: Mapping[str, DType] | FrozenSchema
 ) -> tuple[Seq[ExprIR], FrozenSchema]:
-    frozen_schema = _freeze_schema(**schema)
+    frozen_schema = (
+        schema if isinstance(schema, FrozenSchema) else freeze_schema(**schema)
+    )
     rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
     # NOTE: There's an `expressions_to_schema` step that I'm skipping for now
     # seems too big of a rabbit hole to go down
@@ -172,7 +256,7 @@ def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, expr.Nth):
-            return expr.Column(name=_freeze_columns(schema)[child.index])
+            return expr.Column(name=schema.names[child.index])
         return child
 
     return origin.map_ir(fn)
@@ -299,7 +383,7 @@ def replace_and_add_to_results(
             if isinstance(e, expr.Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
                 result = expand_columns(
-                    origin, result, e, col_names=_freeze_columns(schema), exclude=exclude
+                    origin, result, e, col_names=schema.names, exclude=exclude
                 )
             else:
                 exclude = prepare_excluded(
@@ -308,14 +392,10 @@ def replace_and_add_to_results(
                 result = expand_indices(origin, result, e, schema=schema, exclude=exclude)
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result = replace_wildcard(
-            origin, result, col_names=_freeze_columns(schema), exclude=exclude
-        )
+        result = replace_wildcard(origin, result, col_names=schema.names, exclude=exclude)
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result = replace_regex(
-            origin, result, col_names=_freeze_columns(schema), exclude=exclude
-        )
+        result = replace_regex(origin, result, col_names=schema.names, exclude=exclude)
     return result
 
 

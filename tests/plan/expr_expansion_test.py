@@ -9,7 +9,7 @@ from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import IntoExpr, is_expr
 from narwhals._plan.expr import Alias, Column, Columns, _ColumnSelection
 from narwhals._plan.expr_expansion import (
-    FrozenSchema,
+    freeze_schema,
     prepare_projection,
     replace_selector,
     rewrite_special_aliases,
@@ -342,10 +342,12 @@ def test_map_ir_recursive(expr: DummyExpr, function: MapIR, expected: DummyExpr)
     ],
 )
 def test_replace_selector(
-    expr: DummySelector | DummyExpr, expected: DummyExpr | ExprIR, schema_1: FrozenSchema
+    expr: DummySelector | DummyExpr,
+    expected: DummyExpr | ExprIR,
+    schema_1: dict[str, DType],
 ) -> None:
     group_by_keys = ()
-    actual = replace_selector(expr._ir, group_by_keys, schema=schema_1)
+    actual = replace_selector(expr._ir, group_by_keys, schema=freeze_schema(**schema_1))
     assert_expr_ir_equal(actual, expected)
 
 
@@ -504,7 +506,7 @@ BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
 def test_prepare_projection(
     into_exprs: IntoExpr | Sequence[IntoExpr],
     expected: Sequence[DummyExpr],
-    schema_1: FrozenSchema,
+    schema_1: dict[str, DType],
 ) -> None:
     irs_in = parse_into_seq_of_expr_ir(into_exprs)
     actual, _ = prepare_projection(irs_in, schema_1)
