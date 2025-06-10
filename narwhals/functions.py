@@ -3,7 +3,6 @@ from __future__ import annotations
 import platform
 import sys
 from importlib.metadata import version
-from itertools import chain
 from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
 
 from narwhals._expression_parsing import (
@@ -1777,10 +1776,7 @@ def concat_str(
     )
 
 
-def coalesce(
-    exprs: IntoExpr | Iterable[IntoExpr] | NonNestedLiteral,
-    *more_exprs: IntoExpr | NonNestedLiteral,
-) -> Expr:
+def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     """Folds the columns from left to right, keeping the first non-null value.
 
     Arguments:
@@ -1820,12 +1816,7 @@ def coalesce(
     |  └─────┘         |
     └──────────────────┘
     """
-    flat_exprs = flatten(
-        [
-            expr if isinstance(expr, (Expr, str)) else lit(expr)
-            for expr in chain(flatten([exprs]), more_exprs)
-        ]
-    )
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
 
     return Expr(
         lambda plx: apply_n_ary_operation(
