@@ -23,7 +23,7 @@ from narwhals._plan.options import (
     SortOptions,
 )
 from narwhals._plan.selectors import by_name
-from narwhals._plan.window import OrderedOver, Over
+from narwhals._plan.window import Over
 from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError
@@ -150,7 +150,7 @@ class DummyExpr:
         if order_by is not None:
             by = parse.parse_into_seq_of_expr_ir(order_by)
             options = SortOptions(descending=descending, nulls_last=nulls_last)
-            node = OrderedOver().to_ordered_window_expr(self._ir, partition, by, options)
+            node = Over().to_ordered_window_expr(self._ir, partition, by, options)
         else:
             node = Over().to_window_expr(self._ir, partition)
         return self._from_ir(node)

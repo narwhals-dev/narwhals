@@ -52,8 +52,6 @@ class Over(Window):
             raise err
         return WindowExpr(expr=expr, partition_by=partition_by, options=self)
 
-
-class OrderedOver(Over):
     def to_ordered_window_expr(
         self,
         expr: ExprIR,
