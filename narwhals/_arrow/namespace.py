@@ -274,19 +274,13 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
     def _if_then_else(
         self, when: ArrowSeries, then: ArrowSeries, otherwise: ArrowSeries | None, /
     ) -> ChunkedArrayAny:
-        if otherwise is not None:
-            _when, _then, _otherwise = align_series_full_broadcast(when, then, otherwise)
-            _when = _when.native
-            _then = _then.native
-            _otherwise = _otherwise.native
-        else:
-            _when, _then = align_series_full_broadcast(when, then)
-            _when = _when.native
-            _then = _then.native
-            otherwise = (
-                pa.nulls(len(when), _then.native.type) if otherwise is None else otherwise
+        if otherwise is None:
+            when, then = align_series_full_broadcast(when, then)
+            return pc.if_else(
+                when.native, then.native, pa.nulls(len(when.native), then.native.type)
             )
-        return pc.if_else(_when, _then, _otherwise)
+        when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+        return pc.if_else(when.native, then.native, otherwise.native)
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...
