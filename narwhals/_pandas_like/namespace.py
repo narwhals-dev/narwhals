@@ -3,7 +3,9 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence
+
+import pandas as pd
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -17,8 +19,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
@@ -33,8 +33,8 @@ class PandasLikeNamespace(
         PandasLikeDataFrame,
         PandasLikeSeries,
         PandasLikeExpr,
-        "pd.DataFrame",
-        "pd.Series[Any]",
+        pd.DataFrame,
+        pd.Series[Any],
     ]
 ):
     @property
