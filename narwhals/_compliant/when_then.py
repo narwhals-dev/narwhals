@@ -43,7 +43,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
-    _otherwise_value: IntoExpr[SeriesT, ExprT]
+    _otherwise_value: IntoExpr[SeriesT, ExprT] | None
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -148,11 +148,7 @@ class EagerWhen(
     Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
 ):
     def _if_then_else(
-        self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
-        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
-        /,
+        self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
     ) -> NativeSeriesT: ...
 
     def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
@@ -166,9 +162,11 @@ class EagerWhen(
             then._broadcast = True
         if is_expr(self._otherwise_value):
             otherwise = self._otherwise_value(df)[0]
-        else:
+        elif self._otherwise_value is not None:
             otherwise = when._from_scalar(self._otherwise_value)
             otherwise._broadcast = True
+        else:
+            otherwise = self._otherwise_value
         result = self._if_then_else(when, then, otherwise)
         return [then._with_native(result)]
 
