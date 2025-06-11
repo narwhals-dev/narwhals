@@ -11,13 +11,11 @@ import narwhals._plan.demo as nwd
 from narwhals._plan import (
     boolean,
     functions as F,  # noqa: N812
-    selectors as ndcs,
 )
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr
 from narwhals.exceptions import (
-    DuplicateError,
     InvalidOperationError,
     LengthChangingExprError,
     MultiOutputExpressionError,
@@ -301,39 +299,3 @@ def test_is_in_series() -> None:
 def test_invalid_is_in(other: Any, context: ContextManager[Any]) -> None:
     with context:
         nwd.col("a").is_in(other)
-
-
-@pytest.mark.parametrize(
-    "expr",
-    [
-        nwd.all(),
-        nwd.nth(1, 2, 3),
-        nwd.col("a", "b", "c"),
-        ndcs.boolean(),
-        (ndcs.by_name("a", "b") | ndcs.string()),
-        (nwd.col("b", "c") & nwd.col("a")),
-        nwd.col("a", "b").min().over("c", order_by="e"),
-        (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
-        nwd.nth(6, 2).abs().cast(nw.Int32()) + 10,
-    ],
-)
-def test_invalid_alias(expr: DummyExpr) -> None:
-    pattern = re.compile(r"alias.+dupe.+multi\-output")
-    with pytest.raises(DuplicateError, match=pattern):
-        expr.alias("dupe")
-
-
-@pytest.mark.xfail(
-    reason="BUG: Giving a false positive for horizontal reductions:\n"
-    "'Cannot apply alias 'abc' to multi-output expression'",
-    raises=DuplicateError,
-)
-def test_alias_horizontal() -> None:  # pragma: no cover
-    assert nwd.sum_horizontal("a", "b", "c").alias("abc")
-    assert nwd.sum_horizontal(["a", "b", "c"]).alias("abc")
-    assert nwd.sum_horizontal("a", "b", nwd.col("c")).alias("abc")
-    assert nwd.sum_horizontal(nwd.col("a"), "b", "c").alias("abc")
-    # NOTE: Fails starting here, but all the others should be equivalent
-    assert nwd.sum_horizontal(nwd.col("a", "b"), "c").alias("abc")
-    assert nwd.sum_horizontal("a", nwd.col("b", "c")).alias("abc")
-    assert nwd.sum_horizontal(nwd.col("a", "b", "c")).alias("abc")

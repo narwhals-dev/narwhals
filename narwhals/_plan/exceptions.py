@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from itertools import groupby
 from typing import TYPE_CHECKING
 
 from narwhals.exceptions import (
@@ -164,9 +166,23 @@ def is_iterable_polars_error(
     return TypeError(msg)
 
 
-def alias_duplicate_error(expr: ExprIR, name: str) -> DuplicateError:
-    msg = f"Cannot apply alias {name!r} to multi-output expression:\n{expr!r}"
+def duplicate_error(exprs: Seq[ExprIR]) -> DuplicateError:
+    INDENT = "\n  "  # noqa: N806
+    names = [_output_name(expr) for expr in exprs]
+    duplicates = {k for k, v in Counter(names).items() if v > 1}
+    group_by_name = groupby(exprs, _output_name)
+    name_exprs = {
+        k: INDENT.join(f"{el!r}" for el in it)
+        for k, it in group_by_name
+        if k in duplicates
+    }
+    msg = "\n".join(f"[{name!r}]{INDENT}{e}" for name, e in name_exprs.items())
+    msg = f"Expected unique column names, but found duplicates:\n\n{msg}"
     return DuplicateError(msg)
+
+
+def _output_name(expr: ExprIR) -> str:
+    return expr.meta.output_name()
 
 
 def column_not_found_error(

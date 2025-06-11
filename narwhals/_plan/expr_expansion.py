@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from collections import deque
 from functools import lru_cache
+from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, TypeVar, overload
 
@@ -48,10 +49,17 @@ from narwhals._plan.common import (
     ExprIR,
     Immutable,
     SelectorIR,
+    is_horizontal_reduction,
     is_regex_projection,
 )
+from narwhals._plan.exceptions import column_not_found_error, duplicate_error
 from narwhals.dtypes import DType
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    ComputeError,
+    DuplicateError,
+    InvalidOperationError,
+)
 
 if TYPE_CHECKING:
     import re
@@ -232,21 +240,44 @@ def prepare_projection(
         schema if isinstance(schema, FrozenSchema) else freeze_schema(**schema)
     )
     rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
-    # NOTE: There's an `expressions_to_schema` step that I'm skipping for now
-    # seems too big of a rabbit hole to go down
+    if err := ensure_valid_exprs(rewritten, frozen_schema):
+        raise err
     return rewritten, frozen_schema
 
 
-def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
-    from narwhals._plan import expr
+def ensure_valid_exprs(
+    exprs: Seq[ExprIR], schema: FrozenSchema
+) -> ColumnNotFoundError | DuplicateError | None:
+    """Return an appropriate error if we can't materialize."""
+    if err := _ensure_column_names_unique(exprs):
+        return err
+    root_names = _root_names_unique(exprs)
+    if not (set(schema.names).issuperset(root_names)):
+        return column_not_found_error(root_names, schema)
+    return None
 
+
+def _ensure_column_names_unique(exprs: Seq[ExprIR]) -> DuplicateError | None:
+    names = [e.meta.output_name() for e in exprs]
+    if len(names) != len(set(names)):
+        return duplicate_error(exprs)
+    return None
+
+
+def _root_names_unique(exprs: Seq[ExprIR]) -> set[str]:
+    from narwhals._plan.meta import _expr_to_leaf_column_names_iter
+
+    it = chain.from_iterable(_expr_to_leaf_column_names_iter(expr) for expr in exprs)
+    return set(it)
+
+
+def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
-        if not (
-            isinstance(child, expr.FunctionExpr)
-            and child.options.is_input_wildcard_expansion()
-        ):
-            return child
-        return child.with_input(rewrite_projections(child.input, keys=(), schema=schema))
+        if is_horizontal_reduction(child):
+            return child.with_input(
+                rewrite_projections(child.input, keys=(), schema=schema)
+            )
+        return child
 
     return origin.map_ir(fn)
 

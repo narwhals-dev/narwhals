@@ -16,7 +16,6 @@ from narwhals._plan.common import (
     is_regex_projection,
 )
 from narwhals._plan.exceptions import (
-    alias_duplicate_error,
     column_not_found_error,
     function_expr_invalid_operation_error,
 )
@@ -107,12 +106,6 @@ class Alias(ExprIR):
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
-
-    def __init__(self, *, expr: ExprIR, name: str) -> None:
-        if expr.meta.has_multiple_outputs():
-            raise alias_duplicate_error(expr, name)
-        kwds = {"expr": expr, "name": name}
-        super().__init__(**kwds)
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))

@@ -371,6 +371,12 @@ def is_regex_projection(name: str) -> bool:
     return name.startswith("^") and name.endswith("$")
 
 
+def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr[Any]]:
+    from narwhals._plan.expr import FunctionExpr
+
+    return isinstance(obj, FunctionExpr) and obj.options.is_input_wildcard_expansion()
+
+
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
     dtypes = version.dtypes
     mapping: dict[type[NonNestedLiteral], type[DType]] = {

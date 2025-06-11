@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+import re
+from typing import TYPE_CHECKING, Callable, Iterable, Sequence
 
 import pytest
 
@@ -15,7 +16,7 @@ from narwhals._plan.expr_expansion import (
     rewrite_special_aliases,
 )
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
-from narwhals.exceptions import ColumnNotFoundError, ComputeError
+from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -50,6 +51,18 @@ def schema_1() -> dict[str, DType]:
         "s": nw.List(nw.String()),
         "u": nw.Struct({"a": nw.Int64(), "k": nw.String()}),
     }
+
+
+MULTI_OUTPUT_EXPRS = (
+    pytest.param(nwd.col("a", "b", "c")),
+    pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
+    pytest.param(nwd.nth(0, 1, 2)),
+    pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
+    pytest.param(ndcs.by_name("a", "b", "c")),
+)
+"""All of these resolve to `["a", "b", "c"]`."""
+
+BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
 
 
 def assert_expr_ir_equal(left: DummyExpr | ExprIR, right: DummyExpr | ExprIR) -> None:
@@ -117,46 +130,6 @@ def test_expand_columns_root(
     assert is_column_selection(selection)
     actual = selection.expand_columns(schema_1)
     assert actual == expected
-
-
-@pytest.mark.parametrize(
-    "expr",
-    [
-        nwd.col("y", "z"),
-        nwd.col("a", "b", "z"),
-        nwd.col("x", "b", "a"),
-        nwd.col(
-            [
-                "a",
-                "b",
-                "c",
-                "d",
-                "e",
-                "f",
-                "g",
-                "h",
-                "FIVE",
-                "i",
-                "j",
-                "k",
-                "l",
-                "m",
-                "n",
-                "o",
-                "p",
-                "q",
-                "r",
-                "s",
-                "u",
-            ]
-        ),
-    ],
-)
-def test_invalid_expand_columns(expr: DummyExpr, schema_1: dict[str, DType]) -> None:
-    selection = expr._ir
-    assert is_column_selection(selection)
-    with pytest.raises(ColumnNotFoundError):
-        selection.expand_columns(schema_1)
 
 
 def udf_name_map(name: str) -> str:
@@ -351,9 +324,6 @@ def test_replace_selector(
     assert_expr_ir_equal(actual, expected)
 
 
-BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
-
-
 @pytest.mark.parametrize(
     ("into_exprs", "expected"),
     [
@@ -513,3 +483,138 @@ def test_prepare_projection(
     assert len(actual) == len(expected)
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        nwd.all(),
+        nwd.nth(1, 2, 3),
+        nwd.col("a", "b", "c"),
+        ndcs.boolean() | ndcs.categorical(),
+        (ndcs.by_name("a", "b") | ndcs.string()),
+        (nwd.col("b", "c") & nwd.col("a")),
+        nwd.col("a", "b").min().over("c", order_by="e"),
+        (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
+        nwd.nth(6, 2).abs().cast(nw.Int32()) + 10,
+        *MULTI_OUTPUT_EXPRS,
+    ],
+)
+def test_prepare_projection_duplicate(
+    expr: DummyExpr, schema_1: dict[str, DType]
+) -> None:
+    irs = parse_into_seq_of_expr_ir(expr.alias("dupe"))
+    pattern = re.compile(r"\.alias\(.dupe.\)")
+    with pytest.raises(DuplicateError, match=pattern):
+        prepare_projection(irs, schema_1)
+
+
+@pytest.mark.parametrize(
+    ("into_exprs", "missing"),
+    [
+        ([nwd.col("y", "z")], ["y", "z"]),
+        ([nwd.col("a", "b", "z")], ["z"]),
+        ([nwd.col("x", "b", "a")], ["x"]),
+        (
+            [
+                nwd.col(
+                    [
+                        "a",
+                        "b",
+                        "c",
+                        "d",
+                        "e",
+                        "f",
+                        "g",
+                        "h",
+                        "FIVE",
+                        "i",
+                        "j",
+                        "k",
+                        "l",
+                        "m",
+                        "n",
+                        "o",
+                        "p",
+                        "q",
+                        "r",
+                        "s",
+                        "u",
+                    ]
+                )
+            ],
+            ["FIVE"],
+        ),
+        (
+            [nwd.col("a").min().over("c").alias("y"), nwd.col("one").alias("b").last()],
+            ["one"],
+        ),
+        ([nwd.col("a").sort_by("b", "who").alias("f")], ["who"]),
+        (
+            [
+                nwd.nth(0, 5)
+                .cast(nw.Int64())
+                .abs()
+                .cum_sum()
+                .over("X", "O", "h", "m", "r", "zee"),
+                nwd.col("d", "j"),
+                "n",
+            ],
+            ["O", "X", "zee"],
+        ),
+    ],
+)
+def test_prepare_projection_column_not_found(
+    into_exprs: IntoExpr | Sequence[IntoExpr],
+    missing: Sequence[str],
+    schema_1: dict[str, DType],
+) -> None:
+    pattern = re.compile(rf"not found: {re.escape(repr(missing))}")
+    irs = parse_into_seq_of_expr_ir(into_exprs)
+    with pytest.raises(ColumnNotFoundError, match=pattern):
+        prepare_projection(irs, schema_1)
+
+
+@pytest.mark.parametrize(
+    "into_exprs",
+    [
+        ("a", "b", "c"),
+        (["a", "b", "c"]),
+        ("a", "b", nwd.col("c")),
+        (nwd.col("a"), "b", "c"),
+        (nwd.col("a", "b"), "c"),
+        ("a", nwd.col("b", "c")),
+        ((nwd.nth(0), nwd.nth(1, 2))),
+        *MULTI_OUTPUT_EXPRS,
+    ],
+)
+@pytest.mark.parametrize(
+    "function",
+    [
+        nwd.all_horizontal,
+        nwd.any_horizontal,
+        nwd.sum_horizontal,
+        nwd.min_horizontal,
+        nwd.max_horizontal,
+        nwd.mean_horizontal,
+        nwd.concat_str,
+    ],
+)
+def test_prepare_projection_horizontal_alias(
+    into_exprs: IntoExpr | Iterable[IntoExpr],
+    function: Callable[..., DummyExpr],
+    schema_1: dict[str, DType],
+) -> None:
+    # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2139965411
+    expr = function(into_exprs)
+    alias_1 = expr.alias("alias(x1)")
+    irs = parse_into_seq_of_expr_ir(alias_1)
+    out_irs, _ = prepare_projection(irs, schema_1)
+    assert len(out_irs) == 1
+    assert out_irs[0] == function("a", "b", "c").alias("alias(x1)")._ir
+
+    alias_2 = alias_1.alias("alias(x2)")
+    irs = parse_into_seq_of_expr_ir(alias_2)
+    out_irs, _ = prepare_projection(irs, schema_1)
+    assert len(out_irs) == 1
+    assert out_irs[0] == function("a", "b", "c").alias("alias(x1)").alias("alias(x2)")._ir
