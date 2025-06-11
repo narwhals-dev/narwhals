@@ -31,13 +31,7 @@ HORIZONTAL: Literal[1] = 1
 
 
 class PandasLikeNamespace(
-    EagerNamespace[
-        PandasLikeDataFrame,
-        PandasLikeSeries,
-        PandasLikeExpr,
-        pd.DataFrame,
-        "pd.Series[Any]",
-    ]
+    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, pd.DataFrame]
 ):
     @property
     def _dataframe(self) -> type[PandasLikeDataFrame]:

@@ -33,9 +33,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-class ArrowNamespace(
-    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
-):
+class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table]):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame

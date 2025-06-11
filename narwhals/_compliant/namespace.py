@@ -23,7 +23,6 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeFrameT,
     NativeFrameT_co,
-    NativeSeriesT,
 )
 from narwhals._utils import (
     exclude_column_names,
@@ -130,10 +129,9 @@ class LazyNamespace(
             raise TypeError(msg)
 
 
-# Invariant type variable "NativeSeriesT" used in protocol where covariant one is expected
-class EagerNamespace(  # type: ignore[misc]
+class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT],
 ):
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -143,21 +141,7 @@ class EagerNamespace(  # type: ignore[misc]
         self, predicate: EagerExprT
     ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT]: ...
 
-    @overload
-    def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
-    @overload
-    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
-    # TODO @dangotbanned: Align `PandasLike` typing with `_namespace`, then drop this `@overload`
-    # - Using the guards there introduces `_NativeModin`, `_NativeCuDF`
-    # - These types haven't been integrated into the backend
-    # - Most of the `pandas` stuff is still untyped
-    @overload
-    def from_native(
-        self, data: NativeFrameT | NativeSeriesT | Any, /
-    ) -> EagerDataFrameT | EagerSeriesT: ...
-    def from_native(
-        self, data: NativeFrameT | NativeSeriesT | Any, /
-    ) -> EagerDataFrameT | EagerSeriesT:
+    def from_native(self, data: Any, /) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
         elif self._series._is_native(data):
