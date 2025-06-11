@@ -21,6 +21,10 @@ class KeepName(ExprIR):
 
     expr: ExprIR
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
+
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
@@ -44,6 +48,10 @@ class RenameAlias(ExprIR):
 
     expr: ExprIR
     function: AliasName
+
+    @property
+    def is_scalar(self) -> bool:
+        return self.expr.is_scalar
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"

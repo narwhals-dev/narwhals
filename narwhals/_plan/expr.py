@@ -757,6 +757,10 @@ class Ternary(ExprIR):
     truthy: ExprIR
     falsy: ExprIR
 
+    @property
+    def is_scalar(self) -> bool:
+        return self.predicate.is_scalar and self.truthy.is_scalar and self.falsy.is_scalar
+
     def __str__(self) -> str:
         # NOTE: Default slot ordering made it difficult to read
         fields = (
