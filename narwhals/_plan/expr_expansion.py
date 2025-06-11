@@ -50,7 +50,6 @@ from narwhals._plan.common import (
     Immutable,
     SelectorIR,
     is_horizontal_reduction,
-    is_regex_projection,
 )
 from narwhals._plan.exceptions import column_not_found_error, duplicate_error
 from narwhals._plan.expr import (
@@ -73,20 +72,10 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    import re
-    from typing import (
-        Callable,
-        ItemsView,
-        Iterator,
-        KeysView,
-        Mapping,
-        Sequence,
-        ValuesView,
-    )
+    from typing import ItemsView, Iterator, KeysView, Mapping, Sequence, ValuesView
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan import selectors
     from narwhals._plan.common import Seq
     from narwhals._plan.dummy import DummyExpr
     from narwhals.dtypes import DType
@@ -407,9 +396,7 @@ def replace_and_add_to_results(
         if e := next(it, None):
             if isinstance(e, Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
-                result = expand_columns(
-                    origin, result, e, col_names=schema.names, exclude=exclude
-                )
+                result = expand_columns(origin, result, e, exclude=exclude)
             else:
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
@@ -420,7 +407,8 @@ def replace_and_add_to_results(
         result = replace_wildcard(origin, result, col_names=schema.names, exclude=exclude)
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result = replace_regex(origin, result, col_names=schema.names, exclude=exclude)
+        origin = rewrite_special_aliases(origin)
+        result.append(origin)
     return result
 
 
@@ -456,13 +444,7 @@ def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
 
 
 def expand_columns(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    columns: Columns,
-    *,
-    col_names: FrozenColumns,
-    exclude: Excluded,
+    origin: ExprIR, /, result: ResultIRs, columns: Columns, *, exclude: Excluded
 ) -> ResultIRs:
     if not _all_columns_match(origin, columns):
         msg = "expanding more than one `col` is not allowed"
@@ -470,7 +452,8 @@ def expand_columns(
     for name in columns.names:
         if name not in exclude:
             new_expr = _replace_columns_exclude(origin, name)
-            result = replace_regex(new_expr, result, col_names=col_names, exclude=exclude)
+            new_expr = rewrite_special_aliases(new_expr)
+            result.append(new_expr)
     return result
 
 
@@ -536,75 +519,3 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
             msg = "`keep`, `suffix`, `prefix` should be last expression"
             raise InvalidOperationError(msg)
     return origin
-
-
-def into_pattern(obj: str | re.Pattern[str] | selectors.Matches, /) -> re.Pattern[str]:
-    import re
-
-    from narwhals._plan import selectors
-
-    if isinstance(obj, str):
-        return re.compile(obj)
-    elif isinstance(obj, selectors.Matches):
-        return obj.pattern
-    elif isinstance(obj, re.Pattern):
-        return obj
-    else:
-        msg = f"Cannot convert {type(obj).__name__!r} into a regular expression"
-        raise TypeError(msg)
-
-
-# NOTE: Will likely be using `selectors.Matches` for this
-# Doing a direct translation from `rust` *first*, to make replacing
-# the deviations *later* not as daunting
-def replace_regex(
-    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
-) -> ResultIRs:
-    regex: str | None = None
-    for name in origin.meta.root_names():
-        if is_regex_projection(name):
-            if regex is None:
-                regex = name
-                result = expand_regex(
-                    origin,
-                    result,
-                    into_pattern(name),
-                    col_names=col_names,
-                    exclude=exclude,
-                )
-            elif regex != name:
-                msg = "an expression is not allowed to have different regexes"
-                raise ComputeError(msg)
-    if regex is None:
-        origin = rewrite_special_aliases(origin)
-        result.append(origin)
-    return result
-
-
-def expand_regex(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    pattern: re.Pattern[str],
-    *,
-    col_names: FrozenColumns,
-    exclude: Excluded,
-) -> ResultIRs:
-    for name in col_names:
-        if pattern.match(name) and name not in exclude:
-            expanded = remove_exclude(origin)
-            expanded = expanded.map_ir(_replace_regex(pattern, name))
-            expanded = rewrite_special_aliases(expanded)
-            result.append(expanded)
-    return result
-
-
-def _replace_regex(pattern: re.Pattern[str], name: str, /) -> Callable[[ExprIR], ExprIR]:
-    from narwhals._plan.meta import is_column
-
-    pat = pattern.pattern
-
-    def fn(ir: ExprIR, /) -> ExprIR:
-        return ir.with_name(name) if is_column(ir) and ir.name == pat else ir
-
-    return fn
