@@ -146,6 +146,7 @@ class DuckDBNamespace(
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
+            cols = list(cols)
             return reduce(
                 operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
             ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
