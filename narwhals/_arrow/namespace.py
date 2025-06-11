@@ -24,10 +24,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import (
-        ChunkedArrayAny,  # noqa: F401
-        Incomplete,
-    )
+    from narwhals._arrow.typing import Incomplete
     from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import NonNestedLiteral
