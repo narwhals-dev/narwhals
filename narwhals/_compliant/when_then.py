@@ -13,7 +13,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprAny,
     NativeExprT,
-    NativeSeriesT,
     WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
@@ -43,7 +42,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
-    _otherwise_value: IntoExpr[SeriesT, ExprT]
+    _otherwise_value: IntoExpr[SeriesT, ExprT] | None
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -145,15 +144,11 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     def _if_then_else(
-        self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
-        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
-        /,
-    ) -> NativeSeriesT: ...
+        self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
+    ) -> EagerSeriesT: ...
 
     def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
         is_expr = self._condition._is_expr
@@ -165,11 +160,13 @@ class EagerWhen(
             then = when.alias("literal")._from_scalar(self._then_value)
             then._broadcast = True
         if is_expr(self._otherwise_value):
-            otherwise = df._extract_comparand(self._otherwise_value(df)[0])
+            otherwise = self._otherwise_value(df)[0]
+        elif self._otherwise_value is not None:
+            otherwise = when._from_scalar(self._otherwise_value)
+            otherwise._broadcast = True
         else:
             otherwise = self._otherwise_value
-        result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
-        return [then._with_native(result)]
+        return [self._if_then_else(when, then, otherwise)]
 
 
 class LazyWhen(
