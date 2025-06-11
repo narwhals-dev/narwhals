@@ -53,7 +53,17 @@ from narwhals._plan.common import (
     is_regex_projection,
 )
 from narwhals._plan.exceptions import column_not_found_error, duplicate_error
-from narwhals._plan.expr import col
+from narwhals._plan.expr import (
+    Alias,
+    All,
+    Columns,
+    Exclude,
+    IndexColumns,
+    KeepName,
+    Nth,
+    RenameAlias,
+    col,
+)
 from narwhals.dtypes import DType
 from narwhals.exceptions import (
     ColumnNotFoundError,
@@ -76,7 +86,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan import expr, selectors
+    from narwhals._plan import selectors
     from narwhals._plan.common import Seq
     from narwhals._plan.dummy import DummyExpr
     from narwhals.dtypes import DType
@@ -194,23 +204,21 @@ class ExpansionFlags(Immutable):
 
         [`find_flags`]: https://github.com/pola-rs/polars/blob/df4d21c30c2b383b651e194f8263244f2afaeda3/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L607-L660
         """
-        from narwhals._plan import expr
-
         multiple_columns: bool = False
         has_nth: bool = False
         has_wildcard: bool = False
         has_selector: bool = False
         has_exclude: bool = False
         for e in ir.iter_left():
-            if isinstance(e, (expr.Columns, expr.IndexColumns)):
+            if isinstance(e, (Columns, IndexColumns)):
                 multiple_columns = True
-            elif isinstance(e, expr.Nth):
+            elif isinstance(e, Nth):
                 has_nth = True
-            elif isinstance(e, expr.All):
+            elif isinstance(e, All):
                 has_wildcard = True
-            elif isinstance(e, expr.SelectorIR):
+            elif isinstance(e, SelectorIR):
                 has_selector = True
-            elif isinstance(e, expr.Exclude):
+            elif isinstance(e, Exclude):
                 has_exclude = True
         return ExpansionFlags(
             multiple_columns=multiple_columns,
@@ -284,10 +292,8 @@ def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR
 
 
 def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
-    from narwhals._plan import expr
-
     def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, expr.Nth):
+        if isinstance(child, Nth):
             return col(schema.names[child.index])
         return child
 
@@ -295,8 +301,6 @@ def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
 
 
 def remove_exclude(origin: ExprIR, /) -> ExprIR:
-    from narwhals._plan.expr import Exclude
-
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Exclude):
             return child.expr
@@ -310,7 +314,6 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
 
     [`polars_plan::plans::conversion::expr_expansion::expand_columns`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L187-L191
     """
-    from narwhals._plan.expr import Columns, Exclude
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Columns):
@@ -323,8 +326,6 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
 
 
 def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
-    from narwhals._plan.expr import Exclude, IndexColumns
-
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, IndexColumns):
             return col(name)
@@ -337,7 +338,6 @@ def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
 
 def replace_wildcard_with_column(origin: ExprIR, /, name: str) -> ExprIR:
     """`expr.All` and `Exclude`."""
-    from narwhals._plan.expr import All, Exclude
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, All):
@@ -357,12 +357,11 @@ def replace_selector(
     schema: FrozenSchema,
 ) -> ExprIR:
     """Fully diverging from `polars`, we'll see how that goes."""
-    from narwhals._plan import expr
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, SelectorIR):
             cols = (k for k, v in schema.items() if child.matches_column(k, v))
-            return expr.Columns(names=tuple(cols))
+            return Columns(names=tuple(cols))
         return child
 
     return ir.map_ir(fn)
@@ -401,18 +400,12 @@ def replace_and_add_to_results(
     schema: FrozenSchema,
     flags: ExpansionFlags,
 ) -> ResultIRs:
-    from narwhals._plan import expr
-
     if flags.has_nth:
         origin = replace_nth(origin, schema)
     if flags.expands:
-        it = (
-            e
-            for e in origin.iter_left()
-            if isinstance(e, (expr.Columns, expr.IndexColumns))
-        )
+        it = (e for e in origin.iter_left() if isinstance(e, (Columns, IndexColumns)))
         if e := next(it, None):
-            if isinstance(e, expr.Columns):
+            if isinstance(e, Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
                 result = expand_columns(
                     origin, result, e, col_names=schema.names, exclude=exclude
@@ -433,8 +426,6 @@ def replace_and_add_to_results(
 
 def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
     """Yield all excluded names in `origin`."""
-    from narwhals._plan.expr import Exclude
-
     for e in origin.iter_left():
         if isinstance(e, Exclude):
             yield from e.names
@@ -459,9 +450,7 @@ def prepare_excluded(
     return frozenset(exclude)
 
 
-def _all_columns_match(origin: ExprIR, /, columns: expr.Columns) -> bool:
-    from narwhals._plan.expr import Columns
-
+def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
     it = (e == columns if isinstance(e, Columns) else True for e in origin.iter_left())
     return all(it)
 
@@ -470,7 +459,7 @@ def expand_columns(
     origin: ExprIR,
     /,
     result: ResultIRs,
-    columns: expr.Columns,
+    columns: Columns,
     *,
     col_names: FrozenColumns,
     exclude: Excluded,
@@ -489,7 +478,7 @@ def expand_indices(
     origin: ExprIR,
     /,
     result: ResultIRs,
-    indices: expr.IndexColumns,
+    indices: IndexColumns,
     *,
     schema: FrozenSchema,
     exclude: Excluded,
@@ -528,21 +517,21 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
         - Expanding all selections into `Column`
         - Dealing with `FunctionExpr.input`
     """
-    from narwhals._plan import expr, meta
+    from narwhals._plan import meta
 
-    if meta.has_expr_ir(origin, expr.KeepName, expr.RenameAlias):
-        if isinstance(origin, expr.KeepName):
+    if meta.has_expr_ir(origin, KeepName, RenameAlias):
+        if isinstance(origin, KeepName):
             parent = origin.expr
             roots = parent.meta.root_names()
             alias = next(iter(roots))
-            return expr.Alias(expr=parent, name=alias)
-        elif isinstance(origin, expr.RenameAlias):
+            return Alias(expr=parent, name=alias)
+        elif isinstance(origin, RenameAlias):
             parent = origin.expr
             leaf_name_or_err = meta.get_single_leaf_name(parent)
             if not isinstance(leaf_name_or_err, str):
                 raise leaf_name_or_err
             alias = origin.function(leaf_name_or_err)
-            return expr.Alias(expr=parent, name=alias)
+            return Alias(expr=parent, name=alias)
         else:
             msg = "`keep`, `suffix`, `prefix` should be last expression"
             raise InvalidOperationError(msg)
