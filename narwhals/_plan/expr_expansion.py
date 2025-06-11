@@ -53,6 +53,7 @@ from narwhals._plan.common import (
     is_regex_projection,
 )
 from narwhals._plan.exceptions import column_not_found_error, duplicate_error
+from narwhals._plan.expr import col
 from narwhals.dtypes import DType
 from narwhals.exceptions import (
     ColumnNotFoundError,
@@ -287,7 +288,7 @@ def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, expr.Nth):
-            return expr.Column(name=schema.names[child.index])
+            return col(schema.names[child.index])
         return child
 
     return origin.map_ir(fn)
@@ -309,11 +310,11 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
 
     [`polars_plan::plans::conversion::expr_expansion::expand_columns`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L187-L191
     """
-    from narwhals._plan.expr import Column, Columns, Exclude
+    from narwhals._plan.expr import Columns, Exclude
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Columns):
-            return Column(name=name)
+            return col(name)
         if isinstance(child, Exclude):
             return child.expr
         return child
@@ -322,11 +323,11 @@ def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
 
 
 def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
-    from narwhals._plan.expr import Column, Exclude, IndexColumns
+    from narwhals._plan.expr import Exclude, IndexColumns
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, IndexColumns):
-            return Column(name=name)
+            return col(name)
         if isinstance(child, Exclude):
             return child.expr
         return child
@@ -336,11 +337,11 @@ def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
 
 def replace_wildcard_with_column(origin: ExprIR, /, name: str) -> ExprIR:
     """`expr.All` and `Exclude`."""
-    from narwhals._plan.expr import All, Column, Exclude
+    from narwhals._plan.expr import All, Exclude
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, All):
-            return Column(name=name)
+            return col(name)
         if isinstance(child, Exclude):
             return child.expr
         return child

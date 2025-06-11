@@ -74,7 +74,13 @@ __all__ = [
     "SortBy",
     "Ternary",
     "WindowExpr",
+    "col",
 ]
+
+
+def col(name: str, /) -> Column:
+    """Sugar for a **single** column selection node."""
+    return Column(name=name)
 
 
 class Alias(ExprIR):
@@ -117,14 +123,10 @@ class Column(ExprIR):
         return plx.col(self.name)
 
     def with_name(self, name: str, /) -> Column:
-        return self if name == self.name else Column(name=name)
+        return self if name == self.name else col(name)
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self)
-
-
-def _col(name: str, /) -> Column:
-    return Column(name=name)
 
 
 class _ColumnSelection(ExprIR):
