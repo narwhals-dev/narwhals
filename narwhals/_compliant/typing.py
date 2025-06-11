@@ -60,10 +60,12 @@ CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
-EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any, Any]"
+EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
+EagerNamespaceAny: TypeAlias = (
+    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame]"
+)
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
@@ -124,7 +126,7 @@ EagerSeriesT = TypeVar("EagerSeriesT", bound=EagerSeriesAny)
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=True)
 
 # NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any, Any]")
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any]")
 
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
@@ -147,6 +149,6 @@ EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
 
 WindowFunction: TypeAlias = (
-    "Callable[[CompliantFrameT, WindowInputs], Sequence[NativeExprT]]"
+    "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
 )
 """A function evaluated with `over(partition_by=..., order_by=...)`."""
