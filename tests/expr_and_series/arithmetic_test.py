@@ -184,13 +184,17 @@ def test_series_floordiv_by_zero(
 ) -> None:
     data: dict[str, list[int]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    # pyarrow backend raises divide by zero error
+    # pyarrow backend floordiv raises divide by zero error
     if "pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    # polars floordiv by zero always returns null
+    # polars backend floordiv by zero always returns null
     if "polars" in str(constructor_eager):
         floordiv_result = df["a"] // df["b"]
         assert all(floordiv_result.is_null())
+    # pandas[nullable] backend floordiv always returns 0
+    elif all(x in str(constructor_eager) for x in ["pandas", "nullable"]):
+        floordiv_result = df["a"] // df["b"]
+        assert_equal_data({"a": floordiv_result}, {"a": [0]})
     else:
         floordiv_result = df["a"] // df["b"]
         assert_equal_data({"a": floordiv_result}, {"a": [expected]})
@@ -227,11 +231,11 @@ def test_floordiv_by_zero(
     # ibis backend floordiv cannot cast value to inf or -inf
     if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
         request.applymarker(pytest.mark.xfail)
-    # duckdb floordiv return None
+    # duckdb backend floordiv return None
     if "duckdb" in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
-    # polars floordiv returns null
+    # polars backend floordiv returns null
     elif "polars" in str(constructor) and "lazy" not in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert all(floordiv_result["a"].is_null())
@@ -239,6 +243,10 @@ def test_floordiv_by_zero(
     elif all(x in str(constructor) for x in ["polars", "lazy"]):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
+    # pandas[nullable] backend floordiv always returns 0
+    elif all(x in str(constructor) for x in ["pandas", "nullable"]):
+        floordiv_result = df.select(nw.col("a") // right)
+        assert_equal_data(floordiv_result, {"a": [0]})
     else:
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [expected]})
