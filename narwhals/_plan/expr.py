@@ -15,10 +15,7 @@ from narwhals._plan.common import (
     is_non_nested_literal,
     is_regex_projection,
 )
-from narwhals._plan.exceptions import (
-    column_not_found_error,
-    function_expr_invalid_operation_error,
-)
+from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
     ExprT,
@@ -40,7 +37,7 @@ from narwhals._plan.typing import (
 from narwhals._utils import flatten
 
 if t.TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches  # noqa: F401
@@ -78,12 +75,6 @@ __all__ = [
     "Ternary",
     "WindowExpr",
 ]
-
-_Schema: TypeAlias = "t.Mapping[str, DType]"
-"""Equivalent to `expr_expansion.FrozenSchema`.
-
-Using temporarily before adding caching into the mix.
-"""
 
 
 class Alias(ExprIR):
@@ -136,16 +127,8 @@ def _col(name: str, /) -> Column:
     return Column(name=name)
 
 
-def _cols(names: t.Iterable[str], /) -> Seq[Column]:
-    return tuple(_col(name) for name in names)
-
-
 class _ColumnSelection(ExprIR):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-    def expand_columns(self, schema: _Schema, /) -> Seq[Column]:
-        """Transform selection in context of `schema` into simpler nodes."""
-        raise NotImplementedError
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self)
@@ -162,11 +145,6 @@ class Columns(_ColumnSelection):
     def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
         return plx.col(*self.names)
 
-    def expand_columns(self, schema: _Schema) -> Seq[Column]:
-        if set(schema).issuperset(self.names):
-            return _cols(self.names)
-        raise column_not_found_error(self.names, schema)
-
 
 class Nth(_ColumnSelection):
     __slots__ = ("index",)
@@ -175,10 +153,6 @@ class Nth(_ColumnSelection):
 
     def __repr__(self) -> str:
         return f"nth({self.index})"
-
-    def expand_columns(self, schema: _Schema) -> Seq[Column]:
-        name = tuple(schema)[self.index]
-        return (_col(name),)
 
 
 class IndexColumns(_ColumnSelection):
@@ -196,10 +170,6 @@ class IndexColumns(_ColumnSelection):
     def __repr__(self) -> str:
         return f"index_columns({self.indices!r})"
 
-    def expand_columns(self, schema: _Schema) -> Seq[Column]:
-        names = tuple(schema)
-        return _cols(names[index] for index in self.indices)
-
 
 class All(_ColumnSelection):
     """Aka Wildcard (`pl.all()` or `pl.col("*")`).
@@ -209,9 +179,6 @@ class All(_ColumnSelection):
 
     def __repr__(self) -> str:
         return "all()"
-
-    def expand_columns(self, schema: _Schema) -> Seq[Column]:
-        return _cols(schema)
 
 
 class Exclude(_ColumnSelection):
@@ -236,12 +203,6 @@ class Exclude(_ColumnSelection):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"
-
-    def expand_columns(self, schema: _Schema) -> Seq[Column]:
-        if not isinstance(self.expr, All):
-            msg = f"Only {All()!r} is currently supported with `exclude()`"
-            raise NotImplementedError(msg)
-        return _cols(name for name in schema if name not in self.names)
 
     def iter_left(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_left()

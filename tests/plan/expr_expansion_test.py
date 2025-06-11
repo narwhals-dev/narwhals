@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import IntoExpr, is_expr
-from narwhals._plan.expr import Alias, Column, Columns, _ColumnSelection
+from narwhals._plan.expr import Alias, Columns
 from narwhals._plan.expr_expansion import (
     freeze_schema,
     prepare_projection,
@@ -19,8 +19,6 @@ from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeIs
-
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummyExpr, DummySelector
     from narwhals._plan.typing import MapIR
@@ -69,67 +67,6 @@ def assert_expr_ir_equal(left: DummyExpr | ExprIR, right: DummyExpr | ExprIR) ->
     lhs = left._ir if is_expr(left) else left
     rhs = right._ir if is_expr(right) else right
     assert lhs == rhs
-
-
-# NOTE: The meta check doesn't provide typing and describes a superset of `_ColumnSelection`
-def is_column_selection(obj: ExprIR) -> TypeIs[_ColumnSelection]:
-    return obj.meta.is_column_selection(allow_aliasing=False) and isinstance(
-        obj, _ColumnSelection
-    )
-
-
-def seq_column_from_names(names: Sequence[str]) -> tuple[Column, ...]:
-    return tuple(Column(name=name) for name in names)
-
-
-@pytest.mark.parametrize(
-    ("expr", "into_expected"),
-    [
-        (nwd.col("a", "c"), ["a", "c"]),
-        (nwd.col("o", "k", "b"), ["o", "k", "b"]),
-        (nwd.nth(5), ["f"]),
-        (nwd.nth(0, 1, 2, 3, 4), ["a", "b", "c", "d", "e"]),
-        (nwd.nth(-1), ["u"]),
-        (nwd.nth([-2, -3, -4]), ["s", "r", "q"]),
-        (
-            nwd.all(),
-            [
-                "a",
-                "b",
-                "c",
-                "d",
-                "e",
-                "f",
-                "g",
-                "h",
-                "i",
-                "j",
-                "k",
-                "l",
-                "m",
-                "n",
-                "o",
-                "p",
-                "q",
-                "r",
-                "s",
-                "u",
-            ],
-        ),
-        (
-            nwd.exclude("a", "c", "e", "l", "q"),
-            ["b", "d", "f", "g", "h", "i", "j", "k", "m", "n", "o", "p", "r", "s", "u"],
-        ),
-    ],
-)
-def test_expand_columns_root(
-    expr: DummyExpr, into_expected: Sequence[str], schema_1: dict[str, DType]
-) -> None:
-    expected = seq_column_from_names(into_expected)
-    selection = expr._ir
-    assert is_column_selection(selection)
-    actual = selection.expand_columns(schema_1)
-    assert actual == expected
 
 
 def udf_name_map(name: str) -> str:
