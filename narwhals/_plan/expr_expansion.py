@@ -365,9 +365,7 @@ def rewrite_projections(
     *,  # NOTE: Represents group_by keys
     schema: FrozenSchema,
 ) -> Seq[ExprIR]:
-    # NOTE: This is where the mutable `result` is initialized
-    result_length = len(input) + len(schema)
-    result: deque[ExprIR] = deque(maxlen=result_length)
+    result: deque[ExprIR] = deque()
     for expr in input:
         expanded = expand_function_inputs(expr, schema=schema)
         flags = ExpansionFlags.from_ir(expanded)
@@ -407,8 +405,8 @@ def replace_and_add_to_results(
         result = replace_wildcard(origin, result, col_names=schema.names, exclude=exclude)
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        origin = rewrite_special_aliases(origin)
-        result.append(origin)
+        expanded = rewrite_special_aliases(origin)
+        result.append(expanded)
     return result
 
 
@@ -451,9 +449,9 @@ def expand_columns(
         raise ComputeError(msg)
     for name in columns.names:
         if name not in exclude:
-            new_expr = _replace_columns_exclude(origin, name)
-            new_expr = rewrite_special_aliases(new_expr)
-            result.append(new_expr)
+            expanded = _replace_columns_exclude(origin, name)
+            expanded = rewrite_special_aliases(expanded)
+            result.append(expanded)
     return result
 
 
@@ -475,9 +473,9 @@ def expand_indices(
             raise ComputeError(msg)
         name = names[idx]
         if name not in exclude:
-            new_expr = replace_index_with_column(origin, name)
-            new_expr = rewrite_special_aliases(new_expr)
-            result.append(new_expr)
+            expanded = replace_index_with_column(origin, name)
+            expanded = rewrite_special_aliases(expanded)
+            result.append(expanded)
     return result
 
 
@@ -486,9 +484,9 @@ def replace_wildcard(
 ) -> ResultIRs:
     for name in col_names:
         if name not in exclude:
-            new_expr = replace_wildcard_with_column(origin, name)
-            new_expr = rewrite_special_aliases(new_expr)
-            result.append(new_expr)
+            expanded = replace_wildcard_with_column(origin, name)
+            expanded = rewrite_special_aliases(expanded)
+            result.append(expanded)
     return result
 
 
