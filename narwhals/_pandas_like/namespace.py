@@ -19,8 +19,6 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
-    from typing import Any  # noqa: F401
-
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
