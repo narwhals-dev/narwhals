@@ -300,9 +300,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """
         ...
 
-    def __narwhals_namespace__(
-        self,
-    ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
+    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any, Any]: ...
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
