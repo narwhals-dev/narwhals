@@ -61,3 +61,13 @@ def test_sumh_transformations(constructor: Constructor) -> None:
     result = df.select(d=nw.sum_horizontal("a", nw.lit(None, dtype=nw.Float64), "c"))
     expected = {"d": [8.0, 10.0, 12.0]}
     assert_equal_data(result, expected)
+
+
+def test_sumh_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2]}
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(d=nw.sum_horizontal(nw.sum("a"), nw.sum("b"))).sort("i")
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2], "d": [21, 21, 21]}
+    assert_equal_data(result, expected)
