@@ -17,6 +17,7 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Mapping,
     Protocol,
     Sequence,
     TypeVar,
@@ -352,14 +353,8 @@ class Implementation(NoAutoEnum):
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
 
-        from importlib import import_module
-
-        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
-        module = import_module(module_name)
-
         validate_backend_version(self, self._backend_version())
-
-        return module
+        return self._native_namespace
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -574,13 +569,40 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        from importlib.metadata import version
+        """Returns backend version.
 
-        distribution_name = _IMPLEMENTATION_TO_DISTRIBUTION_NAME.get(self, self.value)
-        return parse_version(version=version(distribution_name))
+        As a biproduct of loading the native namespace, we also store it as an attribute
+        under the `_native_namespace` name.
+        """
+        if self is Implementation.UNKNOWN:  # pragma: no cover
+            msg = "Cannot return backend version from UNKNOWN Implementation"
+            raise AssertionError(msg)
+
+        from importlib import import_module
+
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        self._native_namespace = import_module(module_name)
+
+        into_version: ModuleType | str
+        if self.is_sqlframe():
+            import sqlframe._version
+
+            into_version = sqlframe._version
+        elif self.is_pyspark() or self.is_pyspark_connect():  # pragma: no cover
+            import pyspark  # ignore-banned-import
+
+            into_version = pyspark
+        elif self.is_dask():
+            import dask  # ignore-banned-import
+
+            into_version = dask
+        else:
+            into_version = self._native_namespace
+
+        return parse_version(version=into_version)
 
 
-MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
+MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (0, 25, 3),
     Implementation.MODIN: (0, 25, 3),
     Implementation.CUDF: (24, 10),
@@ -594,19 +616,13 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.SQLFRAME: (3, 22, 0),
 }
 
-_IMPLEMENTATION_TO_MODULE_NAME: dict[Implementation, str] = {
+_IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.DASK: "dask.dataframe",
     Implementation.MODIN: "modin.pandas",
     Implementation.PYSPARK: "pyspark.sql",
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
 """Stores non default mapping from Implementation to module name"""
-
-_IMPLEMENTATION_TO_DISTRIBUTION_NAME: dict[Implementation, str] = {
-    Implementation.IBIS: "ibis-framework",
-    Implementation.PYSPARK_CONNECT: "pyspark",
-}
-"""Stores non default mapping from Implementation to distribution name"""
 
 
 def validate_backend_version(
