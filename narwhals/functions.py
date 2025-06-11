@@ -1798,7 +1798,7 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
     ...     (None, None, None),
     ... ]
     >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
-    >>> (nw.from_native(df).select(nw.coalesce("a", "b", "c", -1)))
+    >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
     ┌──────────────────┐
     |Narwhals DataFrame|
     |------------------|
