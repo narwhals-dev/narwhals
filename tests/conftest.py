@@ -304,7 +304,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "cum_",
                     "fill_null_strategies",
                     "fill_null_limits",
-                    "last_distinct",
                     "concat_str",
                     "fill_null",
                     "is_unique",

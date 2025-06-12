@@ -402,6 +402,20 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
         return self._with_window_function(func)
 
+    def is_last_distinct(self) -> Self:
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            return [
+                row_number().over(
+                    self.partition_by(*inputs.partition_by, expr).order_by(
+                        *inputs.order_by, desc=True
+                    )
+                )
+                == lit(1)
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     def diff(self) -> Self:
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
             window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
@@ -457,7 +471,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     median = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/3491
     unique = not_implemented()
     is_unique = not_implemented()
-    is_last_distinct = not_implemented()
     cum_sum = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
