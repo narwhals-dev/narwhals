@@ -278,6 +278,7 @@ class PolarsExpr:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    exp: Method[Self]
     fill_null: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]

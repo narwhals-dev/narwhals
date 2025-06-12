@@ -1156,6 +1156,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def log(self, base: float) -> Self:
         return self._with_native(pc.logb(self.native, lit(base)))
 
+    def exp(self) -> Self:
+        return self._with_native(pc.exp(self.native))
+
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)

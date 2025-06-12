@@ -653,6 +653,11 @@ class DaskExpr(
 
         return self._with_callable(_log, "log")
 
+    def exp(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.exp, "exp")
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
