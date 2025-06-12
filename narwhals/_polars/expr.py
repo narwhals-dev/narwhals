@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version
-    from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 
 class PolarsExpr:
@@ -61,7 +61,7 @@ class PolarsExpr:
         name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"
         return {name: min_samples}
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
@@ -139,7 +139,7 @@ class PolarsExpr:
         return self._with_native(native)
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
+        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
@@ -155,7 +155,7 @@ class PolarsExpr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
@@ -278,6 +278,7 @@ class PolarsExpr:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    exp: Method[Self]
     fill_null: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]

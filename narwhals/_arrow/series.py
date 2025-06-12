@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -165,7 +166,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
@@ -549,7 +550,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def is_nan(self) -> Self:
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
 
@@ -762,7 +763,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
@@ -1155,6 +1156,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def log(self, base: float) -> Self:
         return self._with_native(pc.logb(self.native, lit(base)))
+
+    def exp(self) -> Self:
+        return self._with_native(pc.exp(self.native))
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

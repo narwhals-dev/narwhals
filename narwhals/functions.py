@@ -9,7 +9,6 @@ from narwhals._expression_parsing import (
     ExprKind,
     ExprMetadata,
     apply_n_ary_operation,
-    check_expressions_preserve_length,
     combine_metadata,
     extract_compliant,
     is_scalar_like,
@@ -32,7 +31,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.expr import Expr
 from narwhals.translate import from_native, to_native
 
@@ -50,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
+        IntoDType,
         IntoExpr,
         IntoSeriesT,
         NativeFrame,
@@ -172,7 +172,7 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -226,7 +226,7 @@ def new_series(
 def _new_series_impl(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str,
 ) -> Series[Any]:
@@ -1449,9 +1449,16 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates))
-        check_expressions_preserve_length(self._predicate, function_name="when")
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
+        if self._predicate._metadata.is_scalar_like and not kind.is_scalar_like:
+            msg = (
+                "If you pass a scalar-like predicate to `nw.when`, then "
+                "the `then` value must also be scalar-like."
+            )
+            raise ShapeError(msg)
+
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1473,11 +1480,21 @@ class When:
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
+        if self._metadata.is_scalar_like and not is_scalar_like(kind):
+            msg = (
+                "If you pass a scalar-like predicate to `nw.when`, then "
+                "the `otherwise` value must also be scalar-like."
+            )
+            raise ShapeError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
-            if is_scalar_like(kind) and is_compliant_expr(compliant_value):
+            if (
+                not self._metadata.is_scalar_like
+                and is_scalar_like(kind)
+                and is_compliant_expr(compliant_value)
+            ):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)  # type: ignore[attr-defined, no-any-return]
 
@@ -1581,7 +1598,7 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     )
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:

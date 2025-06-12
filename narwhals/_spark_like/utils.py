@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._utils import Version
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
     SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
@@ -127,7 +128,7 @@ def fetch_session_time_zone(session: SparkSession) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version, spark_types: ModuleType
+    dtype: IntoDType, version: Version, spark_types: ModuleType
 ) -> _NativeDType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
