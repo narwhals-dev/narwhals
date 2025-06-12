@@ -12,7 +12,6 @@ from narwhals._plan import (
 from narwhals._plan.common import (
     ExprIR,
     into_dtype,
-    is_expr,
     is_non_nested_literal,
     py_to_narwhals_dtype,
 )
@@ -29,7 +28,7 @@ if t.TYPE_CHECKING:
 
     from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.expr import SortBy
-    from narwhals._plan.typing import IntoExpr
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -144,7 +143,9 @@ def concat_str(
     )
 
 
-def when(*predicates: IntoExpr | t.Iterable[IntoExpr]) -> When:
+def when(
+    *predicates: IntoExprColumn | t.Iterable[IntoExprColumn], **constraints: t.Any
+) -> When:
     """Start a `when-then-otherwise` expression.
 
     Examples:
@@ -167,11 +168,10 @@ def when(*predicates: IntoExpr | t.Iterable[IntoExpr]) -> When:
         Narwhals DummyExpr (main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
-    if builtins.len(predicates) == 1 and is_expr(predicates[0]):
-        expr = predicates[0]
-    else:
-        expr = all_horizontal(*predicates)
-    return When._from_expr(expr)
+    condition = parse.parse_predicates_constraints_into_expr_ir(
+        *predicates, **constraints
+    )
+    return When._from_ir(condition)
 
 
 def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:

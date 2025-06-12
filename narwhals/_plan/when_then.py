@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable
 
 from narwhals._plan.common import Immutable, is_expr
 from narwhals._plan.dummy import DummyExpr
-from narwhals._plan.expr_parsing import parse_into_expr_ir
+from narwhals._plan.expr_parsing import (
+    parse_into_expr_ir,
+    parse_predicates_constraints_into_expr_ir,
+)
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import Ternary
-    from narwhals._plan.typing import IntoExpr, Seq
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
 
 
 class When(Immutable):
@@ -24,6 +27,10 @@ class When(Immutable):
     def _from_expr(expr: DummyExpr, /) -> When:
         return When(condition=expr._ir)
 
+    @staticmethod
+    def _from_ir(ir: ExprIR, /) -> When:
+        return When(condition=ir)
+
 
 class Then(Immutable, DummyExpr):
     __slots__ = ("condition", "statement")
@@ -31,10 +38,12 @@ class Then(Immutable, DummyExpr):
     condition: ExprIR
     statement: ExprIR
 
-    def when(self, condition: IntoExpr, /) -> ChainedWhen:
+    def when(
+        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+    ) -> ChainedWhen:
+        condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
-            conditions=(self.condition, parse_into_expr_ir(condition)),
-            statements=(self.statement,),
+            conditions=(self.condition, condition), statements=(self.statement,)
         )
 
     def otherwise(self, statement: IntoExpr, /) -> DummyExpr:
@@ -78,10 +87,12 @@ class ChainedThen(Immutable, DummyExpr):
     conditions: Seq[ExprIR]
     statements: Seq[ExprIR]
 
-    def when(self, condition: IntoExpr, /) -> ChainedWhen:
+    def when(
+        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+    ) -> ChainedWhen:
+        condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
-            conditions=(*self.conditions, parse_into_expr_ir(condition)),
-            statements=self.statements,
+            conditions=(*self.conditions, condition), statements=self.statements
         )
 
     def otherwise(self, statement: IntoExpr, /) -> DummyExpr:
