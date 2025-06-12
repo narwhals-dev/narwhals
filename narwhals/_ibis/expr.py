@@ -1,7 +1,8 @@
 from __future__ import annotations
+from functools import partial
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, cast, Iterator
 
 import ibis
 from ibis import _ as col
@@ -166,6 +167,16 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Ibis does its own broadcasting.
         return self
+    
+    def sort(self, *cols: ir.Column | str, descending: bool =False, nulls_last: bool = False) -> Iterator[ir.Value]:
+        mapping = {
+            (False, False): partial(ibis.asc, nulls_first=True),
+            (True, False): partial(ibis.desc, nulls_first=True),
+            (False, True): partial(ibis.asc, nulls_first=False),
+            (True, True): partial(ibis.desc, nulls_first=False),
+        }
+        sort = mapping[(descending, nulls_last)]
+        yield from (sort(col) for col in cols)
 
     @classmethod
     def from_column_names(
@@ -509,7 +520,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                     ibis.window(
                         following=0,
                         group_by=inputs.partition_by,
-                        order_by=inputs.order_by,
+                        order_by=self.sort(*inputs.order_by),
                     )
                 )
                 for expr in self(df)
