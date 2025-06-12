@@ -549,3 +549,15 @@ def test_prepare_projection_horizontal_alias(
     out_irs, _ = prepare_projection(irs, schema_1)
     assert len(out_irs) == 1
     assert out_irs[0] == function("a", "b", "c").alias("alias(x1)").alias("alias(x2)")._ir
+
+
+@pytest.mark.parametrize(
+    "into_exprs", [nwd.nth(-21), nwd.nth(-1, 2, 54, 0), nwd.nth(20), nwd.nth([-10, -100])]
+)
+def test_prepare_projection_index_error(
+    into_exprs: IntoExpr | Iterable[IntoExpr], schema_1: dict[str, DType]
+) -> None:
+    irs = parse_into_seq_of_expr_ir(into_exprs)
+    pattern = re.compile(r"invalid.+index.+nth", re.DOTALL | re.IGNORECASE)
+    with pytest.raises(ComputeError, match=pattern):
+        prepare_projection(irs, schema_1)

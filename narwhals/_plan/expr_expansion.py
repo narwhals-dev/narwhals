@@ -51,7 +51,11 @@ from narwhals._plan.common import (
     SelectorIR,
     is_horizontal_reduction,
 )
-from narwhals._plan.exceptions import column_not_found_error, duplicate_error
+from narwhals._plan.exceptions import (
+    column_index_error,
+    column_not_found_error,
+    duplicate_error,
+)
 from narwhals._plan.expr import (
     Alias,
     All,
@@ -281,12 +285,22 @@ def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR
 
 
 def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
+    n_fields = len(schema)
+    names = tuple(schema)
+
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Nth):
-            return col(schema.names[child.index])
+            if not is_index_in_range(child.index, n_fields):
+                raise column_index_error(child.index, names)
+            return col(names[child.index])
         return child
 
     return origin.map_ir(fn)
+
+
+def is_index_in_range(index: int, n_fields: int) -> bool:
+    idx = index + n_fields if index < 0 else index
+    return not (idx < 0 or idx >= n_fields)
 
 
 def remove_exclude(origin: ExprIR, /) -> ExprIR:
@@ -453,11 +467,9 @@ def expand_indices(
     n_fields = len(schema)
     names = tuple(schema)
     for index in indices.indices:
-        idx = index + n_fields if index < 0 else index
-        if idx < 0 or idx > n_fields:
-            msg = f"invalid column index {idx!r}"
-            raise ComputeError(msg)
-        name = names[idx]
+        if not is_index_in_range(index, n_fields):
+            raise column_index_error(index, names)
+        name = names[index]
         if name not in exclude:
             expanded = replace_with_column(origin, IndexColumns, name)
             expanded = rewrite_special_aliases(expanded)
