@@ -4,7 +4,7 @@ import os
 import re
 from datetime import timezone
 from enum import Enum, auto
-from functools import wraps
+from functools import lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from secrets import token_hex
@@ -354,7 +354,9 @@ class Implementation(NoAutoEnum):
             raise AssertionError(msg)
 
         validate_backend_version(self, self._backend_version())
-        return self._native_namespace
+
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        return _import_native_namespace(module_name)
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -578,10 +580,8 @@ class Implementation(NoAutoEnum):
             msg = "Cannot return backend version from UNKNOWN Implementation"
             raise AssertionError(msg)
 
-        from importlib import import_module
-
         module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
-        self._native_namespace = import_module(module_name)
+        native_namespace = _import_native_namespace(module_name)
 
         into_version: ModuleType | str
         if self.is_sqlframe():
@@ -597,7 +597,7 @@ class Implementation(NoAutoEnum):
 
             into_version = dask
         else:
-            into_version = self._native_namespace
+            into_version = native_namespace
 
         return parse_version(version=into_version)
 
@@ -631,6 +631,13 @@ def validate_backend_version(
     if backend_version < (min_version := MIN_VERSIONS[implementation]):
         msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
         raise ValueError(msg)
+
+
+@lru_cache(maxsize=16)
+def _import_native_namespace(module_name: str) -> ModuleType:
+    from importlib import import_module
+
+    return import_module(module_name)
 
 
 def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
