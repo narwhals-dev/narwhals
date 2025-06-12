@@ -11,6 +11,7 @@ from narwhals._plan import (
 )
 from narwhals._plan.common import (
     ExprIR,
+    into_dtype,
     is_expr,
     is_non_nested_literal,
     py_to_narwhals_dtype,
@@ -21,7 +22,6 @@ from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
-from narwhals.dtypes import DType
 from narwhals.exceptions import OrderDependentExprError
 
 if t.TYPE_CHECKING:
@@ -30,7 +30,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.expr import SortBy
     from narwhals._plan.typing import IntoExpr
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 
 def col(*names: str | t.Iterable[str]) -> DummyExpr:
@@ -54,15 +54,17 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
 
 
 def lit(
-    value: NonNestedLiteral | DummySeries, dtype: DType | type[DType] | None = None
+    value: NonNestedLiteral | DummySeries, dtype: IntoDType | None = None
 ) -> DummyExpr:
     if isinstance(value, DummySeries):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not is_non_nested_literal(value):
         msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
         raise TypeError(msg)
-    if dtype is None or not isinstance(dtype, DType):
+    if dtype is None:
         dtype = py_to_narwhals_dtype(value, Version.MAIN)
+    else:
+        dtype = into_dtype(dtype)
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 

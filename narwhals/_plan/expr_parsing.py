@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.common import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
-    from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 T = TypeVar("T")
 
@@ -82,7 +82,7 @@ We only support cases `a`, `b`, but the typing for most contexts is more permiss
 
 
 def parse_into_expr_ir(
-    input: IntoExpr, *, str_as_lit: bool = False, dtype: DType | None = None
+    input: IntoExpr, *, str_as_lit: bool = False, dtype: IntoDType | None = None
 ) -> ExprIR:
     """Parse a single input into an `ExprIR` node."""
     from narwhals._plan import demo as nwd

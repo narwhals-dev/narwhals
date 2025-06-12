@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         NativeSeries,
         NumericLiteral,
         RankMethod,
@@ -367,7 +368,7 @@ class DummyExpr:
         old: t.Sequence[t.Any] | t.Mapping[t.Any, t.Any],
         new: t.Sequence[t.Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         before: Seq[t.Any]
         after: Seq[t.Any]
@@ -395,7 +396,7 @@ class DummyExpr:
     def map_batches(
         self,
         function: Udf,
-        return_dtype: DType | None = None,
+        return_dtype: IntoDType | None = None,
         *,
         is_elementwise: bool = False,
         returns_scalar: bool = False,

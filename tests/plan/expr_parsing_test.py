@@ -77,7 +77,7 @@ def test_parsing(
         (["a", "b", "c"]),
         (nwd.col("d", "e", "f"), nwd.col("g"), "q", nwd.nth(9)),
         ((nwd.lit(1),)),
-        ([nwd.lit(1), nwd.lit(2), nwd.lit(3)]),
+        ([nwd.lit(1), nwd.lit(2, nw.Int64), nwd.lit(3, nw.Int64())]),
     ],
 )
 def test_function_expr_horizontal(

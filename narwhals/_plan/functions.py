@@ -17,8 +17,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import AnonymousExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals._plan.typing import Seq, Udf
-    from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
+    from narwhals.typing import FillNullStrategy, IntoDType
 
 
 class Abs(Function):
@@ -372,7 +371,7 @@ class ReplaceStrict(Function):
 
     old: Seq[Any]
     new: Seq[Any]
-    return_dtype: DType | type[DType] | None
+    return_dtype: IntoDType | None
 
     @property
     def function_options(self) -> FunctionOptions:
@@ -400,7 +399,7 @@ class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
 
     function: Udf
-    return_dtype: DType | None
+    return_dtype: IntoDType | None
     is_elementwise: bool
     returns_scalar: bool
 

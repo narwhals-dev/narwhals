@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._plan.typing import ExprT, IRNamespaceT, MapIR, Ns, Seq
+from narwhals.dtypes import DType
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
@@ -16,8 +17,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import FunctionExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedDType, NonNestedLiteral
 
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
@@ -367,7 +367,7 @@ def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
     dtypes = version.dtypes
-    mapping: dict[type[NonNestedLiteral], type[DType]] = {
+    mapping: dict[type[NonNestedLiteral], type[NonNestedDType]] = {
         int: dtypes.Int64,
         float: dtypes.Float64,
         str: dtypes.String,
@@ -381,6 +381,12 @@ def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN)
         type(None): dtypes.Unknown,
     }
     return mapping.get(type(obj), dtypes.Unknown)()
+
+
+def into_dtype(dtype: IntoDType, /) -> DType:
+    if isinstance(dtype, type) and issubclass(dtype, DType):
+        return dtype()
+    return dtype
 
 
 def collect(iterable: Seq[T] | Iterable[T], /) -> Seq[T]:
