@@ -209,6 +209,17 @@ class DummyExpr:
     def log(self, base: float = math.e) -> Self:
         return self._from_ir(F.Log(base=base).to_function_expr(self._ir))
 
+    def exp(self) -> Self:
+        return self._from_ir(F.Exp().to_function_expr(self._ir))
+
+    def sqrt(self) -> Self:
+        return self._from_ir(F.Sqrt().to_function_expr(self._ir))
+
+    def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
+        return self._from_ir(
+            F.Kurtosis(fisher=fisher, bias=bias).to_function_expr(self._ir)
+        )
+
     def null_count(self) -> Self:
         return self._from_ir(F.NullCount().to_function_expr(self._ir))
 

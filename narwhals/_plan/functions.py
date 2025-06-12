@@ -92,6 +92,15 @@ class Log(Function):
         return "log"
 
 
+class Exp(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "exp"
+
+
 class Pow(Function):
     @property
     def function_options(self) -> FunctionOptions:
@@ -99,6 +108,29 @@ class Pow(Function):
 
     def __repr__(self) -> str:
         return "pow"
+
+
+class Sqrt(Function):
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "sqrt"
+
+
+class Kurtosis(Function):
+    __slots__ = ("bias", "fisher")
+
+    fisher: bool
+    bias: bool
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.aggregation()
+
+    def __repr__(self) -> str:
+        return "kurtosis"
 
 
 class FillNull(Function):
