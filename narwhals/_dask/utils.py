@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
-    from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 else:
     try:
         import dask.dataframe.dask_expr as dx
@@ -88,7 +88,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:  # noqa: C901, PLR0912
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"

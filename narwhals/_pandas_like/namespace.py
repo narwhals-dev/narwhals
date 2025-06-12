@@ -21,8 +21,7 @@ from narwhals._pandas_like.utils import align_series_full_broadcast
 if TYPE_CHECKING:
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 VERTICAL: Literal[0] = 0
 HORIZONTAL: Literal[1] = 1
@@ -58,9 +57,7 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> PandasLikeExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(
                 data=[value],

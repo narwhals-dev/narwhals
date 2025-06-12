@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -514,7 +514,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(f)._with_window_function(window_f)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def _cast(expr: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes
@@ -922,6 +922,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
 
         return self._with_elementwise(_log)
+
+    def exp(self) -> Self:
+        def _exp(expr: Column) -> Column:
+            return self._F.exp(expr)
+
+        return self._with_elementwise(_exp)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:
