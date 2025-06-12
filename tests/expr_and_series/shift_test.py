@@ -30,13 +30,11 @@ def test_shift(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_shift_lazy(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_shift_lazy(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "daft" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
         nw.col("i") > 1

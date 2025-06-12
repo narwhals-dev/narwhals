@@ -302,11 +302,9 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 for x in (
                     "rolling_",
                     "cum_",
-                    "shift_test",
                     "fill_null_strategies",
                     "fill_null_limits",
                     "last_distinct",
-                    "first_distinct",
                     "concat_str",
                     "fill_null",
                     "is_unique",
@@ -315,8 +313,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "replace_time_zone",
                     "sumh_broadcasting",
                     "over_pushdown",
-                    # "diff_lazy_grouped",
-                    "shift_lazy_grouped",
                 )
             )
             and constructor == "daft"

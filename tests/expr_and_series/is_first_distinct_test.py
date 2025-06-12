@@ -24,15 +24,11 @@ def test_is_first_distinct_expr(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_first_distinct_expr_lazy(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "daft" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
@@ -54,10 +50,7 @@ def test_is_first_distinct_expr_lazy_grouped(
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if any(
-        x in str(constructor)
-        for x in ("dask", "pandas", "pyarrow", "cudf", "modin", "daft")
-    ):
+    if any(x in str(constructor) for x in ("dask", "pandas", "pyarrow", "cudf", "modin")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))

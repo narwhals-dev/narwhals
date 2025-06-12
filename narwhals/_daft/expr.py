@@ -4,6 +4,8 @@ import operator
 from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
 import daft
+from daft import lit
+from daft.functions import row_number
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
@@ -379,6 +381,27 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def is_nan(self) -> Self:
         return self._with_callable(lambda _input: _input.float.is_nan())
 
+    def shift(self, n: int) -> Self:
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
+            return [expr.lag(n).over(window) for expr in self(df)]
+
+        return self._with_window_function(func)
+
+    def is_first_distinct(self) -> Self:
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            return [
+                row_number().over(
+                    self.partition_by(*inputs.partition_by, expr).order_by(
+                        *inputs.order_by
+                    )
+                )
+                == lit(1)
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     def diff(self) -> Self:
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
             window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
@@ -433,9 +456,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     rank = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/4290
     median = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/3491
     unique = not_implemented()
-    shift = not_implemented()
     is_unique = not_implemented()
-    is_first_distinct = not_implemented()
     is_last_distinct = not_implemented()
     cum_sum = not_implemented()
     cum_count = not_implemented()
