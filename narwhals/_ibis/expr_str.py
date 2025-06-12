@@ -7,7 +7,7 @@ import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
 from narwhals._ibis.utils import lit
-from narwhals.utils import _is_naive_format, not_implemented
+from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
