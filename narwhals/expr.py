@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         IntoExpr,
         NonNestedLiteral,
         NumericLiteral,
@@ -161,7 +162,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Redefine an object's data type.
 
         Arguments:
@@ -1015,7 +1016,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 

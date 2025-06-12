@@ -24,8 +24,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._spark_like.expr import SparkWindowInputs
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
 class SparkLikeNamespace(
@@ -97,9 +96,7 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> SparkLikeExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
             if dtype:
