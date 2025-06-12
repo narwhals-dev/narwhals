@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import MultiOutputExpressionError
+from narwhals.exceptions import MultiOutputExpressionError, ShapeError
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -115,6 +115,15 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_when_then_invalid(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    with pytest.raises(ShapeError):
+        df.select(nw.when(nw.col("a").sum() > 1).then("c"))
+
+    with pytest.raises(ShapeError):
+        df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+
+
 def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
@@ -144,28 +153,22 @@ def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
     ("condition", "then", "otherwise", "expected"),
     [
         (nw.col("a").sum() == 6, 100, 200, [100]),
-        (nw.col("a").sum() == 6, nw.col("a"), 200, [1, 2, 3]),
-        (nw.col("a").sum() == 6, nw.col("a"), nw.col("b"), [1, 2, 3]),
-        (nw.col("a").sum() == 6, 100, nw.col("b"), [100, 100, 100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6]),
+        (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6]),
         (nw.col("a").sum() == 5, 100, 200, [200]),
-        (nw.col("a").sum() == 5, nw.col("a"), 200, [200, 200, 200]),
-        (nw.col("a").sum() == 5, nw.col("a"), nw.col("b"), [4, 5, 6]),
-        (nw.col("a").sum() == 5, 100, nw.col("b"), [4, 5, 6]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200]),
+        (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), nw.col("b").sum(), [15]),
     ],
 )
-def test_when_then_otherwise_broadcast_select(
+def test_when_then_otherwise_aggregate_select(
     condition: nw.Expr,
     then: nw.Expr | int,
     otherwise: nw.Expr | int,
     expected: list[int],
     constructor: Constructor,
-    request: pytest.FixtureRequest,
 ) -> None:
-    # lazy backends needs to be able to pushdown the aggregation for broadcasting to work
-    if any(x in str(constructor) for x in ["duckdb", "sqlframe", "pyspark"]) and not (
-        isinstance(then, int) and isinstance(otherwise, int)
-    ):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(a_when=nw.when(condition).then(then).otherwise(otherwise))
     assert_equal_data(result, {"a_when": expected})
@@ -175,26 +178,23 @@ def test_when_then_otherwise_broadcast_select(
     ("condition", "then", "otherwise", "expected"),
     [
         (nw.col("a").sum() == 6, 100, 200, [100, 100, 100]),
-        (nw.col("a").sum() == 6, nw.col("a"), 200, [1, 2, 3]),
-        (nw.col("a").sum() == 6, nw.col("a"), nw.col("b"), [1, 2, 3]),
-        (nw.col("a").sum() == 6, 100, nw.col("b"), [100, 100, 100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6, 6, 6]),
+        (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100, 100, 100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6, 6, 6]),
         (nw.col("a").sum() == 5, 100, 200, [200, 200, 200]),
-        (nw.col("a").sum() == 5, nw.col("a"), 200, [200, 200, 200]),
-        (nw.col("a").sum() == 5, nw.col("a"), nw.col("b"), [4, 5, 6]),
-        (nw.col("a").sum() == 5, 100, nw.col("b"), [4, 5, 6]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200, 200, 200]),
+        (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15, 15, 15]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), nw.col("b").sum(), [15, 15, 15]),
     ],
 )
-def test_when_then_otherwise_broadcast_with_columns(
+def test_when_then_otherwise_aggregate_with_columns(
     condition: nw.Expr,
     then: nw.Expr | int,
     otherwise: nw.Expr | int,
     expected: list[int],
     constructor: Constructor,
-    request: pytest.FixtureRequest,
 ) -> None:
-    # lazy backends needs to be able to pushdown the aggregation for broadcasting to work
-    if any(x in str(constructor) for x in ["duckdb", "sqlframe", "pyspark"]):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = df.with_columns(a_when=nw.when(condition).then(then).otherwise(otherwise))
+    expr = nw.when(condition).then(then).otherwise(otherwise)
+    result = df.with_columns(a_when=expr)
     assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})
