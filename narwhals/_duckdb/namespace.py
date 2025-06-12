@@ -196,5 +196,12 @@ class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
         self.lit = lit
         return super().__call__(df)
 
+    def _window_function(
+        self, df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
+    ) -> Sequence[Expression]:
+        self.when = when
+        self.lit = lit
+        return super()._window_function(df, window_inputs)
+
 
 class DuckDBThen(LazyThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...
