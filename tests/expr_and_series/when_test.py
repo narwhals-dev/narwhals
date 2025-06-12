@@ -152,10 +152,12 @@ def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("condition", "then", "otherwise", "expected"),
     [
+        (nw.col("a").sum() == 6, 100, None, [100]),
         (nw.col("a").sum() == 6, 100, 200, [100]),
         (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6]),
         (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100]),
         (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6]),
+        (nw.col("a").sum() == 5, 100, None, [None]),
         (nw.col("a").sum() == 5, 100, 200, [200]),
         (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200]),
         (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15]),
@@ -177,10 +179,12 @@ def test_when_then_otherwise_aggregate_select(
 @pytest.mark.parametrize(
     ("condition", "then", "otherwise", "expected"),
     [
+        (nw.col("a").sum() == 6, 100, None, [100, 100, 100]),
         (nw.col("a").sum() == 6, 100, 200, [100, 100, 100]),
         (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6, 6, 6]),
         (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100, 100, 100]),
         (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6, 6, 6]),
+        (nw.col("a").sum() == 5, 100, None, [None, None, None]),
         (nw.col("a").sum() == 5, 100, 200, [200, 200, 200]),
         (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200, 200, 200]),
         (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15, 15, 15]),
