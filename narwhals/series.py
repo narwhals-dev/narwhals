@@ -2601,7 +2601,7 @@ class Series(Generic[IntoSeriesT]):
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2624,7 +2624,7 @@ class Series(Generic[IntoSeriesT]):
         r"""Compute the exponent.
 
         Returns:
-            A new expression exponent values data.
+            A new series.
 
         Examples:
             >>> import pandas as pd

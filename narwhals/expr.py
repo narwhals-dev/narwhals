@@ -2461,7 +2461,7 @@ class Expr:
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -2493,7 +2493,7 @@ class Expr:
         r"""Compute the exponent.
 
         Returns:
-            A new expression exponent values data.
+            A new expression.
 
         Examples:
             >>> import pyarrow as pa
