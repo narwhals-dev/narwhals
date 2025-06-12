@@ -6,10 +6,7 @@ import daft
 import daft.exceptions
 
 from narwhals._daft.utils import evaluate_exprs, native_to_narwhals_dtype
-from narwhals.dependencies import get_daft
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     check_column_names_are_unique,
@@ -18,6 +15,9 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.dependencies import get_daft
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
     from narwhals._daft.expr import DaftExpr
     from narwhals._daft.group_by import DaftGroupBy
     from narwhals._daft.namespace import DaftNamespace
+    from narwhals._utils import _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy
-    from narwhals.utils import _FullContext
 
 
 class DaftLazyFrame(

@@ -6,13 +6,13 @@ import daft
 import daft.datatype
 from daft import DataType
 
-from narwhals.utils import isinstance_or_issubclass
+from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.expr import DaftExpr
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 lit = daft.lit
 """Alias for `daft.lit`."""

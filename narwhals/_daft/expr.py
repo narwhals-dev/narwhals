@@ -11,7 +11,7 @@ from narwhals._daft.expr_str import DaftExprStringNamespace
 from narwhals._daft.expr_struct import DaftExprStructNamespace
 from narwhals._daft.utils import maybe_evaluate_expr, narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
-from narwhals.utils import Implementation, not_implemented
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     from daft import Expression, Window
@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.namespace import DaftNamespace
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
-    from narwhals.utils import Version, _FullContext
 
     DaftWindowInputs = WindowInputs[Expression]
     DaftUnorderableWindowInputs = UnorderableWindowInputs[Expression]
