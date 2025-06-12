@@ -721,7 +721,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(*inputs.order_by, descending=True)
+                        *self._sort(*inputs.order_by, descending=True, nulls_last=True)
                     )
                 )
                 == 1

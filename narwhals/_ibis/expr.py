@@ -502,7 +502,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                 ibis.row_number().over(
                     ibis.window(
                         group_by=[*inputs.partition_by, expr],
-                        order_by=self._sort(*inputs.order_by, descending=True),
+                        order_by=self._sort(
+                            *inputs.order_by, descending=True, nulls_last=True
+                        ),
                     )
                 )
                 == lit(0)
