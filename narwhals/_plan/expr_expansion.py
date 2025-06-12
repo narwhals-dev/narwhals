@@ -61,6 +61,7 @@ from narwhals._plan.expr import (
     KeepName,
     Nth,
     RenameAlias,
+    _ColumnSelection,
     col,
 )
 from narwhals.dtypes import DType
@@ -298,38 +299,16 @@ def remove_exclude(origin: ExprIR, /) -> ExprIR:
     return origin.map_ir(fn)
 
 
-def _replace_columns_exclude(origin: ExprIR, /, name: str) -> ExprIR:
-    """Based on the anonymous function in [`polars_plan::plans::conversion::expr_expansion::expand_columns`].
+def replace_with_column(
+    origin: ExprIR, tp: type[_ColumnSelection], /, name: str
+) -> ExprIR:
+    """Expand a single column within a multi-selection using `name`.
 
-    [`polars_plan::plans::conversion::expr_expansion::expand_columns`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L187-L191
+    For `Columns`, `IndexColumns`, `All`.
     """
 
     def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, Columns):
-            return col(name)
-        if isinstance(child, Exclude):
-            return child.expr
-        return child
-
-    return origin.map_ir(fn)
-
-
-def replace_index_with_column(origin: ExprIR, /, name: str) -> ExprIR:
-    def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, IndexColumns):
-            return col(name)
-        if isinstance(child, Exclude):
-            return child.expr
-        return child
-
-    return origin.map_ir(fn)
-
-
-def replace_wildcard_with_column(origin: ExprIR, /, name: str) -> ExprIR:
-    """`expr.All` and `Exclude`."""
-
-    def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, All):
+        if isinstance(child, tp):
             return col(name)
         if isinstance(child, Exclude):
             return child.expr
@@ -466,7 +445,7 @@ def expand_columns(
         raise ComputeError(msg)
     for name in columns.names:
         if name not in exclude:
-            expanded = _replace_columns_exclude(origin, name)
+            expanded = replace_with_column(origin, Columns, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
     return result
@@ -490,7 +469,7 @@ def expand_indices(
             raise ComputeError(msg)
         name = names[idx]
         if name not in exclude:
-            expanded = replace_index_with_column(origin, name)
+            expanded = replace_with_column(origin, IndexColumns, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
     return result
@@ -501,7 +480,7 @@ def replace_wildcard(
 ) -> ResultIRs:
     for name in col_names:
         if name not in exclude:
-            expanded = replace_wildcard_with_column(origin, name)
+            expanded = replace_with_column(origin, All, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
     return result
