@@ -83,6 +83,16 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
         return DaftNamespace(backend_version=self._backend_version, version=self._version)
 
+    def _with_window_function(self, window_function: DaftWindowFunction) -> Self:
+        return self.__class__(
+            self._call,
+            window_function,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
     @classmethod
     def _alias_native(cls, expr: daft.Expression, name: str) -> daft.Expression:
         return expr.alias(name)
@@ -369,6 +379,13 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def is_nan(self) -> Self:
         return self._with_callable(lambda _input: _input.float.is_nan())
 
+    def diff(self) -> Self:
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
+            return [expr - expr.lag(1).over(window) for expr in self(df)]
+
+        return self._with_window_function(func)
+
     def is_finite(self) -> Self:
         return self._with_callable(
             lambda _input: (_input > float("-inf")) & (_input < float("inf"))
@@ -413,7 +430,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return DaftExprStructNamespace(self)
 
     drop_nulls = not_implemented()
-    diff = not_implemented()
     rank = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/4290
     median = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/3491
     unique = not_implemented()

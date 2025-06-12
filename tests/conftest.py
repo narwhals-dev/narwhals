@@ -315,7 +315,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "replace_time_zone",
                     "sumh_broadcasting",
                     "over_pushdown",
-                    "diff_lazy_grouped",
+                    # "diff_lazy_grouped",
                     "shift_lazy_grouped",
                 )
             )
