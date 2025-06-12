@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
 
-    DaftWindowFunction = WindowFunction[Expression]
+    DaftWindowFunction = WindowFunction[DaftLazyFrame, Expression]
     DaftWindowInputs = WindowInputs[Expression]
 
 
