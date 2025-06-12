@@ -79,6 +79,19 @@ class NullCount(Function):
         return "null_count"
 
 
+class Log(Function):
+    __slots__ = ("base",)
+
+    base: float
+
+    @property
+    def function_options(self) -> FunctionOptions:
+        return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "log"
+
+
 class Pow(Function):
     @property
     def function_options(self) -> FunctionOptions:

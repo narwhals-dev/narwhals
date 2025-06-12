@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import typing as t
 from typing import TYPE_CHECKING
 
@@ -195,6 +196,9 @@ class DummyExpr:
         else:
             node = F.HistBinCount(include_breakpoint=include_breakpoint)
         return self._from_ir(node.to_function_expr(self._ir))
+
+    def log(self, base: float = math.e) -> Self:
+        return self._from_ir(F.Log(base=base).to_function_expr(self._ir))
 
     def null_count(self) -> Self:
         return self._from_ir(F.NullCount().to_function_expr(self._ir))
