@@ -485,7 +485,6 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
 
-# TODO @dangotbanned: add `DummyExpr.filter`
 class Filter(ExprIR):
     __slots__ = ("by", "expr")
 

@@ -7,7 +7,6 @@ import pytest
 
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
-from narwhals._plan.common import IntoExpr, is_expr
 from narwhals._plan.expr import Alias, Columns
 from narwhals._plan.expr_expansion import (
     freeze_schema,
@@ -17,9 +16,10 @@ from narwhals._plan.expr_expansion import (
 )
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
+from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.common import ExprIR, IntoExpr
     from narwhals._plan.dummy import DummyExpr, DummySelector
     from narwhals._plan.typing import MapIR
     from narwhals.dtypes import DType
@@ -61,12 +61,6 @@ MULTI_OUTPUT_EXPRS = (
 """All of these resolve to `["a", "b", "c"]`."""
 
 BIG_EXCLUDE = ("k", "l", "m", "n", "o", "p", "s", "u", "r", "a", "b", "e", "q")
-
-
-def assert_expr_ir_equal(left: DummyExpr | ExprIR, right: DummyExpr | ExprIR) -> None:
-    lhs = left._ir if is_expr(left) else left
-    rhs = right._ir if is_expr(right) else right
-    assert lhs == rhs
 
 
 def udf_name_map(name: str) -> str:

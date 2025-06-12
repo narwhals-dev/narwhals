@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 # ruff: noqa: A002
+from itertools import chain
 from typing import TYPE_CHECKING, Iterable, Sequence, TypeVar
 
-from narwhals._plan.common import is_expr, is_iterable_reject
+from narwhals._plan.common import IntoExprColumn, is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,
@@ -103,6 +104,22 @@ def parse_into_seq_of_expr_ir(
     return tuple(_parse_into_iter_expr_ir(first_input, *more_inputs, **named_inputs))
 
 
+def parse_predicates_constraints_into_expr_ir(
+    first_predicate: IntoExprColumn | Iterable[IntoExprColumn] = (),
+    *more_predicates: IntoExprColumn | _RaisesInvalidIntoExprError,
+    **constraints: IntoExpr,
+) -> ExprIR:
+    """Parse variadic predicates and constraints into an `ExprIR` node.
+
+    The result is an AND-reduction of all inputs.
+    """
+    all_predicates = _parse_into_iter_expr_ir(first_predicate, *more_predicates)
+    if constraints:
+        chained = chain(all_predicates, _parse_constraints(constraints))
+        return _combine_predicates(chained)
+    return _combine_predicates(all_predicates)
+
+
 def _parse_into_iter_expr_ir(
     first_input: IntoExpr | Iterable[IntoExpr],
     *more_inputs: IntoExpr,
@@ -137,6 +154,25 @@ def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR
 
     for name, input in named_inputs.items():
         yield Alias(expr=parse_into_expr_ir(input), name=name)
+
+
+def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
+    from narwhals._plan import demo as nwd
+
+    for name, value in constraints.items():
+        yield (nwd.col(name) == value)._ir
+
+
+def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
+    from narwhals._plan.boolean import AllHorizontal
+
+    first = next(predicates, None)
+    if not first:
+        msg = "at least one predicate or constraint must be provided"
+        raise TypeError(msg)
+    if second := next(predicates, None):
+        return AllHorizontal().to_function_expr(first, second, *predicates)
+    return first
 
 
 def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:

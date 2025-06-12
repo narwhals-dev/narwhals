@@ -138,10 +138,11 @@ def invalid_into_expr_error(
     named_inputs: dict[str, IntoExpr],
     /,
 ) -> InvalidIntoExprError:
+    named = f"\n{named_inputs!r}" if named_inputs else ""
     msg = (
         f"Passing both iterable and positional inputs is not supported.\n"
         f"Hint:\nInstead try collecting all arguments into a {type(first_input).__name__!r}\n"
-        f"{first_input!r}\n{more_inputs!r}\n{named_inputs!r}"
+        f"{first_input!r}\n{more_inputs!r}{named}"
     )
     return InvalidIntoExprError(msg)
 

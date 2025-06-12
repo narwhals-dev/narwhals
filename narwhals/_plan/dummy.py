@@ -173,6 +173,14 @@ class DummyExpr:
         options = SortMultipleOptions(descending=desc, nulls_last=nulls)
         return self._from_ir(expr.SortBy(expr=self._ir, by=sort_by, options=options))
 
+    def filter(
+        self,
+        *predicates: IntoExprColumn | t.Iterable[IntoExprColumn],
+        **constraints: t.Any,
+    ) -> Self:
+        by = parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        return self._from_ir(expr.Filter(expr=self._ir, by=by))
+
     def abs(self) -> Self:
         return self._from_ir(F.Abs().to_function_expr(self._ir))
 

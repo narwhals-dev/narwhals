@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import deque
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
 
 import pytest
@@ -12,15 +13,17 @@ from narwhals._plan import (
     boolean,
     functions as F,  # noqa: N812
 )
-from narwhals._plan.common import ExprIR, Function
+from narwhals._plan.common import ExprIR, Function, IntoExprColumn
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr
 from narwhals.exceptions import (
+    InvalidIntoExprError,
     InvalidOperationError,
     LengthChangingExprError,
     MultiOutputExpressionError,
     ShapeError,
 )
+from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
     from typing import ContextManager
@@ -299,3 +302,58 @@ def test_is_in_series() -> None:
 def test_invalid_is_in(other: Any, context: ContextManager[Any]) -> None:
     with context:
         nwd.col("a").is_in(other)
+
+
+def test_filter_full_spellings() -> None:
+    a = nwd.col("a")
+    b = nwd.col("b")
+    c = nwd.col("c")
+    d = nwd.col("d")
+    expected = a.filter(b != b.max(), c < nwd.lit(2), d == nwd.lit(5))
+    expr_1 = a.filter([b != b.max(), c < nwd.lit(2), d == nwd.lit(5)])
+    expr_2 = a.filter([b != b.max(), c < nwd.lit(2)], d=nwd.lit(5))
+    expr_3 = a.filter([b != b.max(), c < nwd.lit(2)], d=5)
+    expr_4 = a.filter(b != b.max(), c < nwd.lit(2), d=5)
+    expr_5 = a.filter(b != b.max(), c < 2, d=5)
+    expr_6 = a.filter((b != b.max(), c < 2), d=5)
+    assert_expr_ir_equal(expected, expr_1)
+    assert_expr_ir_equal(expected, expr_2)
+    assert_expr_ir_equal(expected, expr_3)
+    assert_expr_ir_equal(expected, expr_4)
+    assert_expr_ir_equal(expected, expr_5)
+    assert_expr_ir_equal(expected, expr_6)
+
+
+@pytest.mark.parametrize(
+    ("predicates", "constraints", "context"),
+    [
+        ([nwd.col("b").is_last_distinct()], {}, nullcontext()),
+        ((), {"b": 10}, nullcontext()),
+        ((), {"b": nwd.lit(10)}, nullcontext()),
+        (
+            (),
+            {},
+            pytest.raises(
+                TypeError, match=re.compile(r"at least one predicate", re.IGNORECASE)
+            ),
+        ),
+        ((nwd.col("b") > 1, nwd.col("c").is_null()), {}, nullcontext()),
+        (
+            ([nwd.col("b") > 1], nwd.col("c").is_null()),
+            {},
+            pytest.raises(
+                InvalidIntoExprError,
+                match=re.compile(
+                    r"both iterable.+positional.+not supported", re.IGNORECASE
+                ),
+            ),
+        ),
+    ],
+)
+def test_filter_partial_spellings(
+    predicates: Iterable[IntoExprColumn],
+    constraints: dict[str, Any],
+    context: ContextManager[Any],
+) -> None:
+    with context:
+        assert nwd.col("a").filter(*predicates, **constraints)
