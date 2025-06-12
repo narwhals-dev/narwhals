@@ -171,8 +171,8 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     ) -> Iterator[ir.Column]:
         mapping = {
             (False, False): partial(ibis.asc, nulls_first=True),
-            (True, False): partial(ibis.desc, nulls_first=True),
             (False, True): partial(ibis.asc, nulls_first=False),
+            (True, False): partial(ibis.desc, nulls_first=True),
             (True, True): partial(ibis.desc, nulls_first=False),
         }
         sort = mapping[(descending, nulls_last)]

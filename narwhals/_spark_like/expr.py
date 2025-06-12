@@ -141,8 +141,8 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         F = self._F  # noqa: N806
         mapping = {
             (False, False): F.asc_nulls_first,
-            (False, True): F.desc_nulls_first,
-            (True, False): F.asc_nulls_last,
+            (False, True): F.asc_nulls_last,
+            (True, False): F.desc_nulls_first,
             (True, True): F.desc_nulls_last,
         }
         sort = mapping[(descending, nulls_last)]
