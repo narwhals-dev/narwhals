@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 import daft
 
 from narwhals._compliant import LazyExpr
+from narwhals._compliant.window import WindowInputs
 from narwhals._daft.expr_dt import DaftExprDateTimeNamespace
 from narwhals._daft.expr_str import DaftExprStringNamespace
 from narwhals._daft.expr_struct import DaftExprStructNamespace
@@ -17,32 +18,24 @@ if TYPE_CHECKING:
     from daft import Expression, Window
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import (
-        AliasNames,
-        EvalNames,
-        EvalSeries,
-        UnorderableWindowFunction,
-        WindowFunction,
-    )
-    from narwhals._compliant.window import UnorderableWindowInputs, WindowInputs
+    from narwhals._compliant.typing import AliasNames, EvalNames, WindowFunction
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.namespace import DaftNamespace
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
 
-    DaftWindowInputs = WindowInputs[Expression]
-    DaftUnorderableWindowInputs = UnorderableWindowInputs[Expression]
     DaftWindowFunction = WindowFunction[Expression]
-    DaftUnorderableWindowFunction = UnorderableWindowFunction[Expression]
+    DaftWindowInputs = WindowInputs[Expression]
 
 
-class DaftExpr(LazyExpr["DaftLazyFrame", "daft.Expression"]):
+class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     _implementation = Implementation.DAFT
 
     def __init__(
         self,
         call: Callable[[DaftLazyFrame], Sequence[daft.Expression]],
+        window_function: DaftWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[DaftLazyFrame],
         alias_output_names: AliasNames | None,
@@ -55,13 +48,20 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "daft.Expression"]):
         self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
+        self._window_function: DaftWindowFunction | None = window_function
 
-        # This can only be set by `_with_window_function`.
-        self._window_function: DaftWindowFunction | None = None
+    @property
+    def window_function(self) -> DaftWindowFunction:
+        def default_window_func(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> list[Expression]:
+            assert not window_inputs.order_by  # noqa: S101
+            return [
+                expr.over(self.partition_by(*window_inputs.partition_by))
+                for expr in self(df)
+            ]
 
-        # These can only be set by `_with_unorderable_window_function`
-        self._unorderable_window_function: DaftUnorderableWindowFunction | None = None
-        self._previous_call: EvalSeries[DaftLazyFrame, Expression] | None = None
+        return self._window_function or default_window_func
 
     def __call__(self, df: DaftLazyFrame) -> Sequence[daft.Expression]:
         return self._call(df)
@@ -316,16 +316,19 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "daft.Expression"]):
             lambda _input: _input.count_distinct() + _input.is_null().bool_or()
         )
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
-        partition = partition_by
-        if (
-            self._window_function is not None
-            or (self._unorderable_window_function) is not None
-        ):
-            msg = "todo"
-            raise NotImplementedError(msg)
+    def over(
+        self, partition_by: Sequence[str | Expression], order_by: Sequence[str]
+    ) -> Self:
+        def func(df: DaftLazyFrame) -> Sequence[Expression]:
+            return self.window_function(df, WindowInputs(partition_by, order_by))
 
-        return self._with_callable(lambda x: x.over(self.partition_by(*partition)))
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
 
     def len(self) -> Self:
         return self._with_callable(lambda _input: _input.count("all"))
