@@ -33,14 +33,14 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
     from narwhals._plan.categorical import ExprCatNamespace
-    from narwhals._plan.common import ExprIR, IntoExpr, IntoExprColumn, Seq, Udf
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.strings import ExprStringNamespace
     from narwhals._plan.struct import ExprStructNamespace
     from narwhals._plan.temporal import ExprDateTimeNamespace
-    from narwhals._plan.typing import ExprT, Ns
+    from narwhals._plan.typing import ExprT, IntoExpr, IntoExprColumn, Ns, Seq, Udf
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,

@@ -7,8 +7,9 @@ from narwhals._plan.dummy import DummyExpr
 from narwhals._plan.expr_parsing import parse_into_expr_ir
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR, IntoExpr, Seq
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import Ternary
+    from narwhals._plan.typing import IntoExpr, Seq
 
 
 class When(Immutable):

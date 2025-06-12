@@ -11,7 +11,6 @@ from narwhals._plan import (
 )
 from narwhals._plan.common import (
     ExprIR,
-    IntoExpr,
     is_expr,
     is_non_nested_literal,
     py_to_narwhals_dtype,
@@ -30,6 +29,7 @@ if t.TYPE_CHECKING:
 
     from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.expr import SortBy
+    from narwhals._plan.typing import IntoExpr
     from narwhals.typing import NonNestedLiteral
 
 

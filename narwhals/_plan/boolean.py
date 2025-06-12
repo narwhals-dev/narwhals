@@ -9,9 +9,10 @@ from narwhals._plan.options import FunctionFlags, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR, Seq  # noqa: F401
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import Literal  # noqa: F401
+    from narwhals._plan.typing import Seq  # noqa: F401
     from narwhals.typing import ClosedInterval
 
 OtherT = TypeVar("OtherT")

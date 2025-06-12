@@ -4,7 +4,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Iterable, Sequence, TypeVar
 
-from narwhals._plan.common import IntoExprColumn, is_expr, is_iterable_reject
+from narwhals._plan.common import is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,
@@ -18,7 +18,8 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.common import ExprIR, IntoExpr, Seq
+    from narwhals._plan.common import ExprIR
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
     from narwhals.dtypes import DType
 
 T = TypeVar("T")

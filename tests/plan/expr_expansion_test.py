@@ -19,9 +19,9 @@ from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateErro
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR, IntoExpr
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummyExpr, DummySelector
-    from narwhals._plan.typing import MapIR
+    from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
 
 

@@ -11,12 +11,14 @@ if t.TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, SelectorIR
-    from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.functions import RollingWindow
     from narwhals.typing import NonNestedLiteral
 
 __all__ = [
     "FunctionT",
+    "IntoExpr",
+    "IntoExprColumn",
     "LeftSelectorT",
     "LeftT",
     "LiteralT",
@@ -29,6 +31,8 @@ __all__ = [
     "RollingT",
     "SelectorOperatorT",
     "SelectorT",
+    "Seq",
+    "Udf",
 ]
 
 
@@ -63,3 +67,18 @@ Expr: TypeAlias = "CompliantExprAny"
 ExprT = TypeVar("ExprT", bound="Expr")
 Ns: TypeAlias = "Namespace[t.Any, ExprT]"
 """A `CompliantNamespace`, ignoring the `Frame` type."""
+
+
+T = TypeVar("T")
+
+Seq: TypeAlias = "tuple[T,...]"
+"""Immutable Sequence.
+
+Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
+"""
+
+Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
+"""Placeholder for `map_batches(function=...)`."""
+
+IntoExprColumn: TypeAlias = "DummyExpr | DummySeries | str"
+IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"

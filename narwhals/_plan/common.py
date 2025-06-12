@@ -4,13 +4,13 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from narwhals._plan.typing import ExprT, IRNamespaceT, MapIR, Ns
+from narwhals._plan.typing import ExprT, IRNamespaceT, MapIR, Ns, Seq
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from typing import Any, Callable, Iterable, Iterator, Literal
 
-    from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
+    from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import FunctionExpr
@@ -48,18 +48,6 @@ else:
 
 
 T = TypeVar("T")
-
-Seq: TypeAlias = "tuple[T,...]"
-"""Immutable Sequence.
-
-Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
-"""
-
-Udf: TypeAlias = "Callable[[Any], Any]"
-"""Placeholder for `map_batches(function=...)`."""
-
-IntoExprColumn: TypeAlias = "DummyExpr | DummySeries | str"
-IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 
 _IMMUTABLE_HASH_NAME: Literal["__immutable_hash_value__"] = "__immutable_hash_value__"
 

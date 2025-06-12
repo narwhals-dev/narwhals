@@ -13,9 +13,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR, Seq, Udf
+    from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import AnonymousExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
+    from narwhals._plan.typing import Seq, Udf
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
 

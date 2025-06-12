@@ -33,13 +33,13 @@ from narwhals._plan.typing import (
     RollingT,
     SelectorOperatorT,
     SelectorT,
+    Seq,
 )
 from narwhals._utils import flatten
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.common import Seq
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions

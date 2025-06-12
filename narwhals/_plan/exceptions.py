@@ -24,10 +24,11 @@ if TYPE_CHECKING:
     import polars as pl
 
     from narwhals._plan.aggregation import Agg
-    from narwhals._plan.common import ExprIR, Function, IntoExpr, Seq
+    from narwhals._plan.common import ExprIR, Function
     from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import SortOptions
+    from narwhals._plan.typing import IntoExpr, Seq
 
 
 # NOTE: Using verbose names to start with

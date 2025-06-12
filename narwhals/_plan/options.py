@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import Seq
+    from narwhals._plan.typing import Seq
     from narwhals.typing import RankMethod
 
 

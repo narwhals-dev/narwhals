@@ -76,8 +76,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.common import Seq
     from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
 

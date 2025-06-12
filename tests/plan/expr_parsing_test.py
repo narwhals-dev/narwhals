@@ -13,7 +13,7 @@ from narwhals._plan import (
     boolean,
     functions as F,  # noqa: N812
 )
-from narwhals._plan.common import ExprIR, Function, IntoExprColumn
+from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr
 from narwhals.exceptions import (
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.common import IntoExpr, Seq
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
 
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
