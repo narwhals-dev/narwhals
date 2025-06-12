@@ -349,11 +349,28 @@ def replace_selector(
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, SelectorIR):
-            cols = (k for k, v in schema.items() if child.matches_column(k, v))
-            return Columns(names=tuple(cols))
+            return expand_selector(child, schema=schema)
         return child
 
     return ir.map_ir(fn)
+
+
+@lru_cache(maxsize=100)
+def selector_matches_column(selector: SelectorIR, name: str, dtype: DType, /) -> bool:
+    """Cached version of `SelectorIR.matches.column`.
+
+    Allows results of evaluations can be shared across:
+    - Instances of `SelectorIR`
+    - Multiple schemas
+    """
+    return selector.matches_column(name, dtype)
+
+
+@lru_cache(maxsize=100)
+def expand_selector(selector: SelectorIR, *, schema: FrozenSchema) -> Columns:
+    """Expand `selector` into `Columns`, within the context of `schema`."""
+    cols = (k for k, v in schema.items() if selector_matches_column(selector, k, v))
+    return Columns(names=tuple(cols))
 
 
 def rewrite_projections(
