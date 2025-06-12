@@ -397,3 +397,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def log(self, base: float) -> Self:
         return self._reuse_series("log", base=base)
+
+    def exp(self) -> Self:
+        return self._reuse_series("exp")

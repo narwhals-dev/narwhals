@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -473,7 +474,7 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Cast between data types.
 
         Arguments:
@@ -1170,7 +1171,7 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 
@@ -2601,7 +2602,7 @@ class Series(Generic[IntoSeriesT]):
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2619,6 +2620,29 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.log(base=base))
+
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([-1, 0, 1], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.exp()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.367879          |
+            |1    1.000000          |
+            |2    2.718282          |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.exp())
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

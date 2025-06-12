@@ -359,6 +359,38 @@ NonNestedLiteral: TypeAlias = (
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
+NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
+"""Any Narwhals DType that does not have required arguments."""
+
+IntoDType: TypeAlias = "dtypes.DType | type[NonNestedDType]"
+"""Anything that can be converted into a Narwhals DType.
+
+Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
+    >>> df = nw.from_native(df_native)
+    >>> df.select(
+    ...     nw.col("a").cast(nw.Int32),
+    ...     nw.col("b").cast(nw.String()).str.split(".").cast(nw.List(nw.Int8)),
+    ... )
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |shape: (3, 2)     |
+    |┌─────┬──────────┐|
+    |│ a   ┆ b        │|
+    |│ --- ┆ ---      │|
+    |│ i32 ┆ list[i8] │|
+    |╞═════╪══════════╡|
+    |│ 1   ┆ [4, 0]   │|
+    |│ 2   ┆ [5, 0]   │|
+    |│ 3   ┆ [6, 0]   │|
+    |└─────┴──────────┘|
+    └──────────────────┘
+"""
+
+
 # Annotations for `__getitem__` methods
 _T = TypeVar("_T")
 _Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"

@@ -38,9 +38,9 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -777,7 +777,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_elementwise(_fill_constant, value=value)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def func(expr: Expression) -> Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return expr.cast(DuckDBPyType(native_dtype))
@@ -871,6 +871,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             )
 
         return self._with_elementwise(_log)
+
+    def exp(self) -> Self:
+        def _exp(expr: Expression) -> Expression:
+            return FunctionExpression("exp", expr)
+
+        return self._with_elementwise(_exp)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:
