@@ -280,6 +280,13 @@ class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
         self.lit = df._F.lit
         return super().__call__(df)
 
+    def _window_function(
+        self, df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+    ) -> Sequence[Column]:
+        self.when = df._F.when
+        self.lit = df._F.lit
+        return super()._window_function(df, window_inputs)
+
 
 class SparkLikeThen(
     LazyThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
