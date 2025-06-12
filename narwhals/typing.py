@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Sequence, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
-from narwhals.dataframe import DataFrame, LazyFrame
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -15,6 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -196,7 +196,7 @@ Examples:
 
 IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 
-FrameT = TypeVar("FrameT", DataFrame[Any], LazyFrame[Any])
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns

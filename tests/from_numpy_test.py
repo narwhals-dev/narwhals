@@ -58,6 +58,12 @@ def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None
         nw.from_numpy(arr, schema=5, backend=backend)  # type: ignore[arg-type]
 
 
+def test_from_numpy_non_eager() -> None:
+    pytest.importorskip("duckdb")
+    with pytest.raises(ValueError, match="lazy-only"):
+        nw.from_numpy(arr, backend="duckdb")
+
+
 def test_from_numpy_v1(constructor_eager: ConstructorEager) -> None:
     df = nw_v1.from_native(constructor_eager(data))
     backend = nw_v1.get_native_namespace(df)

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, Iterable, Iterator, Sequence, TypeVar
 
 from narwhals._expression_parsing import all_exprs_are_scalar_like
+from narwhals._utils import flatten, tupleify
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import DataFrameT
-from narwhals.utils import flatten, tupleify
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny

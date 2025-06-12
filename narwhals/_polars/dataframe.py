@@ -21,9 +21,7 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     native_to_narwhals_dtype,
 )
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import ColumnNotFoundError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     _into_arrow_table,
     check_columns_exist,
@@ -39,6 +37,8 @@ from narwhals.utils import (
     requires,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Version, _FullContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -63,7 +64,6 @@ if TYPE_CHECKING:
         SingleIndexSelector,
         _2DArray,
     )
-    from narwhals.utils import Version, _FullContext
 
     T = TypeVar("T")
     R = TypeVar("R")
@@ -552,6 +552,7 @@ class PolarsLazyFrame:
 
     # CompliantLazyFrame
     _evaluate_expr: Any
+    _evaluate_window_expr: Any
     _evaluate_aliases: Any
 
     def __init__(

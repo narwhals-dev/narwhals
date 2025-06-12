@@ -15,9 +15,7 @@ from narwhals._spark_like.utils import (
     import_window,
     native_to_narwhals_dtype,
 )
-from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     find_stacklevel,
     generate_temporary_column_name,
@@ -26,6 +24,8 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -40,10 +40,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import Version, _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 

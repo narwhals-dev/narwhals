@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator, Sequence, cast
 
-from narwhals.utils import is_sequence_of
+from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
