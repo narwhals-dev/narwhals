@@ -18,10 +18,6 @@ def skip_pandas_pyarrow(constructor: Constructor | ConstructorEager) -> None:
         )
         raise pytest.skip(reason=reason)
 
-    if "polars" in name:
-        reason = "Polars zfill behavior is different from pandas at the moment."
-        raise pytest.skip(reason=reason)
-
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="different zfill behavior")
 def test_str_zfill(constructor: Constructor) -> None:

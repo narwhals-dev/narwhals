@@ -690,6 +690,26 @@ class PolarsSeriesStringNamespace:
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
+    def zfill(self, width: int) -> PolarsSeries:
+        native_series = self._compliant_series.native
+        native_result = native_series.str.zfill(width)
+
+        if self._compliant_series._backend_version <= (1, 30, 0):
+            starts_with_plus = native_series.str.starts_with("+")
+            length = native_series.str.len_chars()
+            less_than_width = length < width
+            native_result = (
+                pl.when(starts_with_plus & less_than_width)
+                .then(
+                    native_series.str.slice(1, length)
+                    .str.zfill(width - 1)
+                    .str.pad_start(width, "+")
+                )
+                .otherwise(native_result)
+            )
+
+        return self._compliant_series._with_native(native_result)
+
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
