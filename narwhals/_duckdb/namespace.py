@@ -186,17 +186,10 @@ class DuckDBNamespace(
         )
 
     def coalesce(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = (c for _expr in exprs for c in _expr(df))
-            return [CoalesceOperator(*cols)]
+        def func(cols: Iterable[Expression]) -> Expression:
+            return CoalesceOperator(*cols)
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._with_elementwise(func, *exprs)
 
 
 class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):

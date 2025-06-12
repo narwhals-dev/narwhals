@@ -267,18 +267,10 @@ class SparkLikeNamespace(
         return SparkLikeWhen.from_expr(predicate, context=self)
 
     def coalesce(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [df._F.coalesce(*cols)]
+        def func(cols: Iterable[Column]) -> Column:
+            return self._F.coalesce(*cols)
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return self._with_elementwise(func, *exprs)
 
 
 class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
