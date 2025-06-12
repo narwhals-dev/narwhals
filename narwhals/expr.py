@@ -2489,6 +2489,32 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
 
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new expression exponent values data.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [-1, 0, 1]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(exp=nw.col("values").exp())
+            >>> result
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |pyarrow.Table                                   |
+            |values: int64                                   |
+            |exp: double                                     |
+            |----                                            |
+            |values: [[-1,0,1]]                              |
+            |exp: [[0.36787944117144233,1,2.718281828459045]]|
+            └────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
+
     @property
     def str(self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)

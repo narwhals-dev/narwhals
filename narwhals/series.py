@@ -2620,6 +2620,29 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.log(base=base))
 
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new expression exponent values data.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([-1, 0, 1], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.exp()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.367879          |
+            |1    1.000000          |
+            |2    2.718282          |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.exp())
+
     @property
     def str(self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
