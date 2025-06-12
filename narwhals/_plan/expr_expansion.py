@@ -86,7 +86,6 @@ FrozenColumns: TypeAlias = "Seq[str]"
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
-ResultIRs: TypeAlias = "deque[ExprIR]"
 _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
 
@@ -368,21 +367,16 @@ def rewrite_projections(
         if flags.has_selector:
             expanded = replace_selector(expanded, keys, schema=schema)
             flags = flags.with_multiple_columns()
-        result = replace_and_add_to_results(
-            expanded, result, keys=keys, schema=schema, flags=flags
+        result.extend(
+            replace_and_add_to_results(expanded, keys=keys, schema=schema, flags=flags)
         )
     return tuple(result)
 
 
 def replace_and_add_to_results(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    keys: Seq[ExprIR],
-    *,
-    schema: FrozenSchema,
-    flags: ExpansionFlags,
-) -> ResultIRs:
+    origin: ExprIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema, flags: ExpansionFlags
+) -> Seq[ExprIR]:
+    result: deque[ExprIR] = deque()
     if flags.has_nth:
         origin = replace_nth(origin, schema)
     if flags.expands:
@@ -390,20 +384,20 @@ def replace_and_add_to_results(
         if e := next(it, None):
             if isinstance(e, Columns):
                 exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
-                result = expand_columns(origin, result, e, exclude=exclude)
+                result.extend(expand_columns(origin, e, exclude=exclude))
             else:
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
                 )
-                result = expand_indices(origin, result, e, schema=schema, exclude=exclude)
+                result.extend(expand_indices(origin, e, schema=schema, exclude=exclude))
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result = replace_wildcard(origin, result, col_names=schema.names, exclude=exclude)
+        result.extend(replace_wildcard(origin, col_names=schema.names, exclude=exclude))
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
         expanded = rewrite_special_aliases(origin)
         result.append(expanded)
-    return result
+    return tuple(result)
 
 
 def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
@@ -438,28 +432,24 @@ def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
 
 
 def expand_columns(
-    origin: ExprIR, /, result: ResultIRs, columns: Columns, *, exclude: Excluded
-) -> ResultIRs:
+    origin: ExprIR, /, columns: Columns, *, exclude: Excluded
+) -> Seq[ExprIR]:
     if not _all_columns_match(origin, columns):
         msg = "expanding more than one `col` is not allowed"
         raise ComputeError(msg)
+    result: deque[ExprIR] = deque()
     for name in columns.names:
         if name not in exclude:
             expanded = replace_with_column(origin, Columns, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
-    return result
+    return tuple(result)
 
 
 def expand_indices(
-    origin: ExprIR,
-    /,
-    result: ResultIRs,
-    indices: IndexColumns,
-    *,
-    schema: FrozenSchema,
-    exclude: Excluded,
-) -> ResultIRs:
+    origin: ExprIR, /, indices: IndexColumns, *, schema: FrozenSchema, exclude: Excluded
+) -> Seq[ExprIR]:
+    result: deque[ExprIR] = deque()
     n_fields = len(schema)
     names = tuple(schema)
     for index in indices.indices:
@@ -472,18 +462,19 @@ def expand_indices(
             expanded = replace_with_column(origin, IndexColumns, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
-    return result
+    return tuple(result)
 
 
 def replace_wildcard(
-    origin: ExprIR, /, result: ResultIRs, *, col_names: FrozenColumns, exclude: Excluded
-) -> ResultIRs:
+    origin: ExprIR, /, *, col_names: FrozenColumns, exclude: Excluded
+) -> Seq[ExprIR]:
+    result: deque[ExprIR] = deque()
     for name in col_names:
         if name not in exclude:
             expanded = replace_with_column(origin, All, name)
             expanded = rewrite_special_aliases(expanded)
             result.append(expanded)
-    return result
+    return tuple(result)
 
 
 def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
