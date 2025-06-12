@@ -351,12 +351,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 raise ShapeError(msg)
             return other.native
 
-        import numpy as np  # ignore-banned-import
-
         value = other.native[0]
-        if self._backend_version < (13,) and hasattr(value, "as_py"):
-            value = value.as_py()
-        return pa.chunked_array([np.full(shape=length, fill_value=value)])
+        return pa.chunked_array([pa.repeat(value, length)])
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
