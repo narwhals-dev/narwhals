@@ -23,7 +23,6 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation
-from narwhals.dependencies import get_dask_expr
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -296,21 +295,24 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
             else self._otherwise_value
         )
 
-        if self._otherwise_value is None:
-            otherwise_value = get_dask_expr()._expr.Where._defaults["other"]
-
         condition = self._condition(df)[0]
         # re-evaluate DataFrame if the condition aggregates to force
         #   then/otherwise to be evaluated against the aggregated frame
-        if self._condition._metadata is None or self._condition._metadata.is_scalar_like:
+        assert self._condition._metadata is not None  # noqa: S101
+        if self._condition._metadata.is_scalar_like:
             new_df = df._with_native(condition.to_frame())
             condition = self._condition.broadcast(ExprKind.AGGREGATION)(df)[0]
             df = new_df
 
+        if self._otherwise_value is None:
+            (condition, then_series) = align_series_full_broadcast(
+                df, condition, then_value
+            )
+            validate_comparand(condition, then_series)
+            return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
         (condition, then_series, otherwise_series) = align_series_full_broadcast(
             df, condition, then_value, otherwise_value
         )
-
         validate_comparand(condition, then_series)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]

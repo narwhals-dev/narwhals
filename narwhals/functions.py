@@ -1451,11 +1451,11 @@ class When:
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if (
-            self._predicate._metadata.is_scalar_like is True
-            and kind.is_scalar_like is False
-        ):
-            msg = "When produced a scalar-like result and Then did not"
+        if self._predicate._metadata.is_scalar_like and not kind.is_scalar_like:
+            msg = (
+                "If you pass a scalar-like predicate to `nw.when`, then "
+                "the `then` value must also be scalar-like."
+            )
             raise ShapeError(msg)
 
         return Then(
@@ -1479,8 +1479,11 @@ class When:
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if self._metadata.is_scalar_like is True and is_scalar_like(kind) is False:
-            msg = "When/Then produced a scalar-like result and otherwise did not"
+        if self._metadata.is_scalar_like and not is_scalar_like(kind):
+            msg = (
+                "If you pass a scalar-like predicate to `nw.when`, then "
+                "the `other` value must also be scalar-like."
+            )
             raise ShapeError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
