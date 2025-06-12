@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._duration import parse_interval_string
 from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
-from narwhals.utils import not_implemented
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir

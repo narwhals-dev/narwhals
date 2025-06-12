@@ -7,8 +7,7 @@ import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     _remap_full_join_keys,
     check_column_names_are_unique,
@@ -18,6 +17,7 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -29,10 +29,10 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import Version, _FullContext
 
 
 class DaskLazyFrame(

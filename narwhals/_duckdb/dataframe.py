@@ -16,10 +16,7 @@ from narwhals._duckdb.utils import (
     lit,
     native_to_narwhals_dtype,
 )
-from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     generate_temporary_column_name,
@@ -28,6 +25,9 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.dependencies import get_duckdb
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -43,11 +43,11 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._utils import _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import _FullContext
 
 with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
     from duckdb import SQLExpression

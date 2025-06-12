@@ -12,8 +12,8 @@ import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
+from narwhals._utils import Implementation, parse_version
 from narwhals.translate import from_native
-from narwhals.utils import Implementation, parse_version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias

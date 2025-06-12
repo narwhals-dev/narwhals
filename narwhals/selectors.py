@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Iterable, NoReturn
 
 from narwhals._expression_parsing import ExprMetadata, combine_metadata
+from narwhals._utils import flatten
 from narwhals.expr import Expr
-from narwhals.utils import flatten
 
 if TYPE_CHECKING:
     from datetime import timezone

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.41.0"
+version = "1.42.1"
 dependencies = []
 requires-python = ">=3.8"
 authors = [
@@ -313,13 +313,13 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-  "*._expression_parsing",
-  "*.utils",
-  "*._pandas_like.*",
-  "*._ibis.*",
-  "*._arrow.*",
-  "*._dask.*",
-  "*._spark_like.*",
+  "narwhals._expression_parsing",
+  "narwhals._utils",
+  "narwhals._pandas_like.*",
+  "narwhals._ibis.*",
+  "narwhals._arrow.*",
+  "narwhals._dask.*",
+  "narwhals._spark_like.*",
 ]
 warn_return_any = false
 

@@ -10,8 +10,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
 
 
 class IbisInterchangeSeries:

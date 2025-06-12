@@ -20,14 +20,14 @@ from narwhals._pandas_like.utils import (
     select_columns_by_name,
     set_index,
 )
-from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
-from narwhals.exceptions import InvalidOperationError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     is_list_of,
     parse_version,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,11 +41,13 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -56,7 +58,6 @@ if TYPE_CHECKING:
         _AnyDArray,
         _SliceIndex,
     )
-    from narwhals.utils import Version, _FullContext
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -179,7 +180,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
         index: Any = None,
     ) -> Self:
         implementation = context._implementation
@@ -296,7 +297,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             self.native.iloc[indices.native] = values_native
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
@@ -619,7 +620,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
@@ -1043,6 +1044,42 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         else:
             result_native = np.log(native) / np.log(base)
+        return self._with_native(result_native)
+
+    def exp(self) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            native = self.native
+            exp_arr = cp.exp(native)
+            result_native = type(native)(exp_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.exp(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_native = np.exp(native)
         return self._with_native(result_native)
 
     @property
