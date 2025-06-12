@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, Iterable, Sequence, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -285,13 +285,6 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         return DaskThen
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        def _aggregates(expr: Any) -> bool:
-            if isinstance(expr, DaskExpr):
-                return expr._metadata is not None and expr._metadata.is_scalar_like
-            elif isinstance(expr, dd.Series):
-                return len(expr) == 1
-            return True
-
         then_value = (
             self._then_value(df)[0]
             if isinstance(self._then_value, DaskExpr)
@@ -307,14 +300,12 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
             otherwise_value = get_dask_expr()._expr.Where._defaults["other"]
 
         condition = self._condition(df)[0]
-        if (
-            _aggregates(self._condition)
-            and _aggregates(then_value)
-            and _aggregates(otherwise_value)
-        ):
-            df = df._with_native(condition.to_frame())
-        elif _aggregates(self._condition):
+        # re-evaluate DataFrame if the condition aggregates to force
+        #   then/otherwise to be evaluated against the aggregated frame
+        if self._condition._metadata is None or self._condition._metadata.is_scalar_like:
+            new_df = df._with_native(condition.to_frame())
             condition = self._condition.broadcast(ExprKind.AGGREGATION)(df)[0]
+            df = new_df
 
         (condition, then_series, otherwise_series) = align_series_full_broadcast(
             df, condition, then_value, otherwise_value
@@ -322,7 +313,7 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
 
         validate_comparand(condition, then_series)
         validate_comparand(condition, otherwise_series)
-        return [then_series.where(condition, otherwise_series)]
+        return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
 
 class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...
