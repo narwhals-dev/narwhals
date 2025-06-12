@@ -666,6 +666,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_exp)
 
+    def sqrt(self) -> Self:
+        def _sqrt(expr: ir.NumericColumn) -> ir.Value:
+            return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
+
+        return self._with_callable(_sqrt)
+
     @property
     def str(self) -> IbisExprStringNamespace:
         return IbisExprStringNamespace(self)

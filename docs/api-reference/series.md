@@ -71,6 +71,7 @@
         - shift
         - sort
         - skew
+        - sqrt
         - std
         - sum
         - tail
