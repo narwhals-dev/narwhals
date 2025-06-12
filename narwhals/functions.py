@@ -1482,7 +1482,7 @@ class Then(Expr):
         if self._metadata.is_scalar_like and not is_scalar_like(kind):
             msg = (
                 "If you pass a scalar-like predicate to `nw.when`, then "
-                "the `other` value must also be scalar-like."
+                "the `otherwise` value must also be scalar-like."
             )
             raise ShapeError(msg)
 
