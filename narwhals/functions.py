@@ -31,7 +31,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.expr import Expr
 from narwhals.translate import from_native, to_native
 
@@ -1450,6 +1450,14 @@ class When:
         self._predicate = all_horizontal(*flatten(predicates))
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
+        kind = ExprKind.from_into_expr(value, str_as_lit=False)
+        if (
+            self._predicate._metadata.is_scalar_like is True
+            and kind.is_scalar_like is False
+        ):
+            msg = "When produced a scalar-like result and Then did not"
+            raise ShapeError(msg)
+
         return Then(
             lambda plx: apply_n_ary_operation(
                 plx,
@@ -1471,11 +1479,18 @@ class When:
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
+        if self._metadata.is_scalar_like is True and is_scalar_like(kind) is False:
+            msg = "When/Then produced a scalar-like result and otherwise did not"
+            raise ShapeError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
             compliant_value = extract_compliant(plx, value, str_as_lit=False)
-            if is_scalar_like(kind) and is_compliant_expr(compliant_value):
+            if (
+                not self._metadata.is_scalar_like
+                and is_scalar_like(kind)
+                and is_compliant_expr(compliant_value)
+            ):
                 compliant_value = compliant_value.broadcast(kind)
             return compliant_expr.otherwise(compliant_value)  # type: ignore[attr-defined, no-any-return]
 
