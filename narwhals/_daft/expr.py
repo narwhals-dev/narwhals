@@ -99,6 +99,22 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def _alias_native(cls, expr: daft.Expression, name: str) -> daft.Expression:
         return expr.alias(name)
 
+    def _cum_window_func(
+        self,
+        *,
+        reverse: bool,
+        func_name: Literal["sum", "max", "min", "count", "product"],
+    ) -> DaftWindowFunction:
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            window = (
+                self.partition_by(*inputs.partition_by)
+                .order_by(*inputs.order_by, desc=reverse)
+                .rows_between(daft.Window.unbounded_preceding, 0)
+            )
+            return [getattr(expr, func_name)().over(window) for expr in self._call(df)]
+
+        return func
+
     @classmethod
     def from_column_names(
         cls: type[Self],
@@ -423,6 +439,11 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
         return self._with_window_function(func)
 
+    def cum_sum(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="sum")
+        )
+
     def is_finite(self) -> Self:
         return self._with_callable(
             lambda _input: (_input > float("-inf")) & (_input < float("inf"))
@@ -471,7 +492,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     median = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/3491
     unique = not_implemented()
     is_unique = not_implemented()
-    cum_sum = not_implemented()
     cum_count = not_implemented()
     cum_min = not_implemented()
     cum_max = not_implemented()

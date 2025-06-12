@@ -300,18 +300,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             any(
                 x in str(metafunc.function)
                 for x in (
-                    "rolling_",
-                    "cum_",
-                    "fill_null_strategies",
-                    "fill_null_limits",
                     "concat_str",
-                    "fill_null",
                     "is_unique",
                     "rank",
                     "truncate",
-                    "replace_time_zone",
                     "sumh_broadcasting",
                     "over_pushdown",
+                    # blocked
+                    "cum_",
+                    "rolling_",
+                    "fill_null_strategies",
+                    "fill_null_limits",
+                    "replace_time_zone",
                 )
             )
             and constructor == "daft"
@@ -319,6 +319,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             # Blockers:
             # - fill_null: https://github.com/Eventual-Inc/Daft/issues/4465
             # - replace_time_zone: https://github.com/Eventual-Inc/Daft/issues/4096
+            # - cum_*: https://github.com/Eventual-Inc/Daft/issues/4526
+            # - rolling_*: https://github.com/Eventual-Inc/Daft/issues/4526
             #
             # The rest should be doable
             continue
