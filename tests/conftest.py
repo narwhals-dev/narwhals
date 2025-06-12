@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 import pytest
 
-from narwhals.utils import generate_temporary_column_name
+from narwhals._utils import generate_temporary_column_name
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:

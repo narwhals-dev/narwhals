@@ -15,7 +15,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._utils import _SupportsVersion
     from narwhals.series import Series
     from narwhals.typing import IntoSeries
-    from narwhals.utils import _SupportsVersion
 
 
 @dataclass
@@ -336,7 +336,7 @@ def test_not_implemented() -> None:
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._polars.expr import PolarsExpr, PolarsExprStringNamespace
-    from narwhals.utils import not_implemented
+    from narwhals._utils import not_implemented
 
     data: dict[str, Any] = {"foo": [1, 2], "bar": [6.0, 7.0]}
     df = pa.table(data)
@@ -351,7 +351,7 @@ def test_not_implemented() -> None:
     assert isinstance(ArrowExpr.ewm_mean, not_implemented)
 
     if TYPE_CHECKING:
-        from narwhals.utils import _SupportsGet
+        from narwhals._utils import _SupportsGet
 
     class DummyCompliant(Protocol):
         _implementation: nw_v1.Implementation

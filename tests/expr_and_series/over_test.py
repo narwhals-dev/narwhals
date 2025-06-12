@@ -411,12 +411,11 @@ def test_over_without_partition_by(
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
-    if "modin" in str(constructor):
-        # probably bugged
+        # windows not yet supported
         request.applymarker(pytest.mark.xfail)
     if "daft" in str(constructor):
         request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
         df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
