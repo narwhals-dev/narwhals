@@ -174,6 +174,7 @@ class CompliantSeries(
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self: ...
+    def exp(self) -> Self: ...
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

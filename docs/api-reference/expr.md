@@ -21,6 +21,7 @@
         - diff
         - drop_nulls
         - ewm_mean
+        - exp
         - fill_null
         - filter
         - gather_every

@@ -1046,6 +1046,42 @@ class PandasLikeSeries(EagerSeries[Any]):
             result_native = np.log(native) / np.log(base)
         return self._with_native(result_native)
 
+    def exp(self) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            native = self.native
+            exp_arr = cp.exp(native)
+            result_native = type(native)(exp_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.exp(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_native = np.exp(native)
+        return self._with_native(result_native)
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
