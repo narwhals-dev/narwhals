@@ -31,13 +31,19 @@ def test_shift(constructor_eager: ConstructorEager) -> None:
 
 
 def test_shift_lazy(constructor: Constructor) -> None:
+    data = {
+        "i": [None, 1, 2, 3, 4],
+        "a": [0, 1, 2, 3, 4],
+        "b": [1, 2, 3, 5, 3],
+        "c": [5, 4, 3, 2, 1],
+    }
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
-        nw.col("i") > 1
+        nw.col("i") > 1, ~nw.col("i").is_null()
     )
     expected = {"i": [2, 3, 4], "a": [0, 1, 2], "b": [1, 2, 3], "c": [5, 4, 3]}
     assert_equal_data(result, expected)

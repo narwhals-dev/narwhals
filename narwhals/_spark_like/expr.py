@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -54,18 +54,8 @@ if TYPE_CHECKING:
     )
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
-    Asc: TypeAlias = Literal[False]
-    Desc: TypeAlias = Literal[True]
-    NullsFirst: TypeAlias = Literal[False]
-    NullsLast: TypeAlias = Literal[True]
-
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
     SparkWindowInputs = WindowInputs[Column]
-
-ASC_NULLS_FIRST: tuple[Asc, NullsFirst] = False, False
-ASC_NULLS_LAST: tuple[Asc, NullsLast] = False, True
-DESC_NULLS_FIRST: tuple[Desc, NullsFirst] = True, False
-DESC_NULLS_LAST: tuple[Desc, NullsLast] = True, True
 
 
 class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
@@ -148,22 +138,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def _sort(
         self, *cols: Column | str, descending: bool = False, nulls_last: bool = False
     ) -> Iterator[Column]:
-        """Sort one or more columns.
-
-        Arguments:
-            *cols: One or more columns, or a `WindowInputs` object - where `order_by` will be used.
-            descending: Sort in descending order.
-            nulls_last: Place null values last.
-
-        Yields:
-            Column expressions, in order of appearance in `cols`.
-        """
         F = self._F  # noqa: N806
         mapping = {
-            ASC_NULLS_FIRST: F.asc_nulls_first,
-            DESC_NULLS_FIRST: F.desc_nulls_first,
-            ASC_NULLS_LAST: F.asc_nulls_last,
-            DESC_NULLS_LAST: F.desc_nulls_last,
+            (False, False): F.asc_nulls_first,
+            (False, True): F.asc_nulls_last,
+            (True, False): F.desc_nulls_first,
+            (True, True): F.desc_nulls_last,
         }
         sort = mapping[(descending, nulls_last)]
         yield from (sort(col) for col in cols)
@@ -514,7 +494,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(f)._with_window_function(window_f)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def _cast(expr: Column) -> Column:
             spark_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes
@@ -741,7 +721,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(*inputs.order_by, descending=True)
+                        *self._sort(*inputs.order_by, descending=True, nulls_last=True)
                     )
                 )
                 == 1
@@ -922,6 +902,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
 
         return self._with_elementwise(_log)
+
+    def exp(self) -> Self:
+        def _exp(expr: Column) -> Column:
+            return self._F.exp(expr)
+
+        return self._with_elementwise(_exp)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

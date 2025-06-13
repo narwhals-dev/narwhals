@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, MultiIndexSelector, _1DArray
+    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
 
     T = TypeVar("T")
 
@@ -78,6 +78,7 @@ INHERITED_METHODS = frozenset(
         "cum_sum",
         "diff",
         "drop_nulls",
+        "exp",
         "fill_null",
         "filter",
         "gather_every",
@@ -161,7 +162,7 @@ class PolarsSeries:
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
         backend_version = context._backend_version
@@ -256,7 +257,7 @@ class PolarsSeries:
             return self._from_native_object(self.native.__getitem__(item.native))
         return self._from_native_object(self.native.__getitem__(item))
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
@@ -266,7 +267,7 @@ class PolarsSeries:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         ser = self.native
         dtype = (
@@ -627,6 +628,7 @@ class PolarsSeries:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    exp: Method[Self]
     fill_null: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]

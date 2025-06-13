@@ -23,8 +23,7 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBWindowInputs
     from narwhals._utils import Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
 class DuckDBNamespace(
@@ -156,9 +155,7 @@ class DuckDBNamespace(
     def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> DuckDBExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[Expression]:
             if dtype is not None:
                 return [
@@ -198,6 +195,13 @@ class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
         self.when = when
         self.lit = lit
         return super().__call__(df)
+
+    def _window_function(
+        self, df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
+    ) -> Sequence[Expression]:
+        self.when = when
+        self.lit = lit
+        return super()._window_function(df, window_inputs)
 
 
 class DuckDBThen(LazyThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...

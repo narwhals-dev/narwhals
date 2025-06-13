@@ -51,6 +51,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
@@ -109,7 +110,7 @@ class CompliantSeries(
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
@@ -148,7 +149,7 @@ class CompliantSeries(
     def arg_max(self) -> int: ...
     def arg_min(self) -> int: ...
     def arg_true(self) -> Self: ...
-    def cast(self, dtype: DType | type[DType]) -> Self: ...
+    def cast(self, dtype: IntoDType) -> Self: ...
     def clip(
         self,
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
@@ -173,6 +174,7 @@ class CompliantSeries(
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self: ...
+    def exp(self) -> Self: ...
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -220,7 +222,7 @@ class CompliantSeries(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
     def rolling_mean(
         self, window_size: int, *, min_samples: int, center: bool

@@ -38,7 +38,6 @@ from narwhals._compliant.typing import (
 from narwhals._typing_compat import Protocol38, deprecated
 from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
-from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from typing import Mapping
@@ -56,9 +55,9 @@ if TYPE_CHECKING:
     )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Implementation, Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -116,7 +115,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
-    def cast(self, dtype: DType | type[DType]) -> Self: ...
+    def cast(self, dtype: IntoDType) -> Self: ...
     def count(self) -> Self: ...
     def min(self) -> Self: ...
     def max(self) -> Self: ...
@@ -139,6 +138,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         limit: int | None,
     ) -> Self: ...
     def diff(self) -> Self: ...
+    def exp(self) -> Self: ...
     def unique(self) -> Self: ...
     def len(self) -> Self: ...
     def log(self, base: float) -> Self: ...
@@ -165,7 +165,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
     def sample(
@@ -182,7 +182,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def map_batches(
         self,
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
 
     def clip(
@@ -513,7 +513,7 @@ class EagerExpr(
             scalar_kwargs=self._scalar_kwargs,
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         return self._reuse_series("cast", dtype=dtype)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -676,7 +676,7 @@ class EagerExpr(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
             "replace_strict", old=old, new=new, return_dtype=return_dtype
@@ -803,7 +803,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
+        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
