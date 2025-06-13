@@ -640,18 +640,6 @@ def _import_native_namespace(module_name: str) -> ModuleType:
     return import_module(module_name)
 
 
-def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
-    if text.startswith(prefix):
-        return text[len(prefix) :]
-    return text
-
-
-def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
-    if text.endswith(suffix):
-        return text[: -len(suffix)]
-    return text  # pragma: no cover
-
-
 def flatten(args: Any) -> list[Any]:
     return list(args[0] if (len(args) == 1 and _is_iterable(args[0])) else args)
 
