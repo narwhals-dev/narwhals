@@ -400,3 +400,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def exp(self) -> Self:
         return self._reuse_series("exp")
+
+    def sqrt(self) -> Self:
+        return self._reuse_series("sqrt")

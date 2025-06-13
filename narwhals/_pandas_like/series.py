@@ -532,6 +532,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             m3 = (m**3).mean()
             return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
+    def kurtosis(self) -> float | None:
+        ser_not_null = self.native.dropna()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = ser_not_null - ser_not_null.mean()
+            m2 = (m**2).mean()
+            m4 = (m**4).mean()
+            return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
+
     def len(self) -> int:
         return len(self.native)
 
@@ -1081,6 +1093,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             result_native = np.exp(native)
         return self._with_native(result_native)
+
+    def sqrt(self) -> Self:
+        return self._with_native(self.native.pow(0.5))
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
