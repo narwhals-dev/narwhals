@@ -13,7 +13,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprAny,
     NativeExprT,
-    NativeSeriesT,
     WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import EvalSeries, ScalarKwargs
+    from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.typing import NonNestedLiteral
 
@@ -43,7 +43,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
-    _otherwise_value: IntoExpr[SeriesT, ExprT]
+    _otherwise_value: IntoExpr[SeriesT, ExprT] | None
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -51,6 +51,9 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     @property
     def _then(self) -> type[CompliantThen[FrameT, SeriesT, ExprT]]: ...
     def __call__(self, compliant_frame: FrameT, /) -> Sequence[SeriesT]: ...
+    def _window_function(
+        self, compliant_frame: FrameT, window_inputs: WindowInputs[Any]
+    ) -> Sequence[SeriesT]: ...
 
     def then(
         self, value: IntoExpr[SeriesT, ExprT], /
@@ -125,9 +128,7 @@ class LazyThen(
         obj = cls.__new__(cls)
         obj._call = when
 
-        # This may require more complicated logic if we want to push down the
-        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
-        obj._window_function = None
+        obj._window_function = when._window_function
 
         obj._when_value = when
         obj._depth = 0
@@ -145,31 +146,31 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT],
 ):
     def _if_then_else(
-        self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
-        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
-        /,
-    ) -> NativeSeriesT: ...
+        self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
+    ) -> EagerSeriesT: ...
 
     def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
         is_expr = self._condition._is_expr
         when: EagerSeriesT = self._condition(df)[0]
         then: EagerSeriesT
+
         if is_expr(self._then_value):
             then = self._then_value(df)[0]
         else:
             then = when.alias("literal")._from_scalar(self._then_value)
             then._broadcast = True
+
         if is_expr(self._otherwise_value):
-            otherwise = df._extract_comparand(self._otherwise_value(df)[0])
+            otherwise = self._otherwise_value(df)[0]
+        elif self._otherwise_value is not None:
+            otherwise = when._from_scalar(self._otherwise_value)
+            otherwise._broadcast = True
         else:
             otherwise = self._otherwise_value
-        result = self._if_then_else(when.native, df._extract_comparand(then), otherwise)
-        return [then._with_native(result)]
+        return [self._if_then_else(when, then, otherwise)]
 
 
 class LazyWhen(
@@ -178,7 +179,6 @@ class LazyWhen(
 ):
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
-    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
     def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
@@ -200,13 +200,33 @@ class LazyWhen(
         obj = cls.__new__(cls)
         obj._condition = condition
 
-        # This may require more complicated logic if we want to push down the
-        # `over`: https://github.com/narwhals-dev/narwhals/issues/2652.
-        obj._window_function = None
-
         obj._then_value = None
         obj._otherwise_value = None
         obj._implementation = context._implementation
         obj._backend_version = context._backend_version
         obj._version = context._version
         return obj
+
+    def _window_function(
+        self, df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+    ) -> Sequence[NativeExprT]:
+        is_expr = self._condition._is_expr
+        condition = self._condition.window_function(df, window_inputs)[0]
+        then_ = self._then_value
+        then = (
+            then_.window_function(df, window_inputs)[0]
+            if is_expr(then_)
+            else self.lit(then_)
+        )
+
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = self.when(condition, then)
+        else:
+            other = (
+                other_.window_function(df, window_inputs)[0]
+                if is_expr(other_)
+                else self.lit(other_)
+            )
+            result = self.when(condition, then).otherwise(other)  # type: ignore  # noqa: PGH003
+        return [result]

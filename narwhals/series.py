@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -473,7 +474,7 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Cast between data types.
 
         Arguments:
@@ -600,6 +601,25 @@ class Series(Generic[IntoSeriesT]):
             A perfectly symmetric distribution has a skewness of 0.
         """
         return self._compliant_series.skew()
+
+    def kurtosis(self) -> float | None:
+        """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Kurtosis is the fourth central moment divided by the square of the variance.
+        The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
+
+        Returns:
+            The kurtosis (Fisher's definition) without bias correction of the column.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 1, 2, 10, 100])
+            >>> nw.from_native(s_native, series_only=True).kurtosis()
+            0.2106571340718002
+        """
+        return self._compliant_series.kurtosis()
 
     def count(self) -> int:
         """Returns the number of non-null elements in the Series.
@@ -1170,7 +1190,7 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 
@@ -1179,7 +1199,7 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
-                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+                `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
@@ -2601,7 +2621,7 @@ class Series(Generic[IntoSeriesT]):
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new series.
 
         Examples:
             >>> import pandas as pd
@@ -2619,6 +2639,52 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.log(base=base))
+
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([-1, 0, 1], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.exp()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    0.367879          |
+            |1    1.000000          |
+            |2    2.718282          |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.exp())
+
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 4, 9], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sqrt()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1.0               |
+            |1    2.0               |
+            |2    3.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.sqrt())
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:

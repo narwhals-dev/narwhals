@@ -24,15 +24,12 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import Incomplete
     from narwhals._utils import Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-class ArrowNamespace(
-    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, "pa.Table", "ChunkedArrayAny"]
-):
+class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table]):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -65,9 +62,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> ArrowExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
@@ -266,20 +261,23 @@ class ArrowNamespace(
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
-        self,
-        when: ChunkedArrayAny,
-        then: ChunkedArrayAny,
-        otherwise: ArrayOrScalar | NonNestedLiteral,
-        /,
-    ) -> ChunkedArrayAny:
-        otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
-        return pc.if_else(when, then, otherwise)
+        self, when: ArrowSeries, then: ArrowSeries, otherwise: ArrowSeries | None, /
+    ) -> ArrowSeries:
+        if otherwise is None:
+            when, then = align_series_full_broadcast(when, then)
+            res_native = pc.if_else(
+                when.native, then.native, pa.nulls(len(when.native), then.native.type)
+            )
+        else:
+            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+            res_native = pc.if_else(when.native, then.native, otherwise.native)
+        return then._with_native(res_native)
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...

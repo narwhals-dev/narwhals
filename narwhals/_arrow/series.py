@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -165,7 +166,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
@@ -393,6 +394,19 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
             return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
 
+    def kurtosis(self, *, _return_py_scalar: bool = True) -> float | None:
+        ser_not_null = self.native.drop_null()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+            m2 = pc.mean(pc.power(m, lit(2)))
+            m4 = pc.mean(pc.power(m, lit(4)))
+            k = pc.subtract(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+            return maybe_extract_py_scalar(k, _return_py_scalar)
+
     def count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(pc.count(self.native), _return_py_scalar)
 
@@ -549,7 +563,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def is_nan(self) -> Self:
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
 
@@ -762,7 +776,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         # https://stackoverflow.com/a/79111029/4451315
         idxs = pc.index_in(self.native, pa.array(old))
@@ -1155,6 +1169,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def log(self, base: float) -> Self:
         return self._with_native(pc.logb(self.native, lit(base)))
+
+    def exp(self) -> Self:
+        return self._with_native(pc.exp(self.native))
+
+    def sqrt(self) -> Self:
+        return self._with_native(pc.sqrt(self.native))
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

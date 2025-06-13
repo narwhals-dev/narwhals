@@ -100,6 +100,8 @@ def get_ibis() -> Any:
 
 def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
+    if (dd := get_dask_dataframe()) is not None and hasattr(dd, "dask_expr"):
+        return dd.dask_expr
     return sys.modules.get("dask_expr", None)
 
 

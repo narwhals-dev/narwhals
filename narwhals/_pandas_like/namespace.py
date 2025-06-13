@@ -3,7 +3,9 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Literal, Sequence
+from typing import TYPE_CHECKING, Literal, Sequence
+
+import pandas as pd
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -17,25 +19,16 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 VERTICAL: Literal[0] = 0
 HORIZONTAL: Literal[1] = 1
 
 
 class PandasLikeNamespace(
-    EagerNamespace[
-        PandasLikeDataFrame,
-        PandasLikeSeries,
-        PandasLikeExpr,
-        "pd.DataFrame",
-        "pd.Series[Any]",
-    ]
+    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, pd.DataFrame]
 ):
     @property
     def _dataframe(self) -> type[PandasLikeDataFrame]:
@@ -64,9 +57,7 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> PandasLikeExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(
                 data=[value],
@@ -315,21 +306,25 @@ class PandasLikeNamespace(
         )
 
 
-class PandasWhen(
-    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, "pd.Series[Any]"]
-):
+class PandasWhen(EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]):
     @property
     def _then(self) -> type[PandasThen]:
         return PandasThen
 
     def _if_then_else(
         self,
-        when: pd.Series[Any],
-        then: pd.Series[Any],
-        otherwise: pd.Series[Any] | NonNestedLiteral,
+        when: PandasLikeSeries,
+        then: PandasLikeSeries,
+        otherwise: PandasLikeSeries | None,
         /,
-    ) -> pd.Series[Any]:
-        return then.where(when) if otherwise is None else then.where(when, otherwise)
+    ) -> PandasLikeSeries:
+        if otherwise is None:
+            when, then = align_series_full_broadcast(when, then)
+            res_native = then.native.where(when.native)
+        else:
+            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
+            res_native = then.native.where(when.native, otherwise.native)
+        return then._with_native(res_native)
 
 
 class PandasThen(
