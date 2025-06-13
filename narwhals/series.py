@@ -609,7 +609,7 @@ class Series(Generic[IntoSeriesT]):
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
 
         Returns:
-            An expression representing the kurtosis (Fisher's definition) without bias correction of the column.
+            The kurtosis (Fisher's definition) without bias correction of the column.
 
         Examples:
             >>> import polars as pl
