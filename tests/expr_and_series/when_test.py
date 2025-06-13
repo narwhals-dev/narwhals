@@ -120,6 +120,9 @@ def test_when_then_invalid(constructor: Constructor) -> None:
     with pytest.raises(ShapeError):
         df.select(nw.when(nw.col("a").sum() > 1).then("c"))
 
+    with pytest.raises(ShapeError):
+        df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
+
 
 def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
@@ -144,3 +147,58 @@ def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
         df.select(x1=nw.when(nw.all() > 1).then(nw.col("a", "b")))
     with pytest.raises(MultiOutputExpressionError):
         df.select(x1=nw.when(nw.all() > 1).then(nw.lit(1)).otherwise(nw.all()))
+
+
+@pytest.mark.parametrize(
+    ("condition", "then", "otherwise", "expected"),
+    [
+        (nw.col("a").sum() == 6, 100, None, [100]),
+        (nw.col("a").sum() == 6, 100, 200, [100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6]),
+        (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6]),
+        (nw.col("a").sum() == 5, 100, None, [None]),
+        (nw.col("a").sum() == 5, 100, 200, [200]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200]),
+        (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), nw.col("b").sum(), [15]),
+    ],
+)
+def test_when_then_otherwise_aggregate_select(
+    condition: nw.Expr,
+    then: nw.Expr | int,
+    otherwise: nw.Expr | int,
+    expected: list[int],
+    constructor: Constructor,
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = df.select(a_when=nw.when(condition).then(then).otherwise(otherwise))
+    assert_equal_data(result, {"a_when": expected})
+
+
+@pytest.mark.parametrize(
+    ("condition", "then", "otherwise", "expected"),
+    [
+        (nw.col("a").sum() == 6, 100, None, [100, 100, 100]),
+        (nw.col("a").sum() == 6, 100, 200, [100, 100, 100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), 200, [6, 6, 6]),
+        (nw.col("a").sum() == 6, 100, nw.col("b").sum(), [100, 100, 100]),
+        (nw.col("a").sum() == 6, nw.col("a").sum(), nw.col("b").sum(), [6, 6, 6]),
+        (nw.col("a").sum() == 5, 100, None, [None, None, None]),
+        (nw.col("a").sum() == 5, 100, 200, [200, 200, 200]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), 200, [200, 200, 200]),
+        (nw.col("a").sum() == 5, 100, nw.col("b").sum(), [15, 15, 15]),
+        (nw.col("a").sum() == 5, nw.col("a").sum(), nw.col("b").sum(), [15, 15, 15]),
+    ],
+)
+def test_when_then_otherwise_aggregate_with_columns(
+    condition: nw.Expr,
+    then: nw.Expr | int,
+    otherwise: nw.Expr | int,
+    expected: list[int],
+    constructor: Constructor,
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    expr = nw.when(condition).then(then).otherwise(otherwise)
+    result = df.with_columns(a_when=expr)
+    assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})

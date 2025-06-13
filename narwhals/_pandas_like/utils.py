@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
+    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -349,7 +349,7 @@ def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
-    dtype: DType | type[DType],
+    dtype: IntoDType,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
     backend_version: tuple[int, ...],
