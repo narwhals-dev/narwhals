@@ -202,4 +202,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def exp(self) -> Self:
         return self._reuse_series("exp")
 
+    def sqrt(self) -> Self:
+        return self._reuse_series("sqrt")
+
     ewm_mean = not_implemented()

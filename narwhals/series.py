@@ -2644,6 +2644,29 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.exp())
 
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 4, 9], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sqrt()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1.0               |
+            |1    2.0               |
+            |2    3.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.sqrt())
+
     @property
     def str(self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)

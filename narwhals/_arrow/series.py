@@ -1160,6 +1160,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def exp(self) -> Self:
         return self._with_native(pc.exp(self.native))
 
+    def sqrt(self) -> Self:
+        return self._with_native(pc.sqrt(self.native))
+
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)

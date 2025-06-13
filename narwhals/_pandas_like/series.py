@@ -1082,6 +1082,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             result_native = np.exp(native)
         return self._with_native(result_native)
 
+    def sqrt(self) -> Self:
+        return self._with_native(self.native.pow(0.5))
+
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)

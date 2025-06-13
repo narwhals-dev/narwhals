@@ -303,6 +303,7 @@ class PolarsExpr:
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[Self]
+    sqrt: Method[Self]
     std: Method[Self]
     sum: Method[Self]
     sort: Method[Self]

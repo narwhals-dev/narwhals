@@ -878,6 +878,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_elementwise(_exp)
 
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Expression) -> Expression:
+            return when(expr < lit(0), lit(float("nan"))).otherwise(
+                FunctionExpression("sqrt", expr)
+            )
+
+        return self._with_elementwise(_sqrt)
+
     @property
     def str(self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)

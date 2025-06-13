@@ -2516,6 +2516,32 @@ class Expr:
         """
         return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
 
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1, 4, 9]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sqrt=nw.col("values").sqrt())
+            >>> result
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |values: int64     |
+            |sqrt: double      |
+            |----              |
+            |values: [[1,4,9]] |
+            |sqrt: [[1,2,3]]   |
+            └──────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).sqrt())
+
     @property
     def str(self) -> ExprStringNamespace[Self]:
         return ExprStringNamespace(self)
