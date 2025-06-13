@@ -45,6 +45,6 @@ def test_sqrt_dtype_pandas_pyarrow() -> None:
     s = pd.Series([1.0, None, 2.0], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6])
     result = nw.from_native(s, series_only=True).sqrt().to_native()
     expected = pd.Series(
-        [1, None, 1.414213], name="a", dtype="Float32[pyarrow]", index=[8, 7, 6]
+        [1, None, 1.414213], name="a", dtype="Float64[pyarrow]", index=[8, 7, 6]
     )
     pd.testing.assert_series_equal(result, expected)
