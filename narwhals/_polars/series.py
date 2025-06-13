@@ -92,6 +92,7 @@ INHERITED_METHODS = frozenset(
         "is_sorted",
         "is_unique",
         "item",
+        "kurtosis",
         "len",
         "log",
         "max",
@@ -642,6 +643,7 @@ class PolarsSeries:
     is_sorted: Method[bool]
     is_unique: Method[Self]
     item: Method[Any]
+    kurtosis: Method[float | None]
     len: Method[int]
     log: Method[Self]
     max: Method[Any]
