@@ -13,6 +13,7 @@ import narwhals.stable.v1 as nw_v1
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
+    is_dask_dataframe,
     is_ibis_table,
     is_modin_dataframe,
     is_modin_series,
@@ -311,6 +312,7 @@ def test_v1_enum_duckdb_2550() -> None:
     "is_native_dataframe",
     [
         is_pandas_dataframe,
+        is_dask_dataframe,
         is_modin_dataframe,
         is_polars_dataframe,
         is_cudf_dataframe,
