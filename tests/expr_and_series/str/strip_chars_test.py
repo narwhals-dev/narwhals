@@ -20,7 +20,7 @@ def test_str_strip_chars(
     characters: str | None,
     expected: Any,
 ) -> None:
-    if "ibis" in str(constructor) and characters is not None:
+    if any(x in str(constructor) for x in ("daft", "ibis")) and characters:
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

@@ -54,17 +54,11 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_columns_dtypes_single_row(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_with_columns_dtypes_single_row(constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         pytest.skip()
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("daft", "duckdb", "daft", "ibis")):
+        pytest.skip("not categorical support")
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
     result = df.with_columns(nw.col("a"))

@@ -29,7 +29,7 @@ def test_convert_time_zone(
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis", "daft")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -58,7 +58,7 @@ def test_convert_time_zone_series(
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf",)):
+    if any(x in str(constructor_eager) for x in ("cudf", "daft")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -88,7 +88,7 @@ def test_convert_time_zone_from_none(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis", "daft")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         # polars used to disallow this

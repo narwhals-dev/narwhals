@@ -31,6 +31,7 @@ from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
     get_cudf,
+    get_daft,
     get_dask_dataframe,
     get_duckdb,
     get_ibis,
@@ -273,6 +274,8 @@ class Implementation(NoAutoEnum):
     """SQLFrame implementation."""
     PYSPARK_CONNECT = "pyspark[connect]"
     """PySpark Connect implementation."""
+    DAFT = "daft"
+    """Daft implementation."""
     UNKNOWN = "unknown"
     """Unknown implementation."""
 
@@ -303,6 +306,7 @@ class Implementation(NoAutoEnum):
             get_ibis(): Implementation.IBIS,
             get_sqlframe(): Implementation.SQLFRAME,
             get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
+            get_daft(): Implementation.DAFT,
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
@@ -570,6 +574,14 @@ class Implementation(NoAutoEnum):
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
 
+    def is_daft(self) -> bool:
+        """Return whether implementation is Daft.
+
+        Returns:
+            Boolean.
+        """
+        return self is Implementation.DAFT  # pragma: no cover
+
     def _backend_version(self) -> tuple[int, ...]:
         """Returns backend version.
 
@@ -614,6 +626,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
     Implementation.SQLFRAME: (3, 22, 0),
+    Implementation.DAFT: (0, 4, 7),
 }
 
 _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
@@ -621,6 +634,7 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.MODIN: "modin.pandas",
     Implementation.PYSPARK: "pyspark.sql",
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
+    Implementation.DAFT: "daft",
 }
 """Stores non default mapping from Implementation to module name"""
 

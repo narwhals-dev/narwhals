@@ -55,6 +55,9 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
+        # https://github.com/Eventual-Inc/Daft/issues/4464
+        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
@@ -409,6 +412,8 @@ def test_over_without_partition_by(
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
+        request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
