@@ -36,9 +36,8 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
-from narwhals.dtypes import DType
-from narwhals.utils import _StoresCompliant, not_implemented
 
 if TYPE_CHECKING:
     from typing import Mapping
@@ -47,11 +46,18 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        ScalarKwargs,
+        WindowFunction,
+    )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals.dtypes import DType
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -59,7 +65,6 @@ if TYPE_CHECKING:
         TemporalLiteral,
         TimeUnit,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
@@ -111,7 +116,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
-    def cast(self, dtype: DType | type[DType]) -> Self: ...
+    def cast(self, dtype: IntoDType) -> Self: ...
     def count(self) -> Self: ...
     def min(self) -> Self: ...
     def max(self) -> Self: ...
@@ -122,6 +127,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
     def skew(self) -> Self: ...
+    def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
     def var(self, *, ddof: int) -> Self: ...
     def n_unique(self) -> Self: ...
@@ -134,6 +140,8 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         limit: int | None,
     ) -> Self: ...
     def diff(self) -> Self: ...
+    def exp(self) -> Self: ...
+    def sqrt(self) -> Self: ...
     def unique(self) -> Self: ...
     def len(self) -> Self: ...
     def log(self, base: float) -> Self: ...
@@ -161,11 +169,9 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
-    def over(
-        self, partition_by: Sequence[str], order_by: Sequence[str] | None
-    ) -> Self: ...
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
     def sample(
         self,
         n: int | None,
@@ -180,7 +186,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def map_batches(
         self,
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
 
     def clip(
@@ -334,7 +340,7 @@ class EagerExpr(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
+    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod
@@ -511,7 +517,7 @@ class EagerExpr(
             scalar_kwargs=self._scalar_kwargs,
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         return self._reuse_series("cast", dtype=dtype)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -610,6 +616,9 @@ class EagerExpr(
     def skew(self) -> Self:
         return self._reuse_series("skew", returns_scalar=True)
 
+    def kurtosis(self) -> Self:
+        return self._reuse_series("kurtosis", returns_scalar=True)
+
     def any(self) -> Self:
         return self._reuse_series("any", returns_scalar=True)
 
@@ -674,7 +683,7 @@ class EagerExpr(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
             "replace_strict", old=old, new=new, return_dtype=return_dtype
@@ -801,7 +810,7 @@ class EagerExpr(
         )
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
+        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
@@ -875,6 +884,9 @@ class LazyExpr(
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # pyright: ignore[reportAssignmentType]
+
+    @property
+    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:

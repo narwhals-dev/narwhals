@@ -15,27 +15,28 @@ from typing import (
 from warnings import warn
 
 import narwhals as nw
-from narwhals import dependencies, exceptions, selectors
+from narwhals import dependencies, exceptions, functions as nw_f, selectors
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import (
+    Implementation,
+    Version,
+    deprecate_native_namespace,
+    find_stacklevel,
+    generate_temporary_column_name,
+    inherit_doc,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+    validate_strict_and_pass_though,
+)
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import (
-    Then as NwThen,
-    When as NwWhen,
-    _from_arrow_impl,
-    _from_dict_impl,
-    _from_numpy_impl,
-    _new_series_impl,
-    _read_csv_impl,
-    _read_parquet_impl,
-    _scan_csv_impl,
-    _scan_parquet_impl,
-    get_level,
-    show_versions,
-    when as nw_when,
-)
+from narwhals.functions import _new_series_impl, concat, get_level, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -71,21 +72,6 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
-from narwhals.utils import (
-    Implementation,
-    Version,
-    deprecate_native_namespace,
-    find_stacklevel,
-    generate_temporary_column_name,
-    inherit_doc,
-    is_ordered_categorical,
-    maybe_align_index,
-    maybe_convert_dtypes,
-    maybe_get_index,
-    maybe_reset_index,
-    maybe_set_index,
-    validate_strict_and_pass_though,
-)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -95,9 +81,8 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import FrameT
     from narwhals.typing import (
-        ConcatMethod,
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrameT,
@@ -122,6 +107,7 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 class DataFrame(NwDataFrame[IntoDataFrameT]):
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -172,7 +158,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
-        return super().lazy(backend=backend)  # type: ignore[return-value]
+        return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -190,10 +176,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
-        return super().is_duplicated()  # type: ignore[return-value]
+        return _stableify(super().is_duplicated())
 
     def is_unique(self) -> Series[Any]:
-        return super().is_unique()  # type: ignore[return-value]
+        return _stableify(super().is_unique())
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -207,6 +193,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 class LazyFrame(NwLazyFrame[IntoFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+        assert df._version is Version.V1  # noqa: S101
         super().__init__(df, level=level)
 
     @property
@@ -244,7 +231,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     def collect(
         self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
-        return super().collect(backend=backend, **kwargs)  # type: ignore[return-value]
+        return _stableify(super().collect(backend=backend, **kwargs))
 
     def _l1_norm(self) -> Self:
         """Private, just used to test the stable API.
@@ -254,7 +241,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         return self.select(all()._l1_norm())
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
+    def tail(self, n: int = 5) -> Self:
         r"""Get the last `n` rows.
 
         Arguments:
@@ -285,6 +272,7 @@ class Series(NwSeries[IntoSeriesT]):
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
     ) -> None:
+        assert series._version is Version.V1  # noqa: S101
         super().__init__(series, level=level)
 
     # We need to override any method which don't return Self so that type
@@ -295,7 +283,7 @@ class Series(NwSeries[IntoSeriesT]):
         return DataFrame
 
     def to_frame(self) -> DataFrame[Any]:
-        return super().to_frame()  # type: ignore[return-value]
+        return _stableify(super().to_frame())
 
     def value_counts(
         self,
@@ -305,8 +293,10 @@ class Series(NwSeries[IntoSeriesT]):
         name: str | None = None,
         normalize: bool = False,
     ) -> DataFrame[Any]:
-        return super().value_counts(  # type: ignore[return-value]
-            sort=sort, parallel=parallel, name=name, normalize=normalize
+        return _stableify(
+            super().value_counts(
+                sort=sort, parallel=parallel, name=name, normalize=normalize
+            )
         )
 
     def hist(
@@ -316,16 +306,18 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
+        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
 
         msg = (
             "`Series.hist` is being called from the stable API although considered "
             "an unstable feature."
         )
         warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return super().hist(  # type: ignore[return-value]
-            bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+        return _stableify(
+            super().hist(
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
         )
 
 
@@ -463,17 +455,14 @@ def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
 def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
 def _stableify(obj: NwExpr) -> Expr: ...
-@overload
-def _stableify(obj: Any) -> Any: ...
 
 
 def _stableify(
     obj: NwDataFrame[IntoFrameT]
     | NwLazyFrame[IntoFrameT]
     | NwSeries[IntoSeriesT]
-    | NwExpr
-    | Any,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
+    | NwExpr,
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
@@ -482,7 +471,8 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    return obj
+    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 @overload
@@ -963,7 +953,7 @@ def from_native(  # noqa: D417
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
 
-    result = _from_native_impl(
+    return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
@@ -972,7 +962,6 @@ def from_native(  # noqa: D417
         allow_series=allow_series,
         version=Version.V1,
     )
-    return _stableify(result)  # type: ignore[no-any-return]
 
 
 @overload
@@ -1035,9 +1024,9 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
+    from narwhals._utils import validate_strict_and_pass_though
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
-    from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
@@ -1228,7 +1217,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -1406,29 +1395,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
-def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
-    """Concatenate multiple DataFrames, LazyFrames into a single entity.
-
-    Arguments:
-        items: DataFrames, LazyFrames to concatenate.
-        how: concatenating strategy
-
-            - vertical: Concatenate vertically. Column names must match.
-            - horizontal: Concatenate horizontally. If lengths don't match, then
-                missing rows are filled with null values. This is only supported
-                when all inputs are (eager) DataFrames.
-            - diagonal: Finds a union between the column schemas and fills missing column
-                values with null.
-
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
-
-    Raises:
-        TypeError: The items to concatenate should either all be eager, or all lazy
-    """
-    return cast("FrameT", _stableify(nw.concat(items, how=how)))
-
-
 def concat_str(
     exprs: IntoExpr | Iterable[IntoExpr],
     *more_exprs: IntoExpr,
@@ -1456,18 +1422,18 @@ def concat_str(
     )
 
 
-class When(NwWhen):
+class When(nw_f.When):
     @classmethod
-    def from_when(cls, when: NwWhen) -> When:
+    def from_when(cls, when: nw_f.When) -> When:
         return cls(when._predicate)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
-class Then(NwThen, Expr):
+class Then(nw_f.Then, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Then:
+    def from_then(cls, then: nw_f.Then) -> Then:
         return cls(then._to_compliant_expr, then._metadata)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
@@ -1495,14 +1461,14 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     Returns:
         A "when" object, which `.then` can be called on.
     """
-    return When.from_when(nw_when(*predicates))
+    return When.from_when(nw_f.when(*predicates))
 
 
 @deprecate_native_namespace(required=True)
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1534,9 +1500,7 @@ def new_series(
         A new Series
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _new_series_impl(name, values, dtype, backend=backend, version=Version.V1)
-    )
+    return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1570,9 +1534,7 @@ def from_arrow(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _from_arrow_impl(native_frame, backend=backend, version=Version.V1)
-    )
+    return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
 @deprecate_native_namespace()
@@ -1616,9 +1578,7 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    return _stableify(  # type: ignore[no-any-return]
-        _from_dict_impl(data, schema, backend=backend, version=Version.V1)
-    )
+    return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1660,7 +1620,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))  # type: ignore[no-any-return]
+    return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1697,9 +1657,7 @@ def read_csv(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1739,9 +1697,7 @@ def scan_csv(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_csv_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1778,9 +1734,7 @@ def read_parquet(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _read_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1834,9 +1788,7 @@ def scan_parquet(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(  # type: ignore[no-any-return]
-        _scan_parquet_impl(source, backend=backend, **kwargs)
-    )
+    return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
 __all__ = [

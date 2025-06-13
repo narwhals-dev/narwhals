@@ -360,3 +360,51 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
         "c": nw.String(),
     }
     assert_equal_data(result.select("c"), {"c": data["a"]})
+
+
+def test_cast_typing_invalid() -> None:
+    """**IMPORTANT**!
+
+    **Please don't parametrize these tests.**
+
+    They're checking we warn early when a cast will fail at runtime.
+    """
+    a = nw.col("a")
+
+    with pytest.raises(TypeError):
+        a.cast(nw.Field)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        a.cast(nw.Field("a", nw.Array))  # type: ignore[arg-type]
+
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame({"a": [1]}))
+
+    # NOTE: If you're seeing this fail because they raise a more consistent error,
+    # feel free to update the types used
+    # See (https://github.com/narwhals-dev/narwhals/pull/2654#discussion_r2142263770)
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.Struct))  # type: ignore[arg-type]
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.List))  # type: ignore[arg-type]
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.Array))  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        df.select(a.cast(nw.Enum))  # type: ignore[arg-type]
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.Struct([nw.Field])))  # type: ignore[list-item]
+
+    with pytest.raises((ValueError, AttributeError)):
+        df.select(a.cast(nw.Struct({"a": nw.Int16, "b": nw.Enum})))  # type: ignore[dict-item]
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.List(nw.Struct)))  # type: ignore[arg-type]
+
+    with pytest.raises(AttributeError):
+        df.select(a.cast(nw.Array(nw.List, 2)))  # type: ignore[arg-type]

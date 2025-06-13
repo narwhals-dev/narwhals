@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Sequence, cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._compliant import CompliantThen, LazyNamespace, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -17,12 +17,11 @@ from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import lit, narwhals_to_native_dtype
-from narwhals.utils import Implementation, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod
-    from narwhals.utils import Version
+    from narwhals._utils import Version
+    from narwhals.typing import ConcatMethod, IntoDType
 
 
 class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
@@ -178,7 +177,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     def when(self, predicate: IbisExpr) -> IbisWhen:
         return IbisWhen.from_expr(predicate, context=self)
 
-    def lit(self, value: Any, dtype: DType | type[DType] | None) -> IbisExpr:
+    def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
             return [lit(value, ibis_dtype)]
@@ -225,4 +224,4 @@ class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
         return [result]
 
 
-class IbisThen(CompliantThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...
+class IbisThen(LazyThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...

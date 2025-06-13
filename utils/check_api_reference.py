@@ -10,7 +10,6 @@ from typing import Any, Iterator
 import polars as pl
 
 import narwhals as nw
-from narwhals.utils import remove_prefix
 
 LOWERCASE = tuple(string.ascii_lowercase)
 
@@ -31,6 +30,12 @@ else:
 def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
     for name, _ in inspect.getmembers(tp, _is_public_method_or_property):
         yield name
+
+
+def remove_prefix(text: str, prefix: str) -> str:
+    if text.startswith(prefix):
+        return text[len(prefix) :]
+    return text
 
 
 ret = 0

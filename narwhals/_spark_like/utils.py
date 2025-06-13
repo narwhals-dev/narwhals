@@ -4,8 +4,8 @@ from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
 
+from narwhals._utils import Implementation, isinstance_or_issubclass
 from narwhals.exceptions import UnsupportedDTypeError
-from narwhals.utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
+    from narwhals.typing import IntoDType
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
     SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
@@ -127,7 +128,7 @@ def fetch_session_time_zone(session: SparkSession) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version, spark_types: ModuleType
+    dtype: IntoDType, version: Version, spark_types: ModuleType
 ) -> _NativeDType:
     dtypes = version.dtypes
     if TYPE_CHECKING:

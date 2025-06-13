@@ -7,8 +7,8 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant.series import _SeriesNamespace
+from narwhals._utils import isinstance_or_issubclass
 from narwhals.exceptions import ShapeError
-from narwhals.utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
@@ -24,9 +24,9 @@ if TYPE_CHECKING:
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import PythonLiteral
-    from narwhals.utils import Version
+    from narwhals.typing import IntoDType, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -165,7 +165,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # 
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."

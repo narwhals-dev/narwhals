@@ -20,8 +20,8 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
+from narwhals._utils import Implementation, requires, validate_backend_version
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.utils import Implementation, requires, validate_backend_version
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -34,10 +34,16 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, MultiIndexSelector, PythonLiteral, _1DArray
-    from narwhals.utils import Version, _FullContext
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        PythonLiteral,
+        _1DArray,
+    )
 
     T = TypeVar("T")
 
@@ -78,6 +84,7 @@ INHERITED_METHODS = frozenset(
         "cum_sum",
         "diff",
         "drop_nulls",
+        "exp",
         "fill_null",
         "filter",
         "gather_every",
@@ -91,6 +98,7 @@ INHERITED_METHODS = frozenset(
         "is_sorted",
         "is_unique",
         "item",
+        "kurtosis",
         "len",
         "log",
         "max",
@@ -105,6 +113,7 @@ INHERITED_METHODS = frozenset(
         "sample",
         "shift",
         "skew",
+        "sqrt",
         "std",
         "sum",
         "tail",
@@ -161,7 +170,7 @@ class PolarsSeries:
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
         backend_version = context._backend_version
@@ -256,7 +265,7 @@ class PolarsSeries:
             return self._from_native_object(self.native.__getitem__(item.native))
         return self._from_native_object(self.native.__getitem__(item))
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
@@ -266,7 +275,7 @@ class PolarsSeries:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         ser = self.native
         dtype = (
@@ -634,6 +643,7 @@ class PolarsSeries:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    exp: Method[Self]
     fill_null: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
@@ -647,6 +657,7 @@ class PolarsSeries:
     is_sorted: Method[bool]
     is_unique: Method[Self]
     item: Method[Any]
+    kurtosis: Method[float | None]
     len: Method[int]
     log: Method[Self]
     max: Method[Any]
@@ -661,6 +672,7 @@ class PolarsSeries:
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[float | None]
+    sqrt: Method[Self]
     std: Method[float]
     sum: Method[float]
     tail: Method[Self]

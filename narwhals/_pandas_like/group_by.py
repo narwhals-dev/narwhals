@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.utils import find_stacklevel
+from narwhals._utils import find_stacklevel
 
 if TYPE_CHECKING:
     from narwhals._compliant.group_by import NarwhalsAggregation

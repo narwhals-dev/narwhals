@@ -6,7 +6,7 @@ from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
-from narwhals.utils import not_implemented
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression

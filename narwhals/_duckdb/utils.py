@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import duckdb
 
-from narwhals.utils import Version, isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 UNITS_DICT = {
     "y": "year",
@@ -159,7 +160,7 @@ def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
         "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
     ).fetchone()
     assert result is not None  # noqa: S101
-    return result[0]
+    return result[0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -189,7 +190,7 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> str:  # noqa: C901, PLR0912, PLR0915
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa: C901, PLR0912, PLR0915
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -284,12 +285,3 @@ def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     else:
         by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
     return f"order by {by_sql}"
-
-
-def ensure_type(obj: Any, *valid_types: type[Any]) -> None:
-    # Use this for extra (possibly redundant) validation in places where we
-    # use SQLExpression, as an extra guard against unsafe inputs.
-    if not isinstance(obj, valid_types):  # pragma: no cover
-        tp_names = " | ".join(tp.__name__ for tp in valid_types)
-        msg = f"Expected {tp_names!r}, got: {type(obj).__name__!r}"
-        raise TypeError(msg)

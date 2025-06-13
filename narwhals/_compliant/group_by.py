@@ -30,7 +30,7 @@ from narwhals._compliant.typing import (
     NativeExprT_co,
 )
 from narwhals._typing_compat import Protocol38
-from narwhals.utils import is_sequence_of
+from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
