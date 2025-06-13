@@ -539,7 +539,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def first(self) -> Self:
         def fn(inputs: SparkWindowInputs) -> Column:
             return self._F.first(inputs.expr, ignorenulls=False).over(
-                self.partition_by(inputs).orderBy(*self._sort(inputs))
+                self.partition_by(*inputs.partition_by).orderBy(
+                    *self._sort(*inputs.order_by)
+                )
             )
 
         return self._with_window_function(fn)
