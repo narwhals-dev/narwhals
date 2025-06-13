@@ -45,6 +45,7 @@
         - is_sorted
         - is_unique
         - item
+        - kurtosis
         - len
         - log
         - max
@@ -71,6 +72,7 @@
         - shift
         - sort
         - skew
+        - sqrt
         - std
         - sum
         - tail

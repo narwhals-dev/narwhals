@@ -663,6 +663,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def skew(self) -> Self:
         return self._with_callable(self._F.skewness)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(self._F.kurtosis)
+
     def n_unique(self) -> Self:
         def _n_unique(expr: Column) -> Column:
             return self._F.count_distinct(expr) + self._F.max(
@@ -908,6 +911,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.exp(expr)
 
         return self._with_elementwise(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Column) -> Column:
+            return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
+                self._F.sqrt(expr)
+            )
+
+        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

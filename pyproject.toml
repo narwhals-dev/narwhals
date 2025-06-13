@@ -286,7 +286,7 @@ exclude_also = [
   'if "modin" in str\(constructor',
   'if "pyspark" in str\(constructor',
   'if "pyspark_connect" in str\(constructor',
-  'pytest.skip\('
+  'pytest.skip\(',
 ]
 
 [tool.mypy]
