@@ -25,6 +25,7 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_scalar
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError
+from narwhals.functions import _new_series_impl
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -76,7 +77,9 @@ class Series(Generic[IntoSeriesT]):
         - If the object is a generic sequence (e.g. a list or a tuple of values), you can
             create a series via [`narwhals.new_series`][], e.g.:
             ```py
-            narwhals.new_series(name="price", values=[10.5, 9.4, 1.2], backend="pandas")
+            import narwhals as nw
+
+            nw.Series.from_iterable(name="price", values=[10.5, 9.4], backend="pandas")
             ```
     """
 
@@ -97,6 +100,54 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Any,
+        dtype: DType | type[DType] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        """Instantiate Narwhals Series from iterable (e.g. list or array).
+
+        Arguments:
+            name: Name of resulting Series.
+            values: Values of make Series from.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> values = [4, 1, 2, 3]
+            >>> nw.Series.from_iterable(
+            ...     name="a", values=values, dtype=nw.Int32, backend=pd
+            ... )
+            ┌─────────────────────┐
+            |   Narwhals Series   |
+            |---------------------|
+            |0    4               |
+            |1    1               |
+            |2    2               |
+            |3    3               |
+            |Name: a, dtype: int32|
+            └─────────────────────┘
+        """
+        return _new_series_impl(name, values, dtype, backend=backend)
 
     @property
     def implementation(self) -> Implementation:
