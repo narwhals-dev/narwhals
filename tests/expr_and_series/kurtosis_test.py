@@ -44,7 +44,7 @@ def test_kurtosis_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11176
+        # https://github.com/ibis-project/ibis/issues/11341
         request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
