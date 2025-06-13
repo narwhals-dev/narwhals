@@ -80,24 +80,14 @@ def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data)).filter(str="z")
 
     result = df.select(**expressions)
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis", "daft")):
-        expected = {
-            "all": [None],
-            "any": [None],
-            "max": [None],
-            "mean": [None],
-            "min": [None],
-            "sum": [None],
-        }
-    else:
-        expected = {
-            "all": [True],
-            "any": [False],
-            "max": [None],
-            "mean": [None],
-            "min": [None],
-            "sum": [0],
-        }
+    expected = {
+        "all": [True],
+        "any": [False],
+        "max": [None],
+        "mean": [None],
+        "min": [None],
+        "sum": [0],
+    }
     assert_equal_data(result, expected)
 
 
