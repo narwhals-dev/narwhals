@@ -3,8 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
 
-import daft
-from daft import lit
+from daft import Window, coalesce, col, lit
 from daft.functions import row_number
 
 from narwhals._compliant import LazyExpr
@@ -17,7 +16,7 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from daft import Expression, Window
+    from daft import Expression
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, EvalNames, WindowFunction
@@ -36,7 +35,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def __init__(
         self,
-        call: Callable[[DaftLazyFrame], Sequence[daft.Expression]],
+        call: Callable[[DaftLazyFrame], Sequence[Expression]],
         window_function: DaftWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[DaftLazyFrame],
@@ -65,17 +64,17 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
         return self._window_function or default_window_func
 
-    def __call__(self, df: DaftLazyFrame) -> Sequence[daft.Expression]:
+    def __call__(self, df: DaftLazyFrame) -> Sequence[Expression]:
         return self._call(df)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
-        return self._with_callable(lambda expr: expr.over(self.partition_by()))
+        return self.over([lit(1)], [])
 
     def partition_by(self, *cols: Expression | str) -> Window:
         """Wraps `Window().paritionBy`, with default and `WindowInputs` handling."""
-        return daft.Window().partition_by(*cols or [daft.lit(1)])
+        return Window().partition_by(*cols or [lit(1)])
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -96,7 +95,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         )
 
     @classmethod
-    def _alias_native(cls, expr: daft.Expression, name: str) -> daft.Expression:
+    def _alias_native(cls, expr: Expression, name: str) -> Expression:
         return expr.alias(name)
 
     def _cum_window_func(
@@ -109,7 +108,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             window = (
                 self.partition_by(*inputs.partition_by)
                 .order_by(*inputs.order_by, desc=reverse)
-                .rows_between(daft.Window.unbounded_preceding, 0)
+                .rows_between(Window.unbounded_preceding, 0)
             )
             return [getattr(expr, func_name)().over(window) for expr in self._call(df)]
 
@@ -123,8 +122,8 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         *,
         context: _FullContext,
     ) -> Self:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
-            return [daft.col(col_name) for col_name in evaluate_column_names(df)]
+        def func(df: DaftLazyFrame) -> list[Expression]:
+            return [col(col_name) for col_name in evaluate_column_names(df)]
 
         return cls(
             func,
@@ -138,9 +137,9 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def from_column_indices(
         cls: type[Self], *column_indices: int, context: _FullContext
     ) -> Self:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(df: DaftLazyFrame) -> list[Expression]:
             columns = df.columns
-            return [daft.col(columns[i]) for i in column_indices]
+            return [col(columns[i]) for i in column_indices]
 
         return cls(
             func,
@@ -151,9 +150,9 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         )
 
     def _with_callable(
-        self, call: Callable[..., daft.Expression], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
     ) -> Self:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(df: DaftLazyFrame) -> list[Expression]:
             native_series_list = self._call(df)
             other_native_series = {
                 key: maybe_evaluate_expr(df, value)
@@ -256,7 +255,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(lambda _input, other: _input | other, other=other)
 
     def __invert__(self) -> Self:
-        invert = cast("Callable[..., daft.Expression]", operator.invert)
+        invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_callable(invert)
 
     def alias(self, name: str) -> Self:
@@ -281,7 +280,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(lambda _input: _input.bool_or())
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        def func(_input: daft.Expression) -> daft.Expression:
+        def func(_input: Expression) -> Expression:
             native_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._backend_version
             )
@@ -311,21 +310,15 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def clip(
         self, lower_bound: Any | None = None, upper_bound: Any | None = None
     ) -> Self:
-        def _clip_lower(
-            _input: daft.Expression, lower_bound: daft.Expression
-        ) -> daft.Expression:
+        def _clip_lower(_input: Expression, lower_bound: Expression) -> Expression:
             return _input.clip(lower_bound)
 
-        def _clip_upper(
-            _input: daft.Expression, upper_bound: daft.Expression
-        ) -> daft.Expression:
+        def _clip_upper(_input: Expression, upper_bound: Expression) -> Expression:
             return _input.clip(max=upper_bound)
 
         def _clip_both(
-            _input: daft.Expression,
-            lower_bound: daft.Expression,
-            upper_bound: daft.Expression,
-        ) -> daft.Expression:
+            _input: Expression, lower_bound: Expression, upper_bound: Expression
+        ) -> Expression:
             return _input.clip(lower_bound, upper_bound)
 
         if lower_bound is None:
@@ -337,7 +330,21 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         )
 
     def sum(self) -> Self:
-        return self._with_callable(lambda _input: _input.sum())
+        def f(expr: Expression) -> Expression:
+            return coalesce(expr.sum(), lit(0))
+
+        def window_f(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> Sequence[Expression]:
+            return [
+                coalesce(
+                    expr.sum().over(self.partition_by(*window_inputs.partition_by)),
+                    lit(0),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def n_unique(self) -> Self:
         return self._with_callable(
@@ -362,7 +369,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(lambda _input: _input.count("all"))
 
     def std(self, ddof: int) -> Self:
-        def func(expr: daft.Expression) -> daft.Expression:
+        def func(expr: Expression) -> Expression:
             std_pop = expr.stddev()
             if ddof == 0:
                 return std_pop
@@ -372,7 +379,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(func)
 
     def var(self, ddof: int) -> Self:
-        def func(expr: daft.Expression) -> daft.Expression:
+        def func(expr: Expression) -> Expression:
             std_pop = expr.stddev()
             var_pop = std_pop * std_pop
             if ddof == 0:
