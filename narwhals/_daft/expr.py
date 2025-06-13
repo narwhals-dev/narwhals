@@ -173,7 +173,8 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
-            call=self._call,
+            self._call,
+            self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
             backend_version=self._backend_version,
@@ -258,26 +259,39 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_callable(invert)
 
-    def alias(self, name: str) -> Self:
-        def alias_output_names(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self.__class__(
-            self._call,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
-
     def all(self) -> Self:
-        return self._with_callable(lambda _input: _input.bool_and())
+        def f(expr: Expression) -> Expression:
+            return coalesce(expr.bool_and(), lit(True))  # noqa: FBT003
+
+        def window_f(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> Sequence[Expression]:
+            return [
+                coalesce(
+                    expr.bool_and().over(self.partition_by(*window_inputs.partition_by)),
+                    lit(True),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def any(self) -> Self:
-        return self._with_callable(lambda _input: _input.bool_or())
+        def f(expr: Expression) -> Expression:
+            return coalesce(expr.bool_or(), lit(False))  # noqa: FBT003
+
+        def window_f(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> Sequence[Expression]:
+            return [
+                coalesce(
+                    expr.bool_or().over(self.partition_by(*window_inputs.partition_by)),
+                    lit(False),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
 
     def cast(self, dtype: DType | type[DType]) -> Self:
         def func(_input: Expression) -> Expression:
