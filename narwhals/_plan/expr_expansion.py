@@ -284,15 +284,14 @@ def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR
     return origin.map_ir(fn)
 
 
-def replace_nth(origin: ExprIR, /, schema: FrozenSchema) -> ExprIR:
-    n_fields = len(schema)
-    names = tuple(schema)
+def replace_nth(origin: ExprIR, /, col_names: FrozenColumns) -> ExprIR:
+    n_fields = len(col_names)
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Nth):
             if not is_index_in_range(child.index, n_fields):
-                raise column_index_error(child.index, names)
-            return col(names[child.index])
+                raise column_index_error(child.index, col_names)
+            return col(col_names[child.index])
         return child
 
     return origin.map_ir(fn)
@@ -382,17 +381,24 @@ def rewrite_projections(
             expanded = replace_selector(expanded, keys, schema=schema)
             flags = flags.with_multiple_columns()
         result.extend(
-            replace_and_add_to_results(expanded, keys=keys, schema=schema, flags=flags)
+            replace_and_add_to_results(
+                expanded, keys=keys, col_names=schema.names, flags=flags
+            )
         )
     return tuple(result)
 
 
 def replace_and_add_to_results(
-    origin: ExprIR, /, keys: Seq[ExprIR], *, schema: FrozenSchema, flags: ExpansionFlags
+    origin: ExprIR,
+    /,
+    keys: Seq[ExprIR],
+    *,
+    col_names: FrozenColumns,
+    flags: ExpansionFlags,
 ) -> Seq[ExprIR]:
     result: deque[ExprIR] = deque()
     if flags.has_nth:
-        origin = replace_nth(origin, schema)
+        origin = replace_nth(origin, col_names)
     if flags.expands:
         it = (e for e in origin.iter_left() if isinstance(e, (Columns, IndexColumns)))
         if e := next(it, None):
@@ -403,10 +409,12 @@ def replace_and_add_to_results(
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
                 )
-                result.extend(expand_indices(origin, e, schema=schema, exclude=exclude))
+                result.extend(
+                    expand_indices(origin, e, col_names=col_names, exclude=exclude)
+                )
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result.extend(replace_wildcard(origin, col_names=schema.names, exclude=exclude))
+        result.extend(replace_wildcard(origin, col_names=col_names, exclude=exclude))
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
         expanded = rewrite_special_aliases(origin)
@@ -461,15 +469,19 @@ def expand_columns(
 
 
 def expand_indices(
-    origin: ExprIR, /, indices: IndexColumns, *, schema: FrozenSchema, exclude: Excluded
+    origin: ExprIR,
+    /,
+    indices: IndexColumns,
+    *,
+    col_names: FrozenColumns,
+    exclude: Excluded,
 ) -> Seq[ExprIR]:
     result: deque[ExprIR] = deque()
-    n_fields = len(schema)
-    names = tuple(schema)
+    n_fields = len(col_names)
     for index in indices.indices:
         if not is_index_in_range(index, n_fields):
-            raise column_index_error(index, names)
-        name = names[index]
+            raise column_index_error(index, col_names)
+        name = col_names[index]
         if name not in exclude:
             expanded = replace_with_column(origin, IndexColumns, name)
             expanded = rewrite_special_aliases(expanded)
