@@ -45,6 +45,7 @@
         - is_sorted
         - is_unique
         - item
+        - kurtosis
         - len
         - log
         - max

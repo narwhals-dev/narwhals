@@ -701,4 +701,5 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
+    kurtosis = not_implemented()
     unique = not_implemented()

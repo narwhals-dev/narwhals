@@ -414,6 +414,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: FunctionExpression("kurtosis_pop", expr))
+
     def median(self) -> Self:
         return self._with_callable(lambda expr: FunctionExpression("median", expr))
 

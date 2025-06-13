@@ -326,6 +326,9 @@ class DaskExpr(
     def skew(self) -> Self:
         return self._with_callable(lambda expr: expr.skew().to_series(), "skew")
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: expr.kurtosis().to_series(), "kurtosis")
+
     def shift(self, n: int) -> Self:
         return self._with_callable(lambda expr: expr.shift(n), "shift")
 

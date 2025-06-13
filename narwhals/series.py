@@ -602,6 +602,25 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.skew()
 
+    def kurtosis(self) -> float | None:
+        """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Kurtosis is the fourth central moment divided by the square of the variance.
+        The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
+
+        Returns:
+            The kurtosis (Fisher's definition) without bias correction of the column.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 1, 2, 10, 100])
+            >>> nw.from_native(s_native, series_only=True).kurtosis()
+            0.2106571340718002
+        """
+        return self._compliant_series.kurtosis()
+
     def count(self) -> int:
         """Returns the number of non-null elements in the Series.
 
