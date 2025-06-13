@@ -118,7 +118,7 @@ class StartsWith(StringFunction):
     prefix: str
 
     def __repr__(self) -> str:
-        return "str.startswith"
+        return "str.starts_with"
 
 
 class StripChars(StringFunction):
