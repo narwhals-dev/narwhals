@@ -21,8 +21,8 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
+    NativeExprT,
     NativeFrameT,
-    NativeSeriesT,
 )
 from narwhals._translate import (
     ArrowConvertible,
@@ -33,7 +33,7 @@ from narwhals._translate import (
     ToNarwhalsT_co,
 )
 from narwhals._typing_compat import deprecated
-from narwhals.utils import (
+from narwhals._utils import (
     Version,
     _StoresNative,
     check_columns_exist,
@@ -55,9 +55,12 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Implementation, _FullContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
@@ -78,7 +81,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Implementation, _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -378,6 +380,16 @@ class CompliantLazyFrame(
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
+    def _evaluate_window_expr(
+        self,
+        expr: LazyExpr[Self, NativeExprT],
+        /,
+        window_inputs: WindowInputs[NativeExprT],
+    ) -> NativeExprT:
+        result = expr.window_function(self, window_inputs)
+        assert len(result) == 1  # debug assertion  # noqa: S101
+        return result[0]
+
     def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
@@ -389,11 +401,11 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
 ):
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT]: ...
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
@@ -437,14 +449,10 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[Any]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
-    def _select_multi_index(
-        self, columns: SizedMultiIndexSelector[NativeSeriesT]
-    ) -> Self: ...
-    def _select_multi_name(
-        self, columns: SizedMultiNameSelector[NativeSeriesT]
-    ) -> Self: ...
+    def _select_multi_index(self, columns: SizedMultiIndexSelector[Any]) -> Self: ...
+    def _select_multi_name(self, columns: SizedMultiNameSelector[Any]) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
     def __getitem__(  # noqa: C901, PLR0912

@@ -26,6 +26,7 @@
         - drop_nulls
         - dtype
         - ewm_mean
+        - exp
         - fill_null
         - filter
         - gather_every

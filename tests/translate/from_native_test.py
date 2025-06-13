@@ -31,7 +31,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Version
+from narwhals._utils import Version
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
@@ -341,6 +341,18 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
     mockdf = MockDf()
     result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
     assert result is mockdf
+
+
+def test_interchange_protocol_non_v1() -> None:
+    class MockDf:
+        def __dataframe__(self) -> None:  # pragma: no cover
+            pass
+
+    mockdf = MockDf()
+    result = nw.from_native(mockdf, pass_through=True)
+    assert result is mockdf
+    with pytest.raises(TypeError):
+        nw.from_native(mockdf)
 
 
 def test_from_native_strict_native_series() -> None:

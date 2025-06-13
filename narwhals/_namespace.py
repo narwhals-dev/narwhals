@@ -14,6 +14,7 @@ from typing import (
 )
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
+from narwhals._utils import Implementation, Version
 from narwhals.dependencies import (
     get_cudf,
     get_modin,
@@ -27,7 +28,6 @@ from narwhals.dependencies import (
     is_pyspark_dataframe,
     is_sqlframe_dataframe,
 )
-from narwhals.utils import Implementation, Version
 
 if TYPE_CHECKING:
     from types import ModuleType

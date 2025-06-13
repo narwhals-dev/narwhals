@@ -25,7 +25,7 @@ from narwhals._compliant.typing import (
     NativeSeriesT_co,
 )
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
-from narwhals.utils import (
+from narwhals._utils import (
     _StoresCompliant,
     _StoresNative,
     is_compliant_series,
@@ -44,12 +44,14 @@ if TYPE_CHECKING:
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
@@ -60,7 +62,6 @@ if TYPE_CHECKING:
         _1DArray,
         _SliceIndex,
     )
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = ["CompliantSeries", "EagerSeries"]
 
@@ -109,7 +110,7 @@ class CompliantSeries(
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
@@ -148,7 +149,7 @@ class CompliantSeries(
     def arg_max(self) -> int: ...
     def arg_min(self) -> int: ...
     def arg_true(self) -> Self: ...
-    def cast(self, dtype: DType | type[DType]) -> Self: ...
+    def cast(self, dtype: IntoDType) -> Self: ...
     def clip(
         self,
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
@@ -173,6 +174,7 @@ class CompliantSeries(
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self: ...
+    def exp(self) -> Self: ...
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -220,7 +222,7 @@ class CompliantSeries(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
     def rolling_mean(
         self, window_size: int, *, min_samples: int, center: bool
@@ -300,9 +302,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """
         ...
 
-    def __narwhals_namespace__(
-        self,
-    ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
+    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any, Any]: ...
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]

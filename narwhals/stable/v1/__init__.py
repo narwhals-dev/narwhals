@@ -15,28 +15,28 @@ from typing import (
 from warnings import warn
 
 import narwhals as nw
-from narwhals import dependencies, exceptions, selectors
+from narwhals import dependencies, exceptions, functions as nw_f, selectors
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import (
+    Implementation,
+    Version,
+    deprecate_native_namespace,
+    find_stacklevel,
+    generate_temporary_column_name,
+    inherit_doc,
+    is_ordered_categorical,
+    maybe_align_index,
+    maybe_convert_dtypes,
+    maybe_get_index,
+    maybe_reset_index,
+    maybe_set_index,
+    validate_strict_and_pass_though,
+)
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import (
-    Then as NwThen,
-    When as NwWhen,
-    _from_arrow_impl,
-    _from_dict_impl,
-    _from_numpy_impl,
-    _new_series_impl,
-    _read_csv_impl,
-    _read_parquet_impl,
-    _scan_csv_impl,
-    _scan_parquet_impl,
-    concat,
-    get_level,
-    show_versions,
-    when as nw_when,
-)
+from narwhals.functions import _new_series_impl, concat, get_level, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -72,21 +72,6 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
-from narwhals.utils import (
-    Implementation,
-    Version,
-    deprecate_native_namespace,
-    find_stacklevel,
-    generate_temporary_column_name,
-    inherit_doc,
-    is_ordered_categorical,
-    maybe_align_index,
-    maybe_convert_dtypes,
-    maybe_get_index,
-    maybe_reset_index,
-    maybe_set_index,
-    validate_strict_and_pass_though,
-)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -97,6 +82,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrameT,
@@ -320,8 +306,8 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
+        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
-        from narwhals.utils import find_stacklevel
 
         msg = (
             "`Series.hist` is being called from the stable API although considered "
@@ -476,7 +462,7 @@ def _stableify(
     | NwLazyFrame[IntoFrameT]
     | NwSeries[IntoSeriesT]
     | NwExpr,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr | Any:
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwLazyFrame):
@@ -1038,9 +1024,9 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
+    from narwhals._utils import validate_strict_and_pass_though
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
-    from narwhals.utils import validate_strict_and_pass_though
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
@@ -1231,7 +1217,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -1436,18 +1422,18 @@ def concat_str(
     )
 
 
-class When(NwWhen):
+class When(nw_f.When):
     @classmethod
-    def from_when(cls, when: NwWhen) -> When:
+    def from_when(cls, when: nw_f.When) -> When:
         return cls(when._predicate)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         return Then.from_then(super().then(value))
 
 
-class Then(NwThen, Expr):
+class Then(nw_f.Then, Expr):
     @classmethod
-    def from_then(cls, then: NwThen) -> Then:
+    def from_then(cls, then: nw_f.Then) -> Then:
         return cls(then._to_compliant_expr, then._metadata)
 
     def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
@@ -1475,14 +1461,14 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     Returns:
         A "when" object, which `.then` can be called on.
     """
-    return When.from_when(nw_when(*predicates))
+    return When.from_when(nw_f.when(*predicates))
 
 
 @deprecate_native_namespace(required=True)
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1514,9 +1500,7 @@ def new_series(
         A new Series
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(
-        _new_series_impl(name, values, dtype, backend=backend, version=Version.V1)
-    )
+    return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1550,7 +1534,7 @@ def from_arrow(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_arrow_impl(native_frame, backend=backend, version=Version.V1))
+    return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
 @deprecate_native_namespace()
@@ -1594,7 +1578,7 @@ def from_dict(
     Returns:
         A new DataFrame.
     """
-    return _stableify(_from_dict_impl(data, schema, backend=backend, version=Version.V1))
+    return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1636,7 +1620,7 @@ def from_numpy(
         A new DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_from_numpy_impl(data, schema, backend=backend, version=Version.V1))
+    return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
 @deprecate_native_namespace(required=True)
@@ -1673,7 +1657,7 @@ def read_csv(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_read_csv_impl(source, backend=backend, **kwargs))
+    return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1713,7 +1697,7 @@ def scan_csv(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_scan_csv_impl(source, backend=backend, **kwargs))
+    return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1750,7 +1734,7 @@ def read_parquet(
         DataFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_read_parquet_impl(source, backend=backend, **kwargs))
+    return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
 @deprecate_native_namespace(required=True)
@@ -1804,7 +1788,7 @@ def scan_parquet(
         LazyFrame.
     """
     backend = cast("ModuleType | Implementation | str", backend)
-    return _stableify(_scan_parquet_impl(source, backend=backend, **kwargs))
+    return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
 __all__ = [

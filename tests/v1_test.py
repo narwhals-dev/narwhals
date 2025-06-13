@@ -254,7 +254,7 @@ def test_cast_to_enum_v1(
         NotImplementedError,
         match="Converting to Enum is not supported in narwhals.stable.v1",
     ):
-        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))
+        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
 def test_v1_ordered_categorical_pandas() -> None:
