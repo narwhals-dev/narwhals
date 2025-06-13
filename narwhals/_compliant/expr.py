@@ -162,6 +162,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def cum_prod(self, *, reverse: bool) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
+    def first(self) -> Self: ...
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
@@ -837,6 +838,9 @@ class EagerExpr(
             alias_output_names=self._alias_output_names,
             context=self,
         )
+
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
 
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:

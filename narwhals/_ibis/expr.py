@@ -373,6 +373,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def sum(self) -> Self:
         return self._with_callable(lambda expr: expr.sum().fill_null(lit(0)))
 
+    def first(self) -> Self:
+        def fn(inputs: IbisWindowInputs) -> ir.Value:
+            order_by = [ibis.asc(by, nulls_first=True) for by in inputs.order_by]
+            expr = cast("ir.Column", inputs.expr)
+            if partition_by := inputs.partition_by:  # pragma: no cover
+                window = ibis.window(group_by=list(partition_by), order_by=order_by)
+                return expr.first(include_null=True).over(window)
+            else:
+                return expr.first(order_by=order_by, include_null=True)
+
+        return self._with_window_function(fn)
+
     def n_unique(self) -> Self:
         return self._with_callable(
             lambda expr: expr.nunique() + expr.isnull().any().cast("int8")
