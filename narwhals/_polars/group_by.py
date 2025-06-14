@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     from polars.dataframe.group_by import GroupBy as NativeGroupBy
     from polars.lazyframe.group_by import LazyGroupBy as NativeLazyGroupBy
 

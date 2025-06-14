@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 import dask.dataframe as dd
 
@@ -9,6 +9,8 @@ from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     import pandas as pd
     from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy

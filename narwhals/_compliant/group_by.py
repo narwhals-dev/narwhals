@@ -1,18 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -33,6 +22,8 @@ from narwhals._typing_compat import Protocol38
 from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
+
     from typing_extensions import TypeAlias
 
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)

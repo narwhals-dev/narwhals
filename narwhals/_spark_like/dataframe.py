@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
@@ -26,6 +26,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pyarrow as pa

@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Container,
-    Iterable,
-    Mapping,
-    Protocol,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -32,6 +23,8 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
+    from collections.abc import Container, Iterable, Mapping, Sequence
+
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace

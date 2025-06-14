@@ -1,17 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    overload,
-)
+from collections.abc import Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
 
 from narwhals._utils import (
     _validate_rolling_arguments,

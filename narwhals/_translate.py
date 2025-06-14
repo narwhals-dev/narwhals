@@ -62,7 +62,8 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, Protocol
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._typing_compat import TypeVar
 

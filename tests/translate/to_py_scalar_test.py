@@ -11,7 +11,6 @@ import pytest
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import get_cudf
-from tests.utils import PANDAS_VERSION
 
 
 @pytest.mark.parametrize(
@@ -45,9 +44,6 @@ def test_to_py_scalar(input_value: Any, expected: Any) -> None:
     assert output == expected
 
 
-@pytest.mark.skipif(
-    PANDAS_VERSION < (1,), reason="there was a (better?) time when there was no pd.NA"
-)
 def test_na_to_py_scalar() -> None:
     assert nw.to_py_scalar(pd.NA) is None
 

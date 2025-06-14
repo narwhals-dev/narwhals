@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Literal, Mapping, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pandas as pd
 import pytest
@@ -15,6 +15,7 @@ pytest.importorskip("polars")
 import polars as pl
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import ModuleType
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}

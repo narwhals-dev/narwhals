@@ -7,11 +7,8 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
     NoReturn,
-    Sequence,
     TypeVar,
     overload,
 )
@@ -49,6 +46,7 @@ from narwhals.series import Series
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType

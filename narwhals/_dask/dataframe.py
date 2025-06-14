@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
 import pandas as pd
@@ -20,6 +20,7 @@ from narwhals._utils import (
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     import dask.dataframe.dask_expr as dx

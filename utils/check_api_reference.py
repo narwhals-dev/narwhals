@@ -3,13 +3,19 @@ from __future__ import annotations
 import inspect
 import string
 import sys
+
+# ruff: noqa: N806
+from collections import deque
 from inspect import isfunction
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 LOWERCASE = tuple(string.ascii_lowercase)
 
@@ -32,10 +38,20 @@ def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
         yield name
 
 
-def remove_prefix(text: str, prefix: str) -> str:
-    if text.startswith(prefix):
-        return text[len(prefix) :]
-    return text
+def read_documented_members(source: str | Path) -> list[str]:
+    MEMBERS_START = "members:\n"
+    MEMBERS_PREFIX = "        - "
+    DUNDER_PREFIX = "__"
+    with open(source) as fd:
+        lines = deque(fd.readlines())
+    head = lines.popleft()
+    while not head.endswith(MEMBERS_START):
+        head = lines.popleft()
+    while not head.startswith(MEMBERS_PREFIX):
+        head = lines.pop()
+    lines.append(head)
+    all_members = (line.removeprefix(MEMBERS_PREFIX).strip() for line in lines)
+    return [m for m in all_members if not m.startswith(DUNDER_PREFIX)]
 
 
 ret = 0
@@ -75,6 +91,7 @@ BASE_DTYPES = {
     "Mapping",
     "Iterable",
 }
+DIR_API_REF = Path("docs/api-reference")
 
 files = {fp.stem for fp in Path("narwhals").iterdir()}
 
@@ -82,13 +99,8 @@ files = {fp.stem for fp in Path("narwhals").iterdir()}
 top_level_functions = [
     i for i in nw.__all__ if not i[0].isupper() and i[0] != "_" and i not in files
 ]
-with open("docs/api-reference/narwhals.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ")
-]
+
+documented = read_documented_members(DIR_API_REF / "narwhals.md")
 if missing := set(top_level_functions).difference(documented).difference({"annotations"}):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -100,13 +112,7 @@ if extra := set(documented).difference(top_level_functions):
 
 # DataFrame methods
 dataframe_methods = list(iter_api_reference_names(nw.DataFrame))
-with open("docs/api-reference/dataframe.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ") and not i.startswith("        - _")
-]
+documented = read_documented_members(DIR_API_REF / "dataframe.md")
 if missing := set(dataframe_methods).difference(documented):
     print("DataFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -118,13 +124,7 @@ if extra := set(documented).difference(dataframe_methods):
 
 # LazyFrame methods
 lazyframe_methods = list(iter_api_reference_names(nw.LazyFrame))
-with open("docs/api-reference/lazyframe.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ")
-]
+documented = read_documented_members(DIR_API_REF / "lazyframe.md")
 if missing := set(lazyframe_methods).difference(documented):
     print("LazyFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -136,13 +136,7 @@ if extra := set(documented).difference(lazyframe_methods):
 
 # Series methods
 series_methods = list(iter_api_reference_names(nw.Series))
-with open("docs/api-reference/series.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ") and not i.startswith("        - _")
-]
+documented = read_documented_members(DIR_API_REF / "series.md")
 if missing := set(series_methods).difference(documented).difference(NAMESPACES):
     print("Series: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -159,13 +153,7 @@ for namespace in NAMESPACES.difference({"name"}):
         for i in dir(getattr(nw.from_native(pl.Series(), series_only=True), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
-    with open(f"docs/api-reference/series_{namespace}.md") as fd:
-        content = fd.read()
-    documented = [
-        remove_prefix(i, "        - ")
-        for i in content.splitlines()
-        if i.startswith("        - ") and not i.startswith("        - _")
-    ]
+    documented = read_documented_members(DIR_API_REF / f"series_{namespace}.md")
     if missing := set(series_ns_methods).difference(documented):
         print(f"Series.{namespace}: not documented")  # noqa: T201
         print(missing)  # noqa: T201
@@ -177,13 +165,7 @@ for namespace in NAMESPACES.difference({"name"}):
 
 # Expr methods
 expr_methods = list(iter_api_reference_names(nw.Expr))
-with open("docs/api-reference/expr.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ")
-]
+documented = read_documented_members(DIR_API_REF / "expr.md")
 if missing := set(expr_methods).difference(documented).difference(NAMESPACES):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -200,13 +182,7 @@ for namespace in NAMESPACES:
         for i in dir(getattr(nw.col("a"), namespace))
         if not i[0].isupper() and i[0] != "_"
     ]
-    with open(f"docs/api-reference/expr_{namespace}.md") as fd:
-        content = fd.read()
-    documented = [
-        remove_prefix(i, "        - ")
-        for i in content.splitlines()
-        if i.startswith("        - ")
-    ]
+    documented = read_documented_members(DIR_API_REF / f"expr_{namespace}.md")
     if missing := set(expr_ns_methods).difference(documented):
         print(f"Expr.{namespace}: not documented")  # noqa: T201
         print(missing)  # noqa: T201
@@ -218,13 +194,7 @@ for namespace in NAMESPACES:
 
 # DTypes
 dtypes = [i for i in dir(nw.dtypes) if i[0].isupper() and not i.isupper() and i[0] != "_"]
-with open("docs/api-reference/dtypes.md") as fd:
-    content = fd.read()
-documented = [
-    remove_prefix(i, "        - ")
-    for i in content.splitlines()
-    if i.startswith("        - ") and not i.startswith("        - _")
-]
+documented = read_documented_members(DIR_API_REF / "dtypes.md")
 if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
     print("Dtype: not documented")  # noqa: T201
     print(missing)  # noqa: T201

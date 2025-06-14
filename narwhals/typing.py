@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 
 if TYPE_CHECKING:
     import datetime as dt
+    from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
-    from typing import Iterable, Sized
 
     import numpy as np
     from typing_extensions import TypeAlias

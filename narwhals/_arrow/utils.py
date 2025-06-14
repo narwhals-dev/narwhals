@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,6 +11,8 @@ from narwhals._utils import isinstance_or_issubclass
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
+
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
@@ -25,6 +25,8 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from duckdb import Expression
     from typing_extensions import Self
 

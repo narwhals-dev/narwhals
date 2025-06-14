@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Mapping, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -9,6 +9,8 @@ from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_com
 from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import TypeAlias
 
     from narwhals._arrow.series import ArrowSeries

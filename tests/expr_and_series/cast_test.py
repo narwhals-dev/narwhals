@@ -167,7 +167,6 @@ def test_cast_series(
     assert result.schema == expected
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_cast_string() -> None:
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)

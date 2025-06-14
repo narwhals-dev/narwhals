@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -9,6 +9,8 @@ import narwhals as nw
 from narwhals.stable.v1.dependencies import is_into_dataframe
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import Self
 
 DATA: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -8,6 +8,9 @@ import narwhals.stable.v1 as nw_v1
 
 pytest.importorskip("polars")
 import polars as pl
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 

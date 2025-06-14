@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Iterable,
-    Iterator,
-    Mapping,
-    Protocol,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -34,6 +25,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd

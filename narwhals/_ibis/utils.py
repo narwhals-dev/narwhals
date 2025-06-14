@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, Mapping
+from typing import TYPE_CHECKING, Any, Literal
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -9,6 +9,8 @@ import ibis.expr.datatypes as ibis_dtypes
 from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     import ibis.expr.types as ir
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs

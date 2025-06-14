@@ -67,10 +67,7 @@ else:  # pragma: no cover
 
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    if sys.version_info >= (3, 9):
-        from typing import Protocol as Protocol38
-    else:
-        from typing import Generic as Protocol38
+    from typing import Protocol as Protocol38
 
 
 __all__ = ["Protocol38", "TypeVar", "deprecated"]

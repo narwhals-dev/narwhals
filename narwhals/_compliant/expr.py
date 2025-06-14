@@ -1,17 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import partial
 from operator import methodcaller
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    Mapping,
-    Protocol,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -40,7 +32,7 @@ from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
-    from typing import Mapping
+    from collections.abc import Mapping, Sequence
 
     from typing_extensions import Self, TypeIs
 

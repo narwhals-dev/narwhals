@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import FunctionExpression, StarExpression
@@ -30,6 +30,7 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd

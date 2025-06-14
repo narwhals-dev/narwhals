@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
+from collections.abc import Iterable, Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING, Iterable, Mapping
+from typing import TYPE_CHECKING
 
 from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import Iterator, Sequence
+    from collections.abc import Iterator, Sequence
 
     from typing_extensions import Self
 

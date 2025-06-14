@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -25,6 +25,8 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     import dask.dataframe.dask_expr as dx
 
     from narwhals._utils import Version

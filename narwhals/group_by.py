@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Iterable, Iterator, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from narwhals._expression_parsing import all_exprs_are_scalar_like
 from narwhals._utils import flatten, tupleify
@@ -8,6 +8,8 @@ from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import DataFrameT
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Sequence
+
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals.dataframe import LazyFrame
     from narwhals.expr import Expr
