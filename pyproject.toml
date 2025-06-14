@@ -34,7 +34,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
 # https://github.com/narwhals-dev/narwhals/issues/817 
-pandas = ["pandas>=0.25.3"]
+pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
