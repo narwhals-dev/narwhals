@@ -23,8 +23,8 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
-        FrameT,
         IntoDataFrameT,
+        IntoLazyFrameT,
         IntoSeriesT,
         _1DArray,
         _1DArrayInt,
@@ -125,8 +125,33 @@ def get_sqlframe() -> Any:
     return sys.modules.get("sqlframe", None)
 
 
+def _raise_if_narwhals_df_or_lf(df: Any) -> None:
+    if is_narwhals_dataframe(df) or is_narwhals_lazyframe(df):
+        msg = (
+            f"You passed a `{type(df)}` to `is_pandas_dataframe`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_dataframe(df)`, "
+            "did you mean `is_pandas_dataframe(df.to_native())`?"
+        )
+        raise TypeError(msg)
+
+
+def _raise_if_narwhals_series(ser: Any) -> None:
+    if is_narwhals_series(ser):
+        msg = (
+            f"You passed a `{type(ser)}` to `is_pandas_series`.\n\n"
+            "Hint: Instead of e.g. `is_pandas_series(ser)`, "
+            "did you mean `is_pandas_series(ser.to_native())`?"
+        )
+        raise TypeError(msg)
+
+
 def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
-    """Check whether `df` is a pandas DataFrame without importing pandas."""
+    """Check whether `df` is a pandas DataFrame without importing pandas.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(df, mod.pandas.DataFrame)
@@ -135,7 +160,12 @@ def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
 
 
 def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
-    """Check whether `ser` is a pandas Series without importing pandas."""
+    """Check whether `ser` is a pandas Series without importing pandas.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _raise_if_narwhals_series(ser)
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -153,12 +183,22 @@ def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
 
 
 def is_modin_dataframe(df: Any) -> TypeIs[mpd.DataFrame]:
-    """Check whether `df` is a modin DataFrame without importing modin."""
+    """Check whether `df` is a modin DataFrame without importing modin.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
 def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
-    """Check whether `ser` is a modin Series without importing modin."""
+    """Check whether `ser` is a modin Series without importing modin.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _raise_if_narwhals_series(ser)
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -168,12 +208,22 @@ def is_modin_index(index: Any) -> TypeIs[mpd.Index[Any]]:  # pragma: no cover
 
 
 def is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
-    """Check whether `df` is a cudf DataFrame without importing cudf."""
+    """Check whether `df` is a cudf DataFrame without importing cudf.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
 def is_cudf_series(ser: Any) -> TypeIs[cudf.Series[Any]]:
-    """Check whether `ser` is a cudf Series without importing cudf."""
+    """Check whether `ser` is a cudf Series without importing cudf.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _raise_if_narwhals_series(ser)
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -193,44 +243,84 @@ def is_cupy_scalar(obj: Any) -> bool:
 
 
 def is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
-    """Check whether `df` is a Dask DataFrame without importing Dask."""
+    """Check whether `df` is a Dask DataFrame without importing Dask.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame)
 
 
 def is_duckdb_relation(df: Any) -> TypeIs[duckdb.DuckDBPyRelation]:
-    """Check whether `df` is a DuckDB Relation without importing DuckDB."""
+    """Check whether `df` is a DuckDB Relation without importing DuckDB.
+
+    Warning:
+        This method cannot be called on Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (duckdb := get_duckdb()) is not None and isinstance(
         df, duckdb.DuckDBPyRelation
     )
 
 
 def is_ibis_table(df: Any) -> TypeIs[ibis.Table]:
-    """Check whether `df` is a Ibis Table without importing Ibis."""
+    """Check whether `df` is a Ibis Table without importing Ibis.
+
+    Warning:
+        This method cannot be called on Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
 def is_polars_dataframe(df: Any) -> TypeIs[pl.DataFrame]:
-    """Check whether `df` is a Polars DataFrame without importing Polars."""
+    """Check whether `df` is a Polars DataFrame without importing Polars.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
 
 
 def is_polars_lazyframe(df: Any) -> TypeIs[pl.LazyFrame]:
-    """Check whether `df` is a Polars LazyFrame without importing Polars."""
+    """Check whether `df` is a Polars LazyFrame without importing Polars.
+
+    Warning:
+        This method cannot be called on Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
 
 
 def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
-    """Check whether `ser` is a Polars Series without importing Polars."""
+    """Check whether `ser` is a Polars Series without importing Polars.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _raise_if_narwhals_series(ser)
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
 def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
-    """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
+    """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
+    """
+    _raise_if_narwhals_series(ser)
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
 def is_pyarrow_table(df: Any) -> TypeIs[pa.Table]:
-    """Check whether `df` is a PyArrow Table without importing PyArrow."""
+    """Check whether `df` is a PyArrow Table without importing PyArrow.
+
+    Warning:
+        This method cannot be called on Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
 
 
@@ -239,7 +329,12 @@ def is_pyarrow_scalar(obj: Any) -> TypeIs[pa.Scalar[Any]]:
 
 
 def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
-    """Check whether `df` is a PySpark DataFrame without importing PySpark."""
+    """Check whether `df` is a PySpark DataFrame without importing PySpark.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
@@ -247,7 +342,12 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 
 
 def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
-    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
+    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     if get_pyspark_connect() is not None:  # pragma: no cover
         try:
             from pyspark.sql.connect.dataframe import DataFrame
@@ -258,7 +358,12 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
 
 
 def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
-    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    _raise_if_narwhals_df_or_lf(df)
     if get_sqlframe() is not None:
         from sqlframe.base.dataframe import BaseDataFrame
 
@@ -301,7 +406,11 @@ def is_pandas_like_dataframe(df: Any) -> bool:
     """Check whether `df` is a pandas-like DataFrame without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
+    _raise_if_narwhals_df_or_lf(df)
     return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
 
 
@@ -309,7 +418,11 @@ def is_pandas_like_series(ser: Any) -> bool:
     """Check whether `ser` is a pandas-like Series without doing any imports.
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
+
+    Warning:
+        This method cannot be called on Narwhals Series.
     """
+    _raise_if_narwhals_series(ser)
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 
@@ -411,7 +524,9 @@ def is_narwhals_dataframe(
     return isinstance(df, DataFrame)
 
 
-def is_narwhals_lazyframe(lf: Any | LazyFrame[FrameT]) -> TypeIs[LazyFrame[FrameT]]:
+def is_narwhals_lazyframe(
+    lf: Any | LazyFrame[IntoLazyFrameT],
+) -> TypeIs[LazyFrame[IntoLazyFrameT]]:
     """Check whether `lf` is a Narwhals LazyFrame.
 
     This is useful if you expect a user to pass in a Narwhals
