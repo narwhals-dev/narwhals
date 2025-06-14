@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import uuid
 from copy import deepcopy
 from functools import lru_cache
@@ -287,7 +286,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             constructor in {"pandas[nullable]", "pandas[pyarrow]"}
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
+        ):
             continue  # pragma: no cover
 
         if constructor in EAGER_CONSTRUCTORS:
