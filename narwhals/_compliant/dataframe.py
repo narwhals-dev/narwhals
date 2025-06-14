@@ -262,7 +262,7 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: str | None) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -374,7 +374,16 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: str) -> Self:
+        plx = self.__narwhals_namespace__()
+        return self.select(
+            plx.lit(1, dtype=None)
+            .rank(method="ordinal", descending=False)
+            .over(order_by=order_by, partition_by=[])
+            .alias(name),
+            plx.all(),
+        )
+
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
@@ -409,6 +418,10 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _with_native(
+        self, df: NativeFrameT, *, validate_column_names: bool = True
+    ) -> Self: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -498,3 +511,16 @@ class EagerDataFrame(
                 raise AssertionError(msg)
 
         return compliant
+
+    def _with_row_index_order_by(self, name: str, order_by: str) -> Self:
+        plx = self.__narwhals_namespace__()
+        return self._with_native(
+            self.with_columns(**{name: plx.lit(value=True, dtype=None)})
+            .select(
+                plx.col(name)
+                .rank(method="ordinal", descending=False)
+                .over(order_by=order_by, partition_by=[]),
+                plx.col(*self.columns),
+            )
+            .native
+        )

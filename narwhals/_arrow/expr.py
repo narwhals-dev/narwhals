@@ -139,7 +139,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token).sort(
+                df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
                 result = self(df.drop([token], strict=True))
