@@ -146,15 +146,12 @@ def set_index(
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
         return obj
-    if implementation is Implementation.PANDAS:
-        kwargs = {}
     if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        kwargs["copy"] = False
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
     else:  # pragma: no cover
-        pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
 
 
 def rename(
