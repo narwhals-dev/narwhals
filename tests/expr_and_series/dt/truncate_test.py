@@ -199,8 +199,9 @@ def test_pandas_numpy_nat() -> None:
 def test_truncate_tz_aware_duckdb() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("zoneinfo")
-    import duckdb
     from zoneinfo import ZoneInfo
+
+    import duckdb
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
     rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")

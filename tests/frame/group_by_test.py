@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import nullcontext
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pyarrow as pa
@@ -22,6 +22,9 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 

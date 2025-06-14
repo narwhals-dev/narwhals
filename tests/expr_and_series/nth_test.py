@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
 

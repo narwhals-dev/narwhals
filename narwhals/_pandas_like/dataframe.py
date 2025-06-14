@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import numpy as np
 

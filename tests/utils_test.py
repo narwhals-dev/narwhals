@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -27,6 +27,7 @@ from narwhals._utils import (
 from tests.utils import PANDAS_VERSION, get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from types import ModuleType
 
     from typing_extensions import Self

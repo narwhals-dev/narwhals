@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import re
+from collections.abc import Sized
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 

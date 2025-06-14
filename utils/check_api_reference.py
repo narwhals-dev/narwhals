@@ -5,11 +5,14 @@ import string
 import sys
 from inspect import isfunction
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 LOWERCASE = tuple(string.ascii_lowercase)
 

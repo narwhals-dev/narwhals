@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -30,8 +30,8 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import Hashable
 
     import pandas as pd
     import polars as pl

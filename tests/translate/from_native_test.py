@@ -24,7 +24,7 @@ import sys
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import numpy as np
 import pytest
@@ -35,6 +35,8 @@ from narwhals._utils import Version
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from _pytest.mark import ParameterSet
     from typing_extensions import assert_type
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Iterable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from narwhals.typing import IntoSeries
     from tests.utils import Constructor
 

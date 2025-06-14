@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, Sequence
+from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 
@@ -19,6 +19,8 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from narwhals._pandas_like.typing import NDFrameT
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral

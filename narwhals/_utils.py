@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
 from functools import lru_cache, wraps
@@ -12,14 +13,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Container,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -55,8 +51,8 @@ from narwhals.dependencies import (
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import AbstractSet as Set
 
     import pandas as pd
     import polars as pl

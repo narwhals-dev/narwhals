@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -10,6 +10,8 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._utils import find_stacklevel
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
+
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
