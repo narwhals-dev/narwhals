@@ -361,15 +361,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def arg_min(self) -> int:
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return self.native.to_numpy().argmin()
         return self.native.argmin()
 
     def arg_max(self) -> int:
-        ser = self.native
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.to_numpy().argmax()
-        return ser.argmax()
+        return self.native.argmax()
 
     # Binary comparisons
 
@@ -699,12 +694,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         has_missing = s.isna().any()
         kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
         if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            if self._implementation is Implementation.PANDAS and self._backend_version < (
-                1,
-            ):  # pragma: no cover
-                ...
-            else:
-                kwargs.update({"na_value": float("nan")})
+            kwargs.update({"na_value": float("nan")})
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]

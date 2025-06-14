@@ -1020,10 +1020,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         separator: str,
     ) -> Self:
         implementation = self._implementation
-        backend_version = self._backend_version
-        if implementation.is_pandas() and backend_version < (1, 1):  # pragma: no cover
-            msg = "pivot is only supported for 'pandas>=1.1'"
-            raise NotImplementedError(msg)
         if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)

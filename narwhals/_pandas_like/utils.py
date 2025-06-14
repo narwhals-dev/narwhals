@@ -146,11 +146,7 @@ def set_index(
         obj = obj.copy(deep=False)  # type: ignore[attr-defined]
         obj.index = index  # type: ignore[attr-defined]
         return obj
-    if implementation is Implementation.PANDAS and (
-        backend_version < (1,)
-    ):  # pragma: no cover
-        kwargs = {"inplace": False}
-    else:
+    if implementation is Implementation.PANDAS:
         kwargs = {}
     if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)

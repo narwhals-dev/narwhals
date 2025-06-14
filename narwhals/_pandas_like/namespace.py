@@ -227,8 +227,6 @@ class PandasLikeNamespace(
 
     def _concat_diagonal(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
         if self._implementation.is_pandas() and self._backend_version < (3,):
-            if self._backend_version < (1,):
-                return self._concat(dfs, axis=VERTICAL, copy=False, sort=False)
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
