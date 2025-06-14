@@ -35,6 +35,12 @@ def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
         yield name
 
 
+def remove_prefix(text: str, prefix: str) -> str:
+    if text.startswith(prefix):
+        return text[len(prefix) :]
+    return text
+
+
 ret = 0
 
 NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
@@ -81,7 +87,11 @@ top_level_functions = [
 ]
 with open("docs/api-reference/narwhals.md") as fd:
     content = fd.read()
-documented = [i.removeprefix("        - ") for i in content.splitlines()]
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
 if missing := set(top_level_functions).difference(documented).difference({"annotations"}):
     print("top-level functions: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -96,7 +106,7 @@ dataframe_methods = list(iter_api_reference_names(nw.DataFrame))
 with open("docs/api-reference/dataframe.md") as fd:
     content = fd.read()
 documented = [
-    i.removeprefix("        - ")
+    remove_prefix(i, "        - ")
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
@@ -113,7 +123,11 @@ if extra := set(documented).difference(dataframe_methods):
 lazyframe_methods = list(iter_api_reference_names(nw.LazyFrame))
 with open("docs/api-reference/lazyframe.md") as fd:
     content = fd.read()
-documented = [i.removeprefix("        - ") for i in content.splitlines()]
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
 if missing := set(lazyframe_methods).difference(documented):
     print("LazyFrame: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -128,7 +142,7 @@ series_methods = list(iter_api_reference_names(nw.Series))
 with open("docs/api-reference/series.md") as fd:
     content = fd.read()
 documented = [
-    i.removeprefix("        - ")
+    remove_prefix(i, "        - ")
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
@@ -151,7 +165,7 @@ for namespace in NAMESPACES.difference({"name"}):
     with open(f"docs/api-reference/series_{namespace}.md") as fd:
         content = fd.read()
     documented = [
-        i.removeprefix("        - ")
+        remove_prefix(i, "        - ")
         for i in content.splitlines()
         if i.startswith("        - ") and not i.startswith("        - _")
     ]
@@ -168,7 +182,11 @@ for namespace in NAMESPACES.difference({"name"}):
 expr_methods = list(iter_api_reference_names(nw.Expr))
 with open("docs/api-reference/expr.md") as fd:
     content = fd.read()
-documented = [i.removeprefix("        - ") for i in content.splitlines()]
+documented = [
+    remove_prefix(i, "        - ")
+    for i in content.splitlines()
+    if i.startswith("        - ")
+]
 if missing := set(expr_methods).difference(documented).difference(NAMESPACES):
     print("Expr: not documented")  # noqa: T201
     print(missing)  # noqa: T201
@@ -187,7 +205,11 @@ for namespace in NAMESPACES:
     ]
     with open(f"docs/api-reference/expr_{namespace}.md") as fd:
         content = fd.read()
-    documented = [i.removeprefix("        - ") for i in content.splitlines()]
+    documented = [
+        remove_prefix(i, "        - ")
+        for i in content.splitlines()
+        if i.startswith("        - ")
+    ]
     if missing := set(expr_ns_methods).difference(documented):
         print(f"Expr.{namespace}: not documented")  # noqa: T201
         print(missing)  # noqa: T201
@@ -202,7 +224,7 @@ dtypes = [i for i in dir(nw.dtypes) if i[0].isupper() and not i.isupper() and i[
 with open("docs/api-reference/dtypes.md") as fd:
     content = fd.read()
 documented = [
-    i.removeprefix("        - ")
+    remove_prefix(i, "        - ")
     for i in content.splitlines()
     if i.startswith("        - ") and not i.startswith("        - _")
 ]
