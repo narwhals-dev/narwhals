@@ -326,6 +326,9 @@ class DaskExpr(
     def skew(self) -> Self:
         return self._with_callable(lambda expr: expr.skew().to_series(), "skew")
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: expr.kurtosis().to_series(), "kurtosis")
+
     def shift(self, n: int) -> Self:
         return self._with_callable(lambda expr: expr.shift(n), "shift")
 
@@ -659,6 +662,11 @@ class DaskExpr(
         import dask.array as da
 
         return self._with_callable(da.exp, "exp")
+
+    def sqrt(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sqrt, "sqrt")
 
     @property
     def str(self) -> DaskExprStringNamespace:

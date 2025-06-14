@@ -414,6 +414,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: FunctionExpression("kurtosis_pop", expr))
+
     def median(self) -> Self:
         return self._with_callable(lambda expr: FunctionExpression("median", expr))
 
@@ -877,6 +880,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return FunctionExpression("exp", expr)
 
         return self._with_elementwise(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Expression) -> Expression:
+            return when(expr < lit(0), lit(float("nan"))).otherwise(
+                FunctionExpression("sqrt", expr)
+            )
+
+        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:
