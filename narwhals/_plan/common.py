@@ -240,6 +240,9 @@ class ExprIR(Immutable):
 
         return IRMetaNamespace(_ir=self)
 
+    def _repr_html_(self) -> str:
+        return self.__repr__()
+
 
 class SelectorIR(ExprIR):
     def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
