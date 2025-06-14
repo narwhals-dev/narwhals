@@ -24,7 +24,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import PANDAS_VERSION, get_module_version_as_tuple
+from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -245,7 +245,6 @@ def test_maybe_reset_index_polars() -> None:
     assert result_s is series
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
