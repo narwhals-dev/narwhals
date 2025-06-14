@@ -649,10 +649,14 @@ def tupleify(arg: Any) -> Any:
 
 
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
-    from narwhals._namespace import is_native_pandas, is_native_polars
     from narwhals.series import Series
 
-    if is_native_pandas(arg) or is_native_polars(arg):
+    if (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame)):
+        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
+        raise TypeError(msg)
+    if (pl := get_polars()) is not None and isinstance(
+        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    ):
         msg = (
             f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
