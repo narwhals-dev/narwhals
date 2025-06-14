@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import pytest
@@ -198,8 +199,6 @@ def test_pandas_numpy_nat() -> None:
 
 def test_truncate_tz_aware_duckdb() -> None:
     pytest.importorskip("duckdb")
-    pytest.importorskip("zoneinfo")
-    from zoneinfo import ZoneInfo
 
     import duckdb
 

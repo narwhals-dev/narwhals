@@ -463,7 +463,6 @@ def test_enum_hash() -> None:
 
 def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
-    pytest.importorskip("zoneinfo")
     import duckdb
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
@@ -490,7 +489,6 @@ def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no 
     if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
         pytest.skip()
     pytest.importorskip("pyspark")
-    pytest.importorskip("zoneinfo")
     from pyspark.sql import SparkSession
 
     session = SparkSession.builder.config(
