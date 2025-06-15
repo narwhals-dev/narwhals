@@ -538,10 +538,10 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# NOTE: Resolving this in the current `PandasLikeGroupBy` might be too complex
 XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
-    PANDAS_VERSION >= (1,),
     reason="Requires `skipna=False`, which was introduced in `2.2.1`.\n"
-    "https://github.com/pandas-dev/pandas/issues/57019\n",
+    "https://github.com/pandas-dev/pandas/issues/57019\n"
 )
 
 
