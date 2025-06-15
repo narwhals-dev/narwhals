@@ -10,11 +10,16 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._utils import find_stacklevel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+
+    import pandas as pd
+    from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+
+NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 
 
 class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", str]):
@@ -217,33 +222,41 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
 
         if self.compliant.native.empty:
             raise empty_results_error()
+        return self._agg_complex(exprs, new_names)
 
+    def _agg_complex(
+        self, exprs: Iterable[PandasLikeExpr], new_names: list[str]
+    ) -> PandasLikeDataFrame:
         warn_complex_group_by()
+        implementation = self.compliant._implementation
+        backend_version = self.compliant._backend_version
+        func = self._apply_exprs(exprs)
+        if implementation.is_pandas() and backend_version >= (2, 2):
+            result = self._grouped.apply(func, include_groups=False)
+        else:  # pragma: no cover
+            result = self._grouped.apply(func)
+        # Keep inplace=True to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result.reset_index(inplace=True)  # noqa: PD002
+        return self.compliant._with_native(
+            select_columns_by_name(result, new_names, backend_version, implementation)
+        ).rename(dict(zip(self._keys, self._output_key_names)))
 
-        def func(df: Any) -> Any:
+    def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
+        ns = self.compliant.__narwhals_namespace__()
+        into_series = ns._series.from_iterable
+
+        def fn(df: pd.DataFrame) -> pd.Series[Any]:
             out_group = []
             out_names = []
             for expr in exprs:
                 results_keys = expr(self.compliant._with_native(df))
-                for result_keys in results_keys:
-                    out_group.append(result_keys.native.iloc[0])
-                    out_names.append(result_keys.name)
-            ns = self.compliant.__narwhals_namespace__()
-            return ns._series.from_iterable(out_group, index=out_names, context=ns).native
+                for keys in results_keys:
+                    out_group.append(keys.native.iloc[0])
+                    out_names.append(keys.name)
+            return into_series(out_group, index=out_names, context=ns).native
 
-        if implementation.is_pandas() and backend_version >= (2, 2):
-            result_complex = self._grouped.apply(func, include_groups=False)
-        else:  # pragma: no cover
-            result_complex = self._grouped.apply(func)
-
-        # Keep inplace=True to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_complex.reset_index(inplace=True)  # noqa: PD002
-        return self.compliant._with_native(
-            select_columns_by_name(
-                result_complex, new_names, backend_version, implementation
-            )
-        ).rename(dict(zip(self._keys, self._output_key_names)))
+        return fn
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
