@@ -92,7 +92,7 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if (doc := getdoc(getattr(nw, item))) is None:
             continue
-        if item in {"from_native", "narwhalify"}:
+        if item in {"from_native", "narwhalify", "get_level"}:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
             continue

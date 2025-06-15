@@ -111,6 +111,10 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
+- Since Narwhals 1.43:
+
+    - `nw.get_level` is deprecated in the main Narwhals namespace.
+
 - Since Narwhals 1.35:
 
     - pandas' ordered categoricals get mapped to `nw.Enum` instead of `nw.Categorical`.

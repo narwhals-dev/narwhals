@@ -243,14 +243,3 @@ def test_invalid() -> None:
         nw_v1.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):
         nw_v1.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
-
-
-def test_get_level() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
-    assert (
-        nw_v1.get_level(
-            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
-        )
-        == "interchange"
-    )
