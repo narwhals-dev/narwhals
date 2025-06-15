@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import platform
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
     ExprKind,

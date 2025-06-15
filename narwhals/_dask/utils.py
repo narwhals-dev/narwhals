@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._utils import (
@@ -12,6 +12,8 @@ from narwhals._utils import (
 from narwhals.dependencies import get_pandas, get_pyarrow
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
 

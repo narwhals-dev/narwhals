@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import ibis
 import ibis.expr.types as ir
@@ -20,6 +20,8 @@ from narwhals._ibis.utils import lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Mapping, Sequence
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -8,6 +8,8 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from narwhals.typing import PythonLiteral
     from tests.utils import Constructor, ConstructorEager
 

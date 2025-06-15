@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Literal, Sequence
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -24,6 +24,8 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from narwhals._arrow.typing import Incomplete
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
