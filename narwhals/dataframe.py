@@ -2449,24 +2449,34 @@ class LazyFrame(BaseFrame[FrameT]):
             The original object with the column added.
 
         Examples:
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = dd.from_dict({"a": [1, 2], "b": [5, 4]}, npartitions=1)
-            >>> nw.from_native(lf_native).with_row_index(order_by="a").collect()
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 5), (2, 4) df(a, b)")
+            >>> nw.from_native(lf_native).with_row_index(order_by="a").sort("a").collect()
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |     index  a  b  |
-            |  0      0  1  5  |
-            |  1      1  2  4  |
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[0,1]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
             └──────────────────┘
-            >>> nw.from_native(lf_native).with_row_index(order_by="b").collect()
+            >>> nw.from_native(lf_native).with_row_index(order_by="b").sort("a").collect()
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |     index  a  b  |
-            |  0      1  1  5  |
-            |  1      0  2  4  |
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[1,0]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
             └──────────────────┘
         """
         if order_by is None:

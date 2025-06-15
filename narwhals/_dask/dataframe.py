@@ -417,7 +417,10 @@ class DaskLazyFrame(
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
         return (
-            self.with_row_index(row_index_token)
+            # `order_by=""` is just a placeholder here. As order_by is unused, an empty
+            # string make sure that a type checker error is not triggered either.
+            # TODO(FBruzzesi): Fix DaskLazyFrame.with_row_index
+            self.with_row_index(row_index_token, order_by="")
             .filter(
                 (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
