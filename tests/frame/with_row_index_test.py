@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42.0, 42.0]}
+data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
 
 def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
@@ -27,6 +27,10 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
         (["const", "abc"], [1, 0]),
         (["const", "xyz"], [0, 1]),
     ],
+)
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 9, 0),
+    reason="Too old for `.over(partition_by=...)` or does not break ties with multiple columns in partition_by",
 )
 def test_with_row_index_lazy(
     request: pytest.FixtureRequest,
