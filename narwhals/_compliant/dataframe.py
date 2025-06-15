@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     NativeExprT,
     NativeFrameT,
 )
+from narwhals._expression_parsing import ExprKind
 from narwhals._translate import (
     ArrowConvertible,
     DictConvertible,
@@ -252,7 +253,6 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -364,7 +364,30 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+
+    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
+        plx = self.__narwhals_namespace__()
+        return self.select(
+            plx.col(order_by).rank(method="ordinal", descending=False).alias(name) - 1,
+            plx.all(),
+        )
+
+    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
+        plx = self.__narwhals_namespace__()
+        columns = self.columns
+        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+        row_index_expr = (
+            plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
+            - 1
+        )
+        return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
+
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+        if isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+        else:
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
+
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
@@ -399,6 +422,10 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _with_native(
+        self, df: NativeFrameT, *, validate_column_names: bool = True
+    ) -> Self: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""

@@ -478,14 +478,17 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str) -> Self:
-        df = self.native
-        cols = self.columns
-
-        row_indices = pa.array(range(df.num_rows))
-        return self._with_native(
-            df.append_column(name, row_indices).select([name, *cols])
-        )
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        if order_by is None:
+            df = self.native
+            row_index = pa.array(range(df.num_rows))
+            return self._with_native(
+                df.append_column(name, row_index).select([name, *self.columns])
+            )
+        elif isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+        else:
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
 
     def filter(
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]

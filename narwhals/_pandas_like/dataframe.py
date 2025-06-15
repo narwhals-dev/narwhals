@@ -415,13 +415,21 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         frame = self.native
-        namespace = self.__narwhals_namespace__()
-        row_index = namespace._series.from_iterable(
-            range(len(frame)), context=self, index=frame.index
-        ).alias(name)
-        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
+        index = frame.index
+        plx = self.__narwhals_namespace__()
+        if order_by is None:
+            row_index = plx._series.from_iterable(
+                range(len(frame)), context=self, index=index
+            )
+            return self._with_native(
+                plx._concat_horizontal([row_index.alias(name).native, frame])
+            )
+        elif isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+        else:
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])

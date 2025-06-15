@@ -504,10 +504,12 @@ class DuckDBLazyFrame(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
 
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+        return super().with_row_index(name=name, order_by=order_by)
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

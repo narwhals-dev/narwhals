@@ -1033,7 +1033,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
 
-        result = pc.if_else(null_mask, lit(None, native_series.type), rank)
+        result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
     @requires.backend_version((13,))
