@@ -65,8 +65,6 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         )
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
-        implementation = self.compliant._implementation
-        backend_version = self.compliant._backend_version
         new_names: list[str] = self._keys.copy()
 
         all_aggs_are_simple = True
@@ -213,16 +211,24 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(self._grouped.groups.keys()), columns=self._keys
                 )
-            # Keep inplace=True to avoid making a redundant copy.
-            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-            result.reset_index(inplace=True)  # noqa: PD002
-            return self.compliant._with_native(
-                select_columns_by_name(result, new_names, backend_version, implementation)
-            ).rename(dict(zip(self._keys, self._output_key_names)))
+            return self._select_results(result, new_names)
 
         if self.compliant.native.empty:
             raise empty_results_error()
         return self._agg_complex(exprs, new_names)
+
+    def _select_results(
+        self, df: pd.DataFrame, /, new_names: list[str]
+    ) -> PandasLikeDataFrame:
+        compliant = self.compliant
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        df.reset_index(inplace=True)  # noqa: PD002
+        native = select_columns_by_name(
+            df, new_names, compliant._backend_version, compliant._implementation
+        )
+        rename = dict(zip(self._keys, self._output_key_names))
+        return compliant._with_native(native).rename(rename)
 
     def _agg_complex(
         self, exprs: Iterable[PandasLikeExpr], new_names: list[str]
@@ -235,12 +241,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             result = self._grouped.apply(func, include_groups=False)
         else:  # pragma: no cover
             result = self._grouped.apply(func)
-        # Keep inplace=True to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result.reset_index(inplace=True)  # noqa: PD002
-        return self.compliant._with_native(
-            select_columns_by_name(result, new_names, backend_version, implementation)
-        ).rename(dict(zip(self._keys, self._output_key_names)))
+        return self._select_results(result, new_names)
 
     def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
