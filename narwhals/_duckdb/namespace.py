@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable
 
 import duckdb
 from duckdb import CoalesceOperator, Expression, FunctionExpression
@@ -21,6 +21,8 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from narwhals._duckdb.expr import DuckDBWindowInputs
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral

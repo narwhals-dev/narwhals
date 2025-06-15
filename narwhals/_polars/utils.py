@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 import polars as pl
 
@@ -25,6 +16,8 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+
     from typing_extensions import TypeIs
 
     from narwhals._utils import _StoresNative

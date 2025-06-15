@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -12,6 +12,8 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
+
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
