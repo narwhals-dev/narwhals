@@ -14,11 +14,11 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
+from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
-    deprecated,
     flatten,
     is_compliant_expr,
     is_eager_allowed,
