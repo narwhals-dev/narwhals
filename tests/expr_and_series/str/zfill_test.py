@@ -28,6 +28,7 @@ def test_str_zfill(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="different zfill behavior")
 def test_str_zfill_series(constructor_eager: ConstructorEager) -> None:
     skip_pandas_pyarrow(constructor_eager)
 
