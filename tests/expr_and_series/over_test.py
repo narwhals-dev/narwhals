@@ -337,8 +337,6 @@ def test_over_diff(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
-        pytest.skip(reason="bug in old version")
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)

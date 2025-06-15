@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import polars as pl
 
@@ -24,6 +15,7 @@ from narwhals._utils import Implementation, requires, validate_backend_version
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
     from typing import TypeVar
 

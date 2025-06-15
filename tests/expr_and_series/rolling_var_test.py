@@ -102,7 +102,6 @@ def test_rolling_var_series(
 
 
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
-@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
@@ -134,7 +133,6 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
 
 
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
-@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")

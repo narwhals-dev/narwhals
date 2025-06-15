@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyGroupBy
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from duckdb import Expression  # noqa: F401
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
