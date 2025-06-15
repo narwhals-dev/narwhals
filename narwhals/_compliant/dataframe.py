@@ -374,10 +374,11 @@ class CompliantLazyFrame(
     def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
         plx = self.__narwhals_namespace__()
         columns = self.columns
-        return self.with_columns(**{name: plx.lit(value=True, dtype=None)}).select(
+        const_expr = plx.lit(value=True, dtype=None)
+        return self.with_columns(const_expr.alias(name)).select(
             plx.col(name)
             .rank(method="ordinal", descending=False)
-            .over(partition_by=[], order_by=order_by)
+            .over(partition_by=const_expr, order_by=order_by)
             - 1,
             plx.col(*columns),
         )

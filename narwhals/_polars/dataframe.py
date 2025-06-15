@@ -450,7 +450,7 @@ class PolarsDataFrame:
             )
         elif isinstance(order_by, str):
             result = frame.select(
-                pl.col(order_by).rank(method="ordinal").alias(name) -1, pl.all()
+                pl.col(order_by).rank(method="ordinal").alias(name) - 1, pl.all()
             )
         else:
             result = frame.with_columns(
@@ -724,7 +724,7 @@ class PolarsLazyFrame:
             )
         elif isinstance(order_by, str):
             result = frame.select(
-                pl.col(order_by).rank(method="ordinal").alias(name) -1, pl.all()
+                pl.col(order_by).rank(method="ordinal").alias(name) - 1, pl.all()
             )
         else:
             result = frame.with_columns(
