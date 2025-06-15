@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 from narwhals._plan.common import Immutable, is_expr
 from narwhals._plan.dummy import DummyExpr
@@ -10,6 +10,8 @@ from narwhals._plan.expr_parsing import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import Ternary
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq

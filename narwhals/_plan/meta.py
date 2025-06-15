@@ -13,7 +13,7 @@ from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from typing_extensions import TypeIs
 

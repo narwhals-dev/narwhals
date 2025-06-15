@@ -9,7 +9,8 @@ from narwhals.dtypes import DType
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Iterable, Iterator, Literal
+    from collections.abc import Iterable, Iterator
+    from typing import Any, Callable, Literal
 
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 

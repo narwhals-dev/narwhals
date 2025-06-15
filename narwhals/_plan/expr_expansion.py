@@ -77,7 +77,14 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from typing import ItemsView, Iterator, KeysView, Mapping, Sequence, ValuesView
+    from collections.abc import (
+        ItemsView,
+        Iterator,
+        KeysView,
+        Mapping,
+        Sequence,
+        ValuesView,
+    )
 
     from typing_extensions import TypeAlias
 

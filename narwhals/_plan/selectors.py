@@ -7,14 +7,16 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from narwhals._plan.common import Immutable, is_iterable_reject
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from datetime import timezone
-    from typing import Iterator, TypeVar
+    from typing import TypeVar
 
     from narwhals._plan.dummy import DummySelector
     from narwhals._plan.expr import RootSelector

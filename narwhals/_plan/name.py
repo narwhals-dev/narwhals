@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from typing_extensions import Self
 

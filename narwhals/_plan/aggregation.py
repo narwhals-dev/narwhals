@@ -6,7 +6,7 @@ from narwhals._plan.common import ExprIR
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from typing_extensions import Self
 

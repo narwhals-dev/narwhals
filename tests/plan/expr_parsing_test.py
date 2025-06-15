@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 from collections import deque
+from collections.abc import Iterable, Sequence
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
 
@@ -26,7 +27,7 @@ from narwhals.exceptions import (
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from typing import ContextManager
+    from contextlib import AbstractContextManager
 
     from typing_extensions import TypeAlias
 
@@ -299,7 +300,7 @@ def test_is_in_series() -> None:
         ),
     ],
 )
-def test_invalid_is_in(other: Any, context: ContextManager[Any]) -> None:
+def test_invalid_is_in(other: Any, context: AbstractContextManager[Any]) -> None:
     with context:
         nwd.col("a").is_in(other)
 
@@ -353,7 +354,7 @@ def test_filter_full_spellings() -> None:
 def test_filter_partial_spellings(
     predicates: Iterable[IntoExprColumn],
     constraints: dict[str, Any],
-    context: ContextManager[Any],
+    context: AbstractContextManager[Any],
 ) -> None:
     with context:
         assert nwd.col("a").filter(*predicates, **constraints)

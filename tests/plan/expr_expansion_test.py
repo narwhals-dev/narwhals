@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable
 
 import pytest
 
@@ -19,6 +19,8 @@ from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateErro
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummyExpr, DummySelector
     from narwhals._plan.typing import IntoExpr, MapIR

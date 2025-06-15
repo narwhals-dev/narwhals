@@ -18,7 +18,8 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
     import pandas as pd
     import polars as pl

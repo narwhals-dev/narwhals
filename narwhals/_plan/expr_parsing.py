@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
+
 # ruff: noqa: A002
 from itertools import chain
-from typing import TYPE_CHECKING, Iterable, Sequence, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from narwhals._plan.common import is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
@@ -13,7 +15,8 @@ from narwhals._plan.exceptions import (
 from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator
+    from collections.abc import Iterator
+    from typing import Any
 
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
