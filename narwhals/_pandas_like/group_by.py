@@ -282,7 +282,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
 
 def safety_assertion_error(
     old_names: Sequence[str], new_names: Sequence[str]
-) -> AssertionError:
+) -> AssertionError:  # pragma: no cover
     msg = (
         f"Safety assertion failed, expected {old_names} "
         f"got {new_names}, "
