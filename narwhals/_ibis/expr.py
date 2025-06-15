@@ -25,8 +25,10 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from typing import Union
+
     import ibis.expr.types as ir
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import (
         AliasNames,
@@ -43,6 +45,10 @@ if TYPE_CHECKING:
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
     IbisWindowInputs = WindowInputs[ir.Value]
+
+    # NOTE: Needed to avoid `ibis` metaclass shenanigans breaking `__or__`
+    # > Expected class but received "UnionType` Pylance(reportGeneralTypeIssues)
+    LegacyWindow: TypeAlias = Union[ir.bl.LegacyWindowBuilder, None]
 
 
 class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
@@ -374,14 +380,21 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.sum().fill_null(lit(0)))
 
     def first(self) -> Self:
-        def fn(inputs: IbisWindowInputs) -> ir.Value:
-            order_by = [ibis.asc(by, nulls_first=True) for by in inputs.order_by]
-            expr = cast("ir.Column", inputs.expr)
-            if partition_by := inputs.partition_by:  # pragma: no cover
-                window = ibis.window(group_by=list(partition_by), order_by=order_by)
-                return expr.first(include_null=True).over(window)
+        def window(
+            expr: ir.Value, order_by: Sequence[ir.Column], legacy: LegacyWindow
+        ) -> ir.Value:
+            expr = cast("ir.Column", expr)
+            if legacy:  # pragma: no cover
+                return expr.first(include_null=True).over(legacy)
             else:
                 return expr.first(order_by=order_by, include_null=True)
+
+        def fn(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
+            legacy: LegacyWindow = None
+            order_by = list(self._sort(*inputs.order_by))
+            if group_by := inputs.partition_by:  # pragma: no cover
+                legacy = ibis.window(group_by=list(group_by), order_by=order_by)
+            return [window(expr, order_by, legacy) for expr in self(df)]
 
         return self._with_window_function(fn)
 
