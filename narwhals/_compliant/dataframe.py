@@ -501,16 +501,3 @@ class EagerDataFrame(
                 raise AssertionError(msg)
 
         return compliant
-
-    def _with_row_index_order_by(self, name: str, order_by: str) -> Self:
-        plx = self.__narwhals_namespace__()
-        return self._with_native(
-            self.with_columns(**{name: plx.lit(value=True, dtype=None)})
-            .select(
-                plx.col(name)
-                .rank(method="ordinal", descending=False)
-                .over(order_by=order_by, partition_by=[]),
-                plx.col(*self.columns),
-            )
-            .native
-        )

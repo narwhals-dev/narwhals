@@ -440,19 +440,21 @@ class PolarsDataFrame:
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self, name: str, order_by: str | None) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
             if self._backend_version < (0, 20, 4):
-                return self._with_native(frame.with_row_count(name))
-            return self._with_native(frame.with_row_index(name))
-
-        return self._with_native(
-            frame.with_columns(**{name: pl.lit(value=True, dtype=pl.Boolean())}).select(
-                pl.col(name).rank(method="ordinal").over(order_by=order_by),
-                pl.all().exclude(name),
+                result = frame.with_row_count(name)
+            result = frame.with_row_index(name)
+        elif isinstance(order_by, str):
+            result = frame.with_columns(
+                pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
             )
-        )
+        else:
+            msg = "TODO"
+            raise NotImplementedError(msg)
+
+        return self._with_native(result)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
@@ -704,19 +706,21 @@ class PolarsLazyFrame:
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self, name: str, order_by: str | None) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
             if self._backend_version < (0, 20, 4):
-                return self._with_native(frame.with_row_count(name))
-            return self._with_native(frame.with_row_index(name))
-
-        return self._with_native(
-            frame.with_columns(**{name: pl.lit(value=True, dtype=pl.Boolean())}).select(
-                pl.col(name).rank(method="ordinal").over(order_by=order_by),
-                pl.all().exclude(name),
+                result = frame.with_row_count(name)
+            result = frame.with_row_index(name)
+        elif isinstance(order_by, str):
+            result = frame.with_columns(
+                pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
             )
-        )
+        else:
+            msg = "TODO"
+            raise NotImplementedError(msg)
+
+        return self._with_native(result)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         if self._backend_version < (1, 0, 0):
