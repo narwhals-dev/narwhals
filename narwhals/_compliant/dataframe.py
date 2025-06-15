@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     NativeExprT,
     NativeFrameT,
 )
+from narwhals._expression_parsing import ExprKind
 from narwhals._translate import (
     ArrowConvertible,
     DictConvertible,
@@ -374,7 +375,7 @@ class CompliantLazyFrame(
     def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
         plx = self.__narwhals_namespace__()
         columns = self.columns
-        const_expr = plx.lit(value=1, dtype=None).alias(name)
+        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
         row_index_expr = (
             plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
             - 1
