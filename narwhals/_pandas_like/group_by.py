@@ -64,6 +64,12 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             observed=True,
         )
 
+    # NOTE: Still have *quite* a bit of work to do here!
+    # -------------------------------------------------------
+    # NOTE: `C901`      Too complex                 (25 > 10)
+    # NOTE: `PLR0912`   Too many branches           (28 > 12)
+    # NOTE: `PLR0914`   Too many local variables    (27 > 15)
+    # NOTE: `PLR0915`   Too many statements         (83 > 50)
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
         new_names: list[str] = self._keys.copy()
 
