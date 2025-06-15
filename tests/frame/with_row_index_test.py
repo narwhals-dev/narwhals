@@ -29,10 +29,29 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_with_row_index_lazy(
-    constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    order_by: str | Sequence[str],
+    expected_index: list[int],
 ) -> None:
+    if "dask" in str(constructor) and expected_index == [1, 0]:
+        request.applymarker(
+            pytest.mark.xfail(reason="Dask supports only default order for now")
+        )
+
     result = (
         nw.from_native(constructor(data)).with_row_index(order_by=order_by).sort("xyz")
     )
     expected = {"index": expected_index, **data}
     assert_equal_data(result, expected)
+
+
+def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
+    frame = nw.from_native(constructor(data)).lazy()
+
+    msg = (
+        "`LazyFrane.with_row_index` requires `order_by` to be specified as it is an "
+        "order-dependent operation."
+    )
+    with pytest.raises(ValueError, match=msg):
+        frame.with_row_index()
