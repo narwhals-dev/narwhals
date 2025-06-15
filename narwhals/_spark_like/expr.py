@@ -1,17 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
@@ -30,6 +20,8 @@ from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
+
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
     from typing_extensions import Self, TypeAlias

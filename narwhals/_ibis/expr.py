@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterator,
-    Literal,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
@@ -25,6 +16,8 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     import ibis.expr.types as ir
     from typing_extensions import Self
 

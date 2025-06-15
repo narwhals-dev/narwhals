@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from narwhals._duration import parse_interval_string
 from narwhals._spark_like.utils import (
@@ -10,6 +10,8 @@ from narwhals._spark_like.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
