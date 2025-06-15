@@ -45,10 +45,8 @@ from narwhals.dependencies import (
     is_narwhals_series_int,
     is_numpy_array_1d,
     is_numpy_array_1d_int,
-    is_pandas_dataframe,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_pandas_series,
     is_polars_series,
     is_pyarrow_chunked_array,
 )
@@ -653,12 +651,13 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
-    if (pl := get_polars()) is not None and isinstance(
-        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    if (
+        (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame))
+    ) or (
+        (pl := get_polars()) is not None
+        and isinstance(arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
     ):
+        # Non-exhaustive check for common potential mistakes.
         msg = (
             f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
