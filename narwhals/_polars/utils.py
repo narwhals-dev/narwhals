@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 import polars as pl
 
@@ -25,10 +16,13 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+
     from typing_extensions import TypeIs
 
     from narwhals._utils import _StoresNative
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -148,7 +142,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+    dtype: IntoDType, version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
     dtypes = version.dtypes
     if dtype == dtypes.Float64:

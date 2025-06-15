@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import wraps
+from functools import lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from secrets import token_hex
@@ -12,13 +13,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Container,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -30,7 +27,6 @@ from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
     get_cudf,
-    get_dask,
     get_dask_dataframe,
     get_duckdb,
     get_ibis,
@@ -38,7 +34,6 @@ from narwhals.dependencies import (
     get_pandas,
     get_polars,
     get_pyarrow,
-    get_pyspark,
     get_pyspark_connect,
     get_pyspark_sql,
     get_sqlframe,
@@ -46,18 +41,16 @@ from narwhals.dependencies import (
     is_narwhals_series_int,
     is_numpy_array_1d,
     is_numpy_array_1d_int,
-    is_pandas_dataframe,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_pandas_series,
     is_polars_series,
     is_pyarrow_chunked_array,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import AbstractSet as Set
 
     import pandas as pd
     import polars as pl
@@ -344,63 +337,20 @@ class Implementation(NoAutoEnum):
             else cls.from_native_namespace(backend)
         )
 
-    def to_native_namespace(self) -> ModuleType:  # noqa: C901, PLR0911
+    def to_native_namespace(self) -> ModuleType:
         """Return the native namespace module corresponding to Implementation.
 
         Returns:
             Native module.
         """
-        if self is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
+        if self is Implementation.UNKNOWN:
+            msg = "Cannot return native namespace from UNKNOWN Implementation"
+            raise AssertionError(msg)
 
-            return pd
-        if self is Implementation.MODIN:
-            import modin.pandas
+        validate_backend_version(self, self._backend_version())
 
-            return modin.pandas
-        if self is Implementation.CUDF:  # pragma: no cover
-            import cudf  # ignore-banned-import
-
-            return cudf
-        if self is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
-            return pa
-        if self is Implementation.PYSPARK:  # pragma: no cover
-            import pyspark.sql
-
-            return pyspark.sql
-        if self is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
-            return pl
-        if self is Implementation.DASK:
-            import dask.dataframe  # ignore-banned-import
-
-            return dask.dataframe
-
-        if self is Implementation.DUCKDB:
-            import duckdb  # ignore-banned-import
-
-            return duckdb
-
-        if self is Implementation.SQLFRAME:
-            import sqlframe  # ignore-banned-import
-
-            return sqlframe
-
-        if self is Implementation.IBIS:
-            import ibis  # ignore-banned-import
-
-            return ibis
-
-        if self is Implementation.PYSPARK_CONNECT:  # pragma: no cover
-            import pyspark.sql.connect  # ignore-banned-import
-
-            return pyspark.sql.connect
-
-        msg = "Not supported Implementation"  # pragma: no cover
-        raise AssertionError(msg)
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        return _import_native_namespace(module_name)
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
@@ -615,29 +565,40 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        native = self.to_native_namespace()
-        into_version: Any
-        if self not in {
-            Implementation.PYSPARK,
-            Implementation.PYSPARK_CONNECT,
-            Implementation.DASK,
-            Implementation.SQLFRAME,
-        }:
-            into_version = native
-        elif self in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
-            into_version = get_pyspark()  # pragma: no cover
-        elif self is Implementation.DASK:
-            into_version = get_dask()
-        else:
+        """Returns backend version.
+
+        As a biproduct of loading the native namespace, we also store it as an attribute
+        under the `_native_namespace` name.
+        """
+        if self is Implementation.UNKNOWN:  # pragma: no cover
+            msg = "Cannot return backend version from UNKNOWN Implementation"
+            raise AssertionError(msg)
+
+        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
+        native_namespace = _import_native_namespace(module_name)
+
+        into_version: ModuleType | str
+        if self.is_sqlframe():
             import sqlframe._version
 
             into_version = sqlframe._version
-        return parse_version(into_version)
+        elif self.is_pyspark() or self.is_pyspark_connect():  # pragma: no cover
+            import pyspark  # ignore-banned-import
+
+            into_version = pyspark
+        elif self.is_dask():
+            import dask  # ignore-banned-import
+
+            into_version = dask
+        else:
+            into_version = native_namespace
+
+        return parse_version(version=into_version)
 
 
-MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
-    Implementation.PANDAS: (0, 25, 3),
-    Implementation.MODIN: (0, 25, 3),
+MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
+    Implementation.PANDAS: (1, 1, 3),
+    Implementation.MODIN: (0, 8, 2),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
@@ -649,6 +610,14 @@ MIN_VERSIONS: dict[Implementation, tuple[int, ...]] = {
     Implementation.SQLFRAME: (3, 22, 0),
 }
 
+_IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
+    Implementation.DASK: "dask.dataframe",
+    Implementation.MODIN: "modin.pandas",
+    Implementation.PYSPARK: "pyspark.sql",
+    Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
+}
+"""Stores non default mapping from Implementation to module name"""
+
 
 def validate_backend_version(
     implementation: Implementation, backend_version: tuple[int, ...]
@@ -658,16 +627,11 @@ def validate_backend_version(
         raise ValueError(msg)
 
 
-def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
-    if text.startswith(prefix):
-        return text[len(prefix) :]
-    return text
+@lru_cache(maxsize=16)
+def _import_native_namespace(module_name: str) -> ModuleType:
+    from importlib import import_module
 
-
-def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
-    if text.endswith(suffix):
-        return text[: -len(suffix)]
-    return text  # pragma: no cover
+    return import_module(module_name)
 
 
 def flatten(args: Any) -> list[Any]:
@@ -683,12 +647,13 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
-    if (pl := get_polars()) is not None and isinstance(
-        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    if (
+        (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame))
+    ) or (
+        (pl := get_polars()) is not None
+        and isinstance(arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
     ):
+        # Non-exhaustive check for common potential mistakes.
         msg = (
             f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"

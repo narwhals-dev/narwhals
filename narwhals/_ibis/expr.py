@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, cast
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
-from ibis import _ as col
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
@@ -16,6 +16,8 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     import ibis.expr.types as ir
     from typing_extensions import Self
 
@@ -29,8 +31,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
-    from narwhals.typing import RankMethod, RollingInterpolationMethod
+    from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
@@ -86,18 +87,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
     ) -> IbisWindowFunction:
         def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            if reverse:
-                order_by_cols = [
-                    ibis.desc(getattr(col, x), nulls_first=False) for x in inputs.order_by
-                ]
-            else:
-                order_by_cols = [
-                    ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
-                ]
-
             window = ibis.window(
                 group_by=list(inputs.partition_by),
-                order_by=order_by_cols,
+                order_by=self._sort(
+                    *inputs.order_by, descending=reverse, nulls_last=reverse
+                ),
                 preceding=None,  # unbounded
                 following=0,
             )
@@ -125,12 +119,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             following = 0
 
         def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            order_by_cols = [
-                ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
-            ]
             window = ibis.window(
                 group_by=list(inputs.partition_by),
-                order_by=order_by_cols,
+                order_by=self._sort(*inputs.order_by),
                 preceding=preceding,
                 following=following,
             )
@@ -167,6 +158,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Ibis does its own broadcasting.
         return self
+
+    def _sort(
+        self, *cols: ir.Column | str, descending: bool = False, nulls_last: bool = False
+    ) -> Iterator[ir.Column]:
+        mapping = {
+            (False, False): partial(ibis.asc, nulls_first=True),
+            (False, True): partial(ibis.asc, nulls_first=False),
+            (True, False): partial(ibis.desc, nulls_first=True),
+            (True, True): partial(ibis.desc, nulls_first=False),
+        }
+        sort = mapping[(descending, nulls_last)]
+        yield from (cast("ir.Column", sort(col)) for col in cols)
 
     @classmethod
     def from_column_names(
@@ -455,7 +458,10 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
             return [
                 expr.lag(n).over(  # type: ignore[attr-defined, unused-ignore]
-                    ibis.window(group_by=inputs.partition_by, order_by=inputs.order_by)
+                    ibis.window(
+                        group_by=inputs.partition_by,
+                        order_by=self._sort(*inputs.order_by),
+                    )
                 )
                 for expr in self(df)
             ]
@@ -466,14 +472,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def func(
             df: IbisLazyFrame, inputs: IbisWindowInputs
         ) -> Sequence[ir.BooleanValue]:
-            order_by_cols = [
-                ibis.asc(getattr(col, x), nulls_first=True) for x in inputs.order_by
-            ]
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
             return [
                 ibis.row_number().over(
                     ibis.window(
-                        group_by=[*inputs.partition_by, expr], order_by=order_by_cols
+                        group_by=[*inputs.partition_by, expr],
+                        order_by=self._sort(*inputs.order_by),
                     )
                 )
                 == lit(0)
@@ -486,14 +490,14 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def func(
             df: IbisLazyFrame, inputs: IbisWindowInputs
         ) -> Sequence[ir.BooleanValue]:
-            order_by_cols = [
-                ibis.desc(getattr(col, x), nulls_first=True) for x in inputs.order_by
-            ]
             # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
             return [
                 ibis.row_number().over(
                     ibis.window(
-                        group_by=[*inputs.partition_by, expr], order_by=order_by_cols
+                        group_by=[*inputs.partition_by, expr],
+                        order_by=self._sort(
+                            *inputs.order_by, descending=True, nulls_last=True
+                        ),
                     )
                 )
                 == lit(0)
@@ -510,7 +514,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                     ibis.window(
                         following=0,
                         group_by=inputs.partition_by,
-                        order_by=inputs.order_by,
+                        order_by=self._sort(*inputs.order_by),
                     )
                 )
                 for expr in self(df)
@@ -599,7 +603,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_fill_null, value=value)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def _func(expr: ir.Column) -> ir.Value:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             # ibis `cast` overloads do not include DataType, only literals
@@ -614,11 +618,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         def _rank(expr: ir.Column) -> ir.Column:
-            order_by: ir.Column = (
-                cast("ir.Column", expr.desc())
-                if descending
-                else cast("ir.Column", expr.asc())
-            )
+            order_by = next(self._sort(expr, descending=descending, nulls_last=True))
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
@@ -660,6 +660,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_log)
 
+    def exp(self) -> Self:
+        def _exp(expr: ir.NumericColumn) -> ir.Value:
+            return expr.exp()
+
+        return self._with_callable(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: ir.NumericColumn) -> ir.Value:
+            return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
+
+        return self._with_callable(_sqrt)
+
     @property
     def str(self) -> IbisExprStringNamespace:
         return IbisExprStringNamespace(self)
@@ -682,4 +694,5 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
+    kurtosis = not_implemented()
     unique = not_implemented()

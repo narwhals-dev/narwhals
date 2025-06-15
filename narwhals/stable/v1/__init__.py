@@ -1,17 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 from warnings import warn
 
 import narwhals as nw
@@ -74,6 +64,7 @@ from narwhals.translate import _from_native_impl, get_native_namespace, to_py_sc
 from narwhals.typing import IntoDataFrameT, IntoFrameT
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from types import ModuleType
 
     from typing_extensions import ParamSpec, Self
@@ -82,6 +73,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrameT,
@@ -1216,7 +1208,7 @@ def len() -> Expr:
     return _stableify(nw.len())
 
 
-def lit(value: NonNestedLiteral, dtype: DType | type[DType] | None = None) -> Expr:
+def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
@@ -1467,7 +1459,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 def new_series(
     name: str,
     values: Any,
-    dtype: DType | type[DType] | None = None,
+    dtype: IntoDType | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001

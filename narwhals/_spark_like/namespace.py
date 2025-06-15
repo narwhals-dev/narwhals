@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable
 
 from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
@@ -19,13 +19,14 @@ from narwhals._spark_like.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._spark_like.expr import SparkWindowInputs
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
 class SparkLikeNamespace(
@@ -97,9 +98,7 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
-    ) -> SparkLikeExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
             if dtype:
@@ -279,6 +278,13 @@ class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
         self.when = df._F.when
         self.lit = df._F.lit
         return super().__call__(df)
+
+    def _window_function(
+        self, df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+    ) -> Sequence[Column]:
+        self.when = df._F.when
+        self.lit = df._F.lit
+        return super()._window_function(df, window_inputs)
 
 
 class SparkLikeThen(

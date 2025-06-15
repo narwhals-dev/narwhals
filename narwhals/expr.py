@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import (
     ExprMetadata,
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         IntoExpr,
         NonNestedLiteral,
         NumericLiteral,
@@ -161,7 +163,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Redefine an object's data type.
 
         Arguments:
@@ -679,6 +681,30 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).skew())
 
+    def kurtosis(self) -> Self:
+        """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Kurtosis is the fourth central moment divided by the square of the variance.
+        The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
+
+        Returns:
+            An expression representing the kurtosis (Fisher's definition) without bias correction of the column.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").kurtosis())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a         b |
+            | 0 -1.3  0.210657 |
+            └──────────────────┘
+        """
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).kurtosis())
+
     def sum(self) -> Expr:
         """Return the sum value.
 
@@ -1015,7 +1041,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 
@@ -2461,7 +2487,7 @@ class Expr:
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -2488,6 +2514,58 @@ class Expr:
         return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
+
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [-1, 0, 1]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(exp=nw.col("values").exp())
+            >>> result
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |pyarrow.Table                                   |
+            |values: int64                                   |
+            |exp: double                                     |
+            |----                                            |
+            |values: [[-1,0,1]]                              |
+            |exp: [[0.36787944117144233,1,2.718281828459045]]|
+            └────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
+
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1, 4, 9]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sqrt=nw.col("values").sqrt())
+            >>> result
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |values: int64     |
+            |sqrt: double      |
+            |----              |
+            |values: [[1,4,9]] |
+            |sqrt: [[1,2,3]]   |
+            └──────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).sqrt())
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

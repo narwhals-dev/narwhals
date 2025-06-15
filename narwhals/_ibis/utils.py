@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, Mapping
+from typing import TYPE_CHECKING, Any, Literal
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -9,6 +9,8 @@ import ibis.expr.datatypes as ibis_dtypes
 from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     import ibis.expr.types as ir
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs
@@ -18,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
     from narwhals._utils import Version
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 lit = ibis.literal
 """Alias for `ibis.literal`."""
@@ -157,7 +160,7 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version
+    dtype: IntoDType, version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes
 

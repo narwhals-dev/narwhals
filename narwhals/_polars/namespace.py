@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
@@ -22,6 +13,7 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
@@ -29,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _FullContext
     from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -154,7 +146,7 @@ class PolarsNamespace:
             )
         return self._lazyframe.from_native(result, context=self)
 
-    def lit(self, value: Any, dtype: DType | type[DType] | None) -> PolarsExpr:
+    def lit(self, value: Any, dtype: IntoDType | None) -> PolarsExpr:
         if dtype is not None:
             return self._expr(
                 pl.lit(

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import re
+from collections.abc import Sized
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
+    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -146,18 +147,11 @@ def set_index(
         obj.index = index  # type: ignore[attr-defined]
         return obj
     if implementation is Implementation.PANDAS and (
-        backend_version < (1,)
-    ):  # pragma: no cover
-        kwargs = {"inplace": False}
-    else:
-        kwargs = {}
-    if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        kwargs["copy"] = False
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
     else:  # pragma: no cover
-        pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
 
 
 def rename(
@@ -349,7 +343,7 @@ def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
-    dtype: DType | type[DType],
+    dtype: IntoDType,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
     backend_version: tuple[int, ...],

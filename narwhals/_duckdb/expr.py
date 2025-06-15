@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
@@ -25,6 +25,8 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from duckdb import Expression
     from typing_extensions import Self
 
@@ -38,9 +40,9 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -414,6 +416,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: FunctionExpression("kurtosis_pop", expr))
+
     def median(self) -> Self:
         return self._with_callable(lambda expr: FunctionExpression("median", expr))
 
@@ -777,7 +782,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_elementwise(_fill_constant, value=value)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def func(expr: Expression) -> Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return expr.cast(DuckDBPyType(native_dtype))
@@ -871,6 +876,20 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             )
 
         return self._with_elementwise(_log)
+
+    def exp(self) -> Self:
+        def _exp(expr: Expression) -> Expression:
+            return FunctionExpression("exp", expr)
+
+        return self._with_elementwise(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Expression) -> Expression:
+            return when(expr < lit(0), lit(float("nan"))).otherwise(
+                FunctionExpression("sqrt", expr)
+            )
+
+        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:

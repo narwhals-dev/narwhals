@@ -135,8 +135,6 @@ def test_rank_expr_in_over_context(
 
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
-        pytest.skip(reason="bug in old version")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")
 
@@ -261,8 +259,6 @@ def test_rank_expr_in_over_desc(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
-        pytest.skip(reason="bug in old version")
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
         pytest.skip(reason="bug in old version")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")

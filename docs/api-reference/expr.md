@@ -21,6 +21,7 @@
         - diff
         - drop_nulls
         - ewm_mean
+        - exp
         - fill_null
         - filter
         - gather_every
@@ -35,6 +36,7 @@
         - is_nan
         - is_null
         - is_unique
+        - kurtosis
         - len
         - log
         - map_batches
@@ -59,6 +61,7 @@
         - shift
         - sort
         - skew
+        - sqrt
         - std
         - sum
         - tail
