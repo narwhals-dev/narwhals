@@ -449,16 +449,16 @@ class PolarsDataFrame:
                 else frame.with_row_index(name)
             )
         elif isinstance(order_by, str):
-            result = frame.with_columns(
-                pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
+            result = frame.select(
+                pl.col(order_by).rank(method="ordinal").alias(name) -1, pl.all()
             )
         else:
             result = frame.with_columns(
-                **{name: pl.lit(value=True, dtype=pl.Boolean())}
+                pl.lit(value=True, dtype=pl.Boolean()).alias(name)
             ).select(
                 pl.col(name)
                 .rank(method="ordinal", descending=False)
-                .over(partition_by=[], order_by=order_by)
+                .over(partition_by=None, order_by=order_by)
                 - 1,
                 pl.all().exclude(name),
             )
@@ -723,16 +723,16 @@ class PolarsLazyFrame:
                 else frame.with_row_index(name)
             )
         elif isinstance(order_by, str):
-            result = frame.with_columns(
-                pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
+            result = frame.select(
+                pl.col(order_by).rank(method="ordinal").alias(name) -1, pl.all()
             )
         else:
             result = frame.with_columns(
-                **{name: pl.lit(value=True, dtype=pl.Boolean())}
+                pl.lit(value=True, dtype=pl.Boolean()).alias(name)
             ).select(
                 pl.col(name)
                 .rank(method="ordinal", descending=False)
-                .over(partition_by=[], order_by=order_by)
+                .over(partition_by=None, order_by=order_by)
                 - 1,
                 pl.all().exclude(name),
             )
