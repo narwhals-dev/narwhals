@@ -29,7 +29,13 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        PythonLiteral,
+        _1DArray,
+    )
 
     T = TypeVar("T")
 
@@ -572,6 +578,13 @@ class PolarsSeries:
 
     def to_polars(self) -> pl.Series:
         return self.native
+
+    def first(self) -> PythonLiteral:
+        if self._backend_version >= (1, 10):
+            return self.native.first()
+        elif len(self):  # pragma: no cover
+            return self.native.item(0)  # type: ignore[no-any-return]
+        return None  # pragma: no cover
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
