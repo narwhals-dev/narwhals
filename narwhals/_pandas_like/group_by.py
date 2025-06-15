@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import collections
 import warnings
-from functools import partial
+from functools import lru_cache
 from itertools import chain
+from operator import methodcaller
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
@@ -16,9 +17,10 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, Unpack
 
     from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
@@ -50,35 +52,30 @@ NativeAggregation: TypeAlias = Literal[
 ]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
+_AggFunc: TypeAlias = "NativeAggregation | Callable[..., Any]"
+"""Equivalent to `pd.NamedAgg.aggfunc`."""
 
-_NamedAgg: TypeAlias = "tuple[str, NativeAggregation | Callable[..., Any]]"
+_NamedAgg: TypeAlias = "tuple[str, _AggFunc]"
+"""Equivalent to `pd.NamedAgg`."""
+
+
+@lru_cache(maxsize=32)
+def _agg_func(
+    name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]
+) -> _AggFunc:  # pragma: no cover
+    if name == "nunique":
+        return methodcaller(name, dropna=False)
+    if not kwds or kwds.get("ddof") == 1:
+        return name
+    return methodcaller(name, **kwds)
 
 
 def _named_aggs(
     gb: PandasLikeGroupBy, /, expr: PandasLikeExpr, exclude: Sequence[str]
 ) -> Iterator[tuple[str, _NamedAgg]]:  # pragma: no cover
-    import numpy as np
-
     output_names, aliases = evaluate_output_names_and_aliases(expr, gb.compliant, exclude)
     function_name = gb._remap_expr_name(gb._leaf_name(expr))
-    scalar_kwargs = expr._scalar_kwargs
-    # NOTE: Will need a better idea than this for `cudf`, `modin`
-    # (https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#named-aggregation)
-    # > "If your aggregation functions require additional arguments, apply them partially with functools.partial()""
-    aggfunc: NativeAggregation | Callable[..., Any]
-    if function_name == "nunique":
-        # NOTE: Very unsure how to do this for non-pandas
-        from pandas.api.typing import SeriesGroupBy
-
-        aggfunc = partial(SeriesGroupBy.nunique, dropna=False)
-    elif (
-        function_name in {"std", "var"}
-        and (ddof := scalar_kwargs.get("ddof"))
-        and ddof != 1
-    ):
-        aggfunc = partial(getattr(np, function_name), ddof=ddof)
-    else:
-        aggfunc = function_name
+    aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
     for output_name, alias in zip(output_names, aliases):
         yield alias, (output_name, aggfunc)
 
@@ -92,7 +89,7 @@ def named_aggs(
 
     The idea would be using this like:
 
-        df.groupby(...).agg(**named_aggs(..., ..., exclude=...))
+        df.groupby(...).agg(**named_aggs(..., ..., exclude=...)).reset_index()
 
     Looks entirely different to the current `PandasLikeGroupBy` 🤔
     """
