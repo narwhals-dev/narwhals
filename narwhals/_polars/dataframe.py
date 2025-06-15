@@ -443,17 +443,25 @@ class PolarsDataFrame:
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
-            if self._backend_version < (0, 20, 4):
-                result = frame.with_row_count(name)
-            result = frame.with_row_index(name)
+            result = (
+                frame.with_row_count(name)
+                if self._backend_version < (0, 20, 4)
+                else frame.with_row_index(name)
+            )
         elif isinstance(order_by, str):
             result = frame.with_columns(
                 pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
             )
         else:
-            msg = "TODO"
-            raise NotImplementedError(msg)
-
+            result = frame.with_columns(
+                **{name: pl.lit(value=True, dtype=pl.Boolean())}
+            ).select(
+                pl.col(name)
+                .rank(method="ordinal", descending=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1,
+                pl.all().exclude(name),
+            )
         return self._with_native(result)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
@@ -709,17 +717,25 @@ class PolarsLazyFrame:
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
-            if self._backend_version < (0, 20, 4):
-                result = frame.with_row_count(name)
-            result = frame.with_row_index(name)
+            result = (
+                frame.with_row_count(name)
+                if self._backend_version < (0, 20, 4)
+                else frame.with_row_index(name)
+            )
         elif isinstance(order_by, str):
             result = frame.with_columns(
                 pl.col(order_by).rank(method="ordinal").alias(name), pl.all()
             )
         else:
-            msg = "TODO"
-            raise NotImplementedError(msg)
-
+            result = frame.with_columns(
+                **{name: pl.lit(value=True, dtype=pl.Boolean())}
+            ).select(
+                pl.col(name)
+                .rank(method="ordinal", descending=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1,
+                pl.all().exclude(name),
+            )
         return self._with_native(result)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:

@@ -252,7 +252,6 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str, order_by: str | None) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -364,15 +363,30 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str, order_by: str) -> Self:
+
+    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
         plx = self.__narwhals_namespace__()
         return self.select(
-            plx.lit(1, dtype=None)
-            .rank(method="ordinal", descending=False)
-            .over(order_by=order_by, partition_by=[])
-            .alias(name),
+            plx.col(order_by).rank(method="ordinal", descending=False).alias(name) - 1,
             plx.all(),
         )
+
+    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
+        plx = self.__narwhals_namespace__()
+        columns = self.columns
+        return self.with_columns(**{name: plx.lit(value=True, dtype=None)}).select(
+            plx.col(name)
+            .rank(method="ordinal", descending=False)
+            .over(partition_by=[], order_by=order_by)
+            - 1,
+            plx.col(*columns),
+        )
+
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+        if isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+        else:
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
 
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)

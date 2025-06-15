@@ -482,16 +482,13 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         if order_by is None:
             df = self.native
             row_index = pa.array(range(df.num_rows))
-        elif isinstance(order_by, str):
-            row_index = (
-                self.get_column(order_by).rank(method="ordinal", descending=False).native
+            return self._with_native(
+                df.append_column(name, row_index).select([name, *self.columns])
             )
+        elif isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:
-            msg = "TODO"
-            raise NotImplementedError(msg)
-        return self._with_native(
-            df.append_column(name, row_index).select([name, *self.columns])
-        )
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
 
     def filter(
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]

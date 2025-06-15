@@ -204,7 +204,7 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         return self._with_native(

@@ -522,6 +522,9 @@ class SparkLikeLazyFrame(
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
         return self._with_native(unpivoted_native_frame)
 
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+        return super().with_row_index(name=name, order_by=order_by)
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
@@ -529,4 +532,3 @@ class SparkLikeLazyFrame(
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

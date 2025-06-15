@@ -423,14 +423,13 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             row_index = plx._series.from_iterable(
                 range(len(frame)), context=self, index=index
             )
+            return self._with_native(
+                plx._concat_horizontal([row_index.alias(name).native, frame])
+            )
         elif isinstance(order_by, str):
-            row_index = self.get_column(order_by).rank(method="ordinal", descending=False)
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:
-            msg = "TODO"
-            raise NotImplementedError(msg)
-        return self._with_native(
-            plx._concat_horizontal([row_index.alias(name).native, frame])
-        )
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
