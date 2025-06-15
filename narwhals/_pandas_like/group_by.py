@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -20,10 +20,36 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
+InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
+NativeAggregation: TypeAlias = Literal[
+    "any",
+    "all",
+    "count",
+    "first",
+    "idxmax",
+    "idxmin",
+    "last",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "nunique",
+    "prod",
+    "quantile",
+    "sem",
+    "size",
+    "std",
+    "sum",
+    "var",
+    InefficientNativeAggregation,
+]
+"""https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
 
-class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", str]):
-    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
+class PandasLikeGroupBy(
+    EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", NativeAggregation]
+):
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, NativeAggregation]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "median",
