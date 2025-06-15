@@ -30,7 +30,7 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
     df = nw.from_native(constructor(data))
     result = df.select(any=nw.any_horizontal("a", "b"))
     if any(x in str(constructor) for x in ("pandas_constructor",)):
-        expected = [True, True, False]
+        expected: list[bool | None] = [True, True, False]
     else:
         expected = [True, True, None]
     assert_equal_data(result, {"any": expected})

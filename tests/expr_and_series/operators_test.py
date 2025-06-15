@@ -73,7 +73,7 @@ def test_logic_operators_expr_kleene(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a") | (nw.col("b")))
     if any(x in str(constructor) for x in ("pandas_constructor",)):
-        expected = [True, True, False, False]
+        expected: list[bool | None] = [True, True, False, False]
     else:
         expected = [True, True, None, None]
     assert_equal_data(result, {"a": expected})
