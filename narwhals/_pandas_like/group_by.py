@@ -150,12 +150,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                     set(result_simple_aggs.columns) == set(expected_old_names)
                     and len(result_simple_aggs.columns) == len(expected_old_names)
                 ):  # pragma: no cover
-                    msg = (
-                        f"Safety assertion failed, expected {expected_old_names} "
-                        f"got {result_simple_aggs.columns}, "
-                        "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
+                    raise safety_assertion_error(
+                        expected_old_names, result_simple_aggs.columns
                     )
-                    raise AssertionError(msg)
 
                 # Rename columns, being very careful
                 expected_old_names_indices: dict[str, list[int]] = (
@@ -219,28 +216,9 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             ).rename(dict(zip(self._keys, self._output_key_names)))
 
         if self.compliant.native.empty:
-            # Don't even attempt this, it's way too inconsistent across pandas versions.
-            msg = (
-                "No results for group-by aggregation.\n\n"
-                "Hint: you were probably trying to apply a non-elementary aggregation with a "
-                "pandas-like API.\n"
-                "Please rewrite your query such that group-by aggregations "
-                "are elementary. For example, instead of:\n\n"
-                "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-                "use:\n\n"
-                "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-            )
-            raise ValueError(msg)
+            raise empty_results_error()
 
-        warnings.warn(
-            "Found complex group-by expression, which can't be expressed efficiently with the "
-            "pandas API. If you can, please rewrite your query such that group-by aggregations "
-            "are simple (e.g. mean, std, min, max, ...). \n\n"
-            "Please see: "
-            "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
-            UserWarning,
-            stacklevel=find_stacklevel(),
-        )
+        warn_complex_group_by()
 
         def func(df: Any) -> Any:
             out_group = []
@@ -280,3 +258,41 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                     key,
                     self.compliant._with_native(group).simple_select(*self._df.columns),
                 )
+
+
+def safety_assertion_error(
+    old_names: Sequence[str], new_names: Sequence[str]
+) -> AssertionError:
+    msg = (
+        f"Safety assertion failed, expected {old_names} "
+        f"got {new_names}, "
+        "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
+    )
+    return AssertionError(msg)
+
+
+def empty_results_error() -> ValueError:
+    """Don't even attempt this, it's way too inconsistent across pandas versions."""
+    msg = (
+        "No results for group-by aggregation.\n\n"
+        "Hint: you were probably trying to apply a non-elementary aggregation with a "
+        "pandas-like API.\n"
+        "Please rewrite your query such that group-by aggregations "
+        "are elementary. For example, instead of:\n\n"
+        "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+        "use:\n\n"
+        "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+    )
+    return ValueError(msg)
+
+
+def warn_complex_group_by() -> None:
+    warnings.warn(
+        "Found complex group-by expression, which can't be expressed efficiently with the "
+        "pandas API. If you can, please rewrite your query such that group-by aggregations "
+        "are simple (e.g. mean, std, min, max, ...). \n\n"
+        "Please see: "
+        "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        UserWarning,
+        stacklevel=find_stacklevel(),
+    )
