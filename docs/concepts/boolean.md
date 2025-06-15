@@ -1,5 +1,7 @@
 # Boolean columns
 
+## Null preservation
+
 Generally speaking, Narwhals operations preserve null values.
 For example, if you do `nw.col('a')*2`, then:
 
@@ -87,3 +89,37 @@ def comparison(df: FrameT) -> FrameT:
     table = pa.table(data)
     print(comparison(table))
     ```
+
+## Kleene logic
+
+Generally speaking, if we have two boolean columns `'a'` and `'b'`, then `nw.col('a') | nw.col('b')` and
+`nw.col('a') & nw.col('b')` follow Kleene logic. That is to say:
+
+| `nw.col('a')` | `nw.col('b')` | `nw.col('a') | nw.col('b')` |
+|---------------|---------------|-----------------------------|
+| T             | T             | T                           |
+| T             | F             | T                           |
+| T             | None          | T                           |
+| F             | T             | T                           |
+| F             | F             | F                           |
+| F             | None          | None                        |
+| None          | T             | T                           |
+| None          | F             | None                        |
+| None          | None          | None                        |
+
+| `nw.col('a')` | `nw.col('b')` | `nw.col('a') & nw.col('b')` |
+|---------------|---------------|-----------------------------|
+| T             | T             | T                           |
+| T             | F             | F                           |
+| T             | None          | None                        |
+| F             | T             | F                           |
+| F             | F             | F                           |
+| F             | None          | False                       |
+| None          | T             | None                        |
+| None          | F             | False                       |
+| None          | None          | None                        |
+
+Here, too, pandas backed by NumPy types differs, as its boolean columns cannot store null values:
+
+- For `nw.col('a') | nw.col('b')`, pandas returns `True` if at least one column contains a `True` value, and `False` otherwise.
+- For `nw.col('a') & nw.col('b')`, pandas returns `True` if both columns contain `True` values, and `False` otherwise.
