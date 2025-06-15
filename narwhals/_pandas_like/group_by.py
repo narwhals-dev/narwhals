@@ -13,11 +13,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     import pandas as pd
+    from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+
+    NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
@@ -82,7 +85,7 @@ class PandasLikeGroupBy(
         else:
             native_frame = self.compliant.native
 
-        self._grouped = native_frame.groupby(
+        self._grouped: NativeGroupBy = native_frame.groupby(
             list(self._keys),
             sort=False,
             as_index=True,
@@ -111,8 +114,8 @@ class PandasLikeGroupBy(
         # We need to do this separately from the rest so that we
         # can pass the `dropna` kwargs.
         nunique_aggs: dict[str, str] = {}
-        simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
-        simple_aggs_functions: set[str] = set()
+        simple_aggs: dict[str, list[NativeAggregation]] = collections.defaultdict(list)
+        simple_aggs_functions: set[NativeAggregation] = set()
 
         # ddof to (output_names, aliases) mapping
         std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
@@ -161,10 +164,11 @@ class PandasLikeGroupBy(
                         simple_agg_new_names.append(alias)
                         simple_aggs_functions.add(function_name)
 
-            result_aggs = []
+            result_aggs: list[pd.DataFrame] = []
 
             if simple_aggs:
                 # Fast path for single aggregation such as `df.groupby(...).mean()`
+                result_simple_aggs: pd.DataFrame
                 if (
                     len(simple_aggs_functions) == 1
                     and (agg_method := simple_aggs_functions.pop()) != "size"
@@ -173,13 +177,14 @@ class PandasLikeGroupBy(
                     result_simple_aggs = getattr(
                         self._grouped[list(simple_aggs.keys())], agg_method
                     )()
-                    result_simple_aggs.columns = [
+                    result_simple_aggs.columns = [  # type: ignore[assignment]
                         f"{a}_{agg_method}" for a in result_simple_aggs.columns
                     ]
                 else:
-                    result_simple_aggs = self._grouped.agg(simple_aggs)
-                    result_simple_aggs.columns = [
-                        f"{a}_{b}" for a, b in result_simple_aggs.columns
+                    result_simple_aggs = self._grouped.agg(simple_aggs)  # type: ignore[arg-type]
+                    result_simple_aggs.columns = [  # type: ignore[assignment,misc]
+                        f"{a}_{b}"  # type: ignore[has-type]
+                        for a, b in result_simple_aggs.columns
                     ]
                 if not (
                     set(result_simple_aggs.columns) == set(expected_old_names)
@@ -199,14 +204,14 @@ class PandasLikeGroupBy(
                     expected_old_names_indices[item].pop(0)
                     for item in result_simple_aggs.columns
                 ]
-                result_simple_aggs.columns = [simple_agg_new_names[i] for i in index_map]
+                result_simple_aggs.columns = [simple_agg_new_names[i] for i in index_map]  # type: ignore[assignment]
                 result_aggs.append(result_simple_aggs)
 
             if nunique_aggs:
                 result_nunique_aggs = self._grouped[list(nunique_aggs.values())].nunique(
                     dropna=False
                 )
-                result_nunique_aggs.columns = list(nunique_aggs.keys())
+                result_nunique_aggs.columns = list(nunique_aggs.keys())  # type: ignore[assignment]
 
                 result_aggs.append(result_nunique_aggs)
 
@@ -214,15 +219,16 @@ class PandasLikeGroupBy(
                 for ddof, (std_output_names, std_aliases) in std_aggs.items():
                     _aggregation = self._grouped[std_output_names].std(ddof=ddof)
                     # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = std_aliases
+                    _aggregation.columns = std_aliases  # type: ignore[assignment]
                     result_aggs.append(_aggregation)
             if var_aggs:
                 for ddof, (var_output_names, var_aliases) in var_aggs.items():
                     _aggregation = self._grouped[var_output_names].var(ddof=ddof)
                     # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = var_aliases
+                    _aggregation.columns = var_aliases  # type: ignore[assignment]
                     result_aggs.append(_aggregation)
 
+            result: pd.DataFrame
             if result_aggs:
                 output_names_counter = collections.Counter(
                     c for frame in result_aggs for c in frame
@@ -307,7 +313,7 @@ class PandasLikeGroupBy(
 
 
 def safety_assertion_error(
-    old_names: Sequence[str], new_names: Sequence[str]
+    old_names: Sequence[str], new_names: Sequence[str] | pd.Index[str]
 ) -> AssertionError:  # pragma: no cover
     msg = (
         f"Safety assertion failed, expected {old_names} "
