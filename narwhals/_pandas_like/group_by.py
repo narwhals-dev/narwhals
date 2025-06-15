@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import collections
 import warnings
+from functools import partial
+from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
@@ -47,6 +49,54 @@ NativeAggregation: TypeAlias = Literal[
     InefficientNativeAggregation,
 ]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
+
+
+_NamedAgg: TypeAlias = "tuple[str, NativeAggregation | Callable[..., Any]]"
+
+
+def _named_aggs(
+    gb: PandasLikeGroupBy, /, expr: PandasLikeExpr, exclude: Sequence[str]
+) -> Iterator[tuple[str, _NamedAgg]]:  # pragma: no cover
+    import numpy as np
+
+    output_names, aliases = evaluate_output_names_and_aliases(expr, gb.compliant, exclude)
+    function_name = gb._remap_expr_name(gb._leaf_name(expr))
+    scalar_kwargs = expr._scalar_kwargs
+    # NOTE: Will need a better idea than this for `cudf`, `modin`
+    # (https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#named-aggregation)
+    # > "If your aggregation functions require additional arguments, apply them partially with functools.partial()""
+    aggfunc: NativeAggregation | Callable[..., Any]
+    if function_name == "nunique":
+        # NOTE: Very unsure how to do this for non-pandas
+        from pandas.api.typing import SeriesGroupBy
+
+        aggfunc = partial(SeriesGroupBy.nunique, dropna=False)
+    elif (
+        function_name in {"std", "var"}
+        and (ddof := scalar_kwargs.get("ddof"))
+        and ddof != 1
+    ):
+        aggfunc = partial(getattr(np, function_name), ddof=ddof)
+    else:
+        aggfunc = function_name
+    for output_name, alias in zip(output_names, aliases):
+        yield alias, (output_name, aggfunc)
+
+
+def named_aggs(
+    gb: PandasLikeGroupBy, *exprs: PandasLikeExpr, exclude: Sequence[str]
+) -> dict[str, _NamedAgg]:  # pragma: no cover
+    """**Very early draft** for named agg-like input.
+
+    Ignoring most special-casing for now, just trying to work out the right shape.
+
+    The idea would be using this like:
+
+        df.groupby(...).agg(**named_aggs(..., ..., exclude=...))
+
+    Looks entirely different to the current `PandasLikeGroupBy` 🤔
+    """
+    return dict(chain.from_iterable(_named_aggs(gb, expr, exclude) for expr in exprs))
 
 
 class PandasLikeGroupBy(
