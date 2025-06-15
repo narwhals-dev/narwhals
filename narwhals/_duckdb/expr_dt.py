@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Sequence
 
-from duckdb import FunctionExpression
+from duckdb import FunctionExpression, SQLExpression
 
 from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
@@ -111,17 +111,17 @@ class DuckDBExprDateTimeNamespace:
 
     def truncate(self, every: str) -> DuckDBExpr:
         multiple, unit = parse_interval_string(every)
-        if multiple != 1:
-            # https://github.com/duckdb/duckdb/issues/17554
-            msg = f"Only multiple 1 is currently supported for DuckDB.\nGot {multiple!s}."
-            raise ValueError(msg)
         if unit == "ns":
             msg = "Truncating to nanoseconds is not yet supported for DuckDB."
             raise NotImplementedError(msg)
-        format = lit(UNITS_DICT[unit])
+
+        interval_str = f"INTERVAL '{multiple} {UNITS_DICT[unit]}'"
+        tz_str = "(select value from duckdb_settings() where name = 'TimeZone')"
 
         def _truncate(expr: Expression) -> Expression:
-            return FunctionExpression("date_trunc", format, expr)
+            return FunctionExpression(
+                "time_bucket", SQLExpression(interval_str), expr, SQLExpression(tz_str)
+            )
 
         return self._compliant_expr._with_callable(_truncate)
 
