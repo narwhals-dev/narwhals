@@ -18,6 +18,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
+    deprecated,
     flatten,
     is_compliant_expr,
     is_eager_allowed,
@@ -595,6 +596,9 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+@deprecated(
+    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
+)
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "lazy", "interchange"]:
