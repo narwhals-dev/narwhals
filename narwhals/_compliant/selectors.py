@@ -4,16 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Collection,
-    Iterable,
-    Iterator,
-    Protocol,
-    Sequence,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._typing_compat import Protocol38
@@ -25,6 +16,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Iterator, Sequence
     from datetime import timezone
 
     from typing_extensions import Self, TypeAlias, TypeIs

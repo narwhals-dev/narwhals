@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections
 import warnings
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -10,6 +10,8 @@ from narwhals._pandas_like.utils import select_columns_by_name
 from narwhals._utils import find_stacklevel
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
+
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -48,27 +50,14 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             native_frame = self.compliant.native.reset_index(drop=True)
         else:
             native_frame = self.compliant.native
-        if (
-            self.compliant._implementation.is_pandas()
-            and self.compliant._backend_version < (1, 1)
-        ):  # pragma: no cover
-            if (
-                not drop_null_keys
-                and self.compliant.simple_select(*self._keys).native.isna().any().any()
-            ):
-                msg = "Grouping by null values is not supported in pandas < 1.1.0"
-                raise NotImplementedError(msg)
-            self._grouped = native_frame.groupby(
-                list(self._keys), sort=False, as_index=True, observed=True
-            )
-        else:
-            self._grouped = native_frame.groupby(
-                list(self._keys),
-                sort=False,
-                as_index=True,
-                dropna=drop_null_keys,
-                observed=True,
-            )
+
+        self._grouped = native_frame.groupby(
+            list(self._keys),
+            sort=False,
+            as_index=True,
+            dropna=drop_null_keys,
+            observed=True,
+        )
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
         implementation = self.compliant._implementation
