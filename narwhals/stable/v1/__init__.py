@@ -26,7 +26,7 @@ from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFram
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, get_level, show_versions
+from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dtypes
@@ -1411,6 +1411,25 @@ def concat_str(
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
+
+
+def get_level(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
+) -> Literal["full", "lazy", "interchange"]:
+    """Level of support Narwhals has for current object.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        This can be one of
+
+            - 'full': full Narwhals API support
+            - 'lazy': only lazy operations are supported. This excludes anything
+              which involves iterating over rows in Python.
+            - 'interchange': only metadata operations are supported (`df.schema`)
+    """
+    return obj._level
 
 
 class When(nw_f.When):
