@@ -95,29 +95,17 @@ def comparison(df: FrameT) -> FrameT:
 Generally speaking, if we have two boolean columns `'a'` and `'b'`, then `nw.col('a') | nw.col('b')` and
 `nw.col('a') & nw.col('b')` follow Kleene logic. That is to say:
 
-| `nw.col('a')` | `nw.col('b')` | `nw.col('a') | nw.col('b')` |
-|---------------|---------------|-----------------------------|
-| T             | T             | T                           |
-| T             | F             | T                           |
-| T             | None          | T                           |
-| F             | T             | T                           |
-| F             | F             | F                           |
-| F             | None          | None                        |
-| None          | T             | T                           |
-| None          | F             | None                        |
-| None          | None          | None                        |
-
-| `nw.col('a')` | `nw.col('b')` | `nw.col('a') & nw.col('b')` |
-|---------------|---------------|-----------------------------|
-| T             | T             | T                           |
-| T             | F             | F                           |
-| T             | None          | None                        |
-| F             | T             | F                           |
-| F             | F             | F                           |
-| F             | None          | False                       |
-| None          | T             | None                        |
-| None          | F             | False                       |
-| None          | None          | None                        |
+| `nw.col('a')` | `nw.col('b')` | `nw.col('a') | nw.col('b')` | `nw.col('a') & nw.col('b')` |
+|---------------|---------------|-----------------------------|-----------------------------|
+| True          | True          | True                        | True                        |
+| True          | False         | True                        | False                       |
+| True          | None          | True                        | None                        |
+| False         | True          | True                        | False                       |
+| False         | False         | False                       | False                       |
+| False         | None          | None                        | False                       |
+| None          | True          | True                        | None                        |
+| None          | False         | None                        | False                       |
+| None          | None          | None                        | None                        |
 
 Here, too, pandas backed by NumPy types differs, as its boolean columns cannot store null values:
 
