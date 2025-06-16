@@ -84,6 +84,8 @@ class PandasLikeGroupBy(
         "n_unique": "nunique",
         "count": "count",
     }
+    _original_columns: tuple[str, ...]
+    """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
 
     def __init__(
         self,
@@ -93,7 +95,7 @@ class PandasLikeGroupBy(
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._df = df
+        self._original_columns = tuple(df.columns)
         self._drop_null_keys = drop_null_keys
         self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
             df, keys=keys
@@ -222,12 +224,9 @@ class PandasLikeGroupBy(
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-
+            with_native = self.compliant._with_native
             for key, group in self._grouped:
-                yield (
-                    key,
-                    self.compliant._with_native(group).simple_select(*self._df.columns),
-                )
+                yield (key, with_native(group).simple_select(*self._original_columns))
 
 
 def empty_results_error() -> ValueError:
