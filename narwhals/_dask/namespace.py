@@ -283,6 +283,12 @@ class DaskNamespace(
             )
             return [reduce(lambda x, y: x.fillna(y), series)]
 
+        exprs = tuple(
+            expr
+            if self._expr._is_expr(expr)
+            else self.lit(expr, dtype=None).broadcast(ExprKind.LITERAL)
+            for expr in exprs
+        )
         return self._expr(
             call=func,
             depth=max(x._depth for x in exprs) + 1,

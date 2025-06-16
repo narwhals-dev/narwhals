@@ -66,6 +66,10 @@ class PandasLikeNamespace(
                 reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
             ]
 
+        exprs = tuple(
+            expr if self._expr._is_expr(expr) else self.lit(expr, dtype=None)
+            for expr in exprs
+        )
         return self._expr._from_callable(
             func=func,
             depth=max(x._depth for x in exprs) + 1,
@@ -83,6 +87,7 @@ class PandasLikeNamespace(
                 index=df._native_frame.index[0:1],
                 context=self,
             )
+            pandas_series._broadcast = True
             if dtype:
                 return pandas_series.cast(dtype)
             return pandas_series

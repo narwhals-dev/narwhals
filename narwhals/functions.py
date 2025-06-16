@@ -1793,7 +1793,9 @@ def concat_str(
     )
 
 
-def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
+) -> Expr:
     """Folds the columns from left to right, keeping the first non-null value.
 
     Arguments:
