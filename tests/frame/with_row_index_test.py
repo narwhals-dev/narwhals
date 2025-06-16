@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
 import pytest
@@ -33,16 +34,8 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
     reason="Too old for `.over(partition_by=...)` or does not break ties with multiple columns in partition_by",
 )
 def test_with_row_index_lazy(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    order_by: str | Sequence[str],
-    expected_index: list[int],
+    constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
-    if "dask" in str(constructor) and expected_index == [1, 0]:
-        request.applymarker(
-            pytest.mark.xfail(reason="Dask supports only default order for now")
-        )
-
     result = (
         nw.from_native(constructor(data)).with_row_index(order_by=order_by).sort("xyz")
     )
@@ -51,11 +44,17 @@ def test_with_row_index_lazy(
 
 
 def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
-    frame = nw.from_native(constructor(data)).lazy()
-
     msg = (
         "`LazyFrane.with_row_index` requires `order_by` to be specified as it is an "
         "order-dependent operation."
     )
-    with pytest.raises(ValueError, match=msg):
+
+    context = (
+        pytest.raises(ValueError, match=msg)
+        if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark"))
+        else does_not_raise()
+    )
+    frame = nw.from_native(constructor(data))
+
+    with context:
         frame.with_row_index()

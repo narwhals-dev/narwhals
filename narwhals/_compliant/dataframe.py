@@ -382,7 +382,13 @@ class CompliantLazyFrame(
         )
         return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        if order_by is None:
+            msg = (
+                "`LazyFrane.with_row_index` requires `order_by` to be specified as it is an "
+                "order-dependent operation."
+            )
+            raise ValueError(msg)
         if isinstance(order_by, str):
             return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:

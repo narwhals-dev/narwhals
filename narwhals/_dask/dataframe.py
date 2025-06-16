@@ -204,12 +204,18 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._with_native(
-            add_row_index(self.native, name, self._backend_version, self._implementation)
-        )
+        if order_by is None:
+            return self._with_native(
+                add_row_index(
+                    self.native, name, self._backend_version, self._implementation
+                )
+            )
+        else:
+            order_by_ = [order_by] if isinstance(order_by, str) else order_by
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by_)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
@@ -417,10 +423,7 @@ class DaskLazyFrame(
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
         return (
-            # `order_by=""` is just a placeholder here. As order_by is unused, an empty
-            # string make sure that a type checker error is not triggered either.
-            # TODO(FBruzzesi): Fix DaskLazyFrame.with_row_index
-            self.with_row_index(row_index_token, order_by="")
+            self.with_row_index(row_index_token, order_by=None)
             .filter(
                 (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
