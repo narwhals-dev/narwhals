@@ -145,15 +145,8 @@ class PandasLikeGroupBy(
             observed=True,
         )
 
-    # NOTE: Still have *quite* a bit of work to do here!
-    # -------------------------------------------------------
-    # NOTE: `C901`      Too complex                 (25 > 10)
-    # NOTE: `PLR0912`   Too many branches           (28 > 12)
-    # NOTE: `PLR0914`   Too many local variables    (27 > 15)
-    # NOTE: `PLR0915`   Too many statements         (83 > 50)
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_names: list[str] = self._keys.copy()
-
         all_aggs_are_simple = True
         exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
