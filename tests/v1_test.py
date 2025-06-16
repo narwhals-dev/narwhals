@@ -343,3 +343,19 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
     data = {"a": [1, 2]}
     ser = nw.from_native(pd.DataFrame(data))["a"]
     assert not is_native_series(ser)
+
+
+def test_get_level() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    with pytest.deprecated_call():
+        assert nw.get_level(nw.from_native(df)) == "full"
+    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    assert (
+        nw_v1.get_level(
+            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+        )
+        == "interchange"
+    )
