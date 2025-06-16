@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import warnings
 from functools import lru_cache
 from itertools import chain
@@ -74,10 +73,16 @@ def _named_aggs(
     gb: PandasLikeGroupBy, /, expr: PandasLikeExpr, exclude: Sequence[str]
 ) -> Iterator[tuple[str, _NamedAgg]]:  # pragma: no cover
     output_names, aliases = evaluate_output_names_and_aliases(expr, gb.compliant, exclude)
-    function_name = gb._remap_expr_name(gb._leaf_name(expr))
+    leaf_name = gb._leaf_name(expr)
+    function_name = gb._remap_expr_name(leaf_name)
     aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
-    for output_name, alias in zip(output_names, aliases):
-        yield alias, (output_name, aggfunc)
+    if leaf_name == "len" and expr._depth == 0:
+        # `len` doesn't exist yet, so just pick a column to call size on
+        first_col = next(iter(set(gb.compliant.columns).difference(exclude)))
+        yield leaf_name, (first_col, aggfunc)
+    else:
+        for output_name, alias in zip(output_names, aliases):
+            yield alias, (output_name, aggfunc)
 
 
 def named_aggs(
@@ -146,7 +151,7 @@ class PandasLikeGroupBy(
     # NOTE: `PLR0912`   Too many branches           (28 > 12)
     # NOTE: `PLR0914`   Too many local variables    (27 > 15)
     # NOTE: `PLR0915`   Too many statements         (83 > 50)
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_names: list[str] = self._keys.copy()
 
         all_aggs_are_simple = True
@@ -157,146 +162,20 @@ class PandasLikeGroupBy(
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
 
-        # dict of {output_name: root_name} that we count n_unique on
-        # We need to do this separately from the rest so that we
-        # can pass the `dropna` kwargs.
-        nunique_aggs: dict[str, str] = {}
-        simple_aggs: dict[str, list[NativeAggregation]] = collections.defaultdict(list)
-        simple_aggs_functions: set[NativeAggregation] = set()
-
-        # ddof to (output_names, aliases) mapping
-        std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
-            lambda: ([], [])
-        )
-        var_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
-            lambda: ([], [])
-        )
-
-        expected_old_names: list[str] = []
-        simple_agg_new_names: list[str] = []
-
-        if all_aggs_are_simple:  # noqa: PLR1702
-            for expr in exprs:
-                output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, exclude
-                )
-                if expr._depth == 0:
-                    # e.g. `agg(nw.len())`
-                    function_name = self._remap_expr_name(expr._function_name)
-                    simple_aggs_functions.add(function_name)
-
-                    for alias in aliases:
-                        expected_old_names.append(f"{self._keys[0]}_{function_name}")
-                        simple_aggs[self._keys[0]].append(function_name)
-                        simple_agg_new_names.append(alias)
-                    continue
-
-                # e.g. `agg(nw.mean('a'))`
-                function_name = self._remap_expr_name(self._leaf_name(expr))
-                is_n_unique = function_name == "nunique"
-                is_std = function_name == "std"
-                is_var = function_name == "var"
-                for output_name, alias in zip(output_names, aliases):
-                    if is_n_unique:
-                        nunique_aggs[alias] = output_name
-                    elif is_std and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
-                        std_aggs[ddof][0].append(output_name)
-                        std_aggs[ddof][1].append(alias)
-                    elif is_var and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
-                        var_aggs[ddof][0].append(output_name)
-                        var_aggs[ddof][1].append(alias)
-                    else:
-                        expected_old_names.append(f"{output_name}_{function_name}")
-                        simple_aggs[output_name].append(function_name)
-                        simple_agg_new_names.append(alias)
-                        simple_aggs_functions.add(function_name)
-
-            result_aggs: list[pd.DataFrame] = []
-
-            if simple_aggs:
-                # Fast path for single aggregation such as `df.groupby(...).mean()`
-                result_simple_aggs: pd.DataFrame
-                if (
-                    len(simple_aggs_functions) == 1
-                    and (agg_method := simple_aggs_functions.pop()) != "size"
-                    and len(simple_aggs) > 1
-                ):
-                    result_simple_aggs = getattr(
-                        self._grouped[list(simple_aggs.keys())], agg_method
-                    )()
-                    result_simple_aggs.columns = [  # type: ignore[assignment]
-                        f"{a}_{agg_method}" for a in result_simple_aggs.columns
-                    ]
-                else:
-                    result_simple_aggs = self._grouped.agg(simple_aggs)  # type: ignore[arg-type]
-                    result_simple_aggs.columns = [  # type: ignore[assignment,misc]
-                        f"{a}_{b}"  # type: ignore[has-type]
-                        for a, b in result_simple_aggs.columns
-                    ]
-                if not (
-                    set(result_simple_aggs.columns) == set(expected_old_names)
-                    and len(result_simple_aggs.columns) == len(expected_old_names)
-                ):  # pragma: no cover
-                    raise safety_assertion_error(
-                        expected_old_names, result_simple_aggs.columns
-                    )
-
-                # Rename columns, being very careful
-                expected_old_names_indices: dict[str, list[int]] = (
-                    collections.defaultdict(list)
-                )
-                for idx, item in enumerate(expected_old_names):
-                    expected_old_names_indices[item].append(idx)
-                index_map: list[int] = [
-                    expected_old_names_indices[item].pop(0)
-                    for item in result_simple_aggs.columns
-                ]
-                result_simple_aggs.columns = [simple_agg_new_names[i] for i in index_map]  # type: ignore[assignment]
-                result_aggs.append(result_simple_aggs)
-
-            if nunique_aggs:
-                result_nunique_aggs = self._grouped[list(nunique_aggs.values())].nunique(
-                    dropna=False
-                )
-                result_nunique_aggs.columns = list(nunique_aggs.keys())  # type: ignore[assignment]
-
-                result_aggs.append(result_nunique_aggs)
-
-            if std_aggs:
-                for ddof, (std_output_names, std_aliases) in std_aggs.items():
-                    _aggregation = self._grouped[std_output_names].std(ddof=ddof)
-                    # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = std_aliases  # type: ignore[assignment]
-                    result_aggs.append(_aggregation)
-            if var_aggs:
-                for ddof, (var_output_names, var_aliases) in var_aggs.items():
-                    _aggregation = self._grouped[var_output_names].var(ddof=ddof)
-                    # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = var_aliases  # type: ignore[assignment]
-                    result_aggs.append(_aggregation)
-
-            result: pd.DataFrame
-            if result_aggs:
-                output_names_counter = collections.Counter(
-                    c for frame in result_aggs for c in frame
-                )
-                if any(v > 1 for v in output_names_counter.values()):
-                    msg = ""
-                    for key, value in output_names_counter.items():
-                        if value > 1:
-                            msg += f"\n- '{key}' {value} times"
-                        else:  # pragma: no cover
-                            pass
-                    msg = f"Expected unique output names, got:{msg}"
-                    raise ValueError(msg)
-                namespace = self.compliant.__narwhals_namespace__()
-                result = namespace._concat_horizontal(result_aggs)
-            else:
+        if all_aggs_are_simple:
+            into_agg = named_aggs(self, *exprs, exclude=exclude)
+            if not into_agg:
                 # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(self._grouped.groups.keys()), columns=self._keys
                 )
-            return self._select_results(result, new_names)
+                return self._select_results(result, new_names)
+            # BUG: Unpacking directly is unsafe when non-`str` column names exist
+            # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
+            # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
+            result = self._grouped.agg(**into_agg)  # type: ignore[call-overload]
+            result.reset_index(inplace=True)  # noqa: PD002
+            return self.compliant._with_native(result)
 
         if self.compliant.native.empty:
             raise empty_results_error()
