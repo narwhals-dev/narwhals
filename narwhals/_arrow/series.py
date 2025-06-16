@@ -649,7 +649,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             n = int(num_rows * fraction)
 
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 

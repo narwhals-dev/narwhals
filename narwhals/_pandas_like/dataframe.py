@@ -416,16 +416,25 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         return scale_bytes(sz, unit=unit)
 
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        frame = self.native
-        index = frame.index
-        plx = self.__narwhals_namespace__()
         if order_by is None:
+            frame = self.native
+            index = frame.index
+            size = len(frame)
+            plx = self.__narwhals_namespace__()
+
+            if self._implementation.is_cudf():
+                import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+                data = cp.arange(size)
+            else:
+                import numpy as np  # ignore-banned-import
+
+                data = np.arange(size)
+
             row_index = plx._series.from_iterable(
-                range(len(frame)), context=self, index=index
-            )
-            return self._with_native(
-                plx._concat_horizontal([row_index.alias(name).native, frame])
-            )
+                data, context=self, index=index, name=name
+            ).native
+            return self._with_native(plx._concat_horizontal([row_index, frame]))
         elif isinstance(order_by, str):
             return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:
