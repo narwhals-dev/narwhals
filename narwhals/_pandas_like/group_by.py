@@ -69,28 +69,6 @@ def _agg_func(
     return methodcaller(name, **kwds)
 
 
-def _named_aggs(
-    gb: PandasLikeGroupBy, /, expr: PandasLikeExpr, exclude: Sequence[str]
-) -> Iterator[tuple[str, _NamedAgg]]:
-    output_names, aliases = evaluate_output_names_and_aliases(expr, gb.compliant, exclude)
-    leaf_name = gb._leaf_name(expr)
-    function_name = gb._remap_expr_name(leaf_name)
-    aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
-    if leaf_name == "len" and expr._depth == 0:
-        # `len` doesn't exist yet, so just pick a column to call size on
-        first_col = next(iter(set(gb.compliant.columns).difference(exclude)))
-        yield leaf_name, (first_col, aggfunc)
-    else:
-        for output_name, alias in zip(output_names, aliases):
-            yield alias, (output_name, aggfunc)
-
-
-def named_aggs(
-    gb: PandasLikeGroupBy, *exprs: PandasLikeExpr, exclude: Sequence[str]
-) -> dict[str, _NamedAgg]:
-    return dict(chain.from_iterable(_named_aggs(gb, expr, exclude) for expr in exprs))
-
-
 class PandasLikeGroupBy(
     EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", NativeAggregation]
 ):
@@ -155,22 +133,41 @@ class PandasLikeGroupBy(
                 f"{self._keys=}\n{new_names=}\n"
             )
             raise NotImplementedError(msg)
-
         if all_aggs_are_simple:
             result: pd.DataFrame
-            into_agg = named_aggs(self, *exprs, exclude=exclude)
-            if not into_agg:
-                # No aggregation provided
+            if named_aggs := self._named_aggs(*exprs, exclude=exclude):
+                result = self._grouped.agg(**named_aggs)  # type: ignore[call-overload]
+            else:
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(self._grouped.groups.keys()), columns=self._keys
                 )
-            else:
-                result = self._grouped.agg(**into_agg)  # type: ignore[call-overload]
             return self._select_results(result, new_names)
-
         if self.compliant.native.empty:
             raise empty_results_error()
         return self._agg_complex(exprs, new_names)
+
+    def _named_aggs(
+        self, *exprs: PandasLikeExpr, exclude: Sequence[str]
+    ) -> dict[str, _NamedAgg]:
+        """Collect all aggregations into a single mapping."""
+        return dict(chain.from_iterable(self._iter_named_aggs(e, exclude) for e in exprs))
+
+    def _iter_named_aggs(
+        self, expr: PandasLikeExpr, exclude: Sequence[str]
+    ) -> Iterator[tuple[str, _NamedAgg]]:
+        output_names, aliases = evaluate_output_names_and_aliases(
+            expr, self.compliant, exclude
+        )
+        leaf_name = self._leaf_name(expr)
+        function_name = self._remap_expr_name(leaf_name)
+        aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
+        if leaf_name == "len" and expr._depth == 0:
+            # `len` doesn't exist yet, so just pick a column to call size on
+            first_col = next(iter(set(self.compliant.columns).difference(exclude)))
+            yield leaf_name, (first_col, aggfunc)
+        else:
+            for output_name, alias in zip(output_names, aliases):
+                yield alias, (output_name, aggfunc)
 
     def _select_results(
         self, df: pd.DataFrame, /, new_names: list[str]
