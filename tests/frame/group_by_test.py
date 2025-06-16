@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -10,6 +11,7 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import (
     ComputeError,
+    DuplicateError,
     InvalidOperationError,
     LengthChangingExprError,
     OrderDependentExprError,
@@ -181,10 +183,12 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-# BUG: Failed: DID NOT RAISE <class 'ValueError'>
 def test_group_by_same_name_twice() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="Expected unique output names"):
+    pattern = re.compile(
+        "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
+    )
+    with pytest.raises(DuplicateError, match=pattern):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
 
 
