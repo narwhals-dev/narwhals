@@ -71,7 +71,7 @@ def _agg_func(
 
 def _named_aggs(
     gb: PandasLikeGroupBy, /, expr: PandasLikeExpr, exclude: Sequence[str]
-) -> Iterator[tuple[str, _NamedAgg]]:  # pragma: no cover
+) -> Iterator[tuple[str, _NamedAgg]]:
     output_names, aliases = evaluate_output_names_and_aliases(expr, gb.compliant, exclude)
     leaf_name = gb._leaf_name(expr)
     function_name = gb._remap_expr_name(leaf_name)
@@ -87,17 +87,7 @@ def _named_aggs(
 
 def named_aggs(
     gb: PandasLikeGroupBy, *exprs: PandasLikeExpr, exclude: Sequence[str]
-) -> dict[str, _NamedAgg]:  # pragma: no cover
-    """**Very early draft** for named agg-like input.
-
-    Ignoring most special-casing for now, just trying to work out the right shape.
-
-    The idea would be using this like:
-
-        df.groupby(...).agg(**named_aggs(..., ..., exclude=...)).reset_index()
-
-    Looks entirely different to the current `PandasLikeGroupBy` 🤔
-    """
+) -> dict[str, _NamedAgg]:
     return dict(chain.from_iterable(_named_aggs(gb, expr, exclude) for expr in exprs))
 
 
