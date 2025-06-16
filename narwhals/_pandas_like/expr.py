@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -9,6 +9,8 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
@@ -400,3 +402,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def exp(self) -> Self:
         return self._reuse_series("exp")
+
+    def sqrt(self) -> Self:
+        return self._reuse_series("sqrt")

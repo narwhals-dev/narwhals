@@ -60,6 +60,31 @@ def test_logic_operators_expr(
     assert_equal_data(result, {"a": expected})
 
 
+def test_logic_operators_expr_kleene(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/19171
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False, None], "b": [True, None, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a") | (nw.col("b")))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected: list[bool | None] = [True, True, False, False]
+    else:
+        expected = [True, True, None, None]
+    assert_equal_data(result, {"a": expected})
+    result = df.select(nw.col("a") & (nw.col("b")))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected = [True, False, False, False]
+    else:
+        expected = [True, None, False, None]
+    assert_equal_data(result, {"a": expected})
+
+
 @pytest.mark.parametrize(
     ("operator", "expected"),
     [

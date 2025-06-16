@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -30,8 +30,8 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import Hashable
 
     import pandas as pd
     import polars as pl
@@ -361,15 +361,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def arg_min(self) -> int:
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return self.native.to_numpy().argmin()
         return self.native.argmin()
 
     def arg_max(self) -> int:
-        ser = self.native
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.to_numpy().argmax()
-        return ser.argmax()
+        return self.native.argmax()
 
     # Binary comparisons
 
@@ -532,6 +527,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             m3 = (m**3).mean()
             return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
+    def kurtosis(self) -> float | None:
+        ser_not_null = self.native.dropna()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = ser_not_null - ser_not_null.mean()
+            m2 = (m**2).mean()
+            m4 = (m**4).mean()
+            return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
+
     def len(self) -> int:
         return len(self.native)
 
@@ -687,12 +694,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         has_missing = s.isna().any()
         kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
         if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            if self._implementation is Implementation.PANDAS and self._backend_version < (
-                1,
-            ):  # pragma: no cover
-                ...
-            else:
-                kwargs.update({"na_value": float("nan")})
+            kwargs.update({"na_value": float("nan")})
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
@@ -1081,6 +1083,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             result_native = np.exp(native)
         return self._with_native(result_native)
+
+    def sqrt(self) -> Self:
+        return self._with_native(self.native.pow(0.5))
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

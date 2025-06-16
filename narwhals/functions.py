@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import platform
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Iterable, Literal, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -13,6 +14,7 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
+from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
@@ -21,6 +23,7 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
+    issue_deprecation_warning,
     parse_version,
     supports_arrow_c_stream,
     validate_laziness,
@@ -593,10 +596,20 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+@deprecated(
+    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
+)
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
+
+    Warning:
+        `get_level` is deprecated and will be removed in a future version.
+        "DuckDB and Ibis now have full lazy support in Narwhals, and passing
+        them to `nw.from_native` returns `nw.LazyFrame`.
+        Note: this will remain available in `narwhals.stable.v1`.
+        See [stable api](../backcompat.md/) for more information.
 
     Arguments:
         obj: Dataframe or Series.
@@ -607,8 +620,13 @@ def get_level(
             - 'full': full Narwhals API support
             - 'lazy': only lazy operations are supported. This excludes anything
               which involves iterating over rows in Python.
-            - 'interchange': only metadata operations are supported (`df.schema`)
     """
+    issue_deprecation_warning(
+        "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
+        "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
+        "returns `nw.LazyFrame`.",
+        "1.43",
+    )
     return obj._level
 
 
@@ -1555,6 +1573,10 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
+    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
+    is followed, except for pandas' classical NumPy types which can't hold null
+    values, see [Boolean columns](../concepts/boolean.md).
+
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
@@ -1639,6 +1661,10 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
+
+    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
+    is followed, except for pandas' classical NumPy types which can't hold null
+    values, see [Boolean columns](../concepts/boolean.md).
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts

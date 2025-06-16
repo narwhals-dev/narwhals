@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.expr import DepthTrackingExpr
@@ -22,6 +22,8 @@ from narwhals._utils import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
@@ -325,6 +327,9 @@ class DaskExpr(
 
     def skew(self) -> Self:
         return self._with_callable(lambda expr: expr.skew().to_series(), "skew")
+
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: expr.kurtosis().to_series(), "kurtosis")
 
     def shift(self, n: int) -> Self:
         return self._with_callable(lambda expr: expr.shift(n), "shift")
@@ -659,6 +664,11 @@ class DaskExpr(
         import dask.array as da
 
         return self._with_callable(da.exp, "exp")
+
+    def sqrt(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sqrt, "sqrt")
 
     @property
     def str(self) -> DaskExprStringNamespace:

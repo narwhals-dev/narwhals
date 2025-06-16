@@ -19,6 +19,23 @@ def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     assert_equal_data(result, expected)
 
 
+def test_allh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/19171
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False], "b": [True, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(all=nw.all_horizontal("a", "b"))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected: list[bool | None] = [True, False, False]
+    else:
+        expected = [True, None, False]
+    assert_equal_data(result, {"all": expected})
+
+
 def test_allh_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
