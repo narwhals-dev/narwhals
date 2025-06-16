@@ -162,6 +162,17 @@ class PandasLikeGroupBy(
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
 
+        if any(not isinstance(k, str) for k in new_names):
+            # TODO @dangotbanned: Need to take a different path **for all** if **any** aggregation does this
+            # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
+            # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
+            msg = (
+                "Unpacking the mapping of named aggregations fails "
+                "when non-`str` column names exist.\n"
+                f"{self._keys=}\n{new_names=}\n"
+            )
+            raise NotImplementedError(msg)
+
         if all_aggs_are_simple:
             result: pd.DataFrame
             into_agg = named_aggs(self, *exprs, exclude=exclude)
@@ -171,9 +182,6 @@ class PandasLikeGroupBy(
                     list(self._grouped.groups.keys()), columns=self._keys
                 )
             else:
-                # BUG: Unpacking directly is unsafe when non-`str` column names exist
-                # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
-                # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
                 result = self._grouped.agg(**into_agg)  # type: ignore[call-overload]
             return self._select_results(result, new_names)
 

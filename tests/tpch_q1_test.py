@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
 
+# BUG: test_q1[pandas] - AssertionError: Expected column name count_order at index 9, found len
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str) -> None:
@@ -164,6 +165,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
     assert_equal_data(result, expected)
 
 
+# BUG: AssertionError: Expected column name count_order at index 9, found len
 @mock.patch.dict(os.environ, {"NARWHALS_FORCE_GENERIC": "1"})
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1_w_pandas_agg_generic_path() -> None:

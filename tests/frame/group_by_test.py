@@ -181,6 +181,7 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# BUG: Failed: DID NOT RAISE <class 'ValueError'>
 def test_group_by_same_name_twice() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(ValueError, match="Expected unique output names"):
