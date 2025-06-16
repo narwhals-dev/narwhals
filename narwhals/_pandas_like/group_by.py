@@ -163,19 +163,19 @@ class PandasLikeGroupBy(
                 all_aggs_are_simple = False
 
         if all_aggs_are_simple:
+            result: pd.DataFrame
             into_agg = named_aggs(self, *exprs, exclude=exclude)
             if not into_agg:
                 # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(self._grouped.groups.keys()), columns=self._keys
                 )
-                return self._select_results(result, new_names)
-            # BUG: Unpacking directly is unsafe when non-`str` column names exist
-            # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
-            # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
-            result = self._grouped.agg(**into_agg)  # type: ignore[call-overload]
-            result.reset_index(inplace=True)  # noqa: PD002
-            return self.compliant._with_native(result)
+            else:
+                # BUG: Unpacking directly is unsafe when non-`str` column names exist
+                # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
+                # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
+                result = self._grouped.agg(**into_agg)  # type: ignore[call-overload]
+            return self._select_results(result, new_names)
 
         if self.compliant.native.empty:
             raise empty_results_error()
@@ -184,6 +184,10 @@ class PandasLikeGroupBy(
     def _select_results(
         self, df: pd.DataFrame, /, new_names: list[str]
     ) -> PandasLikeDataFrame:
+        """Responsible for remapping temp column names back to original.
+
+        See `ParseKeysGroupBy`.
+        """
         compliant = self.compliant
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
