@@ -250,17 +250,6 @@ class PandasLikeGroupBy(
                 )
 
 
-def safety_assertion_error(
-    old_names: Sequence[str], new_names: Sequence[str] | pd.Index[str]
-) -> AssertionError:  # pragma: no cover
-    msg = (
-        f"Safety assertion failed, expected {old_names} "
-        f"got {new_names}, "
-        "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
-    )
-    return AssertionError(msg)
-
-
 def empty_results_error() -> ValueError:
     """Don't even attempt this, it's way too inconsistent across pandas versions."""
     msg = (
