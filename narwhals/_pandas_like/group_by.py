@@ -164,7 +164,7 @@ class PandasLikeGroupBy(
         if leaf_name == "len" and expr._depth == 0:
             # `len` doesn't exist yet, so just pick a column to call size on
             first_col = next(iter(set(self.compliant.columns).difference(exclude)))
-            yield leaf_name, (first_col, aggfunc)
+            yield aliases[0], (first_col, aggfunc)
         else:
             for output_name, alias in zip(output_names, aliases):
                 yield alias, (output_name, aggfunc)
