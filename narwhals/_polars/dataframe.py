@@ -725,16 +725,8 @@ class PolarsLazyFrame:
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        if order_by is None:
-            frame = self.native
-            result = (
-                frame.with_row_count(name)
-                if self._backend_version < (0, 20, 4)
-                else frame.with_row_index(name)
-            )
-            return self._with_native(result)
-        elif isinstance(order_by, str):
+    def with_row_index(self, name: str, order_by: str | Sequence[str]) -> Self:
+        if isinstance(order_by, str):
             return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:
             return self._with_row_index_order_by_multi(name=name, order_by=order_by)
