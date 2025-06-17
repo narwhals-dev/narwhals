@@ -16,15 +16,20 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     import pandas as pd
-    from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
+    from pandas.api.typing import (
+        DataFrameGroupBy as _NativeGroupBy,
+        SeriesGroupBy as _SeriesGroupBy,
+    )
     from typing_extensions import TypeAlias, Unpack
 
     from narwhals._compliant.group_by import NarwhalsAggregation
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._utils import Implementation
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
+    NativeSeriesGroupBy: TypeAlias = "_SeriesGroupBy[Any, tuple[str, ...]]"
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
@@ -66,13 +71,25 @@ NonStrHashable: TypeAlias = Any
 
 @lru_cache(maxsize=32)
 def _agg_func(
-    name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]
+    name: NativeAggregation, impl: Implementation, /, **kwds: Unpack[ScalarKwargs]
 ) -> _AggFunc:  # pragma: no cover
     if name == "nunique":
+        if impl.is_modin():
+            return _n_unique
         return methodcaller(name, dropna=False)
     if not kwds or kwds.get("ddof") == 1:
         return name
+    if impl.is_modin():
+        return lambda x: getattr(x, name)(**kwds)
     return methodcaller(name, **kwds)
+
+
+def _n_unique(self: NativeSeriesGroupBy) -> pd.Series[Any]:
+    """`modin` gets confused by `operator.methodcaller`.
+
+    See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151945563
+    """
+    return self.nunique(dropna=False)
 
 
 # PLAN
@@ -203,7 +220,7 @@ class PandasLikeGroupBy(
         aliases = self._remap_aliases(aliases)
         leaf_name = self._leaf_name(expr)
         function_name = self._remap_expr_name(leaf_name)
-        aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
+        aggfunc = _agg_func(function_name, expr._implementation, **expr._scalar_kwargs)
         if leaf_name == "len" and expr._depth == 0:
             # `len` doesn't exist yet, so just pick a column to call size on
             first_col = next(iter(set(self.compliant.columns).difference(exclude)))
