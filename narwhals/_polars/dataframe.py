@@ -236,6 +236,41 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 for name, dtype in collected_schema.items()
             }
 
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        if order_by is None:
+            frame = self.native
+            result = (
+                frame.with_row_count(name)
+                if self._backend_version < (0, 20, 4)
+                else frame.with_row_index(name)
+            )
+            return self._with_native(result)
+        elif isinstance(order_by, str):
+            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+        else:
+            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
+
+    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
+        result = self.native.select(
+            pl.col(order_by).rank(method="ordinal").alias(name) - 1, pl.all()
+        )
+        return self._with_native(result)
+
+    @requires.backend_version((1, 9))
+    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
+        # Before polars 1.9.0, either `.over(partition_by=...)` is not implemented or it does
+        # not properly break ties with multiple columns in partition_by
+        result = self.native.with_columns(
+            pl.lit(value=True, dtype=pl.Boolean()).alias(name)
+        ).select(
+            pl.col(name)
+            .rank(method="ordinal", descending=False)
+            .over(partition_by=None, order_by=order_by)
+            - 1,
+            pl.all().exclude(name),
+        )
+        return self._with_native(result)
+
 
 class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     clone: Method[Self]
@@ -491,41 +526,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        if order_by is None:
-            frame = self.native
-            result = (
-                frame.with_row_count(name)
-                if self._backend_version < (0, 20, 4)
-                else frame.with_row_index(name)
-            )
-            return self._with_native(result)
-        elif isinstance(order_by, str):
-            return self._with_row_index_order_by_single(name=name, order_by=order_by)
-        else:
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
-
-    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
-        result = self.native.select(
-            pl.col(order_by).rank(method="ordinal").alias(name) - 1, pl.all()
-        )
-        return self._with_native(result)
-
-    @requires.backend_version((1, 9))
-    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
-        # Before polars 1.9.0, either `.over(partition_by=...)` is not implemented or it does
-        # not properly break ties with multiple columns in partition_by
-        result = self.native.with_columns(
-            pl.lit(value=True, dtype=pl.Boolean()).alias(name)
-        ).select(
-            pl.col(name)
-            .rank(method="ordinal", descending=False)
-            .over(partition_by=None, order_by=order_by)
-            - 1,
-            pl.all().exclude(name),
-        )
-        return self._with_native(result)
-
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
@@ -661,41 +661,6 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
-
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        if order_by is None:
-            frame = self.native
-            result = (
-                frame.with_row_count(name)
-                if self._backend_version < (0, 20, 4)
-                else frame.with_row_index(name)
-            )
-            return self._with_native(result)
-        elif isinstance(order_by, str):
-            return self._with_row_index_order_by_single(name=name, order_by=order_by)
-        else:
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
-
-    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
-        result = self.native.select(
-            pl.col(order_by).rank(method="ordinal").alias(name) - 1, pl.all()
-        )
-        return self._with_native(result)
-
-    @requires.backend_version((1, 9))
-    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
-        # Before polars 1.9.0, either `.over(partition_by=...)` is not implemented or it does
-        # not properly break ties with multiple columns in partition_by
-        result = self.native.with_columns(
-            pl.lit(value=True, dtype=pl.Boolean()).alias(name)
-        ).select(
-            pl.col(name)
-            .rank(method="ordinal", descending=False)
-            .over(partition_by=None, order_by=order_by)
-            - 1,
-            pl.all().exclude(name),
-        )
-        return self._with_native(result)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         if self._backend_version < (1, 0, 0):
