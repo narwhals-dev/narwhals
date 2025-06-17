@@ -385,7 +385,7 @@ class CompliantLazyFrame(
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
         if order_by is None:
             msg = (
-                "`LazyFrane.with_row_index` requires `order_by` to be specified as it is an "
+                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
                 "order-dependent operation."
             )
             raise ValueError(msg)
