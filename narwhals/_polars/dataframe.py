@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    TypeAlias,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 import polars as pl
 
@@ -124,7 +115,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def __init__(
         self, df: NativePolarsFrame, *, backend_version: tuple[int, ...], version: Version
     ) -> None:
-        self._native_frame = df
+        self._native_frame: NativePolarsFrame = df
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
