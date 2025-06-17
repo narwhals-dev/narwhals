@@ -45,7 +45,7 @@ def test_with_row_index_lazy(
 
 def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
     msg = (
-        "`LazyFrane.with_row_index` requires `order_by` to be specified as it is an "
+        "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
         "order-dependent operation."
     )
 
