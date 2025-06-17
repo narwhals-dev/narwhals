@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import typing as _t
 
+from narwhals.api import (
+    register_dataframe_namespace,
+    register_expr_namespace,
+    register_lazyframe_namespace,
+)
 from narwhals import dependencies, dtypes, exceptions, selectors
 from narwhals._utils import (
     Implementation,
@@ -161,6 +166,9 @@ __all__ = [
     "nth",
     "read_csv",
     "read_parquet",
+    "register_dataframe_namespace",
+    "register_expr_namespace",
+    "register_lazyframe_namespace",
     "scan_csv",
     "scan_parquet",
     "selectors",
