@@ -223,7 +223,9 @@ class PandasLikeGroupBy(
         aggfunc = _agg_func(function_name, expr._implementation, **expr._scalar_kwargs)
         if leaf_name == "len" and expr._depth == 0:
             # `len` doesn't exist yet, so just pick a column to call size on
-            first_col = next(iter(set(self.compliant.columns).difference(exclude)))
+            first_col = next(
+                iter(set(self.compliant.columns).difference(exclude)), self._keys[0]
+            )
             yield aliases[0], (first_col, aggfunc)
         else:
             for output_name, alias in zip(output_names, aliases):
