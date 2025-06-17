@@ -442,6 +442,8 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
     def with_columns(
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
+        if not exprs:
+            return self
         columns = self._evaluate_into_exprs(*exprs)
         if not columns and len(self) == 0:
             return self

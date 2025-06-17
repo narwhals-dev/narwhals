@@ -53,7 +53,6 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
         nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
-# BUG: TypeError: keywords must be strings
 def test_select_boolean_cols() -> None:
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
     result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
@@ -62,7 +61,6 @@ def test_select_boolean_cols() -> None:
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
 
 
-# BUG: TypeError: keywords must be strings
 def test_select_boolean_cols_multi_group_by() -> None:
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True

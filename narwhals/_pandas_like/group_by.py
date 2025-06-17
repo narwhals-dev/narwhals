@@ -4,12 +4,13 @@ import warnings
 from functools import lru_cache
 from itertools import chain
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._utils import find_stacklevel
+from narwhals._typing_compat import TypeVar
+from narwhals._utils import find_stacklevel, generate_temporary_column_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -57,6 +58,11 @@ _AggFunc: TypeAlias = "NativeAggregation | Callable[..., Any]"
 _NamedAgg: TypeAlias = "tuple[str, _AggFunc]"
 """Equivalent to `pd.NamedAgg`."""
 
+SeqStrT = TypeVar("SeqStrT", bound="Sequence[str]", default="list[str]")
+
+NonStrHashable: TypeAlias = Any
+"""Because `pandas` allows *"names"* like that 😭"""
+
 
 @lru_cache(maxsize=32)
 def _agg_func(
@@ -67,6 +73,26 @@ def _agg_func(
     if not kwds or kwds.get("ddof") == 1:
         return name
     return methodcaller(name, **kwds)
+
+
+# PLAN
+# ----
+# - Before aggregating, rename every column that isn't already a `str`
+# - Proxy all incoming expressions through a rename mapper
+# - At the end, rename back to the original
+def _remap_non_str(
+    original: Sequence[Any], exclude: Iterable[Any]
+) -> dict[NonStrHashable, str]:
+    """An empty result follows a no-op path in `with_columns."""
+    exclude = set(exclude)
+    if remaining := set(original).difference(exclude):
+        union = exclude.union(original)
+        return {
+            name: generate_temporary_column_name(8, union)
+            for name in remaining
+            if not isinstance(name, str)
+        }
+    return {}
 
 
 class PandasLikeGroupBy(
@@ -87,6 +113,14 @@ class PandasLikeGroupBy(
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
 
+    _keys: list[str]
+    """Stores the **aliased** version of group keys from `ParseKeysGroupBy`."""
+
+    _output_key_names: list[str]
+    """Stores the **original** version of group keys."""
+
+    _remap_non_str_columns: dict[NonStrHashable, str]
+
     def __init__(
         self,
         df: PandasLikeDataFrame,
@@ -97,8 +131,13 @@ class PandasLikeGroupBy(
     ) -> None:
         self._original_columns = tuple(df.columns)
         self._drop_null_keys = drop_null_keys
-        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
-            df, keys=keys
+        ns = df.__narwhals_namespace__()
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
+        self._remap_non_str_columns = _remap_non_str(
+            self._original_columns, (*self._keys, *self._output_key_names)
+        )
+        self._compliant_frame = frame.with_columns(
+            *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
         )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
@@ -126,15 +165,7 @@ class PandasLikeGroupBy(
                 all_aggs_are_simple = False
 
         if any(not isinstance(k, str) for k in new_names):
-            # TODO @dangotbanned: Need to take a different path **for all** if **any** aggregation does this
-            # tests/frame/select_test.py::test_select_boolean_cols_multi_group_by - TypeError: keywords must be strings
-            # tests/frame/select_test.py::test_select_boolean_cols - TypeError: keywords must be strings
-            msg = (
-                "Unpacking the mapping of named aggregations fails "
-                "when non-`str` column names exist.\n"
-                f"{self._keys=}\n{new_names=}\n"
-            )
-            raise NotImplementedError(msg)
+            new_names = self._remap_aliases(new_names)
         if all_aggs_are_simple:
             result: pd.DataFrame
             if named_aggs := self._named_aggs(*exprs, exclude=exclude):
@@ -148,6 +179,15 @@ class PandasLikeGroupBy(
             raise empty_results_error()
         return self._agg_complex(exprs, new_names)
 
+    @overload
+    def _remap_aliases(self, names: list[str], /) -> list[str]: ...
+    @overload
+    def _remap_aliases(self, names: SeqStrT, /) -> list[str] | SeqStrT: ...
+    def _remap_aliases(self, names: SeqStrT, /) -> list[str] | SeqStrT:
+        if remap := self._remap_non_str_columns:
+            return [remap.get(name, name) for name in names]
+        return names
+
     def _named_aggs(
         self, *exprs: PandasLikeExpr, exclude: Sequence[str]
     ) -> dict[str, _NamedAgg]:
@@ -160,6 +200,7 @@ class PandasLikeGroupBy(
         output_names, aliases = evaluate_output_names_and_aliases(
             expr, self.compliant, exclude
         )
+        aliases = self._remap_aliases(aliases)
         leaf_name = self._leaf_name(expr)
         function_name = self._remap_expr_name(leaf_name)
         aggfunc = _agg_func(function_name, **expr._scalar_kwargs)
@@ -170,6 +211,13 @@ class PandasLikeGroupBy(
         else:
             for output_name, alias in zip(output_names, aliases):
                 yield alias, (output_name, aggfunc)
+
+    @property
+    def _final_renamer(self) -> dict[str, NonStrHashable]:
+        remap = self._remap_non_str_columns
+        temps = chain(self._keys, remap.values())
+        originals = chain(self._output_key_names, remap)
+        return dict(zip(temps, originals))
 
     def _select_results(
         self, df: pd.DataFrame, /, new_names: list[str]
@@ -185,8 +233,7 @@ class PandasLikeGroupBy(
         native = select_columns_by_name(
             df, new_names, compliant._backend_version, compliant._implementation
         )
-        rename = dict(zip(self._keys, self._output_key_names))
-        return compliant._with_native(native).rename(rename)
+        return compliant._with_native(native).rename(self._final_renamer)
 
     def _agg_complex(
         self, exprs: Iterable[PandasLikeExpr], new_names: list[str]

@@ -1191,7 +1191,7 @@ def generate_unique_token(
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
