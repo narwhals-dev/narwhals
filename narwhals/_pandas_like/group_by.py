@@ -109,7 +109,7 @@ def _remap_non_str(
             for name in remaining
             if not isinstance(name, str)
         }
-    return {}
+    return {}  # pragma: no cover
 
 
 class PandasLikeGroupBy(
