@@ -13,6 +13,7 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     NativeExprT,
     NativeFrameT,
+    NativeSeriesT_contra,
 )
 from narwhals._translate import (
     ArrowConvertible,
@@ -391,7 +392,7 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT_contra],
 ):
     def __narwhals_namespace__(
         self,
@@ -439,7 +440,7 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[Any]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT_contra]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
     def _select_multi_index(self, columns: SizedMultiIndexSelector[Any]) -> Self: ...
     def _select_multi_name(self, columns: SizedMultiNameSelector[Any]) -> Self: ...
