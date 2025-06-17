@@ -540,3 +540,20 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
     assert_equal_data(result, expected)
+
+
+def test_group_by_len_1_column(constructor: Constructor) -> None:
+    """Based on a failure from marimo.
+
+    - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/tests/_plugins/ui/_impl/tables/test_narwhals.py#L1098-L1108
+    - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/marimo/_plugins/ui/_impl/tables/narwhals_table.py#L163-L188
+    """
+    data = {"a": [1, 2, 1, 2, 3, 4]}
+    expected = {"a": [1, 2, 3, 4], "len": [2, 2, 1, 1], "len_a": [2, 2, 1, 1]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.len(), nw.len().alias("len_a"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)
