@@ -106,6 +106,7 @@ if TYPE_CHECKING:
 
     class _CuDFSeries(NativeSeries, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
+        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
 
     class _NativeIbis(Protocol):
         def sql(self, *args: Any, **kwds: Any) -> Any: ...
@@ -118,6 +119,8 @@ if TYPE_CHECKING:
 
     class _ModinSeries(NativeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
+
+        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"

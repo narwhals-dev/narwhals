@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
 
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
+
+
+Incomplete: TypeAlias = Any
+"""Escape hatch, but leaving a trace that this isn't ideal."""
 
 
 _Vertical: TypeAlias = Literal[0]
@@ -365,18 +369,12 @@ class PandasWhen(
 
     def _if_then_else(
         self,
-        when: PandasLikeSeries,
-        then: PandasLikeSeries,
-        otherwise: PandasLikeSeries | None,
-        /,
-    ) -> PandasLikeSeries:
-        if otherwise is None:
-            when, then = align_series_full_broadcast(when, then)
-            res_native = then.native.where(when.native)
-        else:
-            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
-            res_native = then.native.where(when.native, otherwise.native)
-        return then._with_native(res_native)
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | NonNestedLiteral,
+    ) -> NativeSeriesT:
+        where: Incomplete = then.where
+        return where(when) if otherwise is None else where(when, otherwise)
 
 
 class PandasThen(

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
+from typing_extensions import Self
 
 from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
@@ -32,7 +33,7 @@ from narwhals._utils import (
     validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -191,6 +192,32 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        lengths = [len(s) for s in series]
+        max_length = max(lengths)
+        fast_path = all(_len == max_length for _len in lengths)
+
+        if fast_path:
+            return series
+
+        reshaped = []
+        for s in series:
+            if s._broadcast:
+                value = s.native[0]
+                if s._backend_version < (13,) and hasattr(value, "as_py"):
+                    value = value.as_py()
+                reshaped.append(
+                    s._with_native(pa.array([value] * max_length, type=s._type))
+                )
+            else:
+                if (actual_len := len(s)) != max_length:
+                    msg = f"Expected object of length {max_length}, got {actual_len}."
+                    raise ShapeError(msg)
+                reshaped.append(s)
+
+        return reshaped
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
