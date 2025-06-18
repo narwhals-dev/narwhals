@@ -10,7 +10,6 @@ from narwhals._plan.aggregation import Agg, OrderableAgg
 from narwhals._plan.common import (
     ExprIR,
     SelectorIR,
-    _field_str,
     collect,
     is_non_nested_literal,
     is_regex_projection,
@@ -305,7 +304,7 @@ class BinaryExpr(
 
 
 class Cast(ExprIR):
-    __slots__ = ("dtype", "expr")
+    __slots__ = ("expr", "dtype")  # noqa: RUF023
 
     expr: ExprIR
     dtype: DType
@@ -364,7 +363,7 @@ class Sort(ExprIR):
 class SortBy(ExprIR):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
-    __slots__ = ("by", "expr", "options")
+    __slots__ = ("expr", "by", "options")  # noqa: RUF023
 
     expr: ExprIR
     by: Seq[ExprIR]
@@ -486,7 +485,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
 
 
 class Filter(ExprIR):
-    __slots__ = ("by", "expr")
+    __slots__ = ("expr", "by")  # noqa: RUF023
 
     expr: ExprIR
     by: ExprIR
@@ -528,7 +527,7 @@ class WindowExpr(ExprIR):
     - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
     """
 
-    __slots__ = ("expr", "options", "partition_by")
+    __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
 
     expr: ExprIR
     """Renamed from `function`.
@@ -547,12 +546,6 @@ class WindowExpr(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
-
-    def __str__(self) -> str:
-        args = (
-            f"expr={self.expr}, partition_by={self.partition_by}, options={self.options}"
-        )
-        return f"{type(self).__name__}({args})"
 
     def iter_left(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_left()
@@ -586,7 +579,7 @@ class WindowExpr(ExprIR):
 
 # TODO @dangotbanned: Reduce repetition from `WindowExpr`
 class OrderedWindowExpr(WindowExpr):
-    __slots__ = ("expr", "options", "order_by", "partition_by", "sort_options")
+    __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
 
     expr: ExprIR
     partition_by: Seq[ExprIR]
@@ -605,11 +598,6 @@ class OrderedWindowExpr(WindowExpr):
         else:
             args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
         return f"{self.expr!r}.over({args})"
-
-    def __str__(self) -> str:
-        order_by = f"({self.order_by}, {self.sort_options})"
-        args = f"expr={self.expr}, partition_by={self.partition_by}, order_by={order_by}, options={self.options}"
-        return f"{type(self).__name__}({args})"
 
     def iter_left(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_left()
@@ -750,7 +738,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 class Ternary(ExprIR):
     """When-Then-Otherwise."""
 
-    __slots__ = ("falsy", "predicate", "truthy")
+    __slots__ = ("predicate", "truthy", "falsy")  # noqa: RUF023
 
     predicate: ExprIR
     truthy: ExprIR
@@ -759,15 +747,6 @@ class Ternary(ExprIR):
     @property
     def is_scalar(self) -> bool:
         return self.predicate.is_scalar and self.truthy.is_scalar and self.falsy.is_scalar
-
-    def __str__(self) -> str:
-        # NOTE: Default slot ordering made it difficult to read
-        fields = (
-            _field_str("predicate", self.predicate),
-            _field_str("truthy", self.truthy),
-            _field_str("falsy", self.falsy),
-        )
-        return f"{type(self).__name__}({', '.join(fields)})"
 
     def __repr__(self) -> str:
         return (
