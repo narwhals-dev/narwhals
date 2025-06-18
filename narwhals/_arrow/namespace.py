@@ -26,12 +26,14 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete  # noqa: F401
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table]):
+class ArrowNamespace(
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
+):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -263,7 +265,7 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen

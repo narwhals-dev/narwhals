@@ -101,7 +101,10 @@ if TYPE_CHECKING:
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
 
-    class _NativeCuDF(Protocol):
+    class _CuDFDataFrame(NativeFrame, Protocol):
+        def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
+
+    class _CuDFSeries(NativeSeries, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
 
     class _NativeIbis(Protocol):
@@ -110,10 +113,10 @@ if TYPE_CHECKING:
         def __pandas_result__(self, *args: Any, **kwds: Any) -> Any: ...
         def __polars_result__(self, *args: Any, **kwds: Any) -> Any: ...
 
-    class _ModinDataFrame(Protocol):
+    class _ModinDataFrame(NativeFrame, Protocol):
         _pandas_class: type[pd.DataFrame]
 
-    class _ModinSeries(Protocol):
+    class _ModinSeries(NativeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
@@ -121,7 +124,12 @@ if TYPE_CHECKING:
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
-    _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
+    _NativeCuDF: TypeAlias = "_CuDFDataFrame | _CuDFSeries"
+    _NativePandasLikeSeries: TypeAlias = "pd.Series[Any] | _CuDFSeries | _ModinSeries"
+    _NativePandasLikeDataFrame: TypeAlias = (
+        "pd.DataFrame | _CuDFDataFrame | _ModinDataFrame"
+    )
+    _NativePandasLike: TypeAlias = "_NativePandasLikeDataFrame |_NativePandasLikeSeries"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
     _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
     _NativePySparkConnect: TypeAlias = "PySparkConnectDataFrame"
@@ -275,8 +283,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(
-        cls, native: _NativePandasLike, /
-    ) -> Namespace[PandasLikeNamespace]: ...
+        cls, native: _NativePandas, /
+    ) -> Namespace[PandasLikeNamespace[pd.DataFrame, pd.Series[Any]]]: ...
 
     @overload
     @classmethod
@@ -301,6 +309,24 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(cls, native: _NativeIbis, /) -> Namespace[IbisNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativeModin, /
+    ) -> Namespace[PandasLikeNamespace[_ModinDataFrame, _ModinSeries]]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativeCuDF, /
+    ) -> Namespace[PandasLikeNamespace[_CuDFDataFrame, _CuDFSeries]]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativePandasLike, /
+    ) -> Namespace[PandasLikeNamespace[Any, Any]]: ...
 
     @overload
     @classmethod

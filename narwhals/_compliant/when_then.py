@@ -13,6 +13,7 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprAny,
     NativeExprT,
+    NativeSeriesT,
     WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
@@ -148,8 +149,15 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
 ):
+    def _temp_invariant(self, _: NativeSeriesT, /) -> NativeSeriesT:
+        """**DO NOT MERGE**.
+
+        Using as a placeholder until there's real usage of `NativeSeriesT`.
+        """
+        return _
+
     def _if_then_else(
         self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
     ) -> EagerSeriesT: ...

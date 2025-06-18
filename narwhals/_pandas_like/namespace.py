@@ -3,9 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal
-
-import pandas as pd
+from typing import TYPE_CHECKING, Literal, Protocol, overload
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -16,21 +14,34 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
+from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
-    from narwhals._pandas_like.typing import NDFrameT
+    from typing_extensions import TypeAlias
+
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
-VERTICAL: Literal[0] = 0
-HORIZONTAL: Literal[1] = 1
+
+_Vertical: TypeAlias = Literal[0]
+_Horizontal: TypeAlias = Literal[1]
+Axis: TypeAlias = Literal[_Vertical, _Horizontal]
+
+VERTICAL: _Vertical = 0
+HORIZONTAL: _Horizontal = 1
 
 
 class PandasLikeNamespace(
-    EagerNamespace[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, pd.DataFrame]
+    EagerNamespace[
+        PandasLikeDataFrame,
+        PandasLikeSeries,
+        PandasLikeExpr,
+        NativeDataFrameT,
+        NativeSeriesT,
+    ]
 ):
     @property
     def _dataframe(self) -> type[PandasLikeDataFrame]:
@@ -216,21 +227,21 @@ class PandasLikeNamespace(
         )
 
     @property
-    def _concat(self):  # type: ignore[no-untyped-def] # noqa: ANN202
-        """Return the **native** equivalent of `pd.concat`."""
-        # NOTE: Leave un-annotated to allow `@overload` matching via inference.
-        if TYPE_CHECKING:
-            import pandas as pd
+    def _concat(self) -> _NativeConcat[NativeDataFrameT, NativeSeriesT]:
+        """Concatenate pandas objects along a particular axis.
 
-            return pd.concat
+        Return the **native** equivalent of `pd.concat`.
+        """
         return self._implementation.to_native_namespace().concat
 
-    def _concat_diagonal(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+    def _concat_diagonal(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         if self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def _concat_horizontal(self, dfs: Sequence[NDFrameT], /) -> pd.DataFrame:
+    def _concat_horizontal(
+        self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
+    ) -> NativeDataFrameT:
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -243,7 +254,7 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=HORIZONTAL, copy=False)
         return self._concat(dfs, axis=HORIZONTAL)
 
-    def _concat_vertical(self, dfs: Sequence[pd.DataFrame], /) -> pd.DataFrame:
+    def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
         for i, df in enumerate(dfs[1:], start=1):
             cols_current = df.columns
@@ -260,8 +271,8 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def when(self, predicate: PandasLikeExpr) -> PandasWhen:
-        return PandasWhen.from_expr(predicate, context=self)
+    def when(self, predicate: PandasLikeExpr) -> PandasWhen[NativeSeriesT]:
+        return PandasWhen[NativeSeriesT].from_expr(predicate, context=self)
 
     def concat_str(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
@@ -306,7 +317,48 @@ class PandasLikeNamespace(
         )
 
 
-class PandasWhen(EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr]):
+class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
+    @overload
+    def __call__(
+        self,
+        objs: Iterable[NativeDataFrameT],
+        *,
+        axis: _Vertical,
+        copy: bool | None = ...,
+    ) -> NativeDataFrameT: ...
+    @overload
+    def __call__(
+        self, objs: Iterable[NativeSeriesT], *, axis: _Vertical, copy: bool | None = ...
+    ) -> NativeSeriesT: ...
+    @overload
+    def __call__(
+        self,
+        objs: Iterable[NativeDataFrameT | NativeSeriesT],
+        *,
+        axis: _Horizontal,
+        copy: bool | None = ...,
+    ) -> NativeDataFrameT: ...
+    @overload
+    def __call__(
+        self,
+        objs: Iterable[NativeDataFrameT | NativeSeriesT],
+        *,
+        axis: Axis,
+        copy: bool | None = ...,
+    ) -> NativeDataFrameT | NativeSeriesT: ...
+
+    def __call__(
+        self,
+        objs: Iterable[NativeDataFrameT | NativeSeriesT],
+        *,
+        axis: Axis,
+        copy: bool | None = None,
+    ) -> NativeDataFrameT | NativeSeriesT: ...
+
+
+class PandasWhen(
+    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
+):
     @property
     def _then(self) -> type[PandasThen]:
         return PandasThen

@@ -64,9 +64,7 @@ DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame]"
-)
+EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 

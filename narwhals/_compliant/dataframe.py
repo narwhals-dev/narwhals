@@ -13,7 +13,7 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     NativeExprT,
     NativeFrameT,
-    NativeSeriesT_contra,
+    NativeSeriesT,
 )
 from narwhals._translate import (
     ArrowConvertible,
@@ -392,11 +392,11 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT_contra],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
@@ -440,13 +440,13 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT_contra]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
     def _select_multi_index(
-        self, columns: SizedMultiIndexSelector[NativeSeriesT_contra]
+        self, columns: SizedMultiIndexSelector[NativeSeriesT]
     ) -> Self: ...
     def _select_multi_name(
-        self, columns: SizedMultiNameSelector[NativeSeriesT_contra]
+        self, columns: SizedMultiNameSelector[NativeSeriesT]
     ) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
