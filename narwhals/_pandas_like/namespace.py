@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 import warnings
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
@@ -116,8 +117,8 @@ class PandasLikeNamespace(
     def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = [s for _expr in exprs for s in _expr(df)]
-            series = align(*series)
+            it = chain.from_iterable(expr(df) for expr in exprs)
+            series = align(*it)
             native_series = (s.fill_null(0, None, None) for s in series)
             return [reduce(operator.add, native_series)]
 
@@ -181,9 +182,9 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in exprs for s in _expr(df)]
+            it = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            series = align(*series)
+            series = align(*it)
 
             return [
                 PandasLikeSeries(
@@ -207,15 +208,15 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in exprs for s in _expr(df)]
+            it = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            series = align(*series)
+            series = align(*it)
 
             return [
                 PandasLikeSeries(
                     self.concat(
                         (s.to_frame() for s in series), how="horizontal"
-                    )._native_frame.max(axis=1),
+                    ).native.max(axis=1),
                     implementation=self._implementation,
                     backend_version=self._backend_version,
                     version=self._version,
