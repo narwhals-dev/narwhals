@@ -202,14 +202,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return series
 
         reshaped = []
+        repeat: Incomplete = pa.repeat
         for s in series:
             if s._broadcast:
                 value = s.native[0]
                 if s._backend_version < (13,) and hasattr(value, "as_py"):
                     value = value.as_py()
-                reshaped.append(
-                    s._with_native(pa.array([value] * max_length, type=s._type))
-                )
+                reshaped.append(s._with_native(repeat(lit(value, s._type), max_length)))
             else:
                 if (actual_len := len(s)) != max_length:
                     msg = f"Expected object of length {max_length}, got {actual_len}."
