@@ -232,7 +232,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 reindexed.append(
                     s._with_native(
                         native_namespace.Series(
-                            [s.native.iloc[0]] * max_length,
+                            np.repeat(s.native.iloc[0], max_length),
                             index=idx,
                             name=s.name,
                             dtype=s.native.dtype,
