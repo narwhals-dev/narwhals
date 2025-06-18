@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from types import ModuleType
 
 data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
@@ -43,18 +45,22 @@ def test_with_row_index_lazy(
     assert_equal_data(result, expected)
 
 
-def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
+@pytest.mark.parametrize("namespace", [nw, nw_v1])
+def test_with_row_index_lazy_exception(
+    constructor: Constructor, namespace: ModuleType
+) -> None:
     msg = (
         "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
         "order-dependent operation."
     )
+    frame = namespace.from_native(constructor(data))
 
     context = (
         pytest.raises(ValueError, match=msg)
         if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark"))
+        or (namespace is nw and isinstance(frame, namespace.LazyFrame))
         else does_not_raise()
     )
-    frame = nw.from_native(constructor(data))
 
     with context:
         frame.with_row_index()

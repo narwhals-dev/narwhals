@@ -2480,6 +2480,12 @@ class LazyFrame(BaseFrame[FrameT]):
             |  b: [[5,4]]      |
             └──────────────────┘
         """
+        if order_by is None:
+            msg = (
+                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
+                "order-dependent operation."
+            )
+            raise ValueError(msg)
         return super().with_row_index(name=name, order_by=order_by)
 
     @property

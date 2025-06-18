@@ -257,6 +257,22 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
+    def with_row_index(
+        self, name: str = "index", order_by: str | Sequence[str] | None = None
+    ) -> Self:
+        """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index. Must be not None.
+
+        Returns:
+            The original object with the column added.
+        """
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name=name, order_by=order_by)
+        )
+
 
 class Series(NwSeries[IntoSeriesT]):
     @inherit_doc(NwSeries)
