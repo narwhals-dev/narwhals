@@ -435,10 +435,17 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
                 data, context=self, index=index, name=name
             ).native
             return self._with_native(plx._concat_horizontal([row_index, frame]))
-        elif isinstance(order_by, str):
-            return self._with_row_index_order_by_single(name=name, order_by=order_by)
         else:
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
+            plx = self.__narwhals_namespace__()
+
+            row_index_expr = (
+                plx.col(order_by[0])
+                .rank(method="ordinal", descending=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1
+            ).alias(name)
+            result = self.select(row_index_expr, plx.col(*self.columns)).native
+            return self._with_native(result)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])

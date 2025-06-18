@@ -14,7 +14,6 @@ from narwhals._compliant.typing import (
     NativeExprT,
     NativeFrameT,
 )
-from narwhals._expression_parsing import ExprKind
 from narwhals._translate import (
     ArrowConvertible,
     DictConvertible,
@@ -365,34 +364,7 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
 
-    def _with_row_index_order_by_single(self, name: str, order_by: str) -> Self:
-        plx = self.__narwhals_namespace__()
-        return self.select(
-            plx.col(order_by).rank(method="ordinal", descending=False).alias(name) - 1,
-            plx.all(),
-        )
-
-    def _with_row_index_order_by_multi(self, name: str, order_by: Sequence[str]) -> Self:
-        plx = self.__narwhals_namespace__()
-        columns = self.columns
-        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
-        row_index_expr = (
-            plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
-            - 1
-        )
-        return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
-
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        if order_by is None:
-            msg = (
-                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
-                "order-dependent operation."
-            )
-            raise ValueError(msg)
-        if isinstance(order_by, str):
-            return self._with_row_index_order_by_single(name=name, order_by=order_by)
-        else:
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
 
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)

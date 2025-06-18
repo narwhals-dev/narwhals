@@ -6,6 +6,7 @@ import dask.dataframe as dd
 import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
+from narwhals._expression_parsing import ExprKind
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._utils import (
     Implementation,
@@ -204,7 +205,7 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         if order_by is None:
@@ -214,8 +215,18 @@ class DaskLazyFrame(
                 )
             )
         else:
-            order_by_ = [order_by] if isinstance(order_by, str) else order_by
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by_)
+            plx = self.__narwhals_namespace__()
+            columns = self.columns
+            const_expr = (
+                plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+            )
+            row_index_expr = (
+                plx.col(name)
+                .cum_sum(reverse=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1
+            )
+            return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))

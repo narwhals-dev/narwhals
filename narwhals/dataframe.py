@@ -139,8 +139,9 @@ class BaseFrame(Generic[_FrameT]):
         return function(self, *args, **kwargs)
 
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
         return self._with_compliant(
-            self._compliant_frame.with_row_index(name, order_by=order_by)
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
         )
 
     def drop_nulls(self, subset: str | list[str] | None) -> Self:

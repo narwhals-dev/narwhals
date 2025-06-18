@@ -522,6 +522,21 @@ class SparkLikeLazyFrame(
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
         return self._with_native(unpivoted_native_frame)
 
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        if order_by is None:
+            msg = (
+                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
+                "order-dependent operation."
+            )
+            raise ValueError(msg)
+        row_index_expr = (
+            self._F.row_number().over(
+                self._Window.partitionBy(self._F.lit(1)).orderBy(*order_by)
+            )
+            - 1
+        ).alias(name)
+        return self._with_native(self.native.select(row_index_expr, *self.columns))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )

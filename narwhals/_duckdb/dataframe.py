@@ -12,6 +12,7 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     col,
     evaluate_exprs,
+    generate_order_by_sql,
     generate_partition_by_sql,
     lit,
     native_to_narwhals_dtype,
@@ -503,6 +504,18 @@ class DuckDBLazyFrame(
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
+
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        if order_by is None:
+            msg = (
+                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
+                "order-dependent operation."
+            )
+            raise ValueError(msg)
+        order_by_sql = generate_order_by_sql(*order_by, ascending=True)
+        rel = self.native  # noqa: F841
+        query = f"select row_number() over ({order_by_sql}) -1 as {name}, * from rel"  # noqa: S608
+        return self._with_native(duckdb.sql(query))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

@@ -413,6 +413,19 @@ class IbisLazyFrame(
         )
         return self._with_native(unpivoted.select(*final_columns))
 
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        if order_by is None:
+            msg = (
+                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
+                "order-dependent operation."
+            )
+            raise ValueError(msg)
+        to_select = [
+            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.selectors.all(),
+        ]
+        return self._with_native(self.native.select(*to_select))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )

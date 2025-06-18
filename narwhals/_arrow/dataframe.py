@@ -479,18 +479,27 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return {ser.name: ser.to_list() for ser in it}
 
     def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        frame = self.native
+        columns = self.columns
+
         if order_by is None:
             import numpy as np  # ignore-banned-import
 
-            df = self.native
-            row_index = pa.array(np.arange(df.num_rows, dtype=np.int64))
-            return self._with_native(
-                df.append_column(name, row_index).select([name, *self.columns])
-            )
-        elif isinstance(order_by, str):
-            return self._with_row_index_order_by_single(name=name, order_by=order_by)
+            row_index = pa.array(np.arange(frame.num_rows, dtype=np.int64))
+            result = frame.append_column(name, row_index).select([name, *self.columns])
+
         else:
-            return self._with_row_index_order_by_multi(name=name, order_by=order_by)
+            order_by_ = [order_by] if isinstance(order_by, str) else order_by
+            plx = self.__narwhals_namespace__()
+
+            row_index_expr = (
+                plx.col(order_by_[0])
+                .rank(method="ordinal", descending=False)
+                .over(partition_by=[], order_by=order_by_)
+                - 1
+            ).alias(name)
+            result = self.select(row_index_expr, plx.col(*columns)).native
+        return self._with_native(result)
 
     def filter(
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
