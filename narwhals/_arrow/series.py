@@ -197,20 +197,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         lengths = [len(s) for s in series]
         max_length = max(lengths)
         fast_path = all(_len == max_length for _len in lengths)
-
         if fast_path:
             return series
-
         reshaped = []
         for s in series:
             if s._broadcast:
-                reshaped.append(s._with_native(pa.repeat(s.native[0], max_length)))
+                compliant = s._with_native(pa.repeat(s.native[0], max_length))
+            elif (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
             else:
-                if (actual_len := len(s)) != max_length:
-                    msg = f"Expected object of length {max_length}, got {actual_len}."
-                    raise ShapeError(msg)
-                reshaped.append(s)
-
+                compliant = s
+            reshaped.append(compliant)
         return reshaped
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
