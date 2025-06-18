@@ -15,7 +15,6 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import align_series_full_broadcast
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -116,8 +115,9 @@ class PandasLikeNamespace(
     # --- horizontal ---
     def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            align = self._series._align_full_broadcast
             series = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(*series)
+            series = align(*series)
             native_series = (s.fill_null(0, None, None) for s in series)
             return [reduce(operator.add, native_series)]
 
@@ -132,9 +132,8 @@ class PandasLikeNamespace(
 
     def all_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr(df))
-            )
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
             return [reduce(operator.and_, series)]
 
         return self._expr._from_callable(
@@ -148,9 +147,8 @@ class PandasLikeNamespace(
 
     def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = align_series_full_broadcast(
-                *(s for _expr in exprs for s in _expr(df))
-            )
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
             return [reduce(operator.or_, series)]
 
         return self._expr._from_callable(
@@ -165,10 +163,11 @@ class PandasLikeNamespace(
     def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(
+            align = self._series._align_full_broadcast
+            series = align(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
-            non_na = align_series_full_broadcast(*(1 - s.is_null() for s in expr_results))
+            non_na = align(*(1 - s.is_null() for s in expr_results))
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
@@ -183,7 +182,8 @@ class PandasLikeNamespace(
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(*series)
+            align = self._series._align_full_broadcast
+            series = align(*series)
 
             return [
                 PandasLikeSeries(
@@ -208,7 +208,8 @@ class PandasLikeNamespace(
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(*series)
+            align = self._series._align_full_broadcast
+            series = align(*series)
 
             return [
                 PandasLikeSeries(
@@ -285,8 +286,9 @@ class PandasLikeNamespace(
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(*(s.cast(string) for s in expr_results))
-            null_mask = align_series_full_broadcast(*(s.is_null() for s in expr_results))
+            align = self._series._align_full_broadcast
+            series = align(*(s.cast(string) for s in expr_results))
+            null_mask = align(*(s.is_null() for s in expr_results))
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

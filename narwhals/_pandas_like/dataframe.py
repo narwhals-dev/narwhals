@@ -10,7 +10,6 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    align_series_full_broadcast,
     check_column_names_are_unique,
     get_dtype_backend,
     native_to_narwhals_dtype,
@@ -396,7 +395,7 @@ class PandasLikeDataFrame(
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(self.native.__class__(), validate_column_names=False)
-        new_series = align_series_full_broadcast(*new_series)
+        new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
