@@ -202,10 +202,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return series
 
         reshaped = []
-        repeat: Incomplete = pa.repeat
         for s in series:
             if s._broadcast:
-                reshaped.append(s._with_native(repeat(s.native[0], max_length)))
+                reshaped.append(s._with_native(pa.repeat(s.native[0], max_length)))
             else:
                 if (actual_len := len(s)) != max_length:
                     msg = f"Expected object of length {max_length}, got {actual_len}."
