@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from typing_extensions import Self
 
 from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
