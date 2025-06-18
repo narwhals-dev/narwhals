@@ -171,13 +171,11 @@ class EagerWhen(
             then = self._then_value(df)[0]
         else:
             then = when.alias("literal")._from_scalar(self._then_value)
-            then._broadcast = True
 
         if is_expr(self._otherwise_value):
             otherwise = self._otherwise_value(df)[0]
         elif self._otherwise_value is not None:
             otherwise = when._from_scalar(self._otherwise_value)
-            otherwise._broadcast = True
         else:
             otherwise = self._otherwise_value
         return [self._if_then_else(when, then, otherwise)]
