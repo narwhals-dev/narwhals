@@ -318,13 +318,19 @@ jobs:
           uv sync --extra dev_optional
       - name: install-narwhals-dev
         run: |
+          cd plotly.py
+          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e .
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd plotly.py
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run pytest on plotly express
         run: |
           cd plotly.py
+          . .venv/bin/activate
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
