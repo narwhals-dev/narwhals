@@ -104,7 +104,7 @@ class IbisExprStringNamespace:
     def zfill(self, width: int) -> IbisExpr:
         def func(expr: ir.StringColumn) -> ir.Value:
             length = expr.length()
-            less_than_width = expr.length() < lit(width)
+            less_than_width = length < lit(width)
             zero, hyphen, plus = "0", "-", "+"
             starts_with_minus = expr.startswith(hyphen)
             starts_with_plus = expr.startswith(plus)
