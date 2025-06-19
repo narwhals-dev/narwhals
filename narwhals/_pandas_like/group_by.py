@@ -163,12 +163,10 @@ class PandasLikeGroupBy(
         self._casts = []
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(self.compliant.native.index.names).intersection(self.compliant.columns):
-            native_frame = self.compliant.native.reset_index(drop=True)
-        else:
-            native_frame = self.compliant.native
-
-        self._grouped: NativeGroupBy = native_frame.groupby(
+        native = self.compliant.native
+        if set(native.index.names).intersection(self.compliant.columns):
+            native = native.reset_index(drop=True)
+        self._grouped: NativeGroupBy = native.groupby(
             list(self._keys),
             sort=False,
             as_index=True,
@@ -194,7 +192,7 @@ class PandasLikeGroupBy(
                 result = self._grouped.agg(**named_aggs)  # type: ignore[call-overload]
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
-                    list(self._grouped.groups.keys()), columns=self._keys
+                    list(self._grouped.groups), columns=self._keys
                 )
             return self._select_results(result, new_names)
         if self.compliant.native.empty:
