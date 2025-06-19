@@ -344,15 +344,16 @@ class PolarsExprStringNamespace:
         native_result = native_expr.str.zfill(width)
 
         if self._compliant_expr._backend_version <= (1, 30, 0):
-            starts_with_plus = native_expr.str.starts_with("+")
             length = native_expr.str.len_chars()
             less_than_width = length < width
+            plus = "+"
+            starts_with_plus = native_expr.str.starts_with(plus)
             native_result = (
                 pl.when(starts_with_plus & less_than_width)
                 .then(
                     native_expr.str.slice(1, length)
                     .str.zfill(width - 1)
-                    .str.pad_start(width, "+")
+                    .str.pad_start(width, plus)
                 )
                 .otherwise(native_result)
             )

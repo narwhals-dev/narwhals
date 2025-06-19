@@ -106,39 +106,30 @@ class DuckDBExprStringNamespace:
 
         def func(expr: Expression) -> Expression:
             less_than_width = FunctionExpression("length", expr) < lit(width)
-            starts_with_minus = FunctionExpression("starts_with", expr, lit("-"))
-            starts_with_plus = FunctionExpression("starts_with", expr, lit("+"))
+            hyphen = lit("-")
+            plus = lit("+")
+            zero = lit("0")
+            starts_with_minus = FunctionExpression("starts_with", expr, hyphen)
+            starts_with_plus = FunctionExpression("starts_with", expr, plus)
+            substring = FunctionExpression("substr", expr, lit(2))
             return (
                 when(
                     starts_with_minus & less_than_width,
                     FunctionExpression(
                         "concat",
-                        lit("-"),
-                        FunctionExpression(
-                            "lpad",
-                            FunctionExpression("substr", expr, lit(2)),
-                            lit(width - 1),
-                            lit("0"),
-                        ),
+                        hyphen,
+                        FunctionExpression("lpad", substring, lit(width - 1), zero),
                     ),
                 )
                 .when(
                     starts_with_plus & less_than_width,
                     FunctionExpression(
                         "concat",
-                        lit("+"),
-                        FunctionExpression(
-                            "lpad",
-                            FunctionExpression("substr", expr, lit(2)),
-                            lit(width - 1),
-                            lit("0"),
-                        ),
+                        plus,
+                        FunctionExpression("lpad", substring, lit(width - 1), zero),
                     ),
                 )
-                .when(
-                    less_than_width,
-                    FunctionExpression("lpad", expr, lit(width), lit("0")),
-                )
+                .when(less_than_width, FunctionExpression("lpad", expr, lit(width), zero))
                 .otherwise(expr)
             )
 

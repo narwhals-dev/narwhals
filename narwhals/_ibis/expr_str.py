@@ -105,21 +105,25 @@ class IbisExprStringNamespace:
         def func(expr: ir.StringColumn) -> ir.Value:
             length = expr.length()
             less_than_width = expr.length() < lit(width)
-            starts_with_minus = expr.startswith("-")
-            starts_with_plus = expr.startswith("+")
+            hyphen = "-"
+            plus = "+"
+            zero = "0"
+            starts_with_minus = expr.startswith(hyphen)
+            starts_with_plus = expr.startswith(plus)
             one = cast("ir.IntegerScalar", lit(1))
             sub_length = cast("ir.IntegerValue", length - one)
+            substring = expr.substr(one, sub_length)
 
             return ibis.cases(
                 (
                     starts_with_minus & less_than_width,
-                    (expr.substr(1, sub_length).lpad(width - 1, "0").lpad(width, "-")),
+                    (substring.lpad(width - 1, zero).lpad(width, hyphen)),
                 ),
                 (
                     starts_with_plus & less_than_width,
-                    (expr.substr(1, sub_length).lpad(width - 1, "0").lpad(width, "+")),
+                    (substring.lpad(width - 1, zero).lpad(width, plus)),
                 ),
-                (less_than_width, expr.lpad(width, "0")),
+                (less_than_width, expr.lpad(width, zero)),
                 else_=expr,
             )
 
