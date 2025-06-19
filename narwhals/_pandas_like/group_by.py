@@ -8,11 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import (
-    is_pyarrow_dtype_backend,
-    native_to_narwhals_dtype,
-    select_columns_by_name,
-)
+from narwhals._pandas_like.utils import is_pyarrow_dtype_backend, native_to_narwhals_dtype
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import find_stacklevel, generate_temporary_column_name
 
@@ -261,15 +257,12 @@ class PandasLikeGroupBy(
 
         See `ParseKeysGroupBy`.
         """
-        compliant = self.compliant
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         df.reset_index(inplace=True)  # noqa: PD002
-        native = select_columns_by_name(
-            df, new_names, compliant._backend_version, compliant._implementation
-        )
         return (
-            compliant._with_native(native)
+            self.compliant._with_native(df, validate_column_names=False)
+            .simple_select(*new_names)
             .rename(self._final_renamer)
             .with_columns(*self._casts)
         )
