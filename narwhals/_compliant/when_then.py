@@ -175,14 +175,9 @@ class EagerWhen(
             otherwise = self._otherwise_value(df)[0]
             when, then, otherwise = align(when, then, otherwise)
             result = self._if_then_else(when.native, then.native, otherwise.native)
-        elif self._otherwise_value is not None:
-            otherwise = when._from_scalar(self._otherwise_value)
-            otherwise._broadcast = True
-            when, then, otherwise = align(when, then, otherwise)
-            result = self._if_then_else(when.native, then.native, otherwise.native)
         else:
             when, then = align(when, then)
-            result = self._if_then_else(when.native, then.native, None)
+            result = self._if_then_else(when.native, then.native, self._otherwise_value)
         return [then._with_native(result)]
 
 
