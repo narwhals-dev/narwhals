@@ -110,17 +110,10 @@ class IbisExprStringNamespace:
             starts_with_plus = expr.startswith(plus)
             one = cast("ir.IntegerScalar", lit(1))
             sub_length = cast("ir.IntegerValue", length - one)
-            substring = expr.substr(one, sub_length)
-
+            substring = expr.substr(one, sub_length).lpad(width - 1, zero)
             return ibis.cases(
-                (
-                    starts_with_minus & less_than_width,
-                    (substring.lpad(width - 1, zero).lpad(width, hyphen)),
-                ),
-                (
-                    starts_with_plus & less_than_width,
-                    (substring.lpad(width - 1, zero).lpad(width, plus)),
-                ),
+                (starts_with_minus & less_than_width, (substring.lpad(width, hyphen))),
+                (starts_with_plus & less_than_width, (substring.lpad(width, plus))),
                 (less_than_width, expr.lpad(width, zero)),
                 else_=expr,
             )
