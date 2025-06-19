@@ -269,14 +269,14 @@ class PandasLikeGroupBy(
         self, exprs: Iterable[PandasLikeExpr], new_names: list[str]
     ) -> PandasLikeDataFrame:
         warn_complex_group_by()
-        implementation = self.compliant._implementation
+        impl = self.compliant._implementation
         backend_version = self.compliant._backend_version
         func = self._apply_exprs(exprs)
-        if implementation.is_pandas() and backend_version >= (2, 2):
-            result = self._grouped.apply(func, include_groups=False)
+        apply = self._grouped.apply
+        if impl.is_pandas() and backend_version >= (2, 2):
+            return self._select_results(apply(func, include_groups=False), new_names)
         else:  # pragma: no cover
-            result = self._grouped.apply(func)
-        return self._select_results(result, new_names)
+            return self._select_results(apply(func), new_names)
 
     def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
