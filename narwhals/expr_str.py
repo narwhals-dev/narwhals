@@ -451,12 +451,6 @@ class ExprStringNamespace(Generic[ExprT]):
     def zfill(self, width: int) -> ExprT:
         """Transform string to zero-padded variant.
 
-        Warning:
-            Different backends handle strings that start with "+" and "-" signs differently:
-
-            - Pandas preserves both "+" and "-" signs, padding the rest of the string with zeros
-            - Polars only preserves the "-" sign, and prefixes "+" signs with zeros
-
         Arguments:
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.

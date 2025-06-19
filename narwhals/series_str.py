@@ -402,12 +402,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
     def zfill(self, width: int) -> SeriesT:
         r"""Pad strings with zeros on the left.
 
-        Warning:
-            Different backends handle strings that start with "+" and "-" signs differently:
-
-            - Pandas preserves both "+" and "-" signs, padding the rest of the string with zeros
-            - Polars only preserves the "-" sign, and prefixes "+" signs with zeros
-
         Arguments:
             width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
 
