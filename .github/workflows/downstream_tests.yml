@@ -309,8 +309,6 @@ jobs:
           git clone https://github.com/plotly/plotly.py --depth=1
           cd plotly.py
           git log
-      - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
       - name: install-deps
         run: |
           cd plotly.py
