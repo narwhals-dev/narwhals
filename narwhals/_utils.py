@@ -1215,7 +1215,9 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """
     counter = 0
     while True:
-        token = token_hex(n_bytes)
+        # Prepend `'a'` to ensure it always starts with a character
+        # https://github.com/narwhals-dev/narwhals/issues/2510
+        token = f"a{token_hex(n_bytes)[:-1]}"
         if token not in columns:
             return token
 
