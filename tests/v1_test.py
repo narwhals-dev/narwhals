@@ -359,3 +359,10 @@ def test_get_level() -> None:
         )
         == "interchange"
     )
+
+
+def test_regression_dependencies_import() -> None:
+    # See: https://github.com/narwhals-dev/narwhals/pull/2697
+    df = nw_v1.from_native(pd.DataFrame([1, 2, 3, 4]))
+    # Should not raise TypeError
+    assert nw_v1.dependencies.is_pandas_like_dataframe(df) is False
