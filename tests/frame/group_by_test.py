@@ -25,9 +25,8 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Mapping
 
-    from narwhals.typing import IntoExpr
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
@@ -569,186 +568,24 @@ def test_group_by_len_1_column(
     assert_equal_data(result, expected)
 
 
-@pytest.fixture
-def plotly_data() -> dict[str, Any]:
-    return {
-        "total": ["total", "total", "total", "total", "total", "total", "total", "total"],
-        "regions": [
-            "North",
-            "North",
-            "North",
-            "North",
-            "South",
-            "South",
-            "South",
-            "South",
-        ],
-        "sectors": [
-            "Tech",
-            "Tech",
-            "Finance",
-            "Finance",
-            "Tech",
-            "Tech",
-            "Finance",
-            "Finance",
-        ],
-        "vendors": ["A", "B", "C", "D", "E", "F", "G", "H"],
-        "vendors_path_copy": ["A", "B", "C", "D", "E", "F", "G", "H"],
-        "sectors_path_copy": [
-            "Tech",
-            "Tech",
-            "Finance",
-            "Finance",
-            "Tech",
-            "Tech",
-            "Finance",
-            "Finance",
-        ],
-        "regions_path_copy": [
-            "North",
-            "North",
-            "North",
-            "North",
-            "South",
-            "South",
-            "South",
-            "South",
-        ],
-        "total_path_copy": [
-            "total",
-            "total",
-            "total",
-            "total",
-            "total",
-            "total",
-            "total",
-            "total",
-        ],
-        "count": [1, 1, 1, 1, 1, 1, 1, 1],
-    }
+def test_group_by_sunburst(constructor_eager: ConstructorEager) -> None:
+    """Minimal repro for [`px.sunburst` failure].
 
-
-# ruff: noqa: N806
-def test_group_by_sunburst(
-    constructor_eager: ConstructorEager, plotly_data: dict[str, Any]
-) -> None:
-    """WIP repro for [`px.sunburst` failure].
-
-    - In the process on minimizing
-    - Currently triggers a failure for
+    Currently triggers a failure for:
       - `pandas[pyarrow]`
       - `modin[pyarrow]`
 
+    The issue is `nunique` preserving the `string[pyarrow]` type for the count
+
     [`px.sunburst` failure]: https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151972940
     """
-    COLOR = "vendors"
-    COUNT = "count"
-    LEVEL = "vendors_path_copy"
-    REGIONS = "regions"
-    TOTAL = "total"
-    SECTORS = "sectors"
-    N_UNIQUE = "_N_UNIQUE"
-    CONCAT_STR = "_CONCAT_STR"
-    COLS = REGIONS, COUNT, TOTAL, SECTORS, COLOR
-    PATH = LEVEL, "sectors_path_copy", "regions_path_copy", "total_path_copy"
-    agg_f: dict[str, nw.Expr] = {COUNT: nw.sum(COUNT)}
-    for name in (COLOR, REGIONS, TOTAL, SECTORS):
-        agg_f[name] = nw.col(name).max()
-        agg_f[f"{name}{N_UNIQUE}"] = nw.col(name).n_unique().alias(f"{name}{N_UNIQUE}")
-
-    frame = nw.from_native(constructor_eager(plotly_data)).lazy()
-    result = _group_by_hierarchy(
-        frame,
-        PATH,
-        agg_f,
-        n_unique_token=N_UNIQUE,
-        concat_str_token=CONCAT_STR,
-        cols=COLS,
-        color=COLOR,
+    data = {
+        "col_a": ["A", "B", None, "A", "A", "B", None],
+        "col_b": ["A", "A", "B", "B", None, None, None],
+    }
+    expected = {"col_a": [None, "A", "B"], "n_unique": [2, 3, 2]}
+    frame = nw.from_native(constructor_eager(data))
+    result = (
+        frame.group_by("col_a").agg(n_unique=nw.col("col_b").n_unique()).sort("col_a")
     )
-    unique_colors = result.get_column(COLOR).unique().to_list()
-    assert unique_colors != ["(?)"]
-    assert len(unique_colors) == 9
-
-
-def _concat_str_path(
-    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr
-) -> nw.Expr:
-    """`nw.concat_str()` using `"/"`."""
-    return nw.concat_str(exprs, *more_exprs, separator="/")
-
-
-def _post_agg(
-    frame: nw.LazyFrame[Any], discrete_aggs: Sequence[str], n_unique_token: str
-) -> nw.LazyFrame[Any]:
-    return frame.with_columns(
-        *[
-            (
-                nw.when(nw.col(f"{name}{n_unique_token}") == 1)
-                .then(nw.col(name))
-                .otherwise(nw.lit("(?)"))
-                .alias(name)
-            )
-            for name in discrete_aggs
-        ]
-    ).drop([f"{name}{n_unique_token}" for name in discrete_aggs])
-
-
-def _group_by_agg(
-    df: nw.LazyFrame[Any],
-    by: Sequence[str],
-    agg_f: dict[str, nw.Expr],
-    n_unique_token: str,
-) -> nw.LazyFrame[Any]:
-    discrete_aggs = ["vendors", "sectors", "total", "regions"]
-    return (
-        df.group_by(by, drop_null_keys=True)
-        .agg(**agg_f)
-        .pipe(_post_agg, discrete_aggs, n_unique_token)
-    )
-
-
-def _group_by_hierarchy(
-    df: nw.LazyFrame[Any],
-    path: Sequence[str],
-    agg_f: dict[str, nw.Expr],
-    n_unique_token: str,
-    concat_str_token: str,
-    cols: Sequence[str],
-    color: str,
-) -> nw.DataFrame[Any]:
-    all_trees: list[nw.LazyFrame[Any]] = []
-    lit_empty = nw.lit("")
-    col_concat_str = nw.col(concat_str_token)
-    sort_col_name = "sort_color_if_discrete_color"
-
-    col_parent = _concat_str_path(col_concat_str, "parent").alias("parent")
-    col_id = _concat_str_path(col_concat_str, "id").alias("id")
-
-    for i, level in enumerate(path):
-        dfg = _group_by_agg(df, path[i:], agg_f, n_unique_token)
-        # Path label massaging
-        col_level = nw.col(level).cast(nw.String())
-        df_tree = dfg.with_columns(
-            *cols, labels=col_level, parent=lit_empty, id=col_level
-        )
-        if i < len(path) - 1:
-            to_concat = [
-                nw.col(path[j]).cast(nw.String()) for j in range(len(path) - 1, i, -1)
-            ]
-            df_tree = (
-                df_tree.with_columns(_concat_str_path(to_concat).alias(concat_str_token))
-                .with_columns(col_parent, col_id)
-                .drop(concat_str_token)
-            )
-        # strip "/" if at the end of the string, equivalent to `.str.rstrip`
-        df_tree = df_tree.with_columns(
-            nw.col("parent").str.replace("/?$", "").str.replace("^/?", "")
-        )
-        all_trees.append(df_tree.select("labels", "parent", "id", *cols))
-    df_all_trees = nw.maybe_reset_index(nw.concat(all_trees).collect())
-    # we want to make sure than (?) is the first color of the sequence
-    return df_all_trees.with_columns(
-        nw.col(color).cast(nw.String()).alias(sort_col_name)
-    ).sort(by=sort_col_name, nulls_last=True)
+    assert_equal_data(result, expected)
