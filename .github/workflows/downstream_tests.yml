@@ -319,8 +319,9 @@ jobs:
       - name: install-narwhals-dev
         run: |
           cd plotly.py
-          uv remove narwhals
-          uv add ./..
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
         run: |
           cd plotly.py
