@@ -75,13 +75,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         starts_with_plus = pc.equal(first_char, plus)
 
         conditions = pc.make_struct(
-            pc.and_(
-                starts_with_hyphen, less_than_width
-            ),  # starts with hyphen and less than width
-            pc.and_(
-                starts_with_plus, less_than_width
-            ),  # starts with plus and less than width
-            less_than_width,  # less than width
+            pc.and_(starts_with_hyphen, less_than_width),
+            pc.and_(starts_with_plus, less_than_width),
+            less_than_width,
         )
 
         # Cases
