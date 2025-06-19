@@ -1,17 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
@@ -30,6 +20,8 @@ from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
+
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
     from typing_extensions import Self, TypeAlias
@@ -663,6 +655,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def skew(self) -> Self:
         return self._with_callable(self._F.skewness)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(self._F.kurtosis)
+
     def n_unique(self) -> Self:
         def _n_unique(expr: Column) -> Column:
             return self._F.count_distinct(expr) + self._F.max(
@@ -908,6 +903,14 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.exp(expr)
 
         return self._with_elementwise(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Column) -> Column:
+            return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
+                self._F.sqrt(expr)
+            )
+
+        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

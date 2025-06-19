@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -44,6 +35,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -394,6 +386,19 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
             return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
 
+    def kurtosis(self, *, _return_py_scalar: bool = True) -> float | None:
+        ser_not_null = self.native.drop_null()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+            m2 = pc.mean(pc.power(m, lit(2)))
+            m4 = pc.mean(pc.power(m, lit(4)))
+            k = pc.subtract(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+            return maybe_extract_py_scalar(k, _return_py_scalar)
+
     def count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(pc.count(self.native), _return_py_scalar)
 
@@ -644,7 +649,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             n = int(num_rows * fraction)
 
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 
@@ -1159,6 +1164,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def exp(self) -> Self:
         return self._with_native(pc.exp(self.native))
+
+    def sqrt(self) -> Self:
+        return self._with_native(pc.sqrt(self.native))
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

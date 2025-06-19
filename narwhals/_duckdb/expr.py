@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from duckdb import CoalesceOperator, FunctionExpression, StarExpression
 from duckdb.typing import DuckDBPyType
@@ -25,6 +25,8 @@ from narwhals._expression_parsing import ExprKind
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from duckdb import Expression
     from typing_extensions import Self
 
@@ -413,6 +415,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             )
 
         return self._with_callable(func)
+
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: FunctionExpression("kurtosis_pop", expr))
 
     def median(self) -> Self:
         return self._with_callable(lambda expr: FunctionExpression("median", expr))
@@ -877,6 +882,14 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return FunctionExpression("exp", expr)
 
         return self._with_elementwise(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(expr: Expression) -> Expression:
+            return when(expr < lit(0), lit(float("nan"))).otherwise(
+                FunctionExpression("sqrt", expr)
+            )
+
+        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:

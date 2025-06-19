@@ -1,17 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -658,8 +649,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return None
 
     def is_unique(self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(range(len(self)))
+        row_index = pa.array(np.arange(len(self)))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -727,7 +720,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask), validate_column_names=False)
 

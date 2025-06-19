@@ -42,12 +42,10 @@ def test_interchange_ibis_to_pandas(
     assert df.to_pandas().equals(df_raw)
 
 
-def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
+def test_interchange_duckdb_to_pandas() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    if PANDAS_VERSION < (1, 0, 0):
-        request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)
     rel = duckdb.sql("select * from df_raw")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)

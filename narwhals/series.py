@@ -1,17 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    overload,
-)
+from collections.abc import Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
 
 from narwhals._utils import (
     _validate_rolling_arguments,
@@ -601,6 +592,25 @@ class Series(Generic[IntoSeriesT]):
             A perfectly symmetric distribution has a skewness of 0.
         """
         return self._compliant_series.skew()
+
+    def kurtosis(self) -> float | None:
+        """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Kurtosis is the fourth central moment divided by the square of the variance.
+        The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
+
+        Returns:
+            The kurtosis (Fisher's definition) without bias correction of the column.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 1, 2, 10, 100])
+            >>> nw.from_native(s_native, series_only=True).kurtosis()
+            0.2106571340718002
+        """
+        return self._compliant_series.kurtosis()
 
     def count(self) -> int:
         """Returns the number of non-null elements in the Series.
@@ -2643,6 +2653,29 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.exp())
+
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([1, 4, 9], name="a")
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.sqrt()
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |0    1.0               |
+            |1    2.0               |
+            |2    3.0               |
+            |Name: a, dtype: float64|
+            └───────────────────────┘
+        """
+        return self._with_compliant(self._compliant_series.sqrt())
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:
