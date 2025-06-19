@@ -3,6 +3,7 @@ from __future__ import annotations
 import string
 from typing import TYPE_CHECKING
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
@@ -74,8 +75,12 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         starts_with_plus = pc.equal(first_char, plus)
 
         conditions = pc.make_struct(
-            pc.and_(starts_with_hyphen, less_than_width),  # hyphen and less than width
-            pc.and_(starts_with_plus, less_than_width),  # plus and less than width
+            pc.and_(
+                starts_with_hyphen, less_than_width
+            ),  # starts with hyphen and less than width
+            pc.and_(
+                starts_with_plus, less_than_width
+            ),  # starts with plus and less than width
             less_than_width,  # less than width
         )
 
@@ -84,8 +89,12 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
         result = pc.case_when(
             conditions,
-            binary_join(hyphen, padded_remaining_chars, ""),  # hyphen and less than width
-            binary_join(plus, padded_remaining_chars, ""),  # plus and less than width
+            binary_join(
+                pa.repeat(hyphen, len(native)), padded_remaining_chars, ""
+            ),  # starts with hyphen and less than width
+            binary_join(
+                pa.repeat(plus, len(native)), padded_remaining_chars, ""
+            ),  # starts with plus and less than width
             pc.utf8_lpad(native, width=width, padding="0"),  # less than width
             native,
         )
