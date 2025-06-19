@@ -687,23 +687,10 @@ class PolarsSeriesStringNamespace:
         self._compliant_series = series
 
     def zfill(self, width: int) -> PolarsSeries:
-        native_series = self._compliant_series.native
-        native_result = native_series.str.zfill(width)
-
-        if self._compliant_series._backend_version <= (1, 30, 0):
-            starts_with_plus = native_series.str.starts_with("+")
-            length = native_series.str.len_chars()
-            less_than_width = length < width
-
-            other = (
-                native_series.str.slice(1, length)
-                .str.zfill(width - 1)
-                .str.pad_start(width, "+")
-            )
-            native_result = native_result.zip_with(
-                mask=~(starts_with_plus & less_than_width), other=other
-            )
-        return self._compliant_series._with_native(native_result)
+        series = self._compliant_series
+        name = series.name
+        ns = series.__narwhals_namespace__()
+        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
