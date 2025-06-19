@@ -314,6 +314,7 @@ jobs:
       - name: install-deps
         run: |
           cd plotly.py
+          uv venv -p ${{ matrix.python-version }}
           uv sync --extra dev_optional
       - name: install-narwhals-dev
         run: |
