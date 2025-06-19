@@ -161,6 +161,9 @@ def test_truediv_same_dims(
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 @pytest.mark.slow
 def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
+    if any(x in str(constructor_eager) for x in ["modin", "cudf"]):
+        # modin & cudf are too slow here
+        pytest.skip()
     assume(right != 0)
     expected = {"a": [left // right]}
     result = nw.from_native(constructor_eager({"a": [left]}), eager_only=True).select(
@@ -173,11 +176,9 @@ def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int)
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 def test_mod(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
-    if any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow", "cudf"]
-    ):
+    if any(x in str(constructor_eager) for x in ["pandas_pyarrow", "modin", "cudf"]):
         # pandas[pyarrow] does not implement mod
-        # modin[pyarrow] & cudf are frustratingly slow here
+        # modin & cudf are too slow here
         pytest.skip()
     assume(right != 0)
     expected = {"a": [left % right]}
