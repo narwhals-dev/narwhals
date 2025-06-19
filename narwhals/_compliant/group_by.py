@@ -5,13 +5,11 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
-    CompliantDataFrameT,
     CompliantDataFrameT_co,
     CompliantExprT_contra,
-    CompliantFrameT,
     CompliantFrameT_co,
     CompliantLazyFrameAny,
-    CompliantLazyFrameT,
+    CompliantLazyFrameT_co,
     DepthTrackingExprAny,
     DepthTrackingExprT_contra,
     EagerExprT_contra,
@@ -75,14 +73,14 @@ class DataFrameGroupBy(
 
 
 class ParseKeysGroupBy(
-    CompliantGroupBy[CompliantFrameT, CompliantExprT_contra],
-    Protocol38[CompliantFrameT, CompliantExprT_contra],
+    CompliantGroupBy[CompliantFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantFrameT_co, CompliantExprT_contra],
 ):
     def _parse_keys(
         self,
-        compliant_frame: CompliantFrameT,
+        compliant_frame: _SameFrameT,
         keys: Sequence[CompliantExprT_contra] | Sequence[str],
-    ) -> tuple[CompliantFrameT, list[str], list[str]]:
+    ) -> tuple[_SameFrameT, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
             return compliant_frame, keys_str, keys_str.copy()
@@ -132,8 +130,8 @@ class ParseKeysGroupBy(
 
 
 class DepthTrackingGroupBy(
-    ParseKeysGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
-    Protocol38[CompliantFrameT, DepthTrackingExprT_contra, NativeAggregationT_co],
+    ParseKeysGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
+    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -186,16 +184,18 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
-    DataFrameGroupBy[CompliantDataFrameT, EagerExprT_contra],
-    Protocol38[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
+    DepthTrackingGroupBy[
+        CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co
+    ],
+    DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
+    Protocol38[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
 ): ...
 
 
 class LazyGroupBy(
-    ParseKeysGroupBy[CompliantLazyFrameT, LazyExprT_contra],
-    CompliantGroupBy[CompliantLazyFrameT, LazyExprT_contra],
-    Protocol38[CompliantLazyFrameT, LazyExprT_contra, NativeExprT_co],
+    ParseKeysGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
+    CompliantGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
+    Protocol38[CompliantLazyFrameT_co, LazyExprT_contra, NativeExprT_co],
 ):
     _keys: list[str]
     _output_key_names: list[str]
