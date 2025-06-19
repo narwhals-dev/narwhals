@@ -217,6 +217,14 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     return pl.Unknown()  # pragma: no cover
 
 
+def _is_polars_exception(exception: Exception, backend_version: tuple[int, ...]) -> bool:
+    if backend_version >= (1,):
+        # Old versions of Polars didn't have PolarsError.
+        return isinstance(exception, pl.exceptions.PolarsError)
+    # Last attempt, for old Polars versions.
+    return "polars.exceptions" in str(type(exception))  # pragma: no cover
+
+
 def catch_polars_exception(
     exception: Exception, backend_version: tuple[int, ...]
 ) -> NarwhalsError | Exception:
@@ -230,13 +238,7 @@ def catch_polars_exception(
         return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
-    if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
-        # Old versions of Polars didn't have PolarsError.
-        return NarwhalsError(str(exception))  # pragma: no cover
-    elif backend_version < (1,) and "polars.exceptions" in str(
-        type(exception)
-    ):  # pragma: no cover
-        # Last attempt, for old Polars versions.
+    if _is_polars_exception(exception, backend_version):
         return NarwhalsError(str(exception))
     # Just return exception as-is.
     return exception
