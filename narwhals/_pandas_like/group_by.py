@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import select_columns_by_name
+from narwhals._pandas_like.utils import (
+    is_pyarrow_dtype_backend,
+    native_to_narwhals_dtype,
+    select_columns_by_name,
+)
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import find_stacklevel, generate_temporary_column_name
 
@@ -74,9 +78,7 @@ def _agg_func(
     name: NativeAggregation, impl: Implementation, /, **kwds: Unpack[ScalarKwargs]
 ) -> _AggFunc:  # pragma: no cover
     if name == "nunique":
-        if impl.is_modin():
-            return _n_unique
-        return methodcaller(name, dropna=False)
+        return _n_unique
     if not kwds or kwds.get("ddof") == 1:
         return name
     if impl.is_modin():
@@ -138,6 +140,12 @@ class PandasLikeGroupBy(
 
     _remap_non_str_columns: dict[NonStrHashable, str]
 
+    _casts: list[PandasLikeExpr]
+    """Post-aggregation dtype cast expressions.
+
+    See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2157251589
+    """
+
     def __init__(
         self,
         df: PandasLikeDataFrame,
@@ -156,6 +164,7 @@ class PandasLikeGroupBy(
         self._compliant_frame = frame.with_columns(
             *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
         )
+        self._casts = []
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
         if set(self.compliant.native.index.names).intersection(self.compliant.columns):
@@ -214,10 +223,11 @@ class PandasLikeGroupBy(
     def _iter_named_aggs(
         self, expr: PandasLikeExpr, exclude: Sequence[str]
     ) -> Iterator[tuple[str, _NamedAgg]]:
+        ns = self.compliant.__narwhals_namespace__()
         output_names, aliases = evaluate_output_names_and_aliases(
             expr, self.compliant, exclude
         )
-        aliases = self._remap_aliases(aliases)
+        remap_aliases = self._remap_aliases(aliases)
         leaf_name = self._leaf_name(expr)
         function_name = self._remap_expr_name(leaf_name)
         aggfunc = _agg_func(function_name, expr._implementation, **expr._scalar_kwargs)
@@ -226,10 +236,16 @@ class PandasLikeGroupBy(
             first_col = next(
                 iter(set(self.compliant.columns).difference(exclude)), self._keys[0]
             )
-            yield aliases[0], (first_col, aggfunc)
-        else:
-            for output_name, alias in zip(output_names, aliases):
-                yield alias, (output_name, aggfunc)
+            yield remap_aliases[0], (first_col, aggfunc)
+            return
+
+        if leaf_name == "n_unique" and has_pyarrow_string_dtype(
+            self.compliant, output_names
+        ):
+            self._casts.append(ns.col(*aliases).cast(ns._version.dtypes.Int64()))
+
+        for output_name, alias in zip(output_names, remap_aliases):
+            yield alias, (output_name, aggfunc)
 
     @property
     def _final_renamer(self) -> dict[str, NonStrHashable]:
@@ -252,7 +268,11 @@ class PandasLikeGroupBy(
         native = select_columns_by_name(
             df, new_names, compliant._backend_version, compliant._implementation
         )
-        return compliant._with_native(native).rename(self._final_renamer)
+        return (
+            compliant._with_native(native)
+            .rename(self._final_renamer)
+            .with_columns(*self._casts)
+        )
 
     def _agg_complex(
         self, exprs: Iterable[PandasLikeExpr], new_names: list[str]
@@ -293,6 +313,28 @@ class PandasLikeGroupBy(
             with_native = self.compliant._with_native
             for key, group in self._grouped:
                 yield (key, with_native(group).simple_select(*self._original_columns))
+
+
+def has_pyarrow_string_dtype(
+    frame: PandasLikeDataFrame, subset: Sequence[str], /
+) -> bool:
+    """Return True if any column in `subset` has the dtype `string[pyarrow]`."""
+    return any(_has_pyarrow_string_dtype(frame, subset))
+
+
+def _has_pyarrow_string_dtype(
+    frame: PandasLikeDataFrame, subset: Sequence[str], /
+) -> Iterator[bool]:
+    version = frame._version
+    impl = frame._implementation
+    dtypes = version.dtypes
+    for col in subset:
+        native = frame.native.dtypes[col]
+        if str(native) != "object":
+            dtype = native_to_narwhals_dtype(native, version, impl)
+            yield isinstance(dtype, dtypes.String) and is_pyarrow_dtype_backend(
+                native, impl
+            )
 
 
 def empty_results_error() -> ValueError:
