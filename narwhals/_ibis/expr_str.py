@@ -105,9 +105,7 @@ class IbisExprStringNamespace:
         def func(expr: ir.StringColumn) -> ir.Value:
             length = expr.length()
             less_than_width = expr.length() < lit(width)
-            hyphen = "-"
-            plus = "+"
-            zero = "0"
+            zero, hyphen, plus = "0", "-", "+"
             starts_with_minus = expr.startswith(hyphen)
             starts_with_plus = expr.startswith(plus)
             one = cast("ir.IntegerScalar", lit(1))

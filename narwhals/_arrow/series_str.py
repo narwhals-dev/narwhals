@@ -3,7 +3,6 @@ from __future__ import annotations
 import string
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
@@ -66,25 +65,28 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
     def zfill(self, width: int) -> ArrowSeries:
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
+        hyphen, plus = lit("-"), lit("+")
+        first_char, remaining_chars = self.slice(0, 1).native, self.slice(1, None).native
+
+        # Conditions
         less_than_width = pc.less(pc.utf8_length(native), lit(width))
-        starts_with_minus = pc.equal(self.slice(0, 1).native, lit("-"))
-        starts_with_plus = pc.equal(self.slice(0, 1).native, lit("+"))
+        starts_with_hyphen = pc.equal(first_char, hyphen)
+        starts_with_plus = pc.equal(first_char, plus)
 
-        condition_1 = pc.and_(starts_with_minus, less_than_width)
-        condition_1_plus = pc.and_(starts_with_plus, less_than_width)
-        condition_2 = less_than_width
-        statement_1 = pc.utf8_lpad(self.slice(1, None).native, width - 1, padding="0")
-        statement_1_plus = pc.utf8_lpad(
-            self.slice(1, None).native, width - 1, padding="0"
+        conditions = pc.make_struct(
+            pc.and_(starts_with_hyphen, less_than_width),  # hyphen and less than width
+            pc.and_(starts_with_plus, less_than_width),  # plus and less than width
+            less_than_width,  # less than width
         )
-        prefix = pa.repeat(lit("-"), len(native))
-        prefix_plus = pa.repeat(lit("+"), len(native))
-        statement_1 = binary_join(prefix, statement_1, "")
-        statement_1_plus = binary_join(prefix_plus, statement_1_plus, "")
-        statement_2 = pc.utf8_lpad(native, width=width, padding="0")
 
-        conditions = pc.make_struct(condition_1, condition_1_plus, condition_2)
+        # Cases
+        padded_remaining_chars = pc.utf8_lpad(remaining_chars, width - 1, padding="0")
+
         result = pc.case_when(
-            conditions, statement_1, statement_1_plus, statement_2, native
+            conditions,
+            binary_join(hyphen, padded_remaining_chars, ""),  # hyphen and less than width
+            binary_join(plus, padded_remaining_chars, ""),  # plus and less than width
+            pc.utf8_lpad(native, width=width, padding="0"),  # less than width
+            native,
         )
         return self.with_native(result)

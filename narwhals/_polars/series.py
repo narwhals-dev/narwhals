@@ -694,16 +694,15 @@ class PolarsSeriesStringNamespace:
             starts_with_plus = native_series.str.starts_with("+")
             length = native_series.str.len_chars()
             less_than_width = length < width
-            native_result = (
-                pl.when(starts_with_plus & less_than_width)
-                .then(
-                    native_series.str.slice(1, length)
-                    .str.zfill(width - 1)
-                    .str.pad_start(width, "+")
-                )
-                .otherwise(native_result)
-            )
 
+            other = (
+                native_series.str.slice(1, length)
+                .str.zfill(width - 1)
+                .str.pad_start(width, "+")
+            )
+            native_result = native_result.zip_with(
+                mask=~(starts_with_plus & less_than_width), other=other
+            )
         return self._compliant_series._with_native(native_result)
 
     def __getattr__(self, attr: str) -> Any:

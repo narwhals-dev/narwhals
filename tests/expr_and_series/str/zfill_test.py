@@ -33,5 +33,5 @@ def test_str_zfill_series(constructor_eager: ConstructorEager) -> None:
     skip_pandas_pyarrow(constructor_eager)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.select(df["a"].str.zfill(3))
-    assert_equal_data(result, expected)
+    result = df["a"].str.zfill(3)
+    assert_equal_data({"a": result}, expected)
