@@ -225,6 +225,11 @@ def _is_polars_exception(exception: Exception, backend_version: tuple[int, ...])
     return "polars.exceptions" in str(type(exception))  # pragma: no cover
 
 
+def _is_cudf_exception(exception: Exception) -> bool:
+    # These exceptions are raised when running polars on GPUs via cuDF
+    return str(exception).startswith("CUDF failure")
+
+
 def catch_polars_exception(
     exception: Exception, backend_version: tuple[int, ...]
 ) -> NarwhalsError | Exception:
@@ -238,7 +243,7 @@ def catch_polars_exception(
         return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
-    if _is_polars_exception(exception, backend_version):
+    if _is_polars_exception(exception, backend_version) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))
     # Just return exception as-is.
     return exception
