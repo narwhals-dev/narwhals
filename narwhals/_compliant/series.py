@@ -299,9 +299,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         ...
 
     def _from_scalar(self, value: Any) -> Self:
-        ser = self.from_iterable([value], name=self.name, context=self)
-        ser._broadcast = True
-        return ser
+        return self.from_iterable([value], name=self.name, context=self)
 
     def _with_native(
         self, series: NativeSeriesT, *, preserve_broadcast: bool = False
