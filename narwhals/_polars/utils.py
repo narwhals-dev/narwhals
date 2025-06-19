@@ -222,7 +222,7 @@ def _is_polars_exception(exception: Exception, backend_version: tuple[int, ...])
         # Old versions of Polars didn't have PolarsError.
         return isinstance(exception, pl.exceptions.PolarsError)
     # Last attempt, for old Polars versions.
-    return "polars.exceptions" in str(type(exception))
+    return "polars.exceptions" in str(type(exception))  # pragma: no cover
 
 
 def _is_cudf_exception(exception: Exception) -> bool:
