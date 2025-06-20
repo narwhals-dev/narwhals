@@ -20,6 +20,7 @@ from narwhals.exceptions import (
 )
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -610,6 +611,12 @@ def test_group_by_no_preserve_dtype(
     [`px.sunburst` failure]: https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151972940
     [aggregation that requires a function]: https://github.com/pandas-dev/pandas/issues/57317
     """
+    if (
+        "polars" in str(constructor_eager)
+        and isinstance(low, Decimal)
+        and POLARS_VERSION < (1, 0, 0)
+    ):
+        pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
         "col_b": [low, low, high, high, None, None, None],
