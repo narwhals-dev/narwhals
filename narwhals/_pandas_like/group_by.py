@@ -139,7 +139,6 @@ class AggExpr:
     expr: PandasLikeExpr
     output_names: tuple[str, ...]
     aliases: tuple[str, ...]
-    _native_func: _AggFunc
 
     def __init__(self, expr: PandasLikeExpr) -> None:
         self.expr = expr
@@ -205,14 +204,11 @@ class AggExpr:
 
     @property
     def native_func(self) -> _AggFunc:
-        if hasattr(self, "_native_func"):
-            return self._native_func
-        self._native_func = _agg_func(
+        return _agg_func(
             PandasLikeGroupBy._remap_expr_name(self.leaf_name),
             self.implementation,
             **self.kwargs,
         )
-        return self._native_func
 
 
 class PandasLikeGroupBy(
