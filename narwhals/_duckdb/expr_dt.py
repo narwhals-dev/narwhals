@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from duckdb import FunctionExpression, SQLExpression
 
-from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
+from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit, when
 from narwhals._duration import parse_interval_string
 from narwhals._utils import not_implemented
 
@@ -119,8 +119,21 @@ class DuckDBExprDateTimeNamespace:
         tz_str = "(select value from duckdb_settings() where name = 'TimeZone')"
 
         def _truncate(expr: Expression) -> Expression:
-            return FunctionExpression(
-                "time_bucket", SQLExpression(interval_str), expr, SQLExpression(tz_str)
+            is_timestamptz = FunctionExpression("typeof", expr).cast("varchar") == lit(
+                "TIMESTAMP WITH TIME ZONE"
+            )
+            return when(
+                is_timestamptz,
+                FunctionExpression(
+                    "time_bucket",
+                    SQLExpression(interval_str),
+                    expr,
+                    SQLExpression(tz_str),
+                ).cast("TIMESTAMP WITH TIME ZONE"),
+            ).otherwise(
+                FunctionExpression("time_bucket", SQLExpression(interval_str), expr).cast(
+                    "timestamp"
+                )
             )
 
         return self._compliant_expr._with_callable(_truncate)
