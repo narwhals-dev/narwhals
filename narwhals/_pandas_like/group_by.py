@@ -401,11 +401,14 @@ def _has_non_int_nullable_dtype(
             )
 
 
+PANDAS_FLOAT_FIXED = (1, 3, 5)
+"""Keep increasing until random versions doesn't produce `FAILED tests/frame/group_by_test.py::test_group_by_no_preserve_dtype[pandas-float]`"""
+
+
 def _is_old_pandas_float(
     dtype: DType, impl: Implementation, backend_version: tuple[int, ...]
 ) -> bool:
-    """https://pandas.pydata.org/docs/whatsnew/v1.2.0.html."""
-    return dtype.is_float() and impl.is_pandas() and backend_version < (1, 2, 0)
+    return dtype.is_float() and impl.is_pandas() and backend_version < PANDAS_FLOAT_FIXED
 
 
 def empty_results_error() -> ValueError:
