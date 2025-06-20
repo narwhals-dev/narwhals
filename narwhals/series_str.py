@@ -398,3 +398,28 @@ class SeriesStringNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_datetime(format=format)
         )
+
+    def zfill(self, width: int) -> SeriesT:
+        r"""Pad strings with zeros on the left.
+
+        Arguments:
+            width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
+
+        Returns:
+            A new Series with strings padded with zeros on the left.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series(["+1", "-23", "456", "123456"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.zfill(5).to_native()
+            0     +0001
+            1     -0023
+            2     00456
+            3    123456
+            dtype: object
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.zfill(width)
+        )

@@ -113,3 +113,30 @@ class SparkLikeExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
+
+    def zfill(self, width: int) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self._compliant_expr._F  # noqa: N806
+
+            length = F.length(expr)
+            less_than_width = length < width
+            hyphen, plus = F.lit("-"), F.lit("+")
+            starts_with_minus = F.startswith(expr, hyphen)
+            starts_with_plus = F.startswith(expr, plus)
+            sub_length = length - F.lit(1)
+            # NOTE: `len` annotated as `int`, but `Column.substr` accepts `int | Column`
+            substring = F.substring(expr, 2, sub_length)  # pyright: ignore[reportArgumentType]
+            padded_substring = F.lpad(substring, width - 1, "0")
+            return (
+                F.when(
+                    starts_with_minus & less_than_width,
+                    F.concat(hyphen, padded_substring),
+                )
+                .when(
+                    starts_with_plus & less_than_width, F.concat(plus, padded_substring)
+                )
+                .when(less_than_width, F.lpad(expr, width, "0"))
+                .otherwise(expr)
+            )
+
+        return self._compliant_expr._with_callable(func)
