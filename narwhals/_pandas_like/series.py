@@ -358,7 +358,16 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def arg_true(self) -> PandasLikeSeries:
         ser = self.native
-        result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
+        size = len(ser)
+        if self._implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            data = cp.arange(size)
+        else:
+            import numpy as np  # ignore-banned-import
+
+            data = np.arange(size)
+        result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
     def arg_min(self) -> int:
