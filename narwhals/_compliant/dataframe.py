@@ -316,7 +316,8 @@ class CompliantLazyFrame(
     def explode(self, columns: Sequence[str]) -> Self: ...
     def filter(self, predicate: CompliantExprT_contra | Incomplete) -> Self: ...
     @deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
+        "`LazyFrame.gather_every` is deprecated and will be removed in a future version.",
+        category=None,
     )
     def gather_every(self, n: int, offset: int) -> Self: ...
     def group_by(
@@ -351,7 +352,10 @@ class CompliantLazyFrame(
     def sort(
         self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
     ) -> Self: ...
-    @deprecated("`LazyFrame.tail` is deprecated and will be removed in a future version.")
+    @deprecated(
+        "`LazyFrame.tail` is deprecated and will be removed in a future version.",
+        category=None,
+    )
     def tail(self, n: int) -> Self: ...
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy

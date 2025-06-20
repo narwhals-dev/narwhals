@@ -1797,7 +1797,7 @@ class not_implemented:  # noqa: N801
         [descriptor]: https://docs.python.org/3/howto/descriptor.html
         """
         obj = cls()
-        return deprecated(message)(obj)
+        return deprecated(message, category=None)(obj)
 
 
 def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
