@@ -219,6 +219,35 @@ class PandasLikeSeries(EagerSeries[Any]):
         native = implementation.to_native_namespace().Series(arr, name="")
         return cls.from_native(native, context=context)
 
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        Series = series[0].__native_namespace__().Series  # noqa: N806
+        lengths = [len(s) for s in series]
+        max_length = max(lengths)
+        idx = series[lengths.index(max_length)].native.index
+        reindexed = []
+        for s in series:
+            if s._broadcast:
+                native = Series(
+                    np.repeat(s.native.iloc[0], max_length),
+                    index=idx,
+                    name=s.name,
+                    dtype=s.native.dtype,
+                )
+                compliant = s._with_native(native)
+            elif s.native.index is not idx:
+                native = set_index(
+                    s.native,
+                    idx,
+                    implementation=s._implementation,
+                    backend_version=s._backend_version,
+                )
+                compliant = s._with_native(native)
+            else:
+                compliant = s
+            reindexed.append(compliant)
+        return reindexed
+
     @property
     def name(self) -> str:
         return self._name

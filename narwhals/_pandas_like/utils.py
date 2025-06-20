@@ -501,48 +501,6 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     raise AssertionError(msg)
 
 
-def align_series_full_broadcast(*series: PandasLikeSeries) -> list[PandasLikeSeries]:
-    # Ensure all of `series` have the same length and index. Scalars get broadcasted to
-    # the full length of the longest Series. This is useful when you need to construct a
-    # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
-    # such as `nw.col('a') - nw.col('a').mean()`, because then it's more efficient to extract
-    # the right-hand-side's single element as a scalar.
-    native_namespace = series[0].__native_namespace__()
-
-    lengths = [len(s) for s in series]
-    max_length = max(lengths)
-
-    idx = series[lengths.index(max_length)].native.index
-    reindexed = []
-    for s in series:
-        if s._broadcast:
-            reindexed.append(
-                s._with_native(
-                    native_namespace.Series(
-                        [s.native.iloc[0]] * max_length,
-                        index=idx,
-                        name=s.name,
-                        dtype=s.native.dtype,
-                    )
-                )
-            )
-
-        elif s.native.index is not idx:
-            reindexed.append(
-                s._with_native(
-                    set_index(
-                        s.native,
-                        idx,
-                        implementation=s._implementation,
-                        backend_version=s._backend_version,
-                    )
-                )
-            )
-        else:
-            reindexed.append(s)
-    return reindexed
-
-
 def int_dtype_mapper(dtype: Any) -> str:
     if "pyarrow" in str(dtype):
         return "Int64[pyarrow]"
