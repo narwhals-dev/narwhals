@@ -14,13 +14,16 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
         (0, 0, None),
         (0.0, 0.0, None),
         (2, 0, float("inf")),
-        (2.0, 0.0, float("inf"))
+        (2.0, 0.0, float("inf")),
     ],
 )
 def test_series_truediv_by_zero(
-    left: float|int, right: float|int, expected: float | None, constructor_eager: ConstructorEager  # noqa: PYI041
+    left: float,
+    right: float,
+    expected: float | None,
+    constructor_eager: ConstructorEager,
 ) -> None:
-    data: dict[str, list[int|float]] = {"a": [left], "b": [right]}
+    data: dict[str, list[int | float]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     truediv_result = df["a"] / df["b"]
     assert_equal_data({"a": truediv_result}, {"a": [expected]})
@@ -64,13 +67,16 @@ def test_series_floordiv_int_by_zero(
         (0, 0, None),
         (0.0, 0.0, None),
         (2, 0, float("inf")),
-        (2.0, 0.0, float("inf"))
+        (2.0, 0.0, float("inf")),
     ],
 )
 def test_truediv_by_zero(
-    left: float|int, right: float|int, expected: float | None, constructor: Constructor  # noqa: PYI041
+    left: float,
+    right: float,
+    expected: float | None,
+    constructor: Constructor,
 ) -> None:
-    data: dict[str, list[int|float]] = {"a": [left]}
+    data: dict[str, list[int | float]] = {"a": [left]}
     df = nw.from_native(constructor(data))
     truediv_result = df.select(nw.col("a") / right)
     assert_equal_data(truediv_result, {"a": [expected]})
@@ -113,4 +119,3 @@ def test_floordiv_int_by_zero(
     else:
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [expected]})
-

@@ -156,6 +156,7 @@ def test_truediv_same_dims(
     result = s_left.__rtruediv__(s_right)
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
+
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
