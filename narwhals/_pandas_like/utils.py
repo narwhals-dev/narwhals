@@ -342,6 +342,11 @@ def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool
     return get_dtype_backend(dtype, implementation) == "pyarrow"
 
 
+@functools.lru_cache(maxsize=16)
+def is_nullable_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
+    return get_dtype_backend(dtype, implementation) is not None
+
+
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     dtype: IntoDType,
     dtype_backend: DTypeBackend,

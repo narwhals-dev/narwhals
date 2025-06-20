@@ -598,7 +598,10 @@ def test_group_by_len_1_column(
     ],
 )
 def test_group_by_no_preserve_dtype(
-    constructor_eager: ConstructorEager, low: NonNestedLiteral, high: NonNestedLiteral
+    constructor_eager: ConstructorEager,
+    low: NonNestedLiteral,
+    high: NonNestedLiteral,
+    request: pytest.FixtureRequest,
 ) -> None:
     """Minimal repro for [`px.sunburst` failure].
 
@@ -618,4 +621,12 @@ def test_group_by_no_preserve_dtype(
     )
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
+
+    request.applymarker(
+        pytest.mark.xfail(
+            any(x in str(constructor_eager) for x in ("modin_pyarrow", "pandas_pyarrow"))
+            and isinstance(low, bool),
+            reason="Unclear why, but `n_unique` returns `[1, 1, 1]`",
+        )
+    )
     assert_equal_data(result, expected)

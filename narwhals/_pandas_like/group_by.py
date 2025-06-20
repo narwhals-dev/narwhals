@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import is_pyarrow_dtype_backend, native_to_narwhals_dtype
+from narwhals._pandas_like.utils import (
+    is_nullable_dtype_backend,
+    native_to_narwhals_dtype,
+)
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import find_stacklevel, generate_temporary_column_name
 
@@ -233,7 +236,7 @@ class PandasLikeGroupBy(
             yield remap_aliases[0], (first_col, aggfunc)
             return
 
-        if leaf_name == "n_unique" and has_pyarrow_string_dtype(
+        if leaf_name == "n_unique" and has_non_int_nullable_dtype(
             self.compliant, output_names
         ):
             self._casts.append(ns.col(*aliases).cast(ns._version.dtypes.Int64()))
@@ -306,26 +309,23 @@ class PandasLikeGroupBy(
                 yield (key, with_native(group).simple_select(*self._original_columns))
 
 
-def has_pyarrow_string_dtype(
+def has_non_int_nullable_dtype(
     frame: PandasLikeDataFrame, subset: Sequence[str], /
 ) -> bool:
-    """Return True if any column in `subset` has the dtype `string[pyarrow]`."""
-    return any(_has_pyarrow_string_dtype(frame, subset))
+    """Return True if any column in `subset` may get incorrectly coerced after aggregation."""
+    return any(_has_non_int_nullable_dtype(frame, subset))
 
 
-def _has_pyarrow_string_dtype(
+def _has_non_int_nullable_dtype(
     frame: PandasLikeDataFrame, subset: Sequence[str], /
 ) -> Iterator[bool]:
     version = frame._version
     impl = frame._implementation
-    dtypes = version.dtypes
     for col in subset:
         native = frame.native.dtypes[col]
         if str(native) != "object":
             dtype = native_to_narwhals_dtype(native, version, impl)
-            yield isinstance(dtype, dtypes.String) and is_pyarrow_dtype_backend(
-                native, impl
-            )
+            yield not (dtype.is_integer()) and is_nullable_dtype_backend(native, impl)
 
 
 def empty_results_error() -> ValueError:
