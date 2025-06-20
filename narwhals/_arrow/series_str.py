@@ -3,12 +3,14 @@ from __future__ import annotations
 import string
 from typing import TYPE_CHECKING
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
+    from narwhals._arrow.typing import Incomplete
 
 
 class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
@@ -60,3 +62,36 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
     def to_lowercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_lower(self.native))
+
+    def zfill(self, width: int) -> ArrowSeries:
+        binary_join: Incomplete = pc.binary_join_element_wise
+        native = self.native
+        hyphen, plus = lit("-"), lit("+")
+        first_char, remaining_chars = self.slice(0, 1).native, self.slice(1, None).native
+
+        # Conditions
+        less_than_width = pc.less(pc.utf8_length(native), lit(width))
+        starts_with_hyphen = pc.equal(first_char, hyphen)
+        starts_with_plus = pc.equal(first_char, plus)
+
+        conditions = pc.make_struct(
+            pc.and_(starts_with_hyphen, less_than_width),
+            pc.and_(starts_with_plus, less_than_width),
+            less_than_width,
+        )
+
+        # Cases
+        padded_remaining_chars = pc.utf8_lpad(remaining_chars, width - 1, padding="0")
+
+        result = pc.case_when(
+            conditions,
+            binary_join(
+                pa.repeat(hyphen, len(native)), padded_remaining_chars, ""
+            ),  # starts with hyphen and less than width
+            binary_join(
+                pa.repeat(plus, len(native)), padded_remaining_chars, ""
+            ),  # starts with plus and less than width
+            pc.utf8_lpad(native, width=width, padding="0"),  # less than width
+            native,
+        )
+        return self.with_native(result)
