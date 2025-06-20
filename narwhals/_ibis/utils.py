@@ -111,10 +111,10 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
         return dtypes.String()
     if ibis_dtype.is_date():
         return dtypes.Date()
-    if ibis_dtype.is_timestamp():
+    if is_timestamp(ibis_dtype):
         return dtypes.Datetime(
             time_unit=ibis_dtype.unit.value, time_zone=ibis_dtype.timezone
-        )  # pyright: ignore[reportAttributeAccessIssue]
+        )
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
@@ -143,6 +143,10 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     if ibis_dtype.is_binary():
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
+
+
+def is_timestamp(obj: IbisDataType) -> TypeIs[ibis_dtypes.Timestamp]:
+    return obj.is_timestamp()
 
 
 def is_interval(obj: IbisDataType) -> TypeIs[ibis_dtypes.Interval]:
