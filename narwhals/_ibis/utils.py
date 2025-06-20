@@ -112,7 +112,9 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     if ibis_dtype.is_date():
         return dtypes.Date()
     if ibis_dtype.is_timestamp():
-        return dtypes.Datetime()
+        return dtypes.Datetime(
+            time_unit=ibis_dtype.unit.value, time_zone=ibis_dtype.timezone
+        )  # pyright: ignore[reportAttributeAccessIssue]
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
@@ -200,7 +202,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return ibis_dtypes.Timestamp()
+        return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
     if isinstance_or_issubclass(dtype, dtypes.Date):
