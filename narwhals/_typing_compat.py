@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 #   - Where only the <alternative> and <Extended description> sections are optional.
 def _deprecated_compat(
     message: str, /, *, category: type[DeprecationWarning] | None = DeprecationWarning
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:  # pragma: no cover
     def decorate(func: Callable[P, R], /) -> Callable[P, R]:
         if category is None:
             func.__deprecated__ = message  # type: ignore[attr-defined]
