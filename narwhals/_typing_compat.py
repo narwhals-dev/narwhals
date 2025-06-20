@@ -51,10 +51,10 @@ def _deprecated_compat(
         cat = category
         import functools
 
-        from narwhals._utils import issue_deprecation_warning
-
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            from narwhals._utils import issue_deprecation_warning
+
             issue_deprecation_warning(message, _version="???", category=cat)
             return func(*args, **kwds)
 
