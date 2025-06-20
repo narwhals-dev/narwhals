@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
 import os
 import re
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -26,6 +28,8 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from narwhals.typing import NonNestedLiteral
 
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
@@ -568,24 +572,50 @@ def test_group_by_len_1_column(
     assert_equal_data(result, expected)
 
 
-def test_group_by_sunburst(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("low", "high"),
+    [
+        ("A", "B"),
+        (1.5, 5.2),
+        (dt.datetime(2000, 1, 1), dt.datetime(2002, 1, 1)),
+        (dt.date(2000, 1, 1), dt.date(2002, 1, 1)),
+        (dt.time(5, 0, 0), dt.time(14, 0, 0)),
+        (dt.timedelta(32), dt.timedelta(800)),
+        (False, True),
+        (b"a", b"z"),
+        (Decimal("43.954"), Decimal("264.124")),
+    ],
+    ids=[
+        "str",
+        "float",
+        "datetime",
+        "date",
+        "time",
+        "timedelta",
+        "bool",
+        "bytes",
+        "Decimal",
+    ],
+)
+def test_group_by_no_preserve_dtype(
+    constructor_eager: ConstructorEager, low: NonNestedLiteral, high: NonNestedLiteral
+) -> None:
     """Minimal repro for [`px.sunburst` failure].
 
-    Currently triggers a failure for:
-      - `pandas[pyarrow]`
-      - `modin[pyarrow]`
-
-    The issue is `nunique` preserving the `string[pyarrow]` type for the count
+    The issue appeared for `n_unique`, but applies for any [aggregation that requires a function].
 
     [`px.sunburst` failure]: https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151972940
+    [aggregation that requires a function]: https://github.com/pandas-dev/pandas/issues/57317
     """
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
-        "col_b": ["A", "A", "B", "B", None, None, None],
+        "col_b": [low, low, high, high, None, None, None],
     }
     expected = {"col_a": [None, "A", "B"], "n_unique": [2, 3, 2]}
     frame = nw.from_native(constructor_eager(data))
     result = (
         frame.group_by("col_a").agg(n_unique=nw.col("col_b").n_unique()).sort("col_a")
     )
+    actual_dtype = result.schema["n_unique"]
+    assert actual_dtype.is_integer()
     assert_equal_data(result, expected)
