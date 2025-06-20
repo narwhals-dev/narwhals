@@ -331,7 +331,7 @@ class EagerExpr(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any]: ...
+    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod
@@ -1126,6 +1126,9 @@ class EagerExprStringNamespace(
 
     def to_uppercase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_uppercase")
+
+    def zfill(self, width: int) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "zfill", width=width)
 
 
 class EagerExprStructNamespace(

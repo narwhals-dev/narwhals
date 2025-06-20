@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
+import ibis
+import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._ibis.utils import lit
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
-    import ibis.expr.types as ir
-
     from narwhals._ibis.expr import IbisExpr
 
 
@@ -99,5 +100,24 @@ class IbisExprStringNamespace:
             raise NotImplementedError(msg)
         fn = self._to_datetime_naive if _is_naive_format(format) else self._to_datetime
         return self._compliant_expr._with_callable(fn(format))
+
+    def zfill(self, width: int) -> IbisExpr:
+        def func(expr: ir.StringColumn) -> ir.Value:
+            length = expr.length()
+            less_than_width = length < lit(width)
+            zero, hyphen, plus = "0", "-", "+"
+            starts_with_minus = expr.startswith(hyphen)
+            starts_with_plus = expr.startswith(plus)
+            one = cast("ir.IntegerScalar", lit(1))
+            sub_length = cast("ir.IntegerValue", length - one)
+            substring = expr.substr(one, sub_length).lpad(width - 1, zero)
+            return ibis.cases(
+                (starts_with_minus & less_than_width, (substring.lpad(width, hyphen))),
+                (starts_with_plus & less_than_width, (substring.lpad(width, plus))),
+                (less_than_width, expr.lpad(width, zero)),
+                else_=expr,
+            )
+
+        return self._compliant_expr._with_callable(func)
 
     replace = not_implemented()

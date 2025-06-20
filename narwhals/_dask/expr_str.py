@@ -96,3 +96,8 @@ class DaskExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda expr: expr.str.lower(), "to_lowercase"
         )
+
+    def zfill(self, width: int) -> DaskExpr:
+        return self._compliant_expr._with_callable(
+            lambda expr, width: expr.str.zfill(width), "zfill", width=width
+        )

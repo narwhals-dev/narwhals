@@ -280,6 +280,24 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _version: Version
     _broadcast: bool
 
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        """Ensure all of `series` have the same length (and index if `pandas`).
+
+        Scalars get broadcasted to the full length of the longest Series.
+
+        This is useful when you need to construct a full Series anyway, such as:
+
+            DataFrame.select(...)
+
+        It should not be used in binary operations, such as:
+
+            nw.col("a") - nw.col("a").mean()
+
+        because then it's more efficient to extract the right-hand-side's single element as a scalar.
+        """
+        ...
+
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
@@ -296,7 +314,9 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """
         ...
 
-    def __narwhals_namespace__(self) -> EagerNamespace[Any, Self, Any, Any]: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
 
     def _to_expr(self) -> EagerExpr[Any, Any]:
         return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
