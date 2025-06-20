@@ -1356,15 +1356,22 @@ def find_stacklevel() -> int:
     return n
 
 
-def issue_deprecation_warning(message: str, _version: str) -> None:
+def issue_deprecation_warning(
+    message: str,
+    /,
+    *,
+    _version: str,
+    category: type[DeprecationWarning] = DeprecationWarning,
+) -> None:
     """Issue a deprecation warning.
 
     Arguments:
         message: The message associated with the warning.
         _version: Narwhals version when the warning was introduced. Just used for internal
             bookkeeping.
+        category: The `DeprecationWarning` category subclass.
     """
-    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+    warn(message=message, category=category, stacklevel=find_stacklevel())
 
 
 def validate_strict_and_pass_though(
