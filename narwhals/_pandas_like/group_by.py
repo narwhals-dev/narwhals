@@ -67,10 +67,12 @@ _AggFunc: TypeAlias = "NativeAggregation | Callable[..., Any]"
 _NamedAgg: TypeAlias = "tuple[str, _AggFunc]"
 """Equivalent to `pd.NamedAgg`."""
 
-SeqStrT = TypeVar("SeqStrT", bound="Sequence[str]", default="list[str]")
+IterStrT = TypeVar("IterStrT", bound="Iterable[str]")
 
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
+
+T = TypeVar("T")
 
 
 @lru_cache(maxsize=32)
@@ -94,16 +96,15 @@ def _n_unique(self: NativeSeriesGroupBy) -> pd.Series[Any]:
     return self.nunique(dropna=False)
 
 
-# PLAN
-# ----
-# - Before aggregating, rename every column that isn't already a `str`
-# - Proxy all incoming expressions through a rename mapper
-# - At the end, rename back to the original
-def _remap_non_str(
-    original: Sequence[Any], exclude: Iterable[Any]
-) -> dict[NonStrHashable, str]:
-    """An empty result follows a no-op path in `with_columns."""
-    exclude = set(exclude)
+def _remap_non_str(group_by: PandasLikeGroupBy) -> dict[NonStrHashable, str]:
+    """Before aggregating, rename every column that isn't already a `str`.
+
+    - Proxy all incoming expressions through a rename mapper
+    - At the end, rename back to the original
+    - An empty result follows a no-op path in `with_columns.
+    """
+    original = group_by._original_columns
+    exclude = set(group_by.exclude)
     if remaining := set(original).difference(exclude):
         union = exclude.union(original)
         return {
@@ -112,6 +113,106 @@ def _remap_non_str(
             if not isinstance(name, str)
         }
     return {}  # pragma: no cover
+
+
+def collect(iterable: tuple[T, ...] | Iterable[T], /) -> tuple[T, ...]:
+    """Collect `iterable` into a `tuple`, *iff* it is not one already.
+
+    Borrowed from [`ExprIR` PR].
+
+    [`ExprIR` PR]: https://github.com/narwhals-dev/narwhals/blob/1de65d2f82ace95a9bc72667067ffdfa9d28be6d/narwhals/_plan/common.py#L396-L398
+    """
+    return iterable if isinstance(iterable, tuple) else tuple(iterable)
+
+
+class AggExpr:
+    """Wrapper storing the intermediate state per-`PandasLikeExpr`.
+
+    There's a lot of edge cases to handle, so aim to evaluate as little
+    as possible - and store anything that's needed twice.
+
+    Warning:
+        While a `PandasLikeExpr` can be reused - this wrapper is valid **only**
+        in a single `.agg(...)` operation.
+    """
+
+    expr: PandasLikeExpr
+    output_names: tuple[str, ...]
+    aliases: tuple[str, ...]
+    _native_func: _AggFunc
+
+    def __init__(self, expr: PandasLikeExpr) -> None:
+        self.expr = expr
+        self.output_names = ()
+        self.aliases = ()
+        self._leaf_name: NarwhalsAggregation | Any = ""
+
+    def with_expand_names(self, group_by: PandasLikeGroupBy, /) -> AggExpr:
+        """**Mutating operation**.
+
+        Stores the results of `evaluate_output_names_and_aliases`.
+        """
+        df = group_by.compliant
+        exclude = group_by.exclude
+        output_names, aliases = evaluate_output_names_and_aliases(self.expr, df, exclude)
+        self.output_names, self.aliases = collect(output_names), collect(aliases)
+        return self
+
+    def named_aggs(
+        self, group_by: PandasLikeGroupBy, /
+    ) -> Iterator[tuple[str, _NamedAgg]]:
+        aliases = collect(group_by._aliases_str(self.aliases))
+        native_func = self.native_func
+        if self.is_len() and self.is_anonymous():
+            yield aliases[0], (group_by._anonymous_column_name, native_func)
+            return
+        for output_name, alias in zip(self.output_names, aliases):
+            yield alias, (output_name, native_func)
+
+    def _cast_coerced(self, group_by: PandasLikeGroupBy, /) -> Iterator[PandasLikeExpr]:
+        """Yield post-agg casts to correct for weird pandas behavior.
+
+        See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2157251589
+        """
+        df = group_by.compliant
+        if self.is_n_unique() and has_non_int_nullable_dtype(df, self.output_names):
+            ns = df.__narwhals_namespace__()
+            yield ns.col(*self.aliases).cast(ns._version.dtypes.Int64())
+
+    def is_len(self) -> bool:
+        return self.leaf_name == "len"
+
+    def is_n_unique(self) -> bool:
+        return self.leaf_name == "n_unique"
+
+    def is_anonymous(self) -> bool:
+        return self.expr._depth == 0
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.expr._implementation
+
+    @property
+    def kwargs(self) -> ScalarKwargs:
+        return self.expr._scalar_kwargs
+
+    @property
+    def leaf_name(self) -> NarwhalsAggregation | Any:
+        if name := self._leaf_name:
+            return name
+        self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
+        return self._leaf_name
+
+    @property
+    def native_func(self) -> _AggFunc:
+        if hasattr(self, "_native_func"):
+            return self._native_func
+        self._native_func = _agg_func(
+            PandasLikeGroupBy._remap_expr_name(self.leaf_name),
+            self.implementation,
+            **self.kwargs,
+        )
+        return self._native_func
 
 
 class PandasLikeGroupBy(
@@ -140,12 +241,6 @@ class PandasLikeGroupBy(
 
     _remap_non_str_columns: dict[NonStrHashable, str]
 
-    _casts: list[PandasLikeExpr]
-    """Post-aggregation dtype cast expressions.
-
-    See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2157251589
-    """
-
     @property
     def exclude(self) -> tuple[str, ...]:
         """Group keys to ignore when expanding multi-output aggregations."""
@@ -164,11 +259,10 @@ class PandasLikeGroupBy(
         ns = df.__narwhals_namespace__()
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
-        self._remap_non_str_columns = _remap_non_str(self._original_columns, self.exclude)
+        self._remap_non_str_columns = _remap_non_str(self)
         self._compliant_frame = frame.with_columns(
             *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
         )
-        self._casts = []
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
         native = self.compliant.native
@@ -183,68 +277,47 @@ class PandasLikeGroupBy(
         )
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
-        new_names: list[str] = self._keys.copy()
         all_aggs_are_simple = True
+        agg_exprs: list[AggExpr] = []
         for expr in exprs:
-            _, aliases = evaluate_output_names_and_aliases(
-                expr, self.compliant, self.exclude
-            )
-            new_names.extend(aliases)
+            agg_exprs.append(AggExpr(expr).with_expand_names(self))
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
 
-        if any(not isinstance(k, str) for k in new_names):
-            new_names = self._remap_aliases(new_names)
         if all_aggs_are_simple:
             result: pd.DataFrame
-            if named_aggs := self._named_aggs(*exprs):
+            if named_aggs := self._named_aggs(agg_exprs):
                 result = self._grouped.agg(**named_aggs)  # type: ignore[call-overload]
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(self._grouped.groups), columns=self._keys
                 )
-            return self._select_results(result, new_names)
-        if self.compliant.native.empty:
+        elif self.compliant.native.empty:
             raise empty_results_error()
-        return self._agg_complex(exprs, new_names)
+        else:
+            result = self._agg_complex(exprs)
+        return self._select_results(result, agg_exprs)
+
+    def _named_aggs(self, exprs: Iterable[AggExpr], /) -> dict[str, _NamedAgg]:
+        """Collect all aggregations into a single mapping."""
+        return dict(chain.from_iterable(e.named_aggs(self) for e in exprs))
 
     @overload
-    def _remap_aliases(self, names: list[str], /) -> list[str]: ...
+    def _aliases_str(self, names: list[str], /) -> list[str]: ...
     @overload
-    def _remap_aliases(self, names: SeqStrT, /) -> list[str] | SeqStrT: ...
-    def _remap_aliases(self, names: SeqStrT, /) -> list[str] | SeqStrT:
+    def _aliases_str(self, names: IterStrT, /) -> list[str] | IterStrT: ...
+    def _aliases_str(self, names: IterStrT, /) -> list[str] | IterStrT:
+        """If we started with any non `str` column names, return the proxied `str` aliases for `names`."""
         if remap := self._remap_non_str_columns:
             return [remap.get(name, name) for name in names]
         return names
 
-    def _named_aggs(self, *exprs: PandasLikeExpr) -> dict[str, _NamedAgg]:
-        """Collect all aggregations into a single mapping."""
-        return dict(chain.from_iterable(self._iter_named_aggs(e) for e in exprs))
-
-    def _iter_named_aggs(self, expr: PandasLikeExpr) -> Iterator[tuple[str, _NamedAgg]]:
-        ns = self.compliant.__narwhals_namespace__()
-        output_names, aliases = evaluate_output_names_and_aliases(
-            expr, self.compliant, self.exclude
+    @property
+    def _anonymous_column_name(self) -> str:
+        # `len` doesn't exist yet, so just pick a column to call size on
+        return next(
+            iter(set(self.compliant.columns).difference(self.exclude)), self._keys[0]
         )
-        remap_aliases = self._remap_aliases(aliases)
-        leaf_name = self._leaf_name(expr)
-        function_name = self._remap_expr_name(leaf_name)
-        aggfunc = _agg_func(function_name, expr._implementation, **expr._scalar_kwargs)
-        if leaf_name == "len" and expr._depth == 0:
-            # `len` doesn't exist yet, so just pick a column to call size on
-            first_col = next(
-                iter(set(self.compliant.columns).difference(self.exclude)), self._keys[0]
-            )
-            yield remap_aliases[0], (first_col, aggfunc)
-            return
-
-        if leaf_name == "n_unique" and has_non_int_nullable_dtype(
-            self.compliant, output_names
-        ):
-            self._casts.append(ns.col(*aliases).cast(ns._version.dtypes.Int64()))
-
-        for output_name, alias in zip(output_names, remap_aliases):
-            yield alias, (output_name, aggfunc)
 
     @property
     def _final_renamer(self) -> dict[str, NonStrHashable]:
@@ -254,7 +327,7 @@ class PandasLikeGroupBy(
         return dict(zip(temps, originals))
 
     def _select_results(
-        self, df: pd.DataFrame, /, new_names: list[str]
+        self, df: pd.DataFrame, /, agg_exprs: Sequence[AggExpr]
     ) -> PandasLikeDataFrame:
         """Responsible for remapping temp column names back to original.
 
@@ -263,25 +336,24 @@ class PandasLikeGroupBy(
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         df.reset_index(inplace=True)  # noqa: PD002
+        new_names = self._aliases_str(chain.from_iterable(e.aliases for e in agg_exprs))
         return (
             self.compliant._with_native(df, validate_column_names=False)
-            .simple_select(*new_names)
+            .simple_select(*self._keys, *new_names)
             .rename(self._final_renamer)
-            .with_columns(*self._casts)
+            .with_columns(*chain.from_iterable(e._cast_coerced(self) for e in agg_exprs))
         )
 
-    def _agg_complex(
-        self, exprs: Iterable[PandasLikeExpr], new_names: list[str]
-    ) -> PandasLikeDataFrame:
+    def _agg_complex(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
         warn_complex_group_by()
         impl = self.compliant._implementation
         backend_version = self.compliant._backend_version
         func = self._apply_exprs(exprs)
         apply = self._grouped.apply
         if impl.is_pandas() and backend_version >= (2, 2):
-            return self._select_results(apply(func, include_groups=False), new_names)
+            return apply(func, include_groups=False)
         else:  # pragma: no cover
-            return self._select_results(apply(func), new_names)
+            return apply(func)
 
     def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
