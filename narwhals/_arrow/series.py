@@ -32,7 +32,7 @@ from narwhals._utils import (
     validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -191,6 +191,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        lengths = [len(s) for s in series]
+        max_length = max(lengths)
+        fast_path = all(_len == max_length for _len in lengths)
+        if fast_path:
+            return series
+        reshaped = []
+        for s in series:
+            if s._broadcast:
+                compliant = s._with_native(pa.repeat(s.native[0], max_length))
+            elif (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
+            else:
+                compliant = s
+            reshaped.append(compliant)
+        return reshaped
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
