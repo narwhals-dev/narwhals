@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._utils import Implementation
+    from narwhals.dtypes import DType
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
     NativeSeriesGroupBy: TypeAlias = "_SeriesGroupBy[Any, tuple[str, ...]]"
@@ -325,7 +326,17 @@ def _has_non_int_nullable_dtype(
         native = frame.native.dtypes[col]
         if str(native) != "object":
             dtype = native_to_narwhals_dtype(native, version, impl)
-            yield not (dtype.is_integer()) and is_nullable_dtype_backend(native, impl)
+            yield not (dtype.is_integer()) and (
+                is_nullable_dtype_backend(native, impl)
+                or _is_old_pandas_float(dtype, impl, frame._backend_version)
+            )
+
+
+def _is_old_pandas_float(
+    dtype: DType, impl: Implementation, backend_version: tuple[int, ...]
+) -> bool:
+    """https://pandas.pydata.org/docs/whatsnew/v1.2.0.html."""
+    return dtype.is_float() and impl.is_pandas() and backend_version < (1, 2, 0)
 
 
 def empty_results_error() -> ValueError:
