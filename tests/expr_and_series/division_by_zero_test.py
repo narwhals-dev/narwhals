@@ -18,10 +18,7 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
     ],
 )
 def test_series_truediv_by_zero(
-    left: float,
-    right: float,
-    expected: float | None,
-    constructor_eager: ConstructorEager,
+    left: float, right: float, expected: float | None, constructor_eager: ConstructorEager
 ) -> None:
     data: dict[str, list[int | float]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -71,10 +68,7 @@ def test_series_floordiv_int_by_zero(
     ],
 )
 def test_truediv_by_zero(
-    left: float,
-    right: float,
-    expected: float | None,
-    constructor: Constructor,
+    left: float, right: float, expected: float | None, constructor: Constructor
 ) -> None:
     data: dict[str, list[int | float]] = {"a": [left]}
     df = nw.from_native(constructor(data))
