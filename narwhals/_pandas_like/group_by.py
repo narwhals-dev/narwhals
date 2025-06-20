@@ -146,6 +146,11 @@ class PandasLikeGroupBy(
     See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2157251589
     """
 
+    @property
+    def exclude(self) -> tuple[str, ...]:
+        """Group keys to ignore when expanding multi-output aggregations."""
+        return self._exclude
+
     def __init__(
         self,
         df: PandasLikeDataFrame,
@@ -158,9 +163,8 @@ class PandasLikeGroupBy(
         self._drop_null_keys = drop_null_keys
         ns = df.__narwhals_namespace__()
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
-        self._remap_non_str_columns = _remap_non_str(
-            self._original_columns, (*self._keys, *self._output_key_names)
-        )
+        self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
+        self._remap_non_str_columns = _remap_non_str(self._original_columns, self.exclude)
         self._compliant_frame = frame.with_columns(
             *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
         )
@@ -181,9 +185,10 @@ class PandasLikeGroupBy(
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         new_names: list[str] = self._keys.copy()
         all_aggs_are_simple = True
-        exclude = (*self._keys, *self._output_key_names)
         for expr in exprs:
-            _, aliases = evaluate_output_names_and_aliases(expr, self.compliant, exclude)
+            _, aliases = evaluate_output_names_and_aliases(
+                expr, self.compliant, self.exclude
+            )
             new_names.extend(aliases)
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
@@ -192,7 +197,7 @@ class PandasLikeGroupBy(
             new_names = self._remap_aliases(new_names)
         if all_aggs_are_simple:
             result: pd.DataFrame
-            if named_aggs := self._named_aggs(*exprs, exclude=exclude):
+            if named_aggs := self._named_aggs(*exprs):
                 result = self._grouped.agg(**named_aggs)  # type: ignore[call-overload]
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
@@ -212,18 +217,14 @@ class PandasLikeGroupBy(
             return [remap.get(name, name) for name in names]
         return names
 
-    def _named_aggs(
-        self, *exprs: PandasLikeExpr, exclude: Sequence[str]
-    ) -> dict[str, _NamedAgg]:
+    def _named_aggs(self, *exprs: PandasLikeExpr) -> dict[str, _NamedAgg]:
         """Collect all aggregations into a single mapping."""
-        return dict(chain.from_iterable(self._iter_named_aggs(e, exclude) for e in exprs))
+        return dict(chain.from_iterable(self._iter_named_aggs(e) for e in exprs))
 
-    def _iter_named_aggs(
-        self, expr: PandasLikeExpr, exclude: Sequence[str]
-    ) -> Iterator[tuple[str, _NamedAgg]]:
+    def _iter_named_aggs(self, expr: PandasLikeExpr) -> Iterator[tuple[str, _NamedAgg]]:
         ns = self.compliant.__narwhals_namespace__()
         output_names, aliases = evaluate_output_names_and_aliases(
-            expr, self.compliant, exclude
+            expr, self.compliant, self.exclude
         )
         remap_aliases = self._remap_aliases(aliases)
         leaf_name = self._leaf_name(expr)
@@ -232,7 +233,7 @@ class PandasLikeGroupBy(
         if leaf_name == "len" and expr._depth == 0:
             # `len` doesn't exist yet, so just pick a column to call size on
             first_col = next(
-                iter(set(self.compliant.columns).difference(exclude)), self._keys[0]
+                iter(set(self.compliant.columns).difference(self.exclude)), self._keys[0]
             )
             yield remap_aliases[0], (first_col, aggfunc)
             return
