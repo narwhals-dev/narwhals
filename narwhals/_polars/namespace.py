@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
@@ -22,6 +13,7 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen

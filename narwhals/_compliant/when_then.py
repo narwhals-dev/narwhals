@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import (
@@ -18,6 +18,8 @@ from narwhals._compliant.typing import (
 from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import EvalSeries, ScalarKwargs

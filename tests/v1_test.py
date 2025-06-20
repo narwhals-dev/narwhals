@@ -1,17 +1,32 @@
 # Test assorted functions which we overwrite in stable.v1
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
 import pytest
 
-if TYPE_CHECKING:
-    from typing_extensions import assert_type
-
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals.stable.v1.dependencies import (
+    is_cudf_dataframe,
+    is_cudf_series,
+    is_dask_dataframe,
+    is_ibis_table,
+    is_modin_dataframe,
+    is_modin_series,
+    is_pandas_dataframe,
+    is_pandas_like_dataframe,
+    is_pandas_like_series,
+    is_pandas_series,
+    is_polars_dataframe,
+    is_polars_lazyframe,
+    is_polars_series,
+    is_pyarrow_chunked_array,
+    is_pyarrow_table,
+)
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -20,6 +35,11 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from typing_extensions import assert_type
+
+    from tests.utils import Constructor, ConstructorEager
 
 
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
@@ -286,3 +306,56 @@ def test_v1_enum_duckdb_2550() -> None:
         duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
     ).collect_schema()
     assert result == {"a": nw.Enum(("a", "b", "c"))}
+
+
+@pytest.mark.parametrize(
+    "is_native_dataframe",
+    [
+        is_pandas_dataframe,
+        is_dask_dataframe,
+        is_modin_dataframe,
+        is_polars_dataframe,
+        is_cudf_dataframe,
+        is_ibis_table,
+        is_polars_lazyframe,
+        is_pyarrow_table,
+        is_pandas_like_dataframe,
+    ],
+)
+def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
+    data = {"a": [1, 2], "b": ["bar", "foo"]}
+    df = nw.from_native(pd.DataFrame(data))
+    assert not is_native_dataframe(df)
+
+
+@pytest.mark.parametrize(
+    "is_native_series",
+    [
+        is_pandas_series,
+        is_modin_series,
+        is_polars_series,
+        is_cudf_series,
+        is_pyarrow_chunked_array,
+        is_pandas_like_series,
+    ],
+)
+def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
+    data = {"a": [1, 2]}
+    ser = nw.from_native(pd.DataFrame(data))["a"]
+    assert not is_native_series(ser)
+
+
+def test_get_level() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    with pytest.deprecated_call():
+        assert nw.get_level(nw.from_native(df)) == "full"
+    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    assert (
+        nw_v1.get_level(
+            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+        )
+        == "interchange"
+    )

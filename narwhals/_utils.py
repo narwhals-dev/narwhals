@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
 from functools import lru_cache, wraps
@@ -12,14 +13,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Container,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -45,18 +41,16 @@ from narwhals.dependencies import (
     is_narwhals_series_int,
     is_numpy_array_1d,
     is_numpy_array_1d_int,
-    is_pandas_dataframe,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_pandas_series,
     is_polars_series,
     is_pyarrow_chunked_array,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import AbstractSet as Set
 
     import pandas as pd
     import polars as pl
@@ -603,8 +597,8 @@ class Implementation(NoAutoEnum):
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
-    Implementation.PANDAS: (0, 25, 3),
-    Implementation.MODIN: (0, 25, 3),
+    Implementation.PANDAS: (1, 1, 3),
+    Implementation.MODIN: (0, 8, 2),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
@@ -653,12 +647,13 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
-    if (pl := get_polars()) is not None and isinstance(
-        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    if (
+        (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame))
+    ) or (
+        (pl := get_polars()) is not None
+        and isinstance(arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
     ):
+        # Non-exhaustive check for common potential mistakes.
         msg = (
             f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
@@ -1220,7 +1215,9 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """
     counter = 0
     while True:
-        token = token_hex(n_bytes)
+        # Prepend `'nw'` to ensure it always starts with a character
+        # https://github.com/narwhals-dev/narwhals/issues/2510
+        token = f"nw{token_hex(n_bytes - 1)}"
         if token not in columns:
             return token
 
