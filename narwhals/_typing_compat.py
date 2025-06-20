@@ -25,6 +25,12 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 
+# TODO @dangotbanned: `version` validation
+# - For static typing, `message` must be a `LiteralString`
+# - So the `narwhals` version needs to be embedded in the string, without using fstrings/str.format/etc
+# - We'll need to decide on a style to use, and then add **runtime** validation to ensure we stay conistent
+#   - E.g. "<thing> is deprecated since narwhals <version>. Use <alternative> instead. <Extended description>"
+#   - Where only the <alternative> and <Extended description> sections are optional.
 def _deprecated_compat(
     message: str, /, *, category: type[DeprecationWarning] | None = DeprecationWarning
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -33,7 +39,8 @@ def _deprecated_compat(
             func.__deprecated__ = message  # type: ignore[attr-defined]
             return func
 
-        if isinstance(func, type) or not callable(func):
+        # TODO @dangotbanned: Coverage for this before `3.13`?
+        if isinstance(func, type) or not callable(func):  # pragma: no cover
             from narwhals._utils import qualified_type_name
 
             # NOTE: The logic for that part is much more complex, leaving support out *for now*,
