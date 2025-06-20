@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     import ibis.expr.types as ir
+    from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs
 
@@ -112,9 +113,8 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     if ibis_dtype.is_date():
         return dtypes.Date()
     if is_timestamp(ibis_dtype):
-        return dtypes.Datetime(
-            time_unit=ibis_dtype.unit.value, time_zone=ibis_dtype.timezone
-        )
+        _unit = cast("TimestampUnit", ibis_dtype.unit)
+        return dtypes.Datetime(time_unit=_unit.value, time_zone=ibis_dtype.timezone)
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
