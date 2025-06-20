@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Iterable,
-    Iterator,
-    Mapping,
-    Protocol,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -34,6 +25,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -51,6 +43,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
@@ -109,7 +102,7 @@ class CompliantSeries(
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
@@ -148,7 +141,7 @@ class CompliantSeries(
     def arg_max(self) -> int: ...
     def arg_min(self) -> int: ...
     def arg_true(self) -> Self: ...
-    def cast(self, dtype: DType | type[DType]) -> Self: ...
+    def cast(self, dtype: IntoDType) -> Self: ...
     def clip(
         self,
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
@@ -173,6 +166,8 @@ class CompliantSeries(
         min_samples: int,
         ignore_nulls: bool,
     ) -> Self: ...
+    def exp(self) -> Self: ...
+    def sqrt(self) -> Self: ...
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -202,6 +197,7 @@ class CompliantSeries(
     def is_sorted(self, *, descending: bool) -> bool: ...
     def is_unique(self) -> Self: ...
     def item(self, index: int | None) -> Any: ...
+    def kurtosis(self) -> float | None: ...
     def len(self) -> int: ...
     def log(self, base: float) -> Self: ...
     def max(self) -> Any: ...
@@ -220,7 +216,7 @@ class CompliantSeries(
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self: ...
     def rolling_mean(
         self, window_size: int, *, min_samples: int, center: bool
@@ -283,6 +279,24 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _backend_version: tuple[int, ...]
     _version: Version
     _broadcast: bool
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        """Ensure all of `series` have the same length (and index if `pandas`).
+
+        Scalars get broadcasted to the full length of the longest Series.
+
+        This is useful when you need to construct a full Series anyway, such as:
+
+            DataFrame.select(...)
+
+        It should not be used in binary operations, such as:
+
+            nw.col("a") - nw.col("a").mean()
+
+        because then it's more efficient to extract the right-hand-side's single element as a scalar.
+        """
+        ...
 
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)

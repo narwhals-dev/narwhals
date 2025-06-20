@@ -5,7 +5,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -32,6 +31,7 @@ def test_diff(constructor_eager: ConstructorEager) -> None:
 
 
 def test_diff_lazy(constructor: Constructor) -> None:
+    data = {"i": [None, 1, 2, 3, 4], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
         # pc.pairwisediff is available since pyarrow 13.0.0
         pytest.skip()
@@ -41,7 +41,7 @@ def test_diff_lazy(constructor: Constructor) -> None:
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(c_diff=nw.col("c").diff().over(order_by="i")).filter(
-        nw.col("i") > 0
+        ~nw.col("i").is_null()
     )
     expected = {
         "i": [1, 2, 3, 4],
@@ -61,8 +61,6 @@ def test_diff_lazy_grouped(
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 1):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table", "cudf")):
         # https://github.com/dask/dask/issues/11806

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import functools
 import re
+from collections.abc import Sized
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sized, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, TimeUnit, _1DArray
+    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
 
@@ -146,18 +147,11 @@ def set_index(
         obj.index = index  # type: ignore[attr-defined]
         return obj
     if implementation is Implementation.PANDAS and (
-        backend_version < (1,)
-    ):  # pragma: no cover
-        kwargs = {"inplace": False}
-    else:
-        kwargs = {}
-    if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        kwargs["copy"] = False
+        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
     else:  # pragma: no cover
-        pass
-    return obj.set_axis(index, axis=0, **kwargs)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
 
 
 def rename(
@@ -349,7 +343,7 @@ def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
-    dtype: DType | type[DType],
+    dtype: IntoDType,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
     backend_version: tuple[int, ...],
@@ -505,48 +499,6 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
             raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
-
-
-def align_series_full_broadcast(*series: PandasLikeSeries) -> list[PandasLikeSeries]:
-    # Ensure all of `series` have the same length and index. Scalars get broadcasted to
-    # the full length of the longest Series. This is useful when you need to construct a
-    # full Series anyway (e.g. `DataFrame.select`). It should not be used in binary operations,
-    # such as `nw.col('a') - nw.col('a').mean()`, because then it's more efficient to extract
-    # the right-hand-side's single element as a scalar.
-    native_namespace = series[0].__native_namespace__()
-
-    lengths = [len(s) for s in series]
-    max_length = max(lengths)
-
-    idx = series[lengths.index(max_length)].native.index
-    reindexed = []
-    for s in series:
-        if s._broadcast:
-            reindexed.append(
-                s._with_native(
-                    native_namespace.Series(
-                        [s.native.iloc[0]] * max_length,
-                        index=idx,
-                        name=s.name,
-                        dtype=s.native.dtype,
-                    )
-                )
-            )
-
-        elif s.native.index is not idx:
-            reindexed.append(
-                s._with_native(
-                    set_index(
-                        s.native,
-                        idx,
-                        implementation=s._implementation,
-                        backend_version=s._backend_version,
-                    )
-                )
-            )
-        else:
-            reindexed.append(s)
-    return reindexed
 
 
 def int_dtype_mapper(dtype: Any) -> str:

@@ -1,23 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -341,7 +332,8 @@ class ArrowDataFrame(
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        reshaped = align_series_full_broadcast(*new_series)
+        align = new_series[0]._align_full_broadcast
+        reshaped = align(*new_series)
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 
@@ -353,12 +345,8 @@ class ArrowDataFrame(
                 raise ShapeError(msg)
             return other.native
 
-        import numpy as np  # ignore-banned-import
-
         value = other.native[0]
-        if self._backend_version < (13,) and hasattr(value, "as_py"):
-            value = value.as_py()
-        return pa.chunked_array([np.full(shape=length, fill_value=value)])
+        return pa.chunked_array([pa.repeat(value, length)])
 
     def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
@@ -664,8 +652,10 @@ class ArrowDataFrame(
         return None
 
     def is_unique(self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(range(len(self)))
+        row_index = pa.array(np.arange(len(self)))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -733,7 +723,7 @@ class ArrowDataFrame(
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask), validate_column_names=False)
 

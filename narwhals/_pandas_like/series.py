@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -30,8 +30,8 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import Hashable
 
     import pandas as pd
     import polars as pl
@@ -47,6 +47,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         Into1DArray,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -179,7 +180,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         *,
         context: _FullContext,
         name: str = "",
-        dtype: DType | type[DType] | None = None,
+        dtype: IntoDType | None = None,
         index: Any = None,
     ) -> Self:
         implementation = context._implementation
@@ -217,6 +218,35 @@ class PandasLikeSeries(EagerSeries[Any]):
         arr = data if is_numpy_array_1d(data) else [data]
         native = implementation.to_native_namespace().Series(arr, name="")
         return cls.from_native(native, context=context)
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        Series = series[0].__native_namespace__().Series  # noqa: N806
+        lengths = [len(s) for s in series]
+        max_length = max(lengths)
+        idx = series[lengths.index(max_length)].native.index
+        reindexed = []
+        for s in series:
+            if s._broadcast:
+                native = Series(
+                    np.repeat(s.native.iloc[0], max_length),
+                    index=idx,
+                    name=s.name,
+                    dtype=s.native.dtype,
+                )
+                compliant = s._with_native(native)
+            elif s.native.index is not idx:
+                native = set_index(
+                    s.native,
+                    idx,
+                    implementation=s._implementation,
+                    backend_version=s._backend_version,
+                )
+                compliant = s._with_native(native)
+            else:
+                compliant = s
+            reindexed.append(compliant)
+        return reindexed
 
     @property
     def name(self) -> str:
@@ -296,7 +326,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             self.native.iloc[indices.native] = values_native
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
@@ -356,19 +386,23 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def arg_true(self) -> PandasLikeSeries:
         ser = self.native
-        result = ser.__class__(range(len(ser)), name=ser.name, index=ser.index).loc[ser]
+        size = len(ser)
+        if self._implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            data = cp.arange(size)
+        else:
+            import numpy as np  # ignore-banned-import
+
+            data = np.arange(size)
+        result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
     def arg_min(self) -> int:
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return self.native.to_numpy().argmin()
         return self.native.argmin()
 
     def arg_max(self) -> int:
-        ser = self.native
-        if self._implementation is Implementation.PANDAS and self._backend_version < (1,):
-            return ser.to_numpy().argmax()
-        return ser.argmax()
+        return self.native.argmax()
 
     # Binary comparisons
 
@@ -531,6 +565,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             m3 = (m**3).mean()
             return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
+    def kurtosis(self) -> float | None:
+        ser_not_null = self.native.dropna()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = ser_not_null - ser_not_null.mean()
+            m2 = (m**2).mean()
+            m4 = (m**4).mean()
+            return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
+
     def len(self) -> int:
         return len(self.native)
 
@@ -619,7 +665,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         tmp_name = f"{self.name}_tmp"
         dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
@@ -686,12 +732,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         has_missing = s.isna().any()
         kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
         if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            if self._implementation is Implementation.PANDAS and self._backend_version < (
-                1,
-            ):  # pragma: no cover
-                ...
-            else:
-                kwargs.update({"na_value": float("nan")})
+            kwargs.update({"na_value": float("nan")})
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
@@ -1044,6 +1085,45 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             result_native = np.log(native) / np.log(base)
         return self._with_native(result_native)
+
+    def exp(self) -> Self:
+        native = self.native
+        implementation = self._implementation
+
+        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
+
+        if implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            native = self.native
+            exp_arr = cp.exp(native)
+            result_native = type(native)(exp_arr, index=native.index, name=native.name)
+            return self._with_native(result_native)
+
+        if dtype_backend == "pyarrow":
+            import pyarrow.compute as pc
+
+            from narwhals._arrow.utils import native_to_narwhals_dtype
+
+            ca = native.array._pa_array
+            result_arr = cast("ChunkedArrayAny", pc.exp(ca))
+            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+            out_dtype = narwhals_to_native_dtype(
+                nw_dtype,
+                "pyarrow",
+                self._implementation,
+                self._backend_version,
+                self._version,
+            )
+            result_native = native.__class__(
+                result_arr, dtype=out_dtype, index=native.index, name=native.name
+            )
+        else:
+            result_native = np.exp(native)
+        return self._with_native(result_native)
+
+    def sqrt(self) -> Self:
+        return self._with_native(self.native.pow(0.5))
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

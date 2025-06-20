@@ -26,6 +26,7 @@
         - drop_nulls
         - dtype
         - ewm_mean
+        - exp
         - fill_null
         - filter
         - gather_every
@@ -44,6 +45,7 @@
         - is_sorted
         - is_unique
         - item
+        - kurtosis
         - len
         - log
         - max
@@ -70,6 +72,7 @@
         - shift
         - sort
         - skew
+        - sqrt
         - std
         - sum
         - tail

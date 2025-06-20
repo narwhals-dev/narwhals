@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant.series import _SeriesNamespace
 from narwhals._utils import isinstance_or_issubclass
-from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -165,7 +166,7 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # 
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -257,31 +258,6 @@ def extract_native(
         raise TypeError(msg)
 
     return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
-
-
-def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
-    # Ensure all of `series` are of the same length.
-    lengths = [len(s) for s in series]
-    max_length = max(lengths)
-    fast_path = all(_len == max_length for _len in lengths)
-
-    if fast_path:
-        return series
-
-    reshaped = []
-    for s in series:
-        if s._broadcast:
-            value = s.native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):
-                value = value.as_py()
-            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
-        else:
-            if (actual_len := len(s)) != max_length:
-                msg = f"Expected object of length {max_length}, got {actual_len}."
-                raise ShapeError(msg)
-            reshaped.append(s)
-
-    return reshaped
 
 
 def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:

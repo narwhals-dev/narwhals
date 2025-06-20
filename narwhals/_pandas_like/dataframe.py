@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import numpy as np
 
@@ -20,7 +10,6 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    align_series_full_broadcast,
     check_column_names_are_unique,
     get_dtype_backend,
     native_to_narwhals_dtype,
@@ -406,7 +395,7 @@ class PandasLikeDataFrame(
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(self.native.__class__(), validate_column_names=False)
-        new_series = align_series_full_broadcast(*new_series)
+        new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
@@ -429,11 +418,21 @@ class PandasLikeDataFrame(
 
     def with_row_index(self, name: str) -> Self:
         frame = self.native
-        namespace = self.__narwhals_namespace__()
-        row_index = namespace._series.from_iterable(
-            range(len(frame)), context=self, index=frame.index
-        ).alias(name)
-        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
+        index = frame.index
+        size = len(frame)
+        plx = self.__narwhals_namespace__()
+
+        if self._implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            data = cp.arange(size)
+        else:
+            import numpy as np  # ignore-banned-import
+
+            data = np.arange(size)
+
+        row_index = plx._series.from_iterable(data, context=self, index=index, name=name)
+        return self._with_native(plx._concat_horizontal([row_index.native, frame]))
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
@@ -1032,10 +1031,6 @@ class PandasLikeDataFrame(
         separator: str,
     ) -> Self:
         implementation = self._implementation
-        backend_version = self._backend_version
-        if implementation.is_pandas() and backend_version < (1, 1):  # pragma: no cover
-            msg = "pivot is only supported for 'pandas>=1.1'"
-            raise NotImplementedError(msg)
         if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)

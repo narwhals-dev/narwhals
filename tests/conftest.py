@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import os
-import sys
 import uuid
 from copy import deepcopy
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
@@ -13,6 +12,8 @@ from narwhals._utils import generate_temporary_column_name
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import duckdb
     import ibis
     import pandas as pd
@@ -285,7 +286,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         if (
             constructor in {"pandas[nullable]", "pandas[pyarrow]"}
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
-        ) or (constructor == "sqlframe" and sys.version_info < (3, 9)):
+        ):
             continue  # pragma: no cover
 
         if constructor in EAGER_CONSTRUCTORS:

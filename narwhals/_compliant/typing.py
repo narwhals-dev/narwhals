@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -71,6 +72,9 @@ NativeExprT = TypeVar("NativeExprT", bound="NativeExpr")
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeSeriesT_contra = TypeVar(
+    "NativeSeriesT_contra", bound="NativeSeries", contravariant=True
+)
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeFrameT_contra = TypeVar(

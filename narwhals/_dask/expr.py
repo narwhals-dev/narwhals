@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.expr import DepthTrackingExpr
@@ -22,6 +22,8 @@ from narwhals._utils import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
 
@@ -30,9 +32,9 @@ if TYPE_CHECKING:
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Version, _FullContext
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
+        IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -81,7 +83,9 @@ class DaskExpr(
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [result[0] for result in self(df)]
+            # result.loc[0][0] is a workaround for dask~<=2024.10.0/dask_expr~<=1.1.16
+            #   that raised a KeyErrror for result[0] during collection.
+            return [result.loc[0][0] for result in self(df)]
 
         return self.__class__(
             func,
@@ -323,6 +327,9 @@ class DaskExpr(
 
     def skew(self) -> Self:
         return self._with_callable(lambda expr: expr.skew().to_series(), "skew")
+
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: expr.kurtosis().to_series(), "kurtosis")
 
     def shift(self, n: int) -> Self:
         return self._with_callable(lambda expr: expr.shift(n), "shift")
@@ -633,7 +640,7 @@ class DaskExpr(
             version=self._version,
         )
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return expr.astype(native_dtype)
@@ -652,6 +659,16 @@ class DaskExpr(
             return da.log(expr) / da.log(base)
 
         return self._with_callable(_log, "log")
+
+    def exp(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.exp, "exp")
+
+    def sqrt(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sqrt, "sqrt")
 
     @property
     def str(self) -> DaskExprStringNamespace:

@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 import polars as pl
 
@@ -25,10 +16,13 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+
     from typing_extensions import TypeIs
 
     from narwhals._utils import _StoresNative
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -148,7 +142,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+    dtype: IntoDType, version: Version, backend_version: tuple[int, ...]
 ) -> pl.DataType:
     dtypes = version.dtypes
     if dtype == dtypes.Float64:
@@ -223,6 +217,19 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     return pl.Unknown()  # pragma: no cover
 
 
+def _is_polars_exception(exception: Exception, backend_version: tuple[int, ...]) -> bool:
+    if backend_version >= (1,):
+        # Old versions of Polars didn't have PolarsError.
+        return isinstance(exception, pl.exceptions.PolarsError)
+    # Last attempt, for old Polars versions.
+    return "polars.exceptions" in str(type(exception))  # pragma: no cover
+
+
+def _is_cudf_exception(exception: Exception) -> bool:
+    # These exceptions are raised when running polars on GPUs via cuDF
+    return str(exception).startswith("CUDF failure")
+
+
 def catch_polars_exception(
     exception: Exception, backend_version: tuple[int, ...]
 ) -> NarwhalsError | Exception:
@@ -236,13 +243,7 @@ def catch_polars_exception(
         return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
-    if backend_version >= (1,) and isinstance(exception, pl.exceptions.PolarsError):
-        # Old versions of Polars didn't have PolarsError.
+    if _is_polars_exception(exception, backend_version) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover
-    elif backend_version < (1,) and "polars.exceptions" in str(
-        type(exception)
-    ):  # pragma: no cover
-        # Last attempt, for old Polars versions.
-        return NarwhalsError(str(exception))
     # Just return exception as-is.
     return exception
