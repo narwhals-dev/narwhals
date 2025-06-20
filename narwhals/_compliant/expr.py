@@ -27,7 +27,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._typing_compat import deprecated
 from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
@@ -72,7 +72,7 @@ class NativeExpr(Protocol):
     def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
 
-class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
+class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
     _backend_version: tuple[int, ...]
     _version: Version
@@ -269,7 +269,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 
 class DepthTrackingExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
-    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
     _depth: int
     _function_name: str
@@ -307,7 +307,7 @@ class DepthTrackingExpr(
 
 class EagerExpr(
     DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
-    Protocol38[EagerDataFrameT, EagerSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
     _scalar_kwargs: ScalarKwargs
@@ -857,7 +857,7 @@ class EagerExpr(
 
 class LazyExpr(
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT],
 ):
     arg_min: not_implemented = not_implemented()
     arg_max: not_implemented = not_implemented()
