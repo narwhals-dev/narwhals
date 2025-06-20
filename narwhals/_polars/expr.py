@@ -339,6 +339,27 @@ class PolarsExprStringNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
 
+    def zfill(self, width: int) -> PolarsExpr:
+        native_expr = self._compliant_expr.native
+        native_result = native_expr.str.zfill(width)
+
+        if self._compliant_expr._backend_version <= (1, 30, 0):
+            length = native_expr.str.len_chars()
+            less_than_width = length < width
+            plus = "+"
+            starts_with_plus = native_expr.str.starts_with(plus)
+            native_result = (
+                pl.when(starts_with_plus & less_than_width)
+                .then(
+                    native_expr.str.slice(1, length)
+                    .str.zfill(width - 1)
+                    .str.pad_start(width, plus)
+                )
+                .otherwise(native_result)
+            )
+
+        return self._compliant_expr._with_native(native_result)
+
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)
