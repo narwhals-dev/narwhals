@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import duckdb
 from duckdb import CoalesceOperator, Expression, FunctionExpression
@@ -48,30 +48,6 @@ class DuckDBNamespace(
     @property
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
-
-    def _expr_from_elementwise(
-        self, func: Callable[[Iterable[Expression]], Expression], *exprs: DuckDBExpr
-    ) -> DuckDBExpr:
-        def call(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [func(cols)]
-
-        def window_function(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
-            cols = (
-                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
-            )
-            return [func(cols)]
-
-        return self._expr(
-            call=call,
-            window_function=window_function,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
 
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
@@ -119,31 +95,31 @@ class DuckDBNamespace(
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.and_, cols)
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def any_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.or_, cols)
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return FunctionExpression("greatest", *cols)
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return FunctionExpression("least", *cols)
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
@@ -152,7 +128,7 @@ class DuckDBNamespace(
                 operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
             ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
 
-        return self._expr_from_elementwise(func, *exprs)
+        return self._expr.from_elementwise(func, *exprs)
 
     def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)

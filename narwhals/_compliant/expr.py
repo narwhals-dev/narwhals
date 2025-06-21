@@ -32,7 +32,7 @@ from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -893,6 +893,11 @@ class LazyExpr(
 
     @classmethod
     def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
+
+    @classmethod
+    def from_elementwise(
+        cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
+    ) -> Self: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
