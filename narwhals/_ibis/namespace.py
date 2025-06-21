@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import ibis
 import ibis.expr.types as ir
@@ -32,6 +32,21 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
+
+    def _with_callable(
+        self, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: IbisExpr
+    ) -> IbisExpr:
+        def call(df: IbisLazyFrame) -> list[ir.Value]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        return self._expr(
+            call=call,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=self._backend_version,
+            version=self._version,
+        )
 
     @property
     def selectors(self) -> IbisSelectorNamespace:
@@ -86,17 +101,10 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         )
 
     def all_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = chain.from_iterable(expr(df) for expr in exprs)
-            return [reduce(operator.and_, cols)]
+        def func(cols: Iterable[ir.Value]) -> ir.Value:
+            return reduce(operator.and_, cols)
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._with_callable(func, *exprs)
 
     def any_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
