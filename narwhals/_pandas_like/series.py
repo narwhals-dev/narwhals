@@ -20,6 +20,7 @@ from narwhals._pandas_like.utils import (
     select_columns_by_name,
     set_index,
 )
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     is_list_of,
@@ -374,8 +375,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             res = ser.gt(lower_bound) & ser.lt(upper_bound)
         elif closed == "both":
             res = ser.ge(lower_bound) & ser.le(upper_bound)
-        else:  # pragma: no cover
-            raise AssertionError
+        else:
+            assert_never(closed)
         return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> PandasLikeSeries:

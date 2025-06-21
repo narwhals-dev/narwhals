@@ -7,6 +7,7 @@ from enum import Enum, auto
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
+from narwhals._typing_compat import assert_never
 from narwhals._utils import is_compliant_expr
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
 from narwhals.exceptions import (
@@ -56,12 +57,12 @@ def combine_evaluate_output_names(
 ) -> EvalNames[CompliantFrameT]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
-    if not is_compliant_expr(exprs[0]):  # pragma: no cover
-        msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
-        raise AssertionError(msg)
+    expr1 = exprs[0]
+    if not is_compliant_expr(expr1):
+        assert_never(expr1)
 
     def evaluate_output_names(df: CompliantFrameT) -> Sequence[str]:
-        return exprs[0]._evaluate_output_names(df)[:1]
+        return expr1._evaluate_output_names(df)[:1]
 
     return evaluate_output_names
 
