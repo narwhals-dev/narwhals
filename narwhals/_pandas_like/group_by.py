@@ -61,10 +61,10 @@ NativeAggregation: TypeAlias = Literal[
 ]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
-_AggFunc: TypeAlias = "NativeAggregation | Callable[..., Any]"
+_NativeAgg: TypeAlias = "NativeAggregation | Callable[..., Any]"
 """Equivalent to `pd.NamedAgg.aggfunc`."""
 
-_NamedAgg: TypeAlias = "tuple[str, _AggFunc]"
+_NamedAgg: TypeAlias = "tuple[str, _NativeAgg]"
 """Equivalent to `pd.NamedAgg`."""
 
 IterStrT = TypeVar("IterStrT", bound="Iterable[str]")
@@ -76,14 +76,14 @@ T = TypeVar("T")
 
 
 @lru_cache(maxsize=32)
-def _agg_func(
+def _native_agg(
     name: NativeAggregation, impl: Implementation, /, **kwds: Unpack[ScalarKwargs]
-) -> _AggFunc:  # pragma: no cover
+) -> _NativeAgg:
     if name == "nunique":
         return _n_unique
     if not kwds or kwds.get("ddof") == 1:
         return name
-    if impl.is_modin():
+    if impl.is_modin():  # pragma: no cover
         return lambda x: getattr(x, name)(**kwds)
     return methodcaller(name, **kwds)
 
@@ -161,12 +161,12 @@ class AggExpr:
         self, group_by: PandasLikeGroupBy, /
     ) -> Iterator[tuple[str, _NamedAgg]]:
         aliases = collect(group_by._aliases_str(self.aliases))
-        native_func = self.native_func
+        native_agg = self.native_agg()
         if self.is_len() and self.is_anonymous():
-            yield aliases[0], (group_by._anonymous_column_name, native_func)
+            yield aliases[0], (group_by._anonymous_column_name, native_agg)
             return
         for output_name, alias in zip(self.output_names, aliases):
-            yield alias, (output_name, native_func)
+            yield alias, (output_name, native_agg)
 
     def _cast_coerced(self, group_by: PandasLikeGroupBy, /) -> Iterator[PandasLikeExpr]:
         """Yield post-agg casts to correct for weird pandas behavior.
@@ -202,9 +202,8 @@ class AggExpr:
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
 
-    @property
-    def native_func(self) -> _AggFunc:
-        return _agg_func(
+    def native_agg(self) -> _NativeAgg:
+        return _native_agg(
             PandasLikeGroupBy._remap_expr_name(self.leaf_name),
             self.implementation,
             **self.kwargs,
