@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
 import os
+import re
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -10,12 +13,14 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import (
     ComputeError,
+    DuplicateError,
     InvalidOperationError,
     LengthChangingExprError,
     OrderDependentExprError,
 )
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -24,6 +29,9 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from narwhals.typing import NonNestedLiteral
+
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
@@ -183,7 +191,10 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 def test_group_by_same_name_twice() -> None:
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    with pytest.raises(ValueError, match="Expected unique output names"):
+    pattern = re.compile(
+        "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
+    )
+    with pytest.raises(DuplicateError, match=pattern):
         nw.from_native(df).group_by("a").agg(nw.col("b").sum(), nw.col("b").n_unique())
 
 
@@ -534,4 +545,95 @@ def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_len_1_column(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    """Based on a failure from marimo.
+
+    - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/tests/_plugins/ui/_impl/tables/test_narwhals.py#L1098-L1108
+    - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/marimo/_plugins/ui/_impl/tables/narwhals_table.py#L163-L188
+    """
+    if any(x in str(constructor) for x in ("dask", "modin")):
+        # `dask`
+        #     ValueError: conflicting aggregation functions: [('size', 'a'), ('size', 'a')]
+        # `modin[pyarrow]`
+        #     KeyError: "['size'] not in index"  # noqa: ERA001
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2, 1, 2, 3, 4]}
+    expected = {"a": [1, 2, 3, 4], "len": [2, 2, 1, 1], "len_a": [2, 2, 1, 1]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.len(), nw.len().alias("len_a"))
+        .sort("a")
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("low", "high"),
+    [
+        ("A", "B"),
+        (1.5, 5.2),
+        (dt.datetime(2000, 1, 1), dt.datetime(2002, 1, 1)),
+        (dt.date(2000, 1, 1), dt.date(2002, 1, 1)),
+        (dt.time(5, 0, 0), dt.time(14, 0, 0)),
+        (dt.timedelta(32), dt.timedelta(800)),
+        (False, True),
+        (b"a", b"z"),
+        (Decimal("43.954"), Decimal("264.124")),
+    ],
+    ids=[
+        "str",
+        "float",
+        "datetime",
+        "date",
+        "time",
+        "timedelta",
+        "bool",
+        "bytes",
+        "Decimal",
+    ],
+)
+def test_group_by_no_preserve_dtype(
+    constructor_eager: ConstructorEager,
+    low: NonNestedLiteral,
+    high: NonNestedLiteral,
+    request: pytest.FixtureRequest,
+) -> None:
+    """Minimal repro for [`px.sunburst` failure].
+
+    The issue appeared for `n_unique`, but applies for any [aggregation that requires a function].
+
+    [`px.sunburst` failure]: https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151972940
+    [aggregation that requires a function]: https://github.com/pandas-dev/pandas/issues/57317
+    """
+    if (
+        "polars" in str(constructor_eager)
+        and isinstance(low, Decimal)
+        and POLARS_VERSION < (1, 0, 0)
+    ):
+        pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
+    data = {
+        "col_a": ["A", "B", None, "A", "A", "B", None],
+        "col_b": [low, low, high, high, None, None, None],
+    }
+    expected = {"col_a": [None, "A", "B"], "n_unique": [2, 3, 2]}
+    frame = nw.from_native(constructor_eager(data))
+    result = (
+        frame.group_by("col_a").agg(n_unique=nw.col("col_b").n_unique()).sort("col_a")
+    )
+    actual_dtype = result.schema["n_unique"]
+    assert actual_dtype.is_integer()
+
+    request.applymarker(
+        pytest.mark.xfail(
+            any(x in str(constructor_eager) for x in ("modin_pyarrow", "pandas_pyarrow"))
+            and isinstance(low, bool),
+            reason="Unclear why, but `n_unique` returns `[1, 1, 1]`",
+        )
+    )
     assert_equal_data(result, expected)

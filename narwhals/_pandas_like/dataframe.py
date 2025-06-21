@@ -453,8 +453,10 @@ class PandasLikeDataFrame(
     def with_columns(
         self: PandasLikeDataFrame, *exprs: PandasLikeExpr
     ) -> PandasLikeDataFrame:
+        if not exprs:
+            return self
         columns = self._evaluate_into_exprs(*exprs)
-        if not columns and len(self) == 0:
+        if not columns and len(self) == 0:  # pragma: no cover
             return self
         name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}
         to_concat = []
