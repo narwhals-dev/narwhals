@@ -12,7 +12,6 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     native_to_narwhals_dtype,
 )
-from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
@@ -428,7 +427,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 elif is_sequence_like(rows):
                     native = native[rows, :]
                 else:
-                    assert_never(rows)
+                    msg = f"Unreachable code, got unexpected type: {type(rows)}"
+                    raise AssertionError(msg)
 
             return self._with_native(native)
 
