@@ -73,7 +73,7 @@ class SparkLikeNamespace(
         else:
             return import_native_dtypes(self._implementation)
 
-    def _with_elementwise(
+    def _expr_from_callable(
         self, func: Callable[[Iterable[Column]], Column], *exprs: SparkLikeExpr
     ) -> SparkLikeExpr:
         def call(df: SparkLikeLazyFrame) -> list[Column]:
@@ -135,7 +135,7 @@ class SparkLikeNamespace(
         def func(cols: Iterable[Column]) -> Column:
             return reduce(operator.and_, cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -146,19 +146,19 @@ class SparkLikeNamespace(
             )
             return reduce(operator.or_, it)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def max_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.greatest(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def min_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.least(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -166,7 +166,7 @@ class SparkLikeNamespace(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -187,7 +187,7 @@ class SparkLikeNamespace(
                 ),
             )
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod
