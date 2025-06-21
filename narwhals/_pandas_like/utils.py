@@ -512,8 +512,8 @@ def int_dtype_mapper(dtype: Any) -> str:
 
 
 def calculate_timestamp_datetime(  # noqa: C901, PLR0912
-    s: pd.Series[int], original_time_unit: str, time_unit: str
-) -> pd.Series[int]:
+    s: NativeSeriesT, original_time_unit: str, time_unit: str
+) -> NativeSeriesT:
     if original_time_unit == "ns":
         if time_unit == "ns":
             result = s
