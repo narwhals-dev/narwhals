@@ -33,7 +33,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         self._backend_version = backend_version
         self._version = version
 
-    def _with_callable(
+    def _expr_from_callable(
         self, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: IbisExpr
     ) -> IbisExpr:
         def call(df: IbisLazyFrame) -> list[ir.Value]:
@@ -104,32 +104,32 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return reduce(operator.and_, cols)
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def any_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return reduce(operator.or_, cols)
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def max_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.greatest(*cols)
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def min_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.least(*cols)
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def sum_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = (col.fill_null(lit(0)) for col in cols)
             return reduce(operator.add, cols)
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
@@ -138,7 +138,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
                 operator.add, (col.isnull().ifelse(lit(0), lit(1)) for col in cols)
             )
 
-        return self._with_callable(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     @requires.backend_version((10, 0))
     def when(self, predicate: IbisExpr) -> IbisWhen:
