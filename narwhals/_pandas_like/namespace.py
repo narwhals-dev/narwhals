@@ -297,6 +297,9 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
+                # NOTE: Trying to help `mypy` later
+                # error: Cannot determine type of "values"  [has-type]
+                values: list[PandasLikeSeries]
                 init_value, *values = [
                     s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
                 ]

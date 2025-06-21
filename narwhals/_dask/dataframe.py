@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import dask.dataframe.dask_expr as dx
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
@@ -34,6 +34,13 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+
+Incomplete: TypeAlias = "Any"
+"""Using `_pandas_like` utils with `_dask`.
+
+Typing this correctly will complicate the `_pandas_like`-side.
+Very low priority until `dask` adds typing.
+"""
 
 
 class DaskLazyFrame(
@@ -158,8 +165,9 @@ class DaskLazyFrame(
         return self._with_native(self.native.loc[mask])
 
     def simple_select(self, *column_names: str) -> Self:
+        df: Incomplete = self.native
         native = select_columns_by_name(
-            self.native, list(column_names), self._backend_version, self._implementation
+            df, list(column_names), self._backend_version, self._implementation
         )
         return self._with_native(native)
 
@@ -170,8 +178,9 @@ class DaskLazyFrame(
 
     def select(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
+        df: Incomplete = self.native
         df = select_columns_by_name(
-            self.native.assign(**dict(new_series)),
+            df.assign(**dict(new_series)),
             [s[0] for s in new_series],
             self._backend_version,
             self._implementation,
@@ -269,6 +278,7 @@ class DaskLazyFrame(
                 )
                 .drop(columns=key_token)
             )
+        other_native: Incomplete = other.native
 
         if how == "anti":
             indicator_token = generate_temporary_column_name(
@@ -280,7 +290,7 @@ class DaskLazyFrame(
                 raise TypeError(msg)
             other_native = (
                 select_columns_by_name(
-                    other.native,
+                    other_native,
                     list(right_on),
                     self._backend_version,
                     self._implementation,
@@ -307,7 +317,7 @@ class DaskLazyFrame(
                 raise TypeError(msg)
             other_native = (
                 select_columns_by_name(
-                    other.native,
+                    other_native,
                     list(right_on),
                     self._backend_version,
                     self._implementation,

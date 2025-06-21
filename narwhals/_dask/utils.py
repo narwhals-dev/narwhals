@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
 
-    from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.dataframe import DaskLazyFrame, Incomplete
     from narwhals._dask.expr import DaskExpr
     from narwhals.typing import IntoDType
 else:
@@ -65,9 +65,9 @@ def add_row_index(
     implementation: Implementation,
 ) -> dd.DataFrame:
     original_cols = frame.columns
-    frame = frame.assign(**{name: 1})
+    df: Incomplete = frame.assign(**{name: 1})
     return select_columns_by_name(
-        frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1}),
+        df.assign(**{name: df[name].cumsum(method="blelloch") - 1}),
         [name, *original_cols],
         backend_version,
         implementation,
