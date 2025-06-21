@@ -123,7 +123,12 @@ class DuckDBNamespace(
 
     def any_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
-            return reduce(operator.or_, cols)
+            it = (
+                (CoalesceOperator(expr, lit(False)) for expr in cols)  # noqa: FBT003
+                if ignore_nulls
+                else iter(cols)
+            )
+            return reduce(operator.or_, it)
 
         return self._with_elementwise(func, *exprs)
 
