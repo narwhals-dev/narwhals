@@ -6,15 +6,18 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
+
 
 UNITS_DICT = {
     "y": "year",
@@ -285,3 +288,20 @@ def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
     else:
         by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
     return f"order by {by_sql}"
+
+
+def catch_duckdb_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:
+    if isinstance(exception, duckdb.BinderException) and any(
+        msg in str(exception)
+        for msg in (
+            "not found in FROM clause",
+            "this column cannot be referenced before it is defined",
+        )
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
