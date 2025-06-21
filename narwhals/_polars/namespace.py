@@ -125,12 +125,17 @@ class PolarsNamespace:
     def len(self) -> PolarsExpr:
         if self._backend_version < (0, 20, 5):
             return self._expr(
-                pl.count().alias("len"),
-                version=self._version,
-                backend_version=self._backend_version,
+                pl.count().alias("len"), self._version, self._backend_version
             )
+        return self._expr(pl.len(), self._version, self._backend_version)
+
+    def any_horizontal(
+        self, *exprs: PolarsExpr, ignore_nulls: bool
+    ) -> PolarsDataFrame | PolarsLazyFrame:
         return self._expr(
-            pl.len(), version=self._version, backend_version=self._backend_version
+            pl.any_horizontal(*(expr.native for expr in exprs)),
+            self._version,
+            self._backend_version,
         )
 
     def concat(

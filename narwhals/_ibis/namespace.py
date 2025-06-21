@@ -98,7 +98,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             version=self._version,
         )
 
-    def any_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
+    def any_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             cols = chain.from_iterable(expr(df) for expr in exprs)
             return [reduce(operator.or_, cols)]

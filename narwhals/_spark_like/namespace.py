@@ -137,7 +137,7 @@ class SparkLikeNamespace(
 
         return self._with_elementwise(func, *exprs)
 
-    def any_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return reduce(operator.or_, cols)
 

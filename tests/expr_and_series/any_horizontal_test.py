@@ -13,7 +13,7 @@ from tests.utils import Constructor, assert_equal_data
 def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
-    result = df.select(any=nw.any_horizontal(expr1, expr2))
+    result = df.select(any=nw.any_horizontal(expr1, expr2, ignore_nulls=False))
 
     expected = {"any": [False, True, True]}
     assert_equal_data(result, expected)
@@ -28,7 +28,7 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False], "b": [True, None, None]}
     df = nw.from_native(constructor(data))
-    result = df.select(any=nw.any_horizontal("a", "b"))
+    result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=False))
     if any(x in str(constructor) for x in ("pandas_constructor",)):
         expected: list[bool | None] = [True, True, False]
     else:
@@ -39,9 +39,9 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
 def test_anyh_all(constructor: Constructor) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
-    result = df.select(any=nw.any_horizontal(nw.all()))
+    result = df.select(any=nw.any_horizontal(nw.all(), ignore_nulls=False))
     expected = {"any": [False, True, True]}
     assert_equal_data(result, expected)
-    result = df.select(nw.any_horizontal(nw.all()))
+    result = df.select(nw.any_horizontal(nw.all(), ignore_nulls=False))
     expected = {"a": [False, True, True]}
     assert_equal_data(result, expected)

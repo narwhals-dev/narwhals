@@ -97,7 +97,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast

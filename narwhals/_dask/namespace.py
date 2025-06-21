@@ -108,7 +108,7 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def any_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+    def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))

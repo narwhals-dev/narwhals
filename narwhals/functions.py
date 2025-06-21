@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
+from functools import partial
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -1659,16 +1660,20 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
-
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `False`.
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes, as they cannot store null values.
 
     Returns:
         A new expression.
@@ -1704,10 +1709,19 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
+    if ignore_nulls is None:
+        issue_deprecation_warning(
+            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
+            _version="1.44",
+        )
+        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
+            plx,
+            partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
+            *flat_exprs,
+            str_as_lit=False,
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )

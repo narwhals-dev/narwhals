@@ -121,7 +121,7 @@ class DuckDBNamespace(
 
         return self._with_elementwise(func, *exprs)
 
-    def any_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    def any_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.or_, cols)
 

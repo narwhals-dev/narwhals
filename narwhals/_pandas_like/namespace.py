@@ -146,7 +146,9 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def any_horizontal(
+        self, *exprs: PandasLikeExpr, ignore_nulls: bool
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
             series = align(*(s for _expr in exprs for s in _expr(df)))
