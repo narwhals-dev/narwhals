@@ -22,14 +22,14 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation
+from narwhals._pandas_like.utils import get_dtype_backend
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import dask.dataframe.dask_expr as dx
 
-    from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
@@ -110,10 +110,27 @@ class DaskNamespace(
 
     def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = align_series_full_broadcast(
-                df, *(s for _expr in exprs for s in _expr(df))
+            series = [s for _expr in exprs for s in _expr(df)]
+            backends = [
+                get_dtype_backend(s.dtype, implementation=self._implementation)
+                for s in series
+            ]
+            if (
+                self._version is Version.MAIN
+                and not ignore_nulls
+                and any(x is None for x in backends)
+            ):
+                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
+                raise ValueError(msg)
+            it = (
+                (
+                    s if backend is None else s.fill_null(False, None, None)  # noqa: FBT003
+                    for s, backend in zip(series, backends)
+                )
+                if ignore_nulls
+                else iter(series)
             )
-            return [reduce(operator.or_, series)]
+            return [reduce(operator.or_, align_series_full_broadcast(*it))]
 
         return self._expr(
             call=func,

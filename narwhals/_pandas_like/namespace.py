@@ -162,6 +162,7 @@ class PandasLikeNamespace(
                 self._version is Version.MAIN
                 and not ignore_nulls
                 and any(x is None for x in backends)
+                and any(s.is_null().any() for s in series)
             ):
                 msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
                 raise ValueError(msg)
