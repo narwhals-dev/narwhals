@@ -101,7 +101,12 @@ class ArrowNamespace(
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            return [reduce(operator.or_, align(*series))]
+            it = (
+                (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,

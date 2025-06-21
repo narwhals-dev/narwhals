@@ -167,9 +167,7 @@ class PandasLikeNamespace(
                 raise ValueError(msg)
             it = (
                 (
-                    s
-                    if backend is None
-                    else s.fill_null(False, strategy=None, limit=None)  # noqa: FBT003
+                    s if backend is None else s.fill_null(False, None, None)  # noqa: FBT003
                     for s, backend in zip(series, backends)
                 )
                 if ignore_nulls
