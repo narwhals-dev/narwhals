@@ -101,7 +101,14 @@ if TYPE_CHECKING:
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
 
-    class _CuDFDataFrame(NativeFrame, Protocol):
+    class _BasePandasLikeFrame(NativeFrame, Protocol):
+        @property
+        def shape(self) -> tuple[int, int]: ...
+        def __getitem__(self, key: Any, /) -> Any: ...
+        @property
+        def loc(self) -> Any: ...
+
+    class _CuDFDataFrame(_BasePandasLikeFrame, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
 
     class _CuDFSeries(NativeSeries, Protocol):
@@ -114,7 +121,7 @@ if TYPE_CHECKING:
         def __pandas_result__(self, *args: Any, **kwds: Any) -> Any: ...
         def __polars_result__(self, *args: Any, **kwds: Any) -> Any: ...
 
-    class _ModinDataFrame(NativeFrame, Protocol):
+    class _ModinDataFrame(_BasePandasLikeFrame, Protocol):
         _pandas_class: type[pd.DataFrame]
 
     class _ModinSeries(NativeSeries, Protocol):

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import NativeDataFrameT
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
@@ -558,35 +559,37 @@ def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int
 
 
 def select_columns_by_name(
-    df: T,
+    df: NativeDataFrameT,
     column_names: list[str] | _1DArray,  # NOTE: Cannot be a tuple!
     backend_version: tuple[int, ...],
     implementation: Implementation,
-) -> T:
+) -> NativeDataFrameT | Any:
     """Select columns by name.
 
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and all(column_names == df.columns):  # type: ignore[attr-defined]
-        return df
-    if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
+    if len(column_names) == df.shape[1]:  # noqa: SIM102
+        # NOTE: I'm pretty unsure on how this doesn't trigger a runtime error
+        if all(column_names == df.columns):  # type: ignore[arg-type]
+            return df
+    if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
         if error := check_columns_exist(
             column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
+            available=df.columns.tolist(),
         ):
             raise error
-        return df.loc[:, column_names]  # type: ignore[attr-defined]
+        return df.loc[:, column_names]
     try:
-        return df[column_names]  # type: ignore[index]
+        return df[column_names]
     except KeyError as e:
         if error := check_columns_exist(
             column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
+            available=df.columns.tolist(),
         ):
             raise error from e
         raise
