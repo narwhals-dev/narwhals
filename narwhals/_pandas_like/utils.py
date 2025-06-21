@@ -22,7 +22,11 @@ if TYPE_CHECKING:
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.typing import NativeDataFrameT, NativeNDFrameT
+    from narwhals._pandas_like.typing import (
+        NativeDataFrameT,
+        NativeNDFrameT,
+        NativeSeriesT,
+    )
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
@@ -544,7 +548,7 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
     return result
 
 
-def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int]:
+def calculate_timestamp_date(s: NativeSeriesT, time_unit: str) -> NativeSeriesT:
     s = s * 86_400  # number of seconds in a day
     if time_unit == "ns":
         result = s * 1_000_000_000

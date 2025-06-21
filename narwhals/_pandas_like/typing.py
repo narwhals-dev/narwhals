@@ -16,7 +16,6 @@ if TYPE_CHECKING:
         _ModinDataFrame,
         _ModinSeries,
         _NativePandasLikeDataFrame,
-        _NativePandasLikeSeries,
     )
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -24,7 +23,11 @@ if TYPE_CHECKING:
     IntoPandasLikeExpr: TypeAlias = "PandasLikeExpr | PandasLikeSeries"
 
 NativeSeriesT = TypeVar(
-    "NativeSeriesT", bound="_NativePandasLikeSeries", default="pd.Series[Any]"
+    "NativeSeriesT",
+    "pd.Series[Any]",
+    "_CuDFSeries",
+    "_ModinSeries",
+    default="pd.Series[Any]",
 )
 NativeDataFrameT = TypeVar(
     "NativeDataFrameT", bound="_NativePandasLikeDataFrame", default="pd.DataFrame"

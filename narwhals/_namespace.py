@@ -30,7 +30,7 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sized
+    from collections.abc import Collection, Sized
     from types import ModuleType
     from typing import ClassVar
 
@@ -104,6 +104,8 @@ if TYPE_CHECKING:
         """`mypy` doesn't like the asymmetric `property` setter in `pandas`."""
 
         def __getitem__(self, key: Any, /) -> Any: ...
+        def __mul__(self, other: float | Collection[float] | Self) -> Self: ...
+        def __truediv__(self, other: float | Collection[float] | Self) -> Self: ...
         @property
         def loc(self) -> Any: ...
         @property
