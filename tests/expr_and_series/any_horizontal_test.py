@@ -36,6 +36,19 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
     assert_equal_data(result, {"any": expected})
 
 
+def test_anyh_ignore_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False], "b": [True, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=True))
+    expected: list[bool | None] = [True, True, False]
+    assert_equal_data(result, {"any": expected})
+
+
 def test_anyh_all(constructor: Constructor) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
