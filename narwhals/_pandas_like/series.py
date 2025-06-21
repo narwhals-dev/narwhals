@@ -229,10 +229,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         for s in series:
             if s._broadcast:
                 native = Series(
-                    np.repeat(s.native.iloc[0], max_length),
-                    index=idx,
-                    name=s.name,
-                    dtype=s.native.dtype,
+                    s.native.iloc[0], index=idx, name=s.name, dtype=s.native.dtype
                 )
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
