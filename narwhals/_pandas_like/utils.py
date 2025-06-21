@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import re
-from collections.abc import Sized
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
@@ -18,14 +17,12 @@ from narwhals._utils import (
 )
 from narwhals.exceptions import DuplicateError, ShapeError
 
-T = TypeVar("T", bound=Sized)
-
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
-    from narwhals._pandas_like.typing import NativeDataFrameT
+    from narwhals._pandas_like.typing import NativeDataFrameT, NativeNDFrameT
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
@@ -128,12 +125,12 @@ def align_and_extract_native(
 
 
 def set_index(
-    obj: T,
+    obj: NativeNDFrameT,
     index: Any,
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' set_axis to set object index.
 
     We can set `copy` / `inplace` based on implementation/version.
@@ -144,30 +141,30 @@ def set_index(
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
         raise ShapeError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
-        obj.index = index  # type: ignore[attr-defined]
+        obj = obj.copy(deep=False)
+        obj.index = index
         return obj
     if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0, copy=False)
     else:  # pragma: no cover
-        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)
 
 
 def rename(
-    obj: T,
+    obj: NativeNDFrameT,
     *args: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
     **kwargs: Any,
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
         backend_version >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined]
-    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
+        return obj.rename(*args, **kwargs, inplace=False)
+    return obj.rename(*args, **kwargs, copy=False, inplace=False)
 
 
 @functools.lru_cache(maxsize=16)
