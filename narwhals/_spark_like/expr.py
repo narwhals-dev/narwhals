@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import (
+    ExprKind,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -20,7 +24,7 @@ from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
@@ -272,6 +276,33 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
+        )
+
+    @classmethod
+    def from_elementwise(
+        cls, func: Callable[[Iterable[Column]], Column], *exprs: Self
+    ) -> Self:
+        def call(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+        ) -> list[Column]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=context._backend_version,
             version=context._version,
             implementation=context._implementation,

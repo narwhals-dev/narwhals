@@ -8,6 +8,10 @@ import ibis
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
@@ -16,7 +20,7 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self
@@ -199,6 +203,23 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    @classmethod
+    def from_elementwise(
+        cls, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: Self
+    ) -> Self:
+        def call(df: IbisLazyFrame) -> list[ir.Value]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=context._backend_version,
             version=context._version,
         )
