@@ -1770,7 +1770,8 @@ class not_implemented:  # noqa: N801
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
         who = getattr(instance, "_implementation", self._name_owner)
-        raise _not_implemented_error(self._name, who)
+        _raise_not_implemented_error(self._name, who)
+        return None  # pragma: no cover
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         # NOTE: Purely to duck-type as assignable to **any** instance method
@@ -1793,13 +1794,13 @@ class not_implemented:  # noqa: N801
         return deprecated(message)(obj)
 
 
-def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
         f"{what!r} is not implemented for: {who!r}.\n\n"
         "If you would like to see this functionality in `narwhals`, "
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
-    return NotImplementedError(msg)
+    raise NotImplementedError(msg)
 
 
 class requires:  # noqa: N801
