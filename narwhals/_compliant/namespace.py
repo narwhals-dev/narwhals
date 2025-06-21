@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeFrameT,
     NativeFrameT_co,
+    NativeSeriesT,
 )
 from narwhals._utils import (
     exclude_column_names,
@@ -128,7 +129,7 @@ class LazyNamespace(
 
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -136,9 +137,15 @@ class EagerNamespace(
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
-    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT]: ...
+    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
 
-    def from_native(self, data: Any, /) -> EagerDataFrameT | EagerSeriesT:
+    @overload
+    def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
+    @overload
+    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    def from_native(
+        self, data: NativeFrameT | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
         elif self._series._is_native(data):

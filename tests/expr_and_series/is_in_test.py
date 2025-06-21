@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 import narwhals as nw
@@ -18,16 +16,7 @@ def test_expr_is_in(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_empty_list(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU"):
-        # Traceback:
-        # narwhals.exceptions.ComputeError: RuntimeError:
-        # CUDF failure at:/__w/cudf/cudf/cpp/include/cudf/utilities/type_dispatcher.hpp:567:
-        # Invalid type_id.
-        request.applymarker(pytest.mark.xfail)
-
+def test_expr_is_in_empty_list(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").is_in([]))
     expected = {"a": [False, False, False, False]}

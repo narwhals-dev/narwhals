@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -74,7 +74,9 @@ if TYPE_CHECKING:
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
+):
     def __init__(
         self,
         native_dataframe: pa.Table,
@@ -330,7 +332,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        reshaped = align_series_full_broadcast(*new_series)
+        align = new_series[0]._align_full_broadcast
+        reshaped = align(*new_series)
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 

@@ -12,10 +12,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import (
-    align_series_full_broadcast,
-    cast_to_comparable_string_types,
-)
+from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -26,12 +23,14 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._arrow.typing import Incomplete
+    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table]):
+class ArrowNamespace(
+    EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
+):
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -86,7 +85,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
     def all_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
-            return [reduce(operator.and_, align_series_full_broadcast(*series))]
+            align = self._series._align_full_broadcast
+            return [reduce(operator.and_, align(*series))]
 
         return self._expr._from_callable(
             func=func,
@@ -100,7 +100,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
     def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
-            return [reduce(operator.or_, align_series_full_broadcast(*series))]
+            align = self._series._align_full_broadcast
+            return [reduce(operator.or_, align(*series))]
 
         return self._expr._from_callable(
             func=func,
@@ -115,7 +116,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             it = chain.from_iterable(expr(df) for expr in exprs)
             series = (s.fill_null(0, strategy=None, limit=None) for s in it)
-            return [reduce(operator.add, align_series_full_broadcast(*series))]
+            align = self._series._align_full_broadcast
+            return [reduce(operator.add, align(*series))]
 
         return self._expr._from_callable(
             func=func,
@@ -131,12 +133,11 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             expr_results = list(chain.from_iterable(expr(df) for expr in exprs))
-            series = align_series_full_broadcast(
+            align = self._series._align_full_broadcast
+            series = align(
                 *(s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             )
-            non_na = align_series_full_broadcast(
-                *(1 - s.is_null().cast(int_64) for s in expr_results)
-            )
+            non_na = align(*(1 - s.is_null().cast(int_64) for s in expr_results))
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
 
         return self._expr._from_callable(
@@ -150,8 +151,9 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            align = self._series._align_full_broadcast
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
-            init_series, *series = align_series_full_broadcast(init_series, *series)
+            init_series, *series = align(init_series, *series)
             native_series = reduce(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
@@ -175,8 +177,9 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            align = self._series._align_full_broadcast
             init_series, *series = list(chain.from_iterable(expr(df) for expr in exprs))
-            init_series, *series = align_series_full_broadcast(init_series, *series)
+            init_series, *series = align(init_series, *series)
             native_series = reduce(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
@@ -232,7 +235,8 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
         self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            compliant_series_list = align_series_full_broadcast(
+            align = self._series._align_full_broadcast
+            compliant_series_list = align(
                 *(chain.from_iterable(expr(df) for expr in exprs))
             )
             name = compliant_series_list[0].name
@@ -263,23 +267,20 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
         )
 
 
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr]):
+class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
     def _then(self) -> type[ArrowThen]:
         return ArrowThen
 
     def _if_then_else(
-        self, when: ArrowSeries, then: ArrowSeries, otherwise: ArrowSeries | None, /
-    ) -> ArrowSeries:
-        if otherwise is None:
-            when, then = align_series_full_broadcast(when, then)
-            res_native = pc.if_else(
-                when.native, then.native, pa.nulls(len(when.native), then.native.type)
-            )
-        else:
-            when, then, otherwise = align_series_full_broadcast(when, then, otherwise)
-            res_native = pc.if_else(when.native, then.native, otherwise.native)
-        return then._with_native(res_native)
+        self,
+        when: ChunkedArrayAny,
+        then: ChunkedArrayAny,
+        otherwise: ArrayOrScalar | NonNestedLiteral,
+        /,
+    ) -> ChunkedArrayAny:
+        otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
+        return pc.if_else(when, then, otherwise)
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...

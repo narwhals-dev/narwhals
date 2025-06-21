@@ -13,6 +13,7 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprAny,
     NativeExprT,
+    NativeSeriesT,
     WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
@@ -148,16 +149,21 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT],
+    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
 ):
     def _if_then_else(
-        self, when: EagerSeriesT, then: EagerSeriesT, otherwise: EagerSeriesT | None, /
-    ) -> EagerSeriesT: ...
+        self,
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | NonNestedLiteral | Scalar,
+        /,
+    ) -> NativeSeriesT: ...
 
     def __call__(self, df: EagerDataFrameT, /) -> Sequence[EagerSeriesT]:
         is_expr = self._condition._is_expr
         when: EagerSeriesT = self._condition(df)[0]
         then: EagerSeriesT
+        align = when._align_full_broadcast
 
         if is_expr(self._then_value):
             then = self._then_value(df)[0]
@@ -167,12 +173,12 @@ class EagerWhen(
 
         if is_expr(self._otherwise_value):
             otherwise = self._otherwise_value(df)[0]
-        elif self._otherwise_value is not None:
-            otherwise = when._from_scalar(self._otherwise_value)
-            otherwise._broadcast = True
+            when, then, otherwise = align(when, then, otherwise)
+            result = self._if_then_else(when.native, then.native, otherwise.native)
         else:
-            otherwise = self._otherwise_value
-        return [self._if_then_else(when, then, otherwise)]
+            when, then = align(when, then)
+            result = self._if_then_else(when.native, then.native, self._otherwise_value)
+        return [then._with_native(result)]
 
 
 class LazyWhen(
