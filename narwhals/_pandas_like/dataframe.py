@@ -416,23 +416,37 @@ class PandasLikeDataFrame(
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str) -> Self:
-        frame = self.native
-        index = frame.index
-        size = len(frame)
-        plx = self.__narwhals_namespace__()
+    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+        if order_by is None:
+            frame = self.native
+            index = frame.index
+            size = len(frame)
+            plx = self.__narwhals_namespace__()
 
-        if self._implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+            if self._implementation.is_cudf():
+                import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
-            data = cp.arange(size)
+                data = cp.arange(size)
+            else:
+                import numpy as np  # ignore-banned-import
+
+                data = np.arange(size)
+
+            row_index = plx._series.from_iterable(
+                data, context=self, index=index, name=name
+            ).native
+            return self._with_native(plx._concat_horizontal([row_index, frame]))
         else:
-            import numpy as np  # ignore-banned-import
+            plx = self.__narwhals_namespace__()
 
-            data = np.arange(size)
-
-        row_index = plx._series.from_iterable(data, context=self, index=index, name=name)
-        return self._with_native(plx._concat_horizontal([row_index.native, frame]))
+            row_index_expr = (
+                plx.col(order_by[0])
+                .rank(method="ordinal", descending=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1
+            ).alias(name)
+            result = self.select(row_index_expr, plx.col(*self.columns)).native
+            return self._with_native(result)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])

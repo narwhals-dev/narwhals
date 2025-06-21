@@ -212,7 +212,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token).sort(
+                df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
@@ -261,7 +261,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     token = generate_temporary_column_name(8, columns)
                     df = (
                         df.simple_select(*columns)
-                        .with_row_index(token)
+                        .with_row_index(token, order_by=None)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
                     sorting_indices = df.get_column(token)
