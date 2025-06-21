@@ -24,8 +24,49 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Any
 
+
+# TODO @dangotbanned: `version` validation
+# - For static typing, `message` must be a `LiteralString`
+# - So the `narwhals` version needs to be embedded in the string, without using fstrings/str.format/etc
+# - We'll need to decide on a style to use, and then add **runtime** validation to ensure we stay conistent
+#   - E.g. "<thing> is deprecated since narwhals <version>. Use <alternative> instead. <Extended description>"
+#   - Where only the <alternative> and <Extended description> sections are optional.
+def _deprecated_compat(
+    message: str, /, *, category: type[DeprecationWarning] | None = DeprecationWarning
+) -> Callable[[Callable[P, R]], Callable[P, R]]:  # pragma: no cover
+    def decorate(func: Callable[P, R], /) -> Callable[P, R]:
+        if category is None:
+            func.__deprecated__ = message  # type: ignore[attr-defined]
+            return func
+
+        # TODO @dangotbanned: Coverage for this before `3.13`?
+        if isinstance(func, type) or not callable(func):  # pragma: no cover
+            from narwhals._utils import qualified_type_name
+
+            # NOTE: The logic for that part is much more complex, leaving support out *for now*,
+            # as we don't have any deprecated classes.
+            # https://github.com/python/cpython/blob/eec7a8ff22dcf409717a21a9aeab28b55526ee24/Lib/_py_warnings.py#L745-L789
+            msg = f"@nw._typing_compat.deprecated` cannot be applied to {qualified_type_name(func)!r}"
+            raise NotImplementedError(msg)
+        cat = category
+        import functools
+
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwds: P.kwargs) -> R:
+            from narwhals._utils import issue_deprecation_warning
+
+            issue_deprecation_warning(message, _version="???", category=cat)
+            return func(*args, **kwds)
+
+        return wrapper
+
+    return decorate
+
+
 if TYPE_CHECKING:
     from typing import Callable, Protocol as Protocol38
+
+    from typing_extensions import ParamSpec
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar
@@ -33,7 +74,8 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeVar, deprecated
 
-    _Fn = TypeVar("_Fn", bound=Callable[..., Any])
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 else:  # pragma: no cover
@@ -59,11 +101,7 @@ else:  # pragma: no cover
                 contravariant=contravariant,
             )
 
-        def deprecated(message: str, /) -> Callable[[_Fn], _Fn]:
-            def wrapper(func: _Fn, /) -> _Fn:
-                return func
-
-            return wrapper
+        deprecated = _deprecated_compat
 
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386

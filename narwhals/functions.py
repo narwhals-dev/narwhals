@@ -23,7 +23,6 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
-    issue_deprecation_warning,
     parse_version,
     supports_arrow_c_stream,
     validate_laziness,
@@ -597,7 +596,9 @@ def show_versions() -> None:
 
 
 @deprecated(
-    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
+    "`get_level` is deprecated since **1.43**, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
+    "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
+    "returns `nw.LazyFrame`."
 )
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
@@ -621,12 +622,6 @@ def get_level(
             - 'lazy': only lazy operations are supported. This excludes anything
               which involves iterating over rows in Python.
     """
-    issue_deprecation_warning(
-        "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
-        "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
-        "returns `nw.LazyFrame`.",
-        "1.43",
-    )
     return obj._level
 
 
