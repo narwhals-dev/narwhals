@@ -16,13 +16,15 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
+from narwhals._pandas_like.utils import get_dtype_backend
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
-    from narwhals._utils import Implementation, Version
+    from narwhals._utils import Implementation
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -151,8 +153,29 @@ class PandasLikeNamespace(
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
-            return [reduce(operator.or_, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            backends = [
+                get_dtype_backend(s.native.dtype, implementation=self._implementation)
+                for s in series
+            ]
+            if (
+                self._version is Version.MAIN
+                and not ignore_nulls
+                and any(x is None for x in backends)
+            ):
+                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
+                raise ValueError(msg)
+            it = (
+                (
+                    s
+                    if backend is None
+                    else s.fill_null(False, strategy=None, limit=None)  # noqa: FBT003
+                    for s, backend in zip(series, backends)
+                )
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
