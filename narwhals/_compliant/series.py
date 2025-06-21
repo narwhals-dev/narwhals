@@ -16,6 +16,7 @@ from narwhals._compliant.typing import (
     NativeSeriesT_co,
 )
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     _StoresCompliant,
     _StoresNative,
@@ -330,9 +331,8 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
             return self._gather(item.native)
         elif is_sized_multi_index_selector(item):
             return self._gather(item)
-        else:  # pragma: no cover
-            msg = f"Unreachable code, got unexpected type: {type(item)}"
-            raise AssertionError(msg)
+        else:
+            assert_never(item)
 
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
