@@ -157,48 +157,16 @@ def test_truediv_same_dims(
     assert_equal_data({"a": result}, {"a": [2, 1, 1 / 3]})
 
 
-@pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_floordiv_pandas(left: int, right: int) -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
-    assume(right != 0)
-    expected = {"a": [left // right]}
-    result: nw.DataFrame[Any] = nw.from_native(
-        pd.DataFrame({"a": [left]}), eager_only=True
-    ).select(nw.col("a") // right)
-    assert_equal_data(result, expected)
-    if PANDAS_VERSION < (2, 2):  # pragma: no cover
-        # Bug in old version of pandas
-        pass
-    else:
-        result = nw.from_native(
-            pd.DataFrame({"a": [left]}).convert_dtypes(dtype_backend="pyarrow"),
-            eager_only=True,
-        ).select(nw.col("a") // right)
-        assert_equal_data(result, expected)
-    result = nw.from_native(
-        pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
-    ).select(nw.col("a") // right)
-    assert_equal_data(result, expected)
-
-
 @pytest.mark.slow
-@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_floordiv_polars(left: int, right: int) -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
+def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
+    if any(x in str(constructor_eager) for x in ["modin", "cudf"]):
+        # modin & cudf are too slow here
+        pytest.skip()
     assume(right != 0)
     expected = {"a": [left // right]}
-    result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
+    result = nw.from_native(constructor_eager({"a": [left]}), eager_only=True).select(
         nw.col("a") // right
     )
     assert_equal_data(result, expected)
@@ -207,70 +175,14 @@ def test_floordiv_polars(left: int, right: int) -> None:
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_floordiv_pyarrow(left: int, right: int) -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
-    assume(right != 0)
-    expected = {"a": [left // right]}
-    result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
-        nw.col("a") // right
-    )
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.slow
-@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_mod_pandas(left: int, right: int) -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
+def test_mod(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
+    if any(x in str(constructor_eager) for x in ["pandas_pyarrow", "modin", "cudf"]):
+        # pandas[pyarrow] does not implement mod
+        # modin & cudf are too slow here
+        pytest.skip()
     assume(right != 0)
     expected = {"a": [left % right]}
-    result: nw.DataFrame[Any] = nw.from_native(
-        pd.DataFrame({"a": [left]}), eager_only=True
-    ).select(nw.col("a") % right)
-    assert_equal_data(result, expected)
-    result = nw.from_native(
-        pd.DataFrame({"a": [left]}).convert_dtypes(), eager_only=True
-    ).select(nw.col("a") % right)
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.slow
-@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_mod_polars(left: int, right: int) -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
-    assume(right != 0)
-    expected = {"a": [left % right]}
-    result = nw.from_native(pl.DataFrame({"a": [left]}), eager_only=True).select(
-        nw.col("a") % right
-    )
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.slow
-@given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_mod_pyarrow(left: int, right: int) -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
-    # hypothesis complains if we add `constructor` as an argument, so this
-    # test is a bit manual unfortunately
-    assume(right != 0)
-    expected = {"a": [left % right]}
-    result = nw.from_native(pa.table({"a": [left]}), eager_only=True).select(
+    result = nw.from_native(constructor_eager({"a": [left]}), eager_only=True).select(
         nw.col("a") % right
     )
     assert_equal_data(result, expected)
