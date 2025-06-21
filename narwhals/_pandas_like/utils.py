@@ -566,10 +566,8 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1]:  # noqa: SIM102
-        # NOTE: I'm pretty unsure on how this doesn't trigger a runtime error
-        if all(column_names == df.columns):  # type: ignore[arg-type]
-            return df
+    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
+        return df
     if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
