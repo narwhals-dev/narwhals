@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -596,19 +597,25 @@ class PandasLikeSeries(EagerSeries[Any]):
         limit: int | None,
     ) -> Self:
         ser = self.native
-        if value is not None:
-            _, native_value = align_and_extract_native(self, value)
-            res_ser = self._with_native(
-                ser.fillna(value=native_value), preserve_broadcast=True
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                ".*Downcasting object dtype arrays.*is deprecated",
+                category=FutureWarning,
+                module="pandas",
             )
-        else:
-            res_ser = self._with_native(
-                ser.ffill(limit=limit)
-                if strategy == "forward"
-                else ser.bfill(limit=limit),
-                preserve_broadcast=True,
-            )
-
+            if value is not None:
+                _, native_value = align_and_extract_native(self, value)
+                res_ser = self._with_native(
+                    ser.fillna(value=native_value), preserve_broadcast=True
+                )
+            else:
+                res_ser = self._with_native(
+                    ser.ffill(limit=limit)
+                    if strategy == "forward"
+                    else ser.bfill(limit=limit),
+                    preserve_broadcast=True,
+                )
         return res_ser
 
     def drop_nulls(self) -> PandasLikeSeries:
