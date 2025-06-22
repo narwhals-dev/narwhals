@@ -1673,7 +1673,7 @@ def any_horizontal(
             - If `True`, null values are ignored. If there are no elements, the result
               is `False`.
             - If `False`, Kleene logic is followed. Note that this is not allowed for
-              pandas with classical NumPy dtypes, as they cannot store null values.
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
