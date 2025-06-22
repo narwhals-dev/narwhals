@@ -51,7 +51,7 @@ def _create_namespace(
         if name in _reserved_namespaces:
             msg = f"cannot override reserved namespace {name!r}"
             raise AttributeError(msg)
-        elif hasattr(cls, name):
+        if hasattr(cls, name):
             warn(
                 f"Overriding existing custom namespace {name!r} (on {cls.__name__!r})",
                 UserWarning,
@@ -125,13 +125,13 @@ def register_dataframe_namespace(name: str) -> Callable[[type[NS]], type[NS]]:
     name
         Name under which the functionality will be accessed.
 
-    See Also
+    See Also:
     --------
     register_expr_namespace : Register functionality on an Expr.
     register_lazyframe_namespace : Register functionality on a LazyFrame.
     register_series_namespace : Register functionality on a Series.
 
-    Examples
+    Examples:
     --------
     >>> @nw.api.register_dataframe_namespace("split")
     ... class SplitFrame:
@@ -222,13 +222,13 @@ def register_lazyframe_namespace(name: str) -> Callable[[type[NS]], type[NS]]:
     name
         Name under which the functionality will be accessed.
 
-    See Also
+    See Also:
     --------
     register_expr_namespace : Register functionality on an Expr.
     register_dataframe_namespace : Register functionality on a DataFrame.
     register_series_namespace : Register functionality on a Series.
 
-    Examples
+    Examples:
     --------
     >>> @nw.api.register_lazyframe_namespace("types")
     ... class DTypeOperations:
@@ -322,13 +322,13 @@ def register_series_namespace(name: str) -> Callable[[type[NS]], type[NS]]:
     name
         Name under which the functionality will be accessed.
 
-    See Also
+    See Also:
     --------
     register_expr_namespace : Register functionality on an Expr.
     register_dataframe_namespace : Register functionality on a DataFrame.
     register_lazyframe_namespace : Register functionality on a LazyFrame.
 
-    Examples
+    Examples:
     --------
     >>> @nw.api.register_series_namespace("math")
     ... class MathShortcuts:

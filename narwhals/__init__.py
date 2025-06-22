@@ -2,11 +2,6 @@ from __future__ import annotations
 
 import typing as _t
 
-from narwhals.api import (
-    register_dataframe_namespace,
-    register_expr_namespace,
-    register_lazyframe_namespace,
-)
 from narwhals import dependencies, dtypes, exceptions, selectors
 from narwhals._utils import (
     Implementation,
@@ -17,6 +12,11 @@ from narwhals._utils import (
     maybe_get_index,
     maybe_reset_index,
     maybe_set_index,
+)
+from narwhals.api import (
+    register_dataframe_namespace,
+    register_expr_namespace,
+    register_lazyframe_namespace,
 )
 from narwhals.dataframe import DataFrame, LazyFrame
 from narwhals.dtypes import (
