@@ -1467,7 +1467,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
-        self._predicate = all_horizontal(*flatten(predicates))
+        self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
@@ -1627,7 +1627,10 @@ def all_horizontal(
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
+            plx,
+            partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
+            *flat_exprs,
+            str_as_lit=False,
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
