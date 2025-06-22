@@ -252,8 +252,7 @@ def test_replace_selector(
     expected: DummyExpr | ExprIR,
     schema_1: dict[str, DType],
 ) -> None:
-    group_by_keys = ()
-    actual = replace_selector(expr._ir, group_by_keys, schema=freeze_schema(**schema_1))
+    actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
     assert_expr_ir_equal(actual, expected)
 
 

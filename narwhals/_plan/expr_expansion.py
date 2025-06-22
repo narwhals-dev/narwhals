@@ -97,6 +97,13 @@ FrozenColumns: TypeAlias = "Seq[str]"
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
+GroupByKeys: TypeAlias = "Seq[ExprIR]"
+"""Represents group_by keys.
+
+- Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
+- Not fully utilized in `narwhals` version yet
+"""
+
 _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
 
@@ -336,13 +343,7 @@ def replace_with_column(
     return origin.map_ir(fn)
 
 
-def replace_selector(
-    ir: ExprIR,
-    /,
-    keys: Seq[ExprIR],  # noqa: ARG001
-    *,
-    schema: FrozenSchema,
-) -> ExprIR:
+def replace_selector(ir: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     """Fully diverging from `polars`, we'll see how that goes."""
 
     def fn(child: ExprIR, /) -> ExprIR:
@@ -374,10 +375,8 @@ def expand_selector(selector: SelectorIR, *, schema: FrozenSchema) -> Columns:
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
-    keys: Seq[
-        ExprIR
-    ],  # NOTE: Mutable (empty) array initialized on call (except in `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`)
-    *,  # NOTE: Represents group_by keys
+    keys: GroupByKeys,
+    *,
     schema: FrozenSchema,
 ) -> Seq[ExprIR]:
     result: deque[ExprIR] = deque()
@@ -385,7 +384,7 @@ def rewrite_projections(
         expanded = expand_function_inputs(expr, schema=schema)
         flags = ExpansionFlags.from_ir(expanded)
         if flags.has_selector:
-            expanded = replace_selector(expanded, keys, schema=schema)
+            expanded = replace_selector(expanded, schema=schema)
             flags = flags.with_multiple_columns()
         result.extend(
             replace_and_add_to_results(
@@ -398,7 +397,7 @@ def rewrite_projections(
 def replace_and_add_to_results(
     origin: ExprIR,
     /,
-    keys: Seq[ExprIR],
+    keys: GroupByKeys,
     *,
     col_names: FrozenColumns,
     flags: ExpansionFlags,
@@ -410,7 +409,9 @@ def replace_and_add_to_results(
         it = (e for e in origin.iter_left() if isinstance(e, (Columns, IndexColumns)))
         if e := next(it, None):
             if isinstance(e, Columns):
-                exclude = prepare_excluded(origin, keys=(), has_exclude=flags.has_exclude)
+                exclude = prepare_excluded(
+                    origin, keys=keys, has_exclude=flags.has_exclude
+                )
                 result.extend(expand_columns(origin, e, exclude=exclude))
             else:
                 exclude = prepare_excluded(
@@ -437,7 +438,7 @@ def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
 
 
 def prepare_excluded(
-    origin: ExprIR, /, keys: Seq[ExprIR], *, has_exclude: bool
+    origin: ExprIR, /, keys: GroupByKeys, *, has_exclude: bool
 ) -> Excluded:
     """Huge simplification of [`polars_plan::plans::conversion::expr_expansion::prepare_excluded`].
 
