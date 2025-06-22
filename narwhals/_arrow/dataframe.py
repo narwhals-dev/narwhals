@@ -481,23 +481,19 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
-        frame = self.native
-        columns = self.columns
-
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> ArrowDataFrame:
+        plx = self.__narwhals_namespace__()
         if order_by is None:
             import numpy as np  # ignore-banned-import
 
-            row_index = pa.array(np.arange(frame.num_rows, dtype=np.int64))
-            result = frame.append_column(name, row_index).select([name, *self.columns])
-
+            data = pa.array(np.arange(len(self), dtype=np.int64))
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(data, context=self, name=name)
+            )
         else:
-            plx = self.__narwhals_namespace__()
-
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
-            row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
-            result = self.select(row_index_expr.alias(name), plx.col(*columns)).native
-        return self._with_native(result)
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
     def filter(
         self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
