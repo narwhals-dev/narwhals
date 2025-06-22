@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
-    from narwhals._plan.expr import FunctionExpr
+    from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import IntoDType, NonNestedDType, NonNestedLiteral
@@ -363,10 +363,20 @@ def is_regex_projection(name: str) -> bool:
     return name.startswith("^") and name.endswith("$")
 
 
-def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr[Any]]:
+def is_window_expr(obj: Any) -> TypeIs[WindowExpr]:
+    from narwhals._plan.expr import WindowExpr
+
+    return isinstance(obj, WindowExpr)
+
+
+def is_function_expr(obj: Any) -> TypeIs[FunctionExpr[Any]]:
     from narwhals._plan.expr import FunctionExpr
 
-    return isinstance(obj, FunctionExpr) and obj.options.is_input_wildcard_expansion()
+    return isinstance(obj, FunctionExpr)
+
+
+def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr[Any]]:
+    return is_function_expr(obj) and obj.options.is_input_wildcard_expansion()
 
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:

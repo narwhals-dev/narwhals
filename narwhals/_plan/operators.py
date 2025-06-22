@@ -3,13 +3,13 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable
+from narwhals._plan.common import Immutable, is_function_expr
 from narwhals._plan.exceptions import (
     binary_expr_length_changing_error,
     binary_expr_multi_output_error,
     binary_expr_shape_error,
 )
-from narwhals._plan.expr import BinarySelector, FunctionExpr
+from narwhals._plan.expr import BinarySelector
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
@@ -76,7 +76,7 @@ class Operator(Immutable):
 
 
 def _is_filtration(ir: ExprIR) -> bool:
-    if not ir.is_scalar and isinstance(ir, FunctionExpr):
+    if not ir.is_scalar and is_function_expr(ir):
         return not ir.options.is_elementwise()
     return False
 

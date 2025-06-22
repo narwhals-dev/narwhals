@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable
+from narwhals._plan.common import Immutable, is_function_expr, is_window_expr
 from narwhals._plan.exceptions import (
     over_elementwise_error,
     over_nested_error,
@@ -33,11 +33,9 @@ class Over(Window):
         sort_options: SortOptions | None = None,
         /,
     ) -> InvalidOperationError | None:
-        from narwhals._plan.expr import FunctionExpr, WindowExpr
-
-        if isinstance(expr, WindowExpr):
+        if is_window_expr(expr):
             return over_nested_error(expr, partition_by, order_by, sort_options)
-        if isinstance(expr, FunctionExpr):
+        if is_function_expr(expr):
             if expr.options.is_elementwise():
                 return over_elementwise_error(expr, partition_by, order_by, sort_options)
             if expr.options.is_row_separable():
