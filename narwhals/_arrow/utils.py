@@ -237,14 +237,10 @@ def extract_native(
     If one of the two sides has a `_broadcast` flag, then extract the scalar
     underneath it so that PyArrow can do its own broadcasting.
     """
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
     if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
-
-    if isinstance(rhs, ArrowDataFrame):
-        return NotImplemented
 
     if isinstance(rhs, ArrowSeries):
         if lhs._broadcast and not rhs._broadcast:
