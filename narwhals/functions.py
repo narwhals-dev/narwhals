@@ -1571,16 +1571,20 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When(*predicates)
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
-
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `True`.
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
@@ -1594,7 +1598,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_native = pa.table(data)
-        >>> nw.from_native(df_native).select("a", "b", all=nw.all_horizontal("a", "b"))
+        >>> nw.from_native(df_native).select(
+        ...     "a", "b", all=nw.all_horizontal("a", "b", ignore_nulls=False)
+        ... )
         ┌─────────────────────────────────────────┐
         |           Narwhals DataFrame            |
         |-----------------------------------------|
@@ -1612,6 +1618,12 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
+    if ignore_nulls is None:
+        issue_deprecation_warning(
+            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
+            _version="1.44",
+        )
+        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(

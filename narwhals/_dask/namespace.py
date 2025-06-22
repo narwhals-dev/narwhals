@@ -91,12 +91,25 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+    def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = align_series_full_broadcast(
-                df, *(s for _expr in exprs for s in _expr(df))
+            series = [s for _expr in exprs for s in _expr(df)]
+            backends = [
+                get_dtype_backend(s.dtype, implementation=self._implementation)
+                for s in series
+            ]
+            if not ignore_nulls and any(x is None for x in backends):
+                msg = "Cannot use `ignore_nulls=False` in `all_horizontal` for non-nullable NumPy-backed pandas Series."
+                raise ValueError(msg)
+            it = (
+                (
+                    s if backend is None else s.fillna(True)  # noqa: FBT003
+                    for s, backend in zip(series, backends)
+                )
+                if ignore_nulls
+                else iter(series)
             )
-            return [reduce(operator.and_, series)]
+            return [reduce(operator.and_, align_series_full_broadcast(df, *it))]
 
         return self._expr(
             call=func,

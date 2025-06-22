@@ -131,9 +131,14 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def all_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            return reduce(operator.and_, cols)
+            it = (
+                (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
         return self._expr_from_callable(func, *exprs)
 
