@@ -416,13 +416,10 @@ class PandasLikeDataFrame(
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        plx = self.__narwhals_namespace__()
         if order_by is None:
-            frame = self.native
-            index = frame.index
-            size = len(frame)
-            plx = self.__narwhals_namespace__()
-
+            size = len(self)
             if self._implementation.is_cudf():
                 import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
@@ -433,11 +430,11 @@ class PandasLikeDataFrame(
                 data = np.arange(size)
 
             row_index = plx._series.from_iterable(
-                data, context=self, index=index, name=name
+                data, context=self, index=self.native.index, name=name
             )
-            return self._with_native(plx._concat_horizontal([row_index.native, frame]))
+            # TODO @dangotbanned: Add typing support for this in *at-least* `pandas`
+            return plx.concat([row_index, self], how="horizontal")  # type: ignore[list-item]
         else:
-            plx = self.__narwhals_namespace__()
             rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
             row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
             result = self.select(row_index_expr.alias(name), plx.col(*self.columns))
