@@ -416,7 +416,9 @@ class PandasLikeDataFrame(
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+    def with_row_index(
+        self, name: str, order_by: Sequence[str] | None
+    ) -> PandasLikeDataFrame:
         plx = self.__narwhals_namespace__()
         if order_by is None:
             size = len(self)
