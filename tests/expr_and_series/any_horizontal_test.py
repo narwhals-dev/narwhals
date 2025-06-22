@@ -75,9 +75,6 @@ def test_anyh_dask(constructor: Constructor) -> None:
     expected = [True, True, False]
     assert_equal_data(result, {"any": expected})
 
-    with pytest.raises(ValueError, match="ignore_nulls"):
-        result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=False))
-
 
 def test_anyh_all(constructor: Constructor) -> None:
     if "dask" in str(constructor):

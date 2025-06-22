@@ -63,9 +63,6 @@ def test_anyh_dask(constructor: Constructor) -> None:
     expected = [True, False, False]
     assert_equal_data(result, {"all": expected})
 
-    with pytest.raises(ValueError, match="ignore_nulls"):
-        result = df.select(all=nw.all_horizontal("a", "b", ignore_nulls=False))
-
 
 def test_allh_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}

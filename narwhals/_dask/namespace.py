@@ -98,9 +98,8 @@ class DaskNamespace(
                 get_dtype_backend(s.dtype, implementation=self._implementation)
                 for s in series
             ]
-            if not ignore_nulls and any(x is None for x in backends):
-                msg = "Cannot use `ignore_nulls=False` in `all_horizontal` for non-nullable NumPy-backed pandas Series."
-                raise ValueError(msg)
+            # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
+            # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
                     s if backend is None else s.fillna(True)  # noqa: FBT003
@@ -128,9 +127,8 @@ class DaskNamespace(
                 get_dtype_backend(s.dtype, implementation=self._implementation)
                 for s in series
             ]
-            if not ignore_nulls and any(x is None for x in backends):
-                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
-                raise ValueError(msg)
+            # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
+            # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
                     s if backend is None else s.fillna(False)  # noqa: FBT003
