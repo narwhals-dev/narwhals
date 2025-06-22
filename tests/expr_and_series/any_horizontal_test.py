@@ -48,8 +48,7 @@ def test_anyh_ignore_nulls(constructor: Constructor) -> None:
         pytest.skip()
     data = {"a": [True, True, False], "b": [True, None, None]}
     df = nw.from_native(constructor(data))
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=True))
+    result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=True))
     expected = [True, True, False]
     assert_equal_data(result, {"any": expected})
 
