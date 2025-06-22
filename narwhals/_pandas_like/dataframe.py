@@ -439,8 +439,7 @@ class PandasLikeDataFrame(
         else:
             rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
             row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
-            result = self.select(row_index_expr.alias(name), plx.col(*self.columns))
-            return self._with_native(result.native)
+            return self.select(row_index_expr.alias(name), plx.col(*self.columns))
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
