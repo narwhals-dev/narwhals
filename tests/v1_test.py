@@ -372,7 +372,6 @@ def test_any_horizontal() -> None:
     result = df.select(nw_v1.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}
     assert_equal_data(result, expected)
-    df = nw.from_native(pl.DataFrame({"a": [True, True, False], "b": [True, None, None]}))
     with pytest.deprecated_call(match="ignore_nulls"):
         result = df.select(nw.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}

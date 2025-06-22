@@ -1687,7 +1687,9 @@ def any_horizontal(
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_native = pl.DataFrame(data)
-        >>> nw.from_native(df_native).select("a", "b", any=nw.any_horizontal("a", "b"))
+        >>> nw.from_native(df_native).select(
+        ...     "a", "b", any=nw.any_horizontal("a", "b", ignore_nulls=False)
+        ... )
         ┌─────────────────────────┐
         |   Narwhals DataFrame    |
         |-------------------------|
