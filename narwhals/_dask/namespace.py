@@ -97,6 +97,7 @@ class DaskNamespace(
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
                     s if s.dtype == "bool" else s.fillna(True)  # noqa: FBT003
                     for s in series
                 )
@@ -122,6 +123,7 @@ class DaskNamespace(
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
                     s if s.dtype == "bool" else s.fillna(False)  # noqa: FBT003
                     for s in series
                 )

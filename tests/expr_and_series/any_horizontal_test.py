@@ -41,6 +41,8 @@ def test_anyh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -
         assert_equal_data(result, {"any": expected})
 
 
+# filter warning pending decision on https://github.com/narwhals-dev/narwhals/issues/2723.
+@pytest.mark.filterwarnings("ignore:.*Downcasting object dtype arrays:FutureWarning")
 def test_anyh_ignore_nulls(constructor: Constructor) -> None:
     if "dask" in str(constructor):
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.

@@ -146,6 +146,7 @@ class PandasLikeNamespace(
                 raise ValueError(msg)
             it = (
                 (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
                     s if s.native.dtype == "bool" else s.fill_null(True, None, None)  # noqa: FBT003
                     for s in series
                 )
@@ -178,6 +179,7 @@ class PandasLikeNamespace(
                 raise ValueError(msg)
             it = (
                 (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
                     s if s.native.dtype == "bool" else s.fill_null(False, None, None)  # noqa: FBT003
                     for s in series
                 )
