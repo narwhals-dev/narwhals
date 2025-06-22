@@ -252,6 +252,18 @@ class ExpansionFlags(Immutable):
 def prepare_projection(
     exprs: Sequence[ExprIR], schema: Mapping[str, DType] | FrozenSchema
 ) -> tuple[Seq[ExprIR], FrozenSchema]:
+    """Expand IRs into named column selections.
+
+    **Primary entry-point**, will be used by `select`, `with_columns`,
+    and any other context that requires resolving expression names.
+
+    Arguments:
+        exprs: IRs that *may* contain things like `Columns`, `SelectorIR`, `Exclude`, etc.
+        schema: Scope to expand multi-column selectors in.
+
+    Returns:
+        `exprs`, rewritten using `Column(name)` only.
+    """
     frozen_schema = (
         schema if isinstance(schema, FrozenSchema) else freeze_schema(**schema)
     )
