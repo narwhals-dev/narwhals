@@ -29,7 +29,6 @@ class PolarsNamespace:
     col: Method[PolarsExpr]
     exclude: Method[PolarsExpr]
     all_horizontal: Method[PolarsExpr]
-    any_horizontal: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]

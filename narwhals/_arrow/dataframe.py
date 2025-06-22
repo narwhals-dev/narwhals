@@ -434,7 +434,9 @@ class ArrowDataFrame(
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        return self.filter(
+            ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        )
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):

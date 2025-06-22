@@ -12,7 +12,7 @@ def test_sumh_broadcasting(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(
-        any=nw.any_horizontal(nw.sum("a", "b").cast(nw.Boolean)),
+        any=nw.any_horizontal(nw.sum("a", "b").cast(nw.Boolean), ignore_nulls=True),
         all=nw.all_horizontal(nw.sum("a", "b").cast(nw.Boolean)),
         max=nw.max_horizontal(nw.sum("a"), nw.sum("b")),
         min=nw.min_horizontal(nw.sum("a"), nw.sum("b")),

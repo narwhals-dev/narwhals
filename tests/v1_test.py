@@ -359,3 +359,16 @@ def test_get_level() -> None:
         )
         == "interchange"
     )
+
+
+def test_any_horizontal() -> None:
+    # here, it defaults to Kleene logic.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(
+        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
+    )
+    result = df.select(nw_v1.any_horizontal("a", "b"))
+    expected = {"a": [True, True, None]}
+    assert_equal_data(result, expected)
