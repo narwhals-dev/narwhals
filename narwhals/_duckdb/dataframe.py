@@ -24,6 +24,7 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     parse_version,
+    requires,
     validate_backend_version,
 )
 from narwhals.dependencies import get_duckdb
@@ -505,6 +506,7 @@ class DuckDBLazyFrame(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
 
+    @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         if order_by is None:
             msg = (
@@ -513,9 +515,10 @@ class DuckDBLazyFrame(
             )
             raise ValueError(msg)
         order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-        rel = self.native  # noqa: F841
-        query = f"select row_number() over ({order_by_sql}) -1 as {name}, * from rel"  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+        row_index_expr = SQLExpression(
+            f"{FunctionExpression('row_number')} over ({order_by_sql}) - 1"
+        ).alias(name)
+        return self._with_native(self.native.select(row_index_expr, StarExpression()))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

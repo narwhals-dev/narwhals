@@ -434,19 +434,14 @@ class PandasLikeDataFrame(
 
             row_index = plx._series.from_iterable(
                 data, context=self, index=index, name=name
-            ).native
-            return self._with_native(plx._concat_horizontal([row_index, frame]))
+            )
+            return self._with_native(plx._concat_horizontal([row_index.native, frame]))
         else:
             plx = self.__narwhals_namespace__()
-
-            row_index_expr = (
-                plx.col(order_by[0])
-                .rank(method="ordinal", descending=False)
-                .over(partition_by=[], order_by=order_by)
-                - 1
-            ).alias(name)
-            result = self.select(row_index_expr, plx.col(*self.columns)).native
-            return self._with_native(result)
+            rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
+            row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
+            result = self.select(row_index_expr.alias(name), plx.col(*self.columns))
+            return self._with_native(result.native)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])

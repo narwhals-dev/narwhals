@@ -481,7 +481,7 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native
         columns = self.columns
 
@@ -492,16 +492,11 @@ class ArrowDataFrame(
             result = frame.append_column(name, row_index).select([name, *self.columns])
 
         else:
-            order_by_ = [order_by] if isinstance(order_by, str) else order_by
             plx = self.__narwhals_namespace__()
 
-            row_index_expr = (
-                plx.col(order_by_[0])
-                .rank(method="ordinal", descending=False)
-                .over(partition_by=[], order_by=order_by_)
-                - 1
-            ).alias(name)
-            result = self.select(row_index_expr, plx.col(*columns)).native
+            rank = plx.col(order_by[0]).rank("ordinal", descending=False)
+            row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
+            result = self.select(row_index_expr.alias(name), plx.col(*columns)).native
         return self._with_native(result)
 
     def filter(
