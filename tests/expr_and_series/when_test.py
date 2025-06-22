@@ -38,9 +38,7 @@ def test_when_otherwise(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_multiple_conditions(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_multiple_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")

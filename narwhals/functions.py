@@ -1467,12 +1467,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
-        flat_predicates = flatten(predicates)
-        self._predicate = (
-            flat_predicates[0]
-            if len(flat_predicates) == 1
-            else all_horizontal(*flat_predicates, ignore_nulls=False)
-        )
+        self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
