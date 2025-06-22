@@ -104,7 +104,7 @@ class ArrowNamespace(
             it = (
                 (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
                 if ignore_nulls
-                else iter(series)
+                else series
             )
             return [reduce(operator.or_, align(*it))]
 

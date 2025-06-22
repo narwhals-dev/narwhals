@@ -142,7 +142,7 @@ class SparkLikeNamespace(
             it = (
                 (self._F.coalesce(col, self._F.lit(False)) for col in cols)  # noqa: FBT003
                 if ignore_nulls
-                else iter(cols)
+                else cols
             )
             return reduce(operator.or_, it)
 

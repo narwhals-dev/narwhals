@@ -126,7 +126,7 @@ class DuckDBNamespace(
             it = (
                 (CoalesceOperator(expr, lit(False)) for expr in cols)  # noqa: FBT003
                 if ignore_nulls
-                else iter(cols)
+                else cols
             )
             return reduce(operator.or_, it)
 

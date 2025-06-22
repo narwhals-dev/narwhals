@@ -65,7 +65,7 @@ def test_anyh_with_nulls_dask(constructor: Constructor) -> None:
     data = {"a": [True, True, False], "b": [True, None, None]}
     df = nw.from_native(dd.from_pandas(pd.DataFrame(data, dtype="Boolean[pyarrow]")))
     result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=True))
-    expected = [True, True, False]
+    expected: list[bool | None] = [True, True, False]
     assert_equal_data(result, {"any": expected})
     result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=False))
     expected = [True, True, None]

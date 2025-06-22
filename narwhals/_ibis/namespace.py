@@ -111,7 +111,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             it = (
                 (col.fill_null(lit(False)) for col in cols)  # noqa: FBT003
                 if ignore_nulls
-                else iter(cols)
+                else cols
             )
             return reduce(operator.or_, it)
 
