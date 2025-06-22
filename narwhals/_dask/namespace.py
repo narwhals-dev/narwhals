@@ -115,22 +115,18 @@ class DaskNamespace(
                 get_dtype_backend(s.dtype, implementation=self._implementation)
                 for s in series
             ]
-            if (
-                self._version is Version.MAIN
-                and not ignore_nulls
-                and any(x is None for x in backends)
-            ):
+            if not ignore_nulls and any(x is None for x in backends):
                 msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
                 raise ValueError(msg)
             it = (
                 (
-                    s if backend is None else s.fill_null(False, None, None)  # noqa: FBT003
+                    s if backend is None else s.fillna(False)  # noqa: FBT003
                     for s, backend in zip(series, backends)
                 )
                 if ignore_nulls
                 else iter(series)
             )
-            return [reduce(operator.or_, align_series_full_broadcast(*it))]
+            return [reduce(operator.or_, align_series_full_broadcast(df, *it))]
 
         return self._expr(
             call=func,

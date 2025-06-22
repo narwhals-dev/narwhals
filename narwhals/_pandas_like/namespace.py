@@ -17,14 +17,13 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import get_dtype_backend
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
-    from narwhals._utils import Implementation
+    from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -159,12 +158,11 @@ class PandasLikeNamespace(
                 for s in series
             ]
             if (
-                self._version is Version.MAIN
-                and not ignore_nulls
+                not ignore_nulls
                 and any(x is None for x in backends)
                 and any(s.is_null().any() for s in series)
             ):
-                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series."
+                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series when nulls are present."
                 raise ValueError(msg)
             it = (
                 (

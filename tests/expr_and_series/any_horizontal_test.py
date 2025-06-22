@@ -12,6 +12,9 @@ from tests.utils import Constructor, assert_equal_data
 @pytest.mark.parametrize("expr1", ["a", nw.col("a")])
 @pytest.mark.parametrize("expr2", ["b", nw.col("b")])
 def test_anyh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
+    if "dask" in str(constructor):
+        # Can't use `ignore_nulls` for NumPy-backed Dask, test it separately below
+        pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(any=nw.any_horizontal(expr1, expr2, ignore_nulls=False))
@@ -68,8 +71,18 @@ def test_anyh_with_nulls_dask(constructor: Constructor) -> None:
     expected = [True, True, None]
     assert_equal_data(result, {"any": expected})
 
+    # No nulls, NumPy-backed
+    data = {"a": [True, True, False], "b": [True, False, False]}
+    df = nw.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df.select(any=nw.any_horizontal("a", "b", ignore_nulls=True))
+    expected = [True, True, False]
+    assert_equal_data(result, {"any": expected})
+
 
 def test_anyh_all(constructor: Constructor) -> None:
+    if "dask" in str(constructor):
+        # Can't use `ignore_nulls` for NumPy-backed Dask, test it separately below
+        pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(any=nw.any_horizontal(nw.all(), ignore_nulls=False))
