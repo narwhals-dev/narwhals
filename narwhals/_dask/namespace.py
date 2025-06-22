@@ -22,7 +22,6 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._pandas_like.utils import get_dtype_backend
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -93,20 +92,16 @@ class DaskNamespace(
 
     def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s for _expr in exprs for s in _expr(df)]
-            backends = [
-                get_dtype_backend(s.dtype, implementation=self._implementation)
-                for s in series
-            ]
+            series = (s for _expr in exprs for s in _expr(df))
             # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
-                    s if backend is None else s.fillna(True)  # noqa: FBT003
-                    for s, backend in zip(series, backends)
+                    s if s.dtype == "bool" else s.fillna(True)  # noqa: FBT003
+                    for s in series
                 )
                 if ignore_nulls
-                else iter(series)
+                else series
             )
             return [reduce(operator.and_, align_series_full_broadcast(df, *it))]
 
@@ -122,20 +117,16 @@ class DaskNamespace(
 
     def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = [s for _expr in exprs for s in _expr(df)]
-            backends = [
-                get_dtype_backend(s.dtype, implementation=self._implementation)
-                for s in series
-            ]
+            series = (s for _expr in exprs for s in _expr(df))
             # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             it = (
                 (
-                    s if backend is None else s.fillna(False)  # noqa: FBT003
-                    for s, backend in zip(series, backends)
+                    s if s.dtype == "bool" else s.fillna(False)  # noqa: FBT003
+                    for s in series
                 )
                 if ignore_nulls
-                else iter(series)
+                else series
             )
             return [reduce(operator.or_, align_series_full_broadcast(df, *it))]
 
