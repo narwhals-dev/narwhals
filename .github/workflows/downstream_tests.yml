@@ -309,22 +309,26 @@ jobs:
           git clone https://github.com/plotly/plotly.py --depth=1
           cd plotly.py
           git log
-      - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
       - name: install-deps
         run: |
           cd plotly.py
-          uv pip install -r test_requirements/requirements_core.txt -r test_requirements/requirements_optional.txt --system
-          uv pip install -e . --system
+          uv venv -p ${{ matrix.python-version }}
+          uv sync --extra dev_optional
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd plotly.py
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd plotly.py
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run pytest on plotly express
         run: |
           cd plotly.py
+          . .venv/bin/activate
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:

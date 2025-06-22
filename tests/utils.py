@@ -38,6 +38,7 @@ POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
 DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
+CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
