@@ -281,7 +281,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
-        return self.with_expr(self.expr.map_ir(function))
+        return self.with_expr(function(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
         if expr == self.expr:
