@@ -10,7 +10,7 @@ if t.TYPE_CHECKING:
     from narwhals._compliant import CompliantNamespace as Namespace
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
-    from narwhals._plan.common import ExprIR, Function, IRNamespace, SelectorIR
+    from narwhals._plan.common import ExprIR, Function, IRNamespace, NamedIR, SelectorIR
     from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.functions import RollingWindow
     from narwhals.typing import NonNestedLiteral
@@ -46,6 +46,7 @@ RightT2 = TypeVar("RightT2", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT2 = TypeVar("ExprIRT2", bound="ExprIR", default="ExprIR")
+NamedOrExprIRT = TypeVar("NamedOrExprIRT", "NamedIR[t.Any]", "ExprIR")
 
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")

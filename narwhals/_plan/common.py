@@ -4,7 +4,16 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
-from narwhals._plan.typing import ExprIRT, ExprIRT2, ExprT, IRNamespaceT, MapIR, Ns, Seq
+from narwhals._plan.typing import (
+    ExprIRT,
+    ExprIRT2,
+    ExprT,
+    IRNamespaceT,
+    MapIR,
+    NamedOrExprIRT,
+    Ns,
+    Seq,
+)
 from narwhals.dtypes import DType
 from narwhals.utils import Version
 
@@ -432,3 +441,15 @@ def into_dtype(dtype: IntoDType, /) -> DType:
 def collect(iterable: Seq[T] | Iterable[T], /) -> Seq[T]:
     """Collect `iterable` into a `tuple`, *iff* it is not one already."""
     return iterable if isinstance(iterable, tuple) else tuple(iterable)
+
+
+def map_ir(
+    origin: NamedOrExprIRT, function: MapIR, *more_functions: MapIR
+) -> NamedOrExprIRT:
+    """Apply one or more functions, sequentially, to all of `origin`'s children."""
+    if more_functions:
+        result = origin
+        for fn in (function, *more_functions):
+            result = result.map_ir(fn)
+        return result
+    return origin.map_ir(function)
