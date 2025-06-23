@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan.common import IRNamespace
@@ -75,6 +76,8 @@ class IRMetaNamespace(IRNamespace):
         ok_or_err = _expr_output_name(self._ir)
         if isinstance(ok_or_err, ComputeError):
             if raise_if_undetermined:
+                # NOTE: See (https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2161824883)
+                _expr_output_name.cache_clear()
                 raise ok_or_err
             return None
         return ok_or_err
@@ -128,6 +131,7 @@ def _expr_to_leaf_column_name(ir: ExprIR) -> str | ComputeError:
     return ComputeError(msg)
 
 
+@lru_cache(maxsize=32)
 def _expr_output_name(ir: ExprIR) -> str | ComputeError:
     from narwhals._plan import expr
 
