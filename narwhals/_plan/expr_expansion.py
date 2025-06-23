@@ -48,6 +48,7 @@ from narwhals._plan.common import (
     _IMMUTABLE_HASH_NAME,
     ExprIR,
     Immutable,
+    NamedIR,
     SelectorIR,
     is_horizontal_reduction,
 )
@@ -268,10 +269,20 @@ def prepare_projection(
     rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
     # TODO @dangotbanned: (Seq[ExprIR], OutputNames) -> (Seq[NamedIR])
+    # See `expr_rewrites.rewrite_all`
     # TODO @dangotbanned: Return a new schema, with the changes (name only) from projecting exprs
     #  - `select` (subset from schema, maybe need root names as well?)
     #  - `with_columns` https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1045-L1079
     return rewritten, frozen_schema, output_names
+
+
+def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
+    if len(exprs) != len(names):
+        msg = f"zip length mismatch: {len(exprs)} != {len(names)}"
+        raise ValueError(msg)
+    return tuple(
+        NamedIR(expr=remove_alias(ir), name=name) for ir, name in zip(exprs, names)
+    )
 
 
 def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
@@ -324,6 +335,15 @@ def replace_nth(origin: ExprIR, /, col_names: FrozenColumns) -> ExprIR:
 def is_index_in_range(index: int, n_fields: int) -> bool:
     idx = index + n_fields if index < 0 else index
     return not (idx < 0 or idx >= n_fields)
+
+
+def remove_alias(origin: ExprIR, /) -> ExprIR:
+    def fn(child: ExprIR, /) -> ExprIR:
+        if isinstance(child, Alias):
+            return child.expr
+        return child
+
+    return origin.map_ir(fn)
 
 
 def remove_exclude(origin: ExprIR, /) -> ExprIR:

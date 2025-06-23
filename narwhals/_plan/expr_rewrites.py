@@ -5,20 +5,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import expr_parsing as parse
-from narwhals._plan.common import is_function_expr, is_window_expr
-from narwhals._plan.expr_expansion import prepare_projection
+from narwhals._plan.common import NamedIR, is_function_expr, is_window_expr
+from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.typing import IntoExpr, MapIR, Seq
+    from narwhals._plan.typing import IntoExpr, Seq
     from narwhals.dtypes import DType
 
 
 def rewrite_all(
-    *exprs: IntoExpr, schema: Mapping[str, DType], rewrites: Sequence[MapIR]
-) -> Seq[ExprIR]:
+    *exprs: IntoExpr,
+    schema: Mapping[str, DType],
+    rewrites: Sequence[Callable[[NamedIR], NamedIR]],
+) -> Seq[NamedIR]:
     """Very naive approach, but should work for a demo.
 
     - Assumes all of `rewrites` ends with a `ExprIR.map_ir` call
@@ -26,11 +28,16 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    out_irs, _, _ = prepare_projection(parse.parse_into_seq_of_expr_ir(*exprs), schema)
-    return tuple(_rewrite_sequential(ir, rewrites) for ir in out_irs)
+    out_irs, _, names = prepare_projection(
+        parse.parse_into_seq_of_expr_ir(*exprs), schema
+    )
+    named_irs = into_named_irs(out_irs, names)
+    return tuple(_rewrite_sequential(ir, rewrites) for ir in named_irs)
 
 
-def _rewrite_sequential(origin: ExprIR, rewrites: Sequence[MapIR], /) -> ExprIR:
+def _rewrite_sequential(
+    origin: NamedIR, rewrites: Sequence[Callable[[NamedIR], NamedIR]], /
+) -> NamedIR:
     result = origin
     for fn in rewrites:
         result = fn(result)
@@ -39,7 +46,7 @@ def _rewrite_sequential(origin: ExprIR, rewrites: Sequence[MapIR], /) -> ExprIR:
 
 # TODO @dangotbanned: Tests
 # TODO @dangotbanned: Review if `inputs` is always `len(1)`` after `prepare_projection`
-def rewrite_elementwise_over(origin: ExprIR, /) -> ExprIR:
+def rewrite_elementwise_over(origin: NamedIR, /) -> NamedIR:
     """Requested in [discord-0].
 
     Before:

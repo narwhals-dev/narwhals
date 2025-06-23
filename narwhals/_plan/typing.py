@@ -45,6 +45,7 @@ RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
 RightT2 = TypeVar("RightT2", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
+ExprIRT2 = TypeVar("ExprIRT2", bound="ExprIR", default="ExprIR")
 
 SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")

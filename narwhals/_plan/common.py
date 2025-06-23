@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
-from narwhals._plan.typing import ExprIRT, ExprT, IRNamespaceT, MapIR, Ns, Seq
+from narwhals._plan.typing import ExprIRT, ExprIRT2, ExprT, IRNamespaceT, MapIR, Ns, Seq
 from narwhals.dtypes import DType
 from narwhals.utils import Version
 
@@ -278,6 +278,15 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     __slots__ = ("expr", "name")
     expr: ExprIRT
     name: str
+
+    def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
+        """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
+        return self.with_expr(self.expr.map_ir(function))
+
+    def with_expr(self, expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
+        if expr == self.expr:
+            return cast("NamedIR[ExprIRT2]", self)
+        return NamedIR(expr=expr, name=self.name)
 
 
 class IRNamespace(Immutable):
