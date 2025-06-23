@@ -411,7 +411,7 @@ def test_prepare_projection(
     schema_1: dict[str, DType],
 ) -> None:
     irs_in = parse_into_seq_of_expr_ir(into_exprs)
-    actual, _ = prepare_projection(irs_in, schema_1)
+    actual, _, _ = prepare_projection(irs_in, schema_1)
     assert len(actual) == len(expected)
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)
@@ -541,13 +541,13 @@ def test_prepare_projection_horizontal_alias(
     expr = function(into_exprs)
     alias_1 = expr.alias("alias(x1)")
     irs = parse_into_seq_of_expr_ir(alias_1)
-    out_irs, _ = prepare_projection(irs, schema_1)
+    out_irs, _, _ = prepare_projection(irs, schema_1)
     assert len(out_irs) == 1
     assert out_irs[0] == function("a", "b", "c").alias("alias(x1)")._ir
 
     alias_2 = alias_1.alias("alias(x2)")
     irs = parse_into_seq_of_expr_ir(alias_2)
-    out_irs, _ = prepare_projection(irs, schema_1)
+    out_irs, _, _ = prepare_projection(irs, schema_1)
     assert len(out_irs) == 1
     assert out_irs[0] == function("a", "b", "c").alias("alias(x1)").alias("alias(x2)")._ir
 

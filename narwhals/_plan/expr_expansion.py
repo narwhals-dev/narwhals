@@ -69,12 +69,7 @@ from narwhals._plan.expr import (
     col,
 )
 from narwhals.dtypes import DType
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    ComputeError,
-    DuplicateError,
-    InvalidOperationError,
-)
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -103,6 +98,9 @@ GroupByKeys: TypeAlias = "Seq[ExprIR]"
 - Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
 - Not fully utilized in `narwhals` version yet
 """
+
+OutputNames: TypeAlias = "Seq[str]"
+"""Fully expanded, validated output column names, for `NamedIR`s."""
 
 _FrozenSchemaHash: TypeAlias = "Seq[tuple[str, DType]]"
 _T2 = TypeVar("_T2")
@@ -251,7 +249,7 @@ class ExpansionFlags(Immutable):
 
 def prepare_projection(
     exprs: Sequence[ExprIR], schema: Mapping[str, DType] | FrozenSchema
-) -> tuple[Seq[ExprIR], FrozenSchema]:
+) -> tuple[Seq[ExprIR], FrozenSchema, OutputNames]:
     """Expand IRs into named column selections.
 
     **Primary entry-point**, will be used by `select`, `with_columns`,
@@ -268,28 +266,28 @@ def prepare_projection(
         schema if isinstance(schema, FrozenSchema) else freeze_schema(**schema)
     )
     rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
-    if err := ensure_valid_exprs(rewritten, frozen_schema):
-        raise err
-    return rewritten, frozen_schema
+    output_names = ensure_valid_exprs(rewritten, frozen_schema)
+    # TODO @dangotbanned: (Seq[ExprIR], OutputNames) -> (Seq[NamedIR])
+    # TODO @dangotbanned: Return a new schema, with the changes (name only) from projecting exprs
+    #  - `select` (subset from schema, maybe need root names as well?)
+    #  - `with_columns` https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1045-L1079
+    return rewritten, frozen_schema, output_names
 
 
-def ensure_valid_exprs(
-    exprs: Seq[ExprIR], schema: FrozenSchema
-) -> ColumnNotFoundError | DuplicateError | None:
-    """Return an appropriate error if we can't materialize."""
-    if err := _ensure_column_names_unique(exprs):
-        return err
+def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
+    """Raise an appropriate error if we can't materialize."""
+    output_names = _ensure_output_names_unique(exprs)
     root_names = _root_names_unique(exprs)
     if not (set(schema.names).issuperset(root_names)):
-        return column_not_found_error(root_names, schema)
-    return None
+        raise column_not_found_error(root_names, schema)
+    return output_names
 
 
-def _ensure_column_names_unique(exprs: Seq[ExprIR]) -> DuplicateError | None:
-    names = [e.meta.output_name() for e in exprs]
+def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
+    names = tuple(e.meta.output_name() for e in exprs)
     if len(names) != len(set(names)):
-        return duplicate_error(exprs)
-    return None
+        raise duplicate_error(exprs)
+    return names
 
 
 def _root_names_unique(exprs: Seq[ExprIR]) -> set[str]:

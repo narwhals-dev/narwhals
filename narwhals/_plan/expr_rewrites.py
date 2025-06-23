@@ -26,7 +26,7 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    out_irs, _ = prepare_projection(parse.parse_into_seq_of_expr_ir(*exprs), schema)
+    out_irs, _, _ = prepare_projection(parse.parse_into_seq_of_expr_ir(*exprs), schema)
     return tuple(_rewrite_sequential(ir, rewrites) for ir in out_irs)
 
 

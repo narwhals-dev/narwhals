@@ -4,7 +4,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from narwhals._plan.typing import ExprT, IRNamespaceT, MapIR, Ns, Seq
+from narwhals._plan.typing import ExprIRT, ExprT, IRNamespaceT, MapIR, Ns, Seq
 from narwhals.dtypes import DType
 from narwhals.utils import Version
 
@@ -261,6 +261,23 @@ class SelectorIR(ExprIR):
           - Instead do one pass, evaluating every selector against a single column at a time
         """
         raise NotImplementedError(type(self))
+
+
+class NamedIR(Immutable, Generic[ExprIRT]):
+    """Post-projection expansion wrapper for `ExprIR`.
+
+    - Somewhat similar to [`polars_plan::plans::expr_ir::ExprIR`].
+    - The [`polars_plan::plans::aexpr::AExpr`] stage has been skipped (*for now*)
+      - Parts of that will probably be in here too
+      - `AExpr` seems like too much duplication when we won't get the memory allocation benefits in python
+
+    [`polars_plan::plans::expr_ir::ExprIR`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/expr_ir.rs#L63-L74
+    [`polars_plan::plans::aexpr::AExpr`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/mod.rs#L145-L231
+    """
+
+    __slots__ = ("expr", "name")
+    expr: ExprIRT
+    name: str
 
 
 class IRNamespace(Immutable):
