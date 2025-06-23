@@ -264,7 +264,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index. Must be not None.
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
