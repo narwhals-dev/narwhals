@@ -258,7 +258,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         )
 
     def with_row_index(
-        self, name: str = "index", order_by: str | Sequence[str] | None = None
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
     ) -> Self:
         """Insert column which enumerates rows.
 
@@ -271,7 +271,10 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         order_by_ = [order_by] if isinstance(order_by, str) else order_by
         return self._with_compliant(
-            self._compliant_frame.with_row_index(name=name, order_by=order_by_)
+            self._compliant_frame.with_row_index(
+                name=name,
+                order_by=order_by_,  # type: ignore[arg-type]
+            )
         )
 
 

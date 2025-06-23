@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -31,10 +31,6 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
         (["const", "xyz"], [0, 1]),
     ],
 )
-@pytest.mark.skipif(
-    POLARS_VERSION < (1, 9, 0),
-    reason="Too old for `.over(partition_by=...)` or does not break ties with multiple columns in partition_by",
-)
 def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
@@ -49,18 +45,17 @@ def test_with_row_index_lazy(
 def test_with_row_index_lazy_exception(
     constructor: Constructor, namespace: ModuleType
 ) -> None:
-    msg = (
-        "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
-        "order-dependent operation."
-    )
     frame = namespace.from_native(constructor(data))
 
     context = (
-        pytest.raises(ValueError, match=msg)
-        if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark"))
+        pytest.raises(Exception)  # noqa: PT011
+        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
         or (namespace is nw and isinstance(frame, namespace.LazyFrame))
         else does_not_raise()
     )
 
     with context:
         frame.with_row_index()
+
+
+# TODO(FBruzzesi): Validate Dask and Ibis results with nw_v1 and order_by=None.

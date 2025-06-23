@@ -138,12 +138,6 @@ class BaseFrame(Generic[_FrameT]):
     ) -> R:
         return function(self, *args, **kwargs)
 
-    def with_row_index(self, name: str, order_by: str | Sequence[str] | None) -> Self:
-        order_by_ = [order_by] if isinstance(order_by, str) else order_by
-        return self._with_compliant(
-            self._compliant_frame.with_row_index(name, order_by=order_by_)
-        )
-
     def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
@@ -1071,7 +1065,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().drop_nulls(subset=subset)
 
     def with_row_index(
-        self, name: str = "index", order_by: str | Sequence[str] | None = None
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
     ) -> Self:
         """Insert column which enumerates rows.
 
@@ -1096,7 +1090,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             a: [[1,2]]
             b: [[4,5]]
         """
-        return super().with_row_index(name=name, order_by=order_by)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:
@@ -2438,13 +2435,13 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().drop_nulls(subset=subset)
 
     def with_row_index(
-        self, name: str = "index", order_by: str | Sequence[str] | None = None
+        self, name: str = "index", *, order_by: str | Sequence[str]
     ) -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index. Must be not None.
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
@@ -2480,13 +2477,10 @@ class LazyFrame(BaseFrame[FrameT]):
             |  b: [[5,4]]      |
             └──────────────────┘
         """
-        if order_by is None:
-            msg = (
-                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
-                "order-dependent operation."
-            )
-            raise ValueError(msg)
-        return super().with_row_index(name=name, order_by=order_by)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:

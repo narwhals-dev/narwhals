@@ -507,13 +507,7 @@ class DuckDBLazyFrame(
         )
 
     @requires.backend_version((1, 3))
-    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
-        if order_by is None:
-            msg = (
-                "`LazyFrame.with_row_index` requires `order_by` to be specified as it is an "
-                "order-dependent operation."
-            )
-            raise ValueError(msg)
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         order_by_sql = generate_order_by_sql(*order_by, ascending=True)
         row_index_expr = SQLExpression(
             f"{FunctionExpression('row_number')} over ({order_by_sql}) - 1"

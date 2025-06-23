@@ -111,7 +111,7 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
-- Since Narwhals 1.44:
+- Since Narwhals 1.45:
 
     - `LazyFrame.with_row_index` requires `order_by` to be specified as it is an order-dependent operation, in the main Narwhals namespace.
 
