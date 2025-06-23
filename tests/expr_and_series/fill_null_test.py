@@ -41,7 +41,7 @@ def test_fill_null_pandas_downcast() -> None:
     result = df.select(nw.col("a").fill_null(False))  # noqa: FBT003
     expected = {"a": [True, False]}
     assert_equal_data(result, expected)
-    assert result["a"].to_native().dtype == "bool"
+    assert result["a"].to_native().dtype == "object"
 
 
 def test_fill_null_series_expression(constructor: Constructor) -> None:

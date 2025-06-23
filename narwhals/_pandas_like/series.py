@@ -597,23 +597,26 @@ class PandasLikeSeries(EagerSeries[Any]):
         limit: int | None,
     ) -> Self:
         ser = self.native
+        kwargs = (
+            {"downcast": False}
+            if self._implementation is Implementation.PANDAS
+            and self._backend_version < (3,)
+            else {}
+        )
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "ignore",
-                ".*Downcasting object dtype arrays.*is deprecated",
-                category=FutureWarning,
-                module="pandas",
+                "ignore", "The 'downcast' keyword .*is deprecated", category=FutureWarning
             )
             if value is not None:
                 _, native_value = align_and_extract_native(self, value)
                 res_ser = self._with_native(
-                    ser.fillna(value=native_value), preserve_broadcast=True
+                    ser.fillna(value=native_value, **kwargs), preserve_broadcast=True
                 )
             else:
                 res_ser = self._with_native(
-                    ser.ffill(limit=limit)
+                    ser.ffill(limit=limit, **kwargs)
                     if strategy == "forward"
-                    else ser.bfill(limit=limit),
+                    else ser.bfill(limit=limit, **kwargs),
                     preserve_broadcast=True,
                 )
         return res_ser
