@@ -4,13 +4,37 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan import expr_parsing as parse
 from narwhals._plan.common import is_function_expr, is_window_expr
 from narwhals._plan.expr_expansion import prepare_projection
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
+    from collections.abc import Mapping, Sequence
 
-select_context_ish = prepare_projection
+    from narwhals._plan.common import ExprIR
+    from narwhals._plan.typing import IntoExpr, MapIR, Seq
+    from narwhals.dtypes import DType
+
+
+def rewrite_all(
+    *exprs: IntoExpr, schema: Mapping[str, DType], rewrites: Sequence[MapIR]
+) -> Seq[ExprIR]:
+    """Very naive approach, but should work for a demo.
+
+    - Assumes all of `rewrites` ends with a `ExprIR.map_ir` call
+    - Applying multiple functions should be happening at a lower level
+      - Currently we do a full traversal of each tree per-rewrite function
+    - There's no caching *after* `prepare_projection` yet
+    """
+    out_irs, _ = prepare_projection(parse.parse_into_seq_of_expr_ir(*exprs), schema)
+    return tuple(_rewrite_sequential(ir, rewrites) for ir in out_irs)
+
+
+def _rewrite_sequential(origin: ExprIR, rewrites: Sequence[MapIR], /) -> ExprIR:
+    result = origin
+    for fn in rewrites:
+        result = fn(result)
+    return result
 
 
 # TODO @dangotbanned: Tests
