@@ -51,7 +51,7 @@ def test_with_row_index_lazy_exception(
 ) -> None:
     frame = namespace.from_native(constructor(data))
 
-    match_main_ns = r"LazyFrame.with_row_index\(\) missing 1 required keyword-only argument: 'order_by'"
+    match_main_ns = r"(LazyFrame\.)?with_row_index\(\) missing 1 required keyword-only argument: 'order_by'$"
     match_v1_ns = r".*argument after \* must be an iterable, not NoneType$"
     context = (
         pytest.raises(TypeError, match=match_main_ns)
