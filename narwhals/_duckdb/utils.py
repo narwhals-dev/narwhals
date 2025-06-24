@@ -306,7 +306,7 @@ def window_expression(
     rows_end: str = "",
     *,
     descending: bool = False,
-    nulls_last: bool = True,
+    nulls_last: bool = False,
     ignore_nulls: bool = False,
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
