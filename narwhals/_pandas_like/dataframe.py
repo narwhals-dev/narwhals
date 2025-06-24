@@ -313,9 +313,7 @@ class PandasLikeDataFrame(
             self.native.iloc[:, columns], validate_column_names=False
         )
 
-    def _select_multi_name(
-        self, columns: SizedMultiNameSelector[pd.Series[Any]]
-    ) -> PandasLikeDataFrame:
+    def _select_multi_name(self, columns: SizedMultiNameSelector[pd.Series[Any]]) -> Self:
         return self._with_native(self.native.loc[:, columns])
 
     # --- properties ---
@@ -390,7 +388,7 @@ class PandasLikeDataFrame(
             validate_column_names=False,
         )
 
-    def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+    def select(self, *exprs: PandasLikeExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -402,9 +400,7 @@ class PandasLikeDataFrame(
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
 
-    def drop_nulls(
-        self: PandasLikeDataFrame, subset: Sequence[str] | None
-    ) -> PandasLikeDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(
                 self.native.dropna(axis=0), validate_column_names=False
@@ -437,9 +433,7 @@ class PandasLikeDataFrame(
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
-    def filter(
-        self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
-    ) -> PandasLikeDataFrame:
+    def filter(self, predicate: PandasLikeExpr | list[bool]) -> Self:
         if isinstance(predicate, list):
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
@@ -450,9 +444,7 @@ class PandasLikeDataFrame(
             self.native.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
+    def with_columns(self, *exprs: PandasLikeExpr) -> Self:
         if not exprs:
             return self
         columns = self._evaluate_into_exprs(*exprs)
