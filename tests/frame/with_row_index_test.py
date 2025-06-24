@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
@@ -36,9 +37,11 @@ def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
     result = (
-        nw.from_native(constructor(data)).with_row_index(order_by=order_by).sort("xyz")
+        nw.from_native(constructor(data))
+        .with_row_index(name="foo bar", order_by=order_by)
+        .sort("xyz")
     )
-    expected = {"index": expected_index, **data}
+    expected = {"foo bar": expected_index, **data}
     assert_equal_data(result, expected)
 
 
@@ -49,15 +52,20 @@ def test_with_row_index_lazy_exception(
 ) -> None:
     frame = namespace.from_native(constructor(data))
 
+    match_main_ns = (
+        "LazyFrame.with_row_index() missing 1 required keyword-only argument: 'order_by'"
+    )
+    match_v1_ns = "argument after * must be an iterable, not NoneType"
     context = (
-        pytest.raises(Exception)  # noqa: PT011
+        pytest.raises(TypeError, match=re.escape(match_main_ns))
+        if (namespace is nw and isinstance(frame, namespace.LazyFrame))
+        else pytest.raises(TypeError, match=re.escape(match_v1_ns))
         if any(x in str(constructor) for x in ("duckdb", "pyspark"))
-        or (namespace is nw and isinstance(frame, namespace.LazyFrame))
         else does_not_raise()
     )
 
     with context:
-        frame.with_row_index()
+        result = frame.with_row_index()
 
-
-# TODO(FBruzzesi): Validate Dask and Ibis results with nw_v1 and order_by=None.
+        expected = {"index": [0, 1], **data}
+        assert_equal_data(result, expected)
