@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
@@ -52,14 +51,12 @@ def test_with_row_index_lazy_exception(
 ) -> None:
     frame = namespace.from_native(constructor(data))
 
-    match_main_ns = (
-        "LazyFrame.with_row_index() missing 1 required keyword-only argument: 'order_by'"
-    )
-    match_v1_ns = "argument after * must be an iterable, not NoneType"
+    match_main_ns = r"LazyFrame.with_row_index\(\) missing 1 required keyword-only argument: 'order_by'"
+    match_v1_ns = r".*argument after \* must be an iterable, not NoneType$"
     context = (
-        pytest.raises(TypeError, match=re.escape(match_main_ns))
+        pytest.raises(TypeError, match=match_main_ns)
         if (namespace is nw and isinstance(frame, namespace.LazyFrame))
-        else pytest.raises(TypeError, match=re.escape(match_v1_ns))
+        else pytest.raises(TypeError, match=match_v1_ns)
         if any(x in str(constructor) for x in ("duckdb", "pyspark"))
         else does_not_raise()
     )
