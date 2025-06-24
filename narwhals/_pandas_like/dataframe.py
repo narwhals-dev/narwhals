@@ -425,15 +425,15 @@ class PandasLikeDataFrame(
 
                 data = np.arange(size)
 
-            row_index = plx._series.from_iterable(
-                data, context=self, index=self.native.index, name=name
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(
+                    data, context=self, index=self.native.index, name=name
+                )
             )
-            # TODO @dangotbanned: Add typing support for this in *at-least* `pandas`
-            return plx.concat([row_index, self], how="horizontal")  # type: ignore[return-value, list-item]
         else:
             rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
-            row_index_expr = rank.over(partition_by=[], order_by=order_by) - 1
-            return self.select(row_index_expr.alias(name), plx.all())
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
