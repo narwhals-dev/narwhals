@@ -49,7 +49,7 @@ class DuckDBNamespace(
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
 
-    def _with_elementwise(
+    def _expr_from_elementwise(
         self, func: Callable[[Iterable[Expression]], Expression], *exprs: DuckDBExpr
     ) -> DuckDBExpr:
         def call(df: DuckDBLazyFrame) -> list[Expression]:
@@ -119,31 +119,31 @@ class DuckDBNamespace(
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.and_, cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def any_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.or_, cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return FunctionExpression("greatest", *cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return FunctionExpression("least", *cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
@@ -152,7 +152,7 @@ class DuckDBNamespace(
                 operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
             ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_elementwise(func, *exprs)
 
     def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)

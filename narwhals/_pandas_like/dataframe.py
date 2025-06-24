@@ -10,7 +10,6 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    align_series_full_broadcast,
     check_column_names_are_unique,
     get_dtype_backend,
     native_to_narwhals_dtype,
@@ -93,7 +92,9 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
+class PandasLikeDataFrame(
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"]
+):
     def __init__(
         self,
         native_dataframe: Any,
@@ -312,9 +313,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             self.native.iloc[:, columns], validate_column_names=False
         )
 
-    def _select_multi_name(
-        self, columns: SizedMultiNameSelector[pd.Series[Any]]
-    ) -> PandasLikeDataFrame:
+    def _select_multi_name(self, columns: SizedMultiNameSelector[pd.Series[Any]]) -> Self:
         return self._with_native(self.native.loc[:, columns])
 
     # --- properties ---
@@ -389,21 +388,19 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+    def select(self, *exprs: PandasLikeExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(self.native.__class__(), validate_column_names=False)
-        new_series = align_series_full_broadcast(*new_series)
+        new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
 
-    def drop_nulls(
-        self: PandasLikeDataFrame, subset: Sequence[str] | None
-    ) -> PandasLikeDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(
                 self.native.dropna(axis=0), validate_column_names=False
@@ -417,18 +414,26 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
 
     def with_row_index(self, name: str) -> Self:
         frame = self.native
-        namespace = self.__narwhals_namespace__()
-        row_index = namespace._series.from_iterable(
-            range(len(frame)), context=self, index=frame.index
-        ).alias(name)
-        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
+        index = frame.index
+        size = len(frame)
+        plx = self.__narwhals_namespace__()
+
+        if self._implementation.is_cudf():
+            import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+            data = cp.arange(size)
+        else:
+            import numpy as np  # ignore-banned-import
+
+            data = np.arange(size)
+
+        row_index = plx._series.from_iterable(data, context=self, index=index, name=name)
+        return self._with_native(plx._concat_horizontal([row_index.native, frame]))
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
-    def filter(
-        self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
-    ) -> PandasLikeDataFrame:
+    def filter(self, predicate: PandasLikeExpr | list[bool]) -> Self:
         if isinstance(predicate, list):
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
@@ -439,9 +444,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             self.native.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
+    def with_columns(self, *exprs: PandasLikeExpr) -> Self:
         columns = self._evaluate_into_exprs(*exprs)
         if not columns and len(self) == 0:
             return self

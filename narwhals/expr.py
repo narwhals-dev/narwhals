@@ -1375,9 +1375,11 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            - pandas handles null values differently from other libraries.
+              See [null_handling](../concepts/null_handling.md/)
+              for reference.
+            - For pandas Series of `object` dtype, `fill_null` will not automatically change the
+              Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
 
         Examples:
             >>> import polars as pl

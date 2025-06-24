@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -74,7 +74,9 @@ if TYPE_CHECKING:
     PromoteOptions: TypeAlias = Literal["none", "default", "permissive"]
 
 
-class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
+class ArrowDataFrame(
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
+):
     def __init__(
         self,
         native_dataframe: pa.Table,
@@ -322,7 +324,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             self.native.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def select(self, *exprs: ArrowExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -330,7 +332,8 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        reshaped = align_series_full_broadcast(*new_series)
+        align = new_series[0]._align_full_broadcast
+        reshaped = align(*new_series)
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 
@@ -345,7 +348,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         value = other.native[0]
         return pa.chunked_array([pa.repeat(value, length)])
 
-    def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def with_columns(self, *exprs: ArrowExpr) -> Self:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
@@ -427,7 +430,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
-    def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
@@ -487,9 +490,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
             df.append_column(name, row_indices).select([name, *cols])
         )
 
-    def filter(
-        self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
-    ) -> ArrowDataFrame:
+    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):
             mask_native: Mask | ChunkedArrayAny = predicate
         else:
@@ -649,8 +650,10 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return None
 
     def is_unique(self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(range(len(self)))
+        row_index = pa.array(np.arange(len(self)))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -665,12 +668,12 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         return ArrowSeries.from_native(native, context=self)
 
     def unique(
-        self: ArrowDataFrame,
+        self,
         subset: Sequence[str] | None,
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
-    ) -> ArrowDataFrame:
+    ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
@@ -718,7 +721,7 @@ class ArrowDataFrame(EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table"]):
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask), validate_column_names=False)
 

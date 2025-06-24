@@ -686,6 +686,12 @@ class PolarsSeriesStringNamespace:
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
+    def zfill(self, width: int) -> PolarsSeries:
+        series = self._compliant_series
+        name = series.name
+        ns = series.__narwhals_namespace__()
+        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
             pos, kwds = extract_args_kwargs(args, kwargs)
