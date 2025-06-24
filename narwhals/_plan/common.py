@@ -305,6 +305,12 @@ class NamedIR(Immutable, Generic[ExprIRT]):
             return cast("NamedIR[ExprIRT2]", self)
         return NamedIR(expr=expr, name=self.name)
 
+    def __repr__(self) -> str:
+        return f"{self.name}={self.expr!r}"
+
+    def _repr_html_(self) -> str:
+        return f"<b>{self.name}</b>={self.expr._repr_html_()}"
+
 
 class IRNamespace(Immutable):
     __slots__ = ("_ir",)
