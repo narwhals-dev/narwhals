@@ -35,9 +35,7 @@ def rewrite_all(
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
 
-# TODO @dangotbanned: Tests
-# TODO @dangotbanned: Review if `inputs` is always `len(1)`` after `prepare_projection`
-def rewrite_elementwise_over(child: ExprIR, /) -> ExprIR:
+def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     """Requested in [discord-0].
 
     Before:
@@ -51,21 +49,14 @@ def rewrite_elementwise_over(child: ExprIR, /) -> ExprIR:
     [discord-0]: https://discord.com/channels/1235257048170762310/1383078215303696544/1384807793512677398
     """
     if (
-        is_window_expr(child)
-        and is_function_expr(child.expr)
-        and child.expr.options.is_elementwise()
+        is_window_expr(window)
+        and is_function_expr(window.expr)
+        and window.expr.options.is_elementwise()
     ):
-        # NOTE: Aliasing isn't required, but it does help readability
-        window = child
-        func = child.expr
-        if len(func.input) != 1:
-            msg = (
-                f"Expected function inputs to have been expanded, "
-                f"but got {len(func.input)!r} inputs at: {func}"
-            )
-            raise NotImplementedError(msg)
-        return func.with_input([window.with_expr(func.input[0])])
-    return child
+        func = window.expr
+        parent, *args = func.input
+        return func.with_input((window.with_expr(parent), *args))
+    return window
 
 
 # TODO @dangotbanned: Full implementation
