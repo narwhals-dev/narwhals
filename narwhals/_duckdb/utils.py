@@ -313,7 +313,7 @@ def window_expression(
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
     try:
         from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:
+    except ModuleNotFoundError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
@@ -323,7 +323,7 @@ def window_expression(
 
     if rows_start and rows_end:
         rows = f"rows between {rows_start} and {rows_end}"
-    elif rows_start or rows_end:
+    elif rows_start or rows_end:  # pragma: no cover
         msg = "Either both `rows_start` and `rows_end` must be specified, or neither."
     else:
         rows = ""
