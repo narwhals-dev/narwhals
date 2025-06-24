@@ -481,7 +481,7 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> ArrowDataFrame:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
             import numpy as np  # ignore-banned-import
