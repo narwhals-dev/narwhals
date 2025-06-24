@@ -93,13 +93,9 @@ def align_and_extract_native(
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
     lhs_index = lhs.native.index
-
-    if isinstance(rhs, PandasLikeDataFrame):
-        return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
         return lhs.native.iloc[0], rhs.native
