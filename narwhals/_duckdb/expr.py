@@ -77,13 +77,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     @property
     def window_function(self) -> DuckDBWindowFunction:
         def default_window_func(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
+            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
         ) -> list[Expression]:
-            assert not window_inputs.order_by  # noqa: S101
+            assert not inputs.order_by  # noqa: S101
             return [
-                window_expression(
-                    expr, window_inputs.partition_by, window_inputs.order_by
-                )
+                window_expression(expr, inputs.partition_by, inputs.order_by)
                 for expr in self(df)
             ]
 
@@ -237,17 +235,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def _push_down_window_function(
         self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
     ) -> DuckDBWindowFunction:
-        def window_f(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             # If a function `f` is elementwise, and `g` is another function, then
             # - `f(g) over (window)`
             # - `f(g over (window))
             # are equivalent.
             # Make sure to only use with if `call` is elementwise!
-            native_series_list = self.window_function(df, window_inputs)
+            native_series_list = self.window_function(df, inputs)
             other_native_series = {
-                key: df._evaluate_window_expr(value, window_inputs)
+                key: df._evaluate_window_expr(value, inputs)
                 if self._is_expr(value)
                 else lit(value)
                 for key, value in expressifiable_args.items()
@@ -431,13 +427,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def f(expr: Expression) -> Expression:
             return CoalesceOperator(FunctionExpression("bool_and", expr), lit(True))  # noqa: FBT003
 
-        def window_f(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
                     window_expression(
-                        FunctionExpression("bool_and", expr), window_inputs.partition_by
+                        FunctionExpression("bool_and", expr), inputs.partition_by
                     ),
                     lit(True),  # noqa: FBT003
                 )
@@ -450,13 +444,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def f(expr: Expression) -> Expression:
             return CoalesceOperator(FunctionExpression("bool_or", expr), lit(False))  # noqa: FBT003
 
-        def window_f(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
                     window_expression(
-                        FunctionExpression("bool_or", expr), window_inputs.partition_by
+                        FunctionExpression("bool_or", expr), inputs.partition_by
                     ),
                     lit(False),  # noqa: FBT003
                 )
@@ -506,13 +498,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def f(expr: Expression) -> Expression:
             return CoalesceOperator(FunctionExpression("sum", expr), lit(0))
 
-        def window_f(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
                     window_expression(
-                        FunctionExpression("sum", expr), window_inputs.partition_by
+                        FunctionExpression("sum", expr), inputs.partition_by
                     ),
                     lit(0),
                 )
