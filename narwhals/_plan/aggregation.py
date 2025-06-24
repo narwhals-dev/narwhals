@@ -39,6 +39,9 @@ class Agg(ExprIR):
         yield self
         yield from self.expr.iter_right()
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
+
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))
 

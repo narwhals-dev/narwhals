@@ -285,6 +285,9 @@ class BinaryExpr(
         yield from self.right.iter_right()
         yield from self.left.iter_right()
 
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.left.iter_output_name()
+
     def with_left(self, left: LeftT2, /) -> BinaryExpr[LeftT2, OperatorT, RightT]:
         if left == self.left:
             return t.cast("BinaryExpr[LeftT2, OperatorT, RightT]", self)
@@ -324,6 +327,9 @@ class Cast(ExprIR):
         yield self
         yield from self.expr.iter_right()
 
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
+
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))
 
@@ -352,6 +358,9 @@ class Sort(ExprIR):
     def iter_right(self) -> t.Iterator[ExprIR]:
         yield self
         yield from self.expr.iter_right()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))
@@ -524,6 +533,9 @@ class Filter(ExprIR):
         yield self
         yield from self.by.iter_right()
         yield from self.expr.iter_right()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         expr = self.expr.map_ir(function)
@@ -785,6 +797,9 @@ class Ternary(ExprIR):
         yield from self.predicate.iter_right()
         yield from self.falsy.iter_right()
         yield from self.truthy.iter_right()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.truthy.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         predicate = self.predicate.map_ir(function)

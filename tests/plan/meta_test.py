@@ -60,11 +60,6 @@ def test_meta_root_names(
     assert nw_result == pl_result
 
 
-XFAIL_WRONG_ALIAS = pytest.mark.xfail(
-    reason="Found the wrong alias.\nNeed to add `iter_output_name` override."
-)
-
-
 @pytest.mark.parametrize(
     ("nw_expr", "pl_expr", "expected"),
     [
@@ -112,7 +107,6 @@ XFAIL_WRONG_ALIAS = pytest.mark.xfail(
             ),
             "ROOT-ALIAS",
             id="BinaryExpr-Multiple",
-            marks=XFAIL_WRONG_ALIAS,
         ),
         pytest.param(
             nwd.col("ROOT").alias("ROOT-ALIAS").mean().over(nwd.col("a").alias("b")),
@@ -125,14 +119,12 @@ XFAIL_WRONG_ALIAS = pytest.mark.xfail(
             pl.when(pl.col("a").alias("a?")).then(10),
             "literal",
             id="When-Literal",
-            marks=XFAIL_WRONG_ALIAS,
         ),
         pytest.param(
             nwd.when(nwd.col("a").alias("a?")).then(nwd.col("b")).otherwise(20),
             pl.when(pl.col("a").alias("a?")).then(pl.col("b")).otherwise(20),
             "b",
             id="When-Column-Literal",
-            marks=XFAIL_WRONG_ALIAS,
         ),
         pytest.param(
             nwd.when(a=1).then(10).otherwise(nwd.col("c").alias("c?")),
@@ -155,7 +147,6 @@ XFAIL_WRONG_ALIAS = pytest.mark.xfail(
             ),
             "literal",
             id="When-Literal-BinaryExpr-Column",
-            marks=XFAIL_WRONG_ALIAS,
         ),
         pytest.param(
             (
@@ -178,7 +169,6 @@ XFAIL_WRONG_ALIAS = pytest.mark.xfail(
             (pl.col("ROOT").alias("ROOT-ALIAS").filter(pl.col("c") <= 1).mean()),
             "ROOT-ALIAS",
             id="Filter",
-            marks=XFAIL_WRONG_ALIAS,
         ),
     ],
 )
