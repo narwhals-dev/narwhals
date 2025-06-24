@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     import ibis.expr.types as ir
+    from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs
 
@@ -111,8 +112,9 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
         return dtypes.String()
     if ibis_dtype.is_date():
         return dtypes.Date()
-    if ibis_dtype.is_timestamp():
-        return dtypes.Datetime()
+    if is_timestamp(ibis_dtype):
+        _unit = cast("TimestampUnit", ibis_dtype.unit)
+        return dtypes.Datetime(time_unit=_unit.value, time_zone=ibis_dtype.timezone)
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
@@ -141,6 +143,10 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     if ibis_dtype.is_binary():
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
+
+
+def is_timestamp(obj: IbisDataType) -> TypeIs[ibis_dtypes.Timestamp]:
+    return obj.is_timestamp()
 
 
 def is_interval(obj: IbisDataType) -> TypeIs[ibis_dtypes.Interval]:
@@ -200,7 +206,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return ibis_dtypes.Timestamp()
+        return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
     if isinstance_or_issubclass(dtype, dtypes.Date):
