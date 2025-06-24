@@ -126,9 +126,6 @@ def _expr_output_name(ir: ExprIR) -> str | ComputeError:
     from narwhals._plan import expr
 
     for e in ir.iter_output_name():
-        if isinstance(e, (expr.WindowExpr, expr.SortBy)):
-            # Don't follow `over(partition_by=...)` or `sort_by(by=...)
-            return _expr_output_name(e.expr)
         if isinstance(e, (expr.Column, expr.Alias, expr.Literal, expr.Len)):
             return e.name
         if isinstance(e, (expr.All, expr.KeepName, expr.RenameAlias)):

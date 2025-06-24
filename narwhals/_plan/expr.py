@@ -388,6 +388,9 @@ class SortBy(ExprIR):
             yield from e.iter_right()
         yield from self.expr.iter_right()
 
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
+
     def map_ir(self, function: MapIR, /) -> ExprIR:
         by = (ir.map_ir(function) for ir in self.by)
         return function(self.with_expr(self.expr.map_ir(function)).with_by(by))
@@ -574,6 +577,9 @@ class WindowExpr(ExprIR):
         for e in reversed(self.partition_by):
             yield from e.iter_right()
         yield from self.expr.iter_right()
+
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        yield from self.expr.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
