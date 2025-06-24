@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -270,7 +271,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         adjust: bool,
         min_samples: int,
         ignore_nulls: bool,
-    ) -> PandasLikeSeries:
+    ) -> Self:
         ser = self.native
         mask_na = ser.isna()
         if self._implementation is Implementation.CUDF:
@@ -378,10 +379,10 @@ class PandasLikeSeries(EagerSeries[Any]):
             raise AssertionError
         return self._with_native(res).alias(ser.name)
 
-    def is_in(self, other: Any) -> PandasLikeSeries:
+    def is_in(self, other: Any) -> Self:
         return self._with_native(self.native.isin(other))
 
-    def arg_true(self) -> PandasLikeSeries:
+    def arg_true(self) -> Self:
         ser = self.native
         size = len(ser)
         if self._implementation.is_cudf():
@@ -403,114 +404,114 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     # Binary comparisons
 
-    def filter(self, predicate: Any) -> PandasLikeSeries:
+    def filter(self, predicate: Any) -> Self:
         if not is_list_of(predicate, bool):
             _, other_native = align_and_extract_native(self, predicate)
         else:
             other_native = predicate
         return self._with_native(self.native.loc[other_native]).alias(self.name)
 
-    def __eq__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser == other).alias(self.name)
 
-    def __ne__(self, other: object) -> PandasLikeSeries:  # type: ignore[override]
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser != other).alias(self.name)
 
-    def __ge__(self, other: Any) -> PandasLikeSeries:
+    def __ge__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser >= other).alias(self.name)
 
-    def __gt__(self, other: Any) -> PandasLikeSeries:
+    def __gt__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser > other).alias(self.name)
 
-    def __le__(self, other: Any) -> PandasLikeSeries:
+    def __le__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser <= other).alias(self.name)
 
-    def __lt__(self, other: Any) -> PandasLikeSeries:
+    def __lt__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser < other).alias(self.name)
 
-    def __and__(self, other: Any) -> PandasLikeSeries:
+    def __and__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser & other).alias(self.name)
 
-    def __rand__(self, other: Any) -> PandasLikeSeries:
+    def __rand__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         ser = cast("pd.Series[Any]", ser)
         return self._with_native(ser.__and__(other)).alias(self.name)
 
-    def __or__(self, other: Any) -> PandasLikeSeries:
+    def __or__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser | other).alias(self.name)
 
-    def __ror__(self, other: Any) -> PandasLikeSeries:
+    def __ror__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         ser = cast("pd.Series[Any]", ser)
         return self._with_native(ser.__or__(other)).alias(self.name)
 
-    def __add__(self, other: Any) -> PandasLikeSeries:
+    def __add__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser + other).alias(self.name)
 
-    def __radd__(self, other: Any) -> PandasLikeSeries:
+    def __radd__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__radd__(other_native)).alias(self.name)
 
-    def __sub__(self, other: Any) -> PandasLikeSeries:
+    def __sub__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser - other).alias(self.name)
 
-    def __rsub__(self, other: Any) -> PandasLikeSeries:
+    def __rsub__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rsub__(other_native)).alias(self.name)
 
-    def __mul__(self, other: Any) -> PandasLikeSeries:
+    def __mul__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser * other).alias(self.name)
 
-    def __rmul__(self, other: Any) -> PandasLikeSeries:
+    def __rmul__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rmul__(other_native)).alias(self.name)
 
-    def __truediv__(self, other: Any) -> PandasLikeSeries:
+    def __truediv__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser / other).alias(self.name)
 
-    def __rtruediv__(self, other: Any) -> PandasLikeSeries:
+    def __rtruediv__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rtruediv__(other_native)).alias(self.name)
 
-    def __floordiv__(self, other: Any) -> PandasLikeSeries:
+    def __floordiv__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser // other).alias(self.name)
 
-    def __rfloordiv__(self, other: Any) -> PandasLikeSeries:
+    def __rfloordiv__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rfloordiv__(other_native)).alias(self.name)
 
-    def __pow__(self, other: Any) -> PandasLikeSeries:
+    def __pow__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser**other).alias(self.name)
 
-    def __rpow__(self, other: Any) -> PandasLikeSeries:
+    def __rpow__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rpow__(other_native)).alias(self.name)
 
-    def __mod__(self, other: Any) -> PandasLikeSeries:
+    def __mod__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser % other).alias(self.name)
 
-    def __rmod__(self, other: Any) -> PandasLikeSeries:
+    def __rmod__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
         return self._with_native(self.native.__rmod__(other_native)).alias(self.name)
 
     # Unary
 
-    def __invert__(self: PandasLikeSeries) -> PandasLikeSeries:
+    def __invert__(self) -> Self:
         return self._with_native(~self.native)
 
     # Reductions
@@ -579,10 +580,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     # Transformations
 
-    def is_null(self) -> PandasLikeSeries:
+    def is_null(self) -> Self:
         return self._with_native(self.native.isna(), preserve_broadcast=True)
 
-    def is_nan(self) -> PandasLikeSeries:
+    def is_nan(self) -> Self:
         ser = self.native
         if self.dtype.is_numeric():
             return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
@@ -596,22 +597,31 @@ class PandasLikeSeries(EagerSeries[Any]):
         limit: int | None,
     ) -> Self:
         ser = self.native
-        if value is not None:
-            _, native_value = align_and_extract_native(self, value)
-            res_ser = self._with_native(
-                ser.fillna(value=native_value), preserve_broadcast=True
+        kwargs = (
+            {"downcast": False}
+            if self._implementation is Implementation.PANDAS
+            and self._backend_version < (3,)
+            else {}
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "The 'downcast' keyword .*is deprecated", category=FutureWarning
             )
-        else:
-            res_ser = self._with_native(
-                ser.ffill(limit=limit)
-                if strategy == "forward"
-                else ser.bfill(limit=limit),
-                preserve_broadcast=True,
-            )
-
+            if value is not None:
+                _, native_value = align_and_extract_native(self, value)
+                res_ser = self._with_native(
+                    ser.fillna(value=native_value, **kwargs), preserve_broadcast=True
+                )
+            else:
+                res_ser = self._with_native(
+                    ser.ffill(limit=limit, **kwargs)
+                    if strategy == "forward"
+                    else ser.bfill(limit=limit, **kwargs),
+                    preserve_broadcast=True,
+                )
         return res_ser
 
-    def drop_nulls(self) -> PandasLikeSeries:
+    def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())
 
     def n_unique(self) -> int:
@@ -631,7 +641,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
-    def abs(self) -> PandasLikeSeries:
+    def abs(self) -> Self:
         return self._with_native(self.native.abs())
 
     def cum_sum(self, *, reverse: bool) -> Self:
@@ -642,7 +652,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         return self._with_native(result)
 
-    def unique(self, *, maintain_order: bool = True) -> PandasLikeSeries:
+    def unique(self, *, maintain_order: bool = True) -> Self:
         """Pandas always maintains order, as per its docstring.
 
         > Uniques are returned in order of appearance.
@@ -651,10 +661,10 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native.__class__(self.native.unique(), name=self.name)
         )
 
-    def diff(self) -> PandasLikeSeries:
+    def diff(self) -> Self:
         return self._with_native(self.native.diff())
 
-    def shift(self, n: int) -> PandasLikeSeries:
+    def shift(self, n: int) -> Self:
         return self._with_native(self.native.shift(n))
 
     def replace_strict(
@@ -797,7 +807,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> float:
         return self.native.quantile(q=quantile, interpolation=interpolation)
 
-    def zip_with(self, mask: Any, other: Any) -> PandasLikeSeries:
+    def zip_with(self, mask: Any, other: Any) -> Self:
         ser = self.native
         _, mask = align_and_extract_native(self, mask)
         _, other = align_and_extract_native(self, other)
