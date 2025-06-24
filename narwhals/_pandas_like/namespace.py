@@ -76,7 +76,7 @@ class PandasLikeNamespace(
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = align_series_full_broadcast(
+            series = self._series._align_full_broadcast(
                 *(s for _expr in exprs for s in _expr(df))
             )
             return [

@@ -269,7 +269,7 @@ class ArrowNamespace(
 
     def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = align_series_full_broadcast(
+            init_series, *series = self._series._align_full_broadcast(
                 *chain.from_iterable(expr(df) for expr in exprs)
             )
             return [
