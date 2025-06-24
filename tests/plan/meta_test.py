@@ -22,6 +22,10 @@ if POLARS_VERSION >= (1, 0):
     )
 else:  # pragma: no cover
     OVER_CASE = (nwd.col("a").last().over("b"), pl.col("a").last().over("b"), ["a", "b"])
+if POLARS_VERSION >= (0, 20, 5):
+    LEN_CASE = (nwd.len(), pl.len(), "len")
+else:  # pragma: no cover
+    LEN_CASE = (nwd.len().alias("count"), pl.count(), "count")
 
 
 @pytest.mark.parametrize(
@@ -66,21 +70,26 @@ XFAIL_WRONG_ALIAS = pytest.mark.xfail(
     [
         (nwd.col("a"), pl.col("a"), "a"),
         (nwd.lit(1), pl.lit(1), "literal"),
-        (nwd.len(), pl.len(), "len"),
-        (
-            nwd.col("a")
-            .alias("b")
-            .min()
-            .alias("c")
-            .over("e", "f")
-            .sort_by(nwd.nth(9), nwd.col("g", "h")),
-            pl.col("a")
-            .alias("b")
-            .min()
-            .alias("c")
-            .over("e", "f")
-            .sort_by(pl.nth(9), pl.col("g", "h")),
+        LEN_CASE,
+        pytest.param(
+            (
+                nwd.col("a")
+                .alias("b")
+                .min()
+                .alias("c")
+                .over("e", "f")
+                .sort_by(nwd.col("i"), nwd.col("g", "h"))
+            ),
+            (
+                pl.col("a")
+                .alias("b")
+                .min()
+                .alias("c")
+                .over("e", "f")
+                .sort_by(pl.col("i"), pl.col("g", "h"))
+            ),
             "c",
+            id="Kitchen-Sink",
         ),
         pytest.param(
             nwd.col("c").alias("x").fill_null(50),
