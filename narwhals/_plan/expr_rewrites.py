@@ -6,18 +6,21 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan import expr_parsing as parse
 from narwhals._plan.common import NamedIR, is_function_expr, is_window_expr, map_ir
-from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
+from narwhals._plan.expr_expansion import (
+    IntoFrozenSchema,
+    into_named_irs,
+    prepare_projection,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
     from narwhals._plan.common import ExprIR
     from narwhals._plan.typing import IntoExpr, MapIR, Seq
-    from narwhals.dtypes import DType
 
 
 def rewrite_all(
-    *exprs: IntoExpr, schema: Mapping[str, DType], rewrites: Sequence[MapIR]
+    *exprs: IntoExpr, schema: IntoFrozenSchema, rewrites: Sequence[MapIR]
 ) -> Seq[NamedIR]:
     """Very naive approach, but should work for a demo.
 

@@ -88,6 +88,12 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
+IntoFrozenSchema: TypeAlias = "Mapping[str, DType] | FrozenSchema"
+"""A schema to freeze, or an already frozen one.
+
+As `DType` instances (`.values()`) are hashable, we can coerce the schema
+into a cache-safe proxy structure (`FrozenSchema`).
+"""
 
 FrozenColumns: TypeAlias = "Seq[str]"
 Excluded: TypeAlias = "frozenset[str]"
@@ -249,7 +255,7 @@ class ExpansionFlags(Immutable):
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], schema: Mapping[str, DType] | FrozenSchema
+    exprs: Sequence[ExprIR], schema: IntoFrozenSchema
 ) -> tuple[Seq[ExprIR], FrozenSchema, OutputNames]:
     """Expand IRs into named column selections.
 
