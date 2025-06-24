@@ -81,9 +81,7 @@ def test_meta_root_names(
             nwd.col("c").alias("x").fill_null(50),
             pl.col("c").alias("x").fill_null(50),
             "x",
-            marks=pytest.mark.xfail(
-                reason="Incorrectly matched `Literal.name` instead of earlier `Alias.name`."
-            ),
+            id="FunctionExpr-Literal",
         ),
     ],
 )

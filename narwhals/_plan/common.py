@@ -244,6 +244,14 @@ class ExprIR(Immutable):
         """
         yield from self.iter_left()
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        """Override for different iteration behavior in `ExprIR.meta.output_name`.
+
+        Note:
+            Identical to `iter_right` by default.
+        """
+        yield from self.iter_right()
+
     @property
     def meta(self) -> IRMetaNamespace:
         from narwhals._plan.meta import IRMetaNamespace

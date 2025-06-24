@@ -463,6 +463,22 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
         for e in reversed(self.input):
             yield from e.iter_right()
 
+    def iter_output_name(self) -> t.Iterator[ExprIR]:
+        """When we have multiple inputs, we want the name of the left-most expression.
+
+        For expr:
+
+            col("c").alias("x").fill_null(50)
+
+        We are interested in the name which comes from the root:
+
+            FunctionExpr(..., [Alias(..., name='...'), Literal(...), ...])
+            #                  ^^^^^            ^^^
+        """
+        yield self
+        for e in self.input:
+            yield from e.iter_output_name()
+
     def __init__(
         self,
         *,
