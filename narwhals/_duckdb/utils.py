@@ -281,21 +281,27 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     return f"partition by {by_sql}"
 
 
-def generate_order_by_sql(*order_by: str, ascending: bool, nulls_first: bool) -> str:
+def generate_order_by_sql(
+    *order_by: str | Expression, ascending: bool, nulls_first: bool
+) -> str:
     if not order_by:
         return ""
     nulls = "nulls first" if nulls_first else "nulls last"
     if ascending:
-        by_sql = ", ".join([f"{col(x)} asc {nulls}" for x in order_by])
+        by_sql = ", ".join(
+            [f"{col(x) if isinstance(x, str) else x} asc {nulls}" for x in order_by]
+        )
     else:
-        by_sql = ", ".join([f"{col(x)} desc {nulls}" for x in order_by])
+        by_sql = ", ".join(
+            [f"{col(x) if isinstance(x, str) else x} desc {nulls}" for x in order_by]
+        )
     return f"order by {by_sql}"
 
 
 def window_expression(
     expr: Expression,
     partition_by: Sequence[str | Expression],
-    order_by: Sequence[str] = (),
+    order_by: Sequence[str | Expression] = (),
     rows_start: str = "",
     rows_end: str = "",
     *,

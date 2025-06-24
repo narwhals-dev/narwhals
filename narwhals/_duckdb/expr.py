@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._duckdb.typing import WindowExpressionKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _FullContext
     from narwhals.typing import (
@@ -159,7 +160,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             else:  # pragma: no cover
                 msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
                 raise ValueError(msg)
-            window_kwargs: dict[Any, Any] = {
+            window_kwargs: WindowExpressionKwargs = {
                 "partition_by": inputs.partition_by,
                 "order_by": inputs.order_by,
                 "rows_start": start,
@@ -511,7 +512,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return [
                 CoalesceOperator(
                     window_expression(
-                        FunctionExpression("sum", expr), window_inputs.partition_by, ()
+                        FunctionExpression("sum", expr), window_inputs.partition_by
                     ),
                     lit(0),
                 )
@@ -806,7 +807,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def is_unique(self) -> Self:
         def _is_unique(expr: Expression, *partition_by: str | Expression) -> Expression:
             return window_expression(
-                FunctionExpression("count", StarExpression()), (expr, *partition_by), ()
+                FunctionExpression("count", StarExpression()), (expr, *partition_by)
             ) == lit(1)
 
         def _unpartitioned_is_unique(expr: Expression) -> Expression:
@@ -838,21 +839,22 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             partition_by: Sequence[str | Expression] | None = None,
         ) -> Expression:
             count_expr = FunctionExpression("count", StarExpression())
-            common_window_kwargs = {"descending": descending, "nulls_last": True}
             if partition_by is not None:
-                window_kwargs = {
+                window_kwargs: WindowExpressionKwargs = {
                     "partition_by": partition_by,
                     "order_by": (expr,),
-                    **common_window_kwargs,
+                    "descending": descending,
+                    "nulls_last": True,
                 }
-                count_window_kwargs: dict[Any, Any] = {
+                count_window_kwargs: WindowExpressionKwargs = {
                     "partition_by": (*partition_by, expr)
                 }
             else:
                 window_kwargs = {
                     "partition_by": (),
                     "order_by": [expr],
-                    **common_window_kwargs,
+                    "descending": descending,
+                    "nulls_last": True,
                 }
                 count_window_kwargs = {"partition_by": (expr,)}
             if method == "max":
