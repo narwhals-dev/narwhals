@@ -478,8 +478,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
             FunctionExpr(..., [Alias(..., name='...'), Literal(...), ...])
             #                  ^^^^^            ^^^
         """
-        yield self
-        for e in self.input:
+        for e in self.input[:1]:
             yield from e.iter_output_name()
 
     def __init__(
