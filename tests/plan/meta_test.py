@@ -56,6 +56,11 @@ def test_meta_root_names(
     assert nw_result == pl_result
 
 
+XFAIL_WRONG_ALIAS = pytest.mark.xfail(
+    reason="Found the wrong alias.\nNeed to add `iter_output_name` override."
+)
+
+
 @pytest.mark.parametrize(
     ("nw_expr", "pl_expr", "expected"),
     [
@@ -82,6 +87,89 @@ def test_meta_root_names(
             pl.col("c").alias("x").fill_null(50),
             "x",
             id="FunctionExpr-Literal",
+        ),
+        pytest.param(
+            (
+                nwd.col("ROOT")
+                .alias("ROOT-ALIAS")
+                .filter(nwd.col("b") >= 30, nwd.col("c").alias("d") == 7)
+                + nwd.col("RHS").alias("RHS-ALIAS")
+            ),
+            (
+                pl.col("ROOT")
+                .alias("ROOT-ALIAS")
+                .filter(pl.col("b") >= 30, pl.col("c").alias("d") == 7)
+                + pl.col("RHS").alias("RHS-ALIAS")
+            ),
+            "ROOT-ALIAS",
+            id="BinaryExpr-Multiple",
+            marks=XFAIL_WRONG_ALIAS,
+        ),
+        pytest.param(
+            nwd.col("ROOT").alias("ROOT-ALIAS").mean().over(nwd.col("a").alias("b")),
+            pl.col("ROOT").alias("ROOT-ALIAS").mean().over(pl.col("a").alias("b")),
+            "ROOT-ALIAS",
+            id="WindowExpr",
+        ),
+        pytest.param(
+            nwd.when(nwd.col("a").alias("a?")).then(10),
+            pl.when(pl.col("a").alias("a?")).then(10),
+            "literal",
+            id="When-Literal",
+            marks=XFAIL_WRONG_ALIAS,
+        ),
+        pytest.param(
+            nwd.when(nwd.col("a").alias("a?")).then(nwd.col("b")).otherwise(20),
+            pl.when(pl.col("a").alias("a?")).then(pl.col("b")).otherwise(20),
+            "b",
+            id="When-Column-Literal",
+            marks=XFAIL_WRONG_ALIAS,
+        ),
+        pytest.param(
+            nwd.when(a=1).then(10).otherwise(nwd.col("c").alias("c?")),
+            pl.when(a=1).then(10).otherwise(pl.col("c").alias("c?")),
+            "literal",
+            id="When-Literal-Alias",
+        ),
+        pytest.param(
+            (
+                nwd.when(nwd.col("a").alias("a?"))
+                .then(1)
+                .when(nwd.col("b") == 1)
+                .then(nwd.col("c"))
+            ),
+            (
+                pl.when(pl.col("a").alias("a?"))
+                .then(1)
+                .when(pl.col("b") == 1)
+                .then(pl.col("c"))
+            ),
+            "literal",
+            id="When-Literal-BinaryExpr-Column",
+            marks=XFAIL_WRONG_ALIAS,
+        ),
+        pytest.param(
+            (
+                nwd.when(nwd.col("foo") > 2, nwd.col("bar") < 3)
+                .then(nwd.lit("Yes"))
+                .otherwise(nwd.lit("No"))
+                .alias("TARGET")
+            ),
+            (
+                pl.when(pl.col("foo") > 2, pl.col("bar") < 3)
+                .then(pl.lit("Yes"))
+                .otherwise(pl.lit("No"))
+                .alias("TARGET")
+            ),
+            "TARGET",
+            id="When2-Literal-Literal-Alias",
+        ),
+        pytest.param(
+            (nwd.col("ROOT").alias("ROOT-ALIAS").filter(nwd.col("c") <= 1).mean()),
+            (pl.col("ROOT").alias("ROOT-ALIAS").filter(pl.col("c") <= 1).mean()),
+            "ROOT-ALIAS",
+            id="Filter",
+            marks=XFAIL_WRONG_ALIAS,
         ),
     ],
 )
