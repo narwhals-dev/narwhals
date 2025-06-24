@@ -22,7 +22,9 @@ def _unwrap_ir(obj: DummyExpr | ExprIR | NamedIR) -> ExprIR:
 
 
 def assert_expr_ir_equal(
-    actual: DummyExpr | ExprIR | NamedIR, expected: DummyExpr | ExprIR | LiteralString, /
+    actual: DummyExpr | ExprIR | NamedIR,
+    expected: DummyExpr | ExprIR | NamedIR | LiteralString,
+    /,
 ) -> None:
     """Assert that `actual` is equivalent to `expected`.
 
@@ -37,6 +39,8 @@ def assert_expr_ir_equal(
     lhs = _unwrap_ir(actual)
     if isinstance(expected, str):
         assert repr(lhs) == expected
+    elif isinstance(actual, NamedIR) and isinstance(expected, NamedIR):
+        assert actual == expected
     else:
         rhs = expected._ir if is_expr(expected) else expected
         assert lhs == rhs

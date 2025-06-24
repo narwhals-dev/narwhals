@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, expr_parsing as parse
+from narwhals._plan import demo as nwd, expr_parsing as parse, selectors as ndcs
+from narwhals._plan.common import ExprIR, NamedIR, is_expr
 from narwhals._plan.expr import WindowExpr
 from narwhals._plan.expr_rewrites import rewrite_all, rewrite_elementwise_over
 from narwhals._plan.window import Over
@@ -13,6 +14,7 @@ from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
+    from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 
@@ -71,5 +73,46 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
     )
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 2
+    for lhs, rhs in zip(actual, expected):
+        assert_expr_ir_equal(lhs, rhs)
+
+
+def named_ir(name: str, expr: DummyExpr | ExprIR, /) -> NamedIR[ExprIR]:
+    """Helper constructor for test compare."""
+    ir = expr._ir if is_expr(expr) else expr
+    return NamedIR(expr=ir, name=name)
+
+
+def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
+    expected = (
+        named_ir("a", nwd.col("a")),
+        named_ir("b", nwd.col("b").cast(nw.String())),
+        named_ir("x2", nwd.col("c").max().over("a").fill_null(50)),
+        named_ir("d**", ~nwd.col("d").is_duplicated().over("b")),
+        named_ir("f_some", nwd.col("f").str.contains("some")),
+        named_ir("g_some", nwd.col("g").str.contains("some")),
+        named_ir("h_some", nwd.col("h").str.contains("some")),
+        named_ir("D", nwd.col("d").null_count().over("f", "g", "j").sqrt()),
+        named_ir("E", nwd.col("e").null_count().over("f", "g", "j").sqrt()),
+        named_ir("B", nwd.col("b").null_count().over("f", "g", "j").sqrt()),
+    )
+    before = (
+        nwd.col("a"),
+        nwd.col("b").cast(nw.String()),
+        (
+            _to_window_expr(nwd.col("c").max().alias("x").fill_null(50), "a")
+            .to_narwhals()
+            .alias("x2")
+        ),
+        ~(nwd.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
+        ndcs.string().str.contains("some").name.suffix("_some"),
+        (
+            _to_window_expr(nwd.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
+            .to_narwhals()
+            .name.to_uppercase()
+        ),
+    )
+    actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_elementwise_over])
+    assert len(actual) == len(expected)
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)
