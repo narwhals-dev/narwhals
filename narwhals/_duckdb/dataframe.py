@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any
@@ -12,9 +11,9 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     col,
     evaluate_exprs,
-    generate_partition_by_sql,
     lit,
     native_to_narwhals_dtype,
+    window_expression,
 )
 from narwhals._utils import (
     Implementation,
@@ -49,9 +48,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-
-with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression
 
 
 class DuckDBLazyFrame(
@@ -381,24 +377,17 @@ class DuckDBLazyFrame(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset_ := subset if keep == "any" else (subset or self.columns):
-            if self._backend_version < (1, 3):
-                msg = (
-                    "At least version 1.3 of DuckDB is required for `unique` operation\n"
-                    "with `subset` specified."
-                )
-                raise NotImplementedError(msg)
             # Sanitise input
             if error := self._check_columns_exist(subset_):
                 raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-            partition_by_sql = generate_partition_by_sql(*(subset_))
             name = count_name if keep == "none" else idx_name
-            idx_expr = SQLExpression(
-                f"{FunctionExpression('row_number')} over ({partition_by_sql})"
+            idx_expr = window_expression(
+                FunctionExpression("row_number"), subset_, ()
             ).alias(idx_name)
-            count_expr = SQLExpression(
-                f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
+            count_expr = window_expression(
+                FunctionExpression("count", StarExpression()), subset_, ()
             ).alias(count_name)
             return self._with_native(
                 self.native.select(StarExpression(), idx_expr, count_expr)
