@@ -191,7 +191,7 @@ class DuckDBNamespace(
         def func(cols: Iterable[Expression]) -> Expression:
             return CoalesceOperator(*cols)
 
-        return self._with_elementwise(
+        return self._expr_from_elementwise(
             func,
             *(
                 expr if self._expr._is_expr(expr) else self.lit(expr, dtype=None)
