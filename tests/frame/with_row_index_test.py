@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -31,7 +31,6 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
         (["const", "xyz"], [0, 1]),
     ],
 )
-@pytest.mark.skipif(POLARS_VERSION < (0, 20, 5), reason="Too old for `len`")
 def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
@@ -45,7 +44,6 @@ def test_with_row_index_lazy(
 
 
 @pytest.mark.parametrize("namespace", [nw, nw_v1])
-@pytest.mark.skipif(POLARS_VERSION < (0, 20, 5), reason="Too old for `len`")
 def test_with_row_index_lazy_exception(
     constructor: Constructor, namespace: ModuleType
 ) -> None:
