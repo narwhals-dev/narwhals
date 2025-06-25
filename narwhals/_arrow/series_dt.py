@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -198,7 +198,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     def offset_by(self, by: str) -> ArrowSeries:
         from narwhals._arrow.utils import create_timedelta
 
-        multiple, unit = parse_interval_string(by)
+        multiple, unit = parse_interval_string_no_constraints(by)
         native = self.native
         if unit in {"y", "q", "mo"}:
             msg = f"Offsetting by {unit} is not yet supported."

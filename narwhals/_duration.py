@@ -58,3 +58,20 @@ def parse_interval_string(every: str) -> tuple[int, IntervalUnit]:
         f"where 'unit' is one of: {get_args(IntervalUnit)}."
     )
     raise ValueError(msg)
+
+
+def parse_interval_string_no_constraints(every: str) -> tuple[int, IntervalUnit]:
+    """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
+
+    Returns:
+        A tuple of multiple and unit parsed from the interval string.
+    """
+    if match := PATTERN_INTERVAL.match(every):
+        multiple = int(match["multiple"])
+        unit = cast("IntervalUnit", match["unit"])
+        return multiple, unit
+    msg = (
+        f"Invalid `every` string: {every}. Expected string of kind <number><unit>, "
+        f"where 'unit' is one of: {get_args(IntervalUnit)}."
+    )
+    raise ValueError(msg)

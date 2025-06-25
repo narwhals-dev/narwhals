@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
     PandasLikeSeriesNamespace,
@@ -241,7 +241,7 @@ class PandasLikeSeriesDateTimeNamespace(
 
         from narwhals._arrow.utils import UNITS_DICT
 
-        multiple, unit = parse_interval_string(by)
+        multiple, unit = parse_interval_string_no_constraints(by)
         if unit in {"y", "q", "mo"}:
             msg = f"Offsetting by {unit} is not yet supported."
             raise NotImplementedError(msg)
@@ -260,7 +260,7 @@ class PandasLikeSeriesDateTimeNamespace(
             if unit == "d":
                 offset = create_timedelta(multiple, unit)
                 original_timezone = ca.type.tz
-                native_without_timezone = pc.cast(ca, pa.timestamp("us"))
+                native_without_timezone = pc.local_timestamp(ca)
                 result = pc.add(native_without_timezone, offset)
                 if original_timezone is not None:
                     result = pc.assume_timezone(result, original_timezone)

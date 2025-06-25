@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
     calculate_timestamp_date,
@@ -165,7 +165,7 @@ class DaskExprDateTimeNamespace:
         def func(s: dx.Series, by: str) -> dx.Series:
             from narwhals._arrow.utils import create_timedelta
 
-            multiple, unit = parse_interval_string(by)
+            multiple, unit = parse_interval_string_no_constraints(by)
             if unit in {"y", "q", "mo", "d", "ns"}:
                 msg = f"Offsetting by {unit} is not supported yet for dask."
                 raise NotImplementedError(msg)

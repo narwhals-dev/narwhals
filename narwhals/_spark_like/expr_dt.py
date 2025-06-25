@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
@@ -125,7 +125,7 @@ class SparkLikeExprDateTimeNamespace:
     def offset_by(self, by: str) -> SparkLikeExpr:
         from narwhals._spark_like.utils import import_functions
 
-        multiple, unit = parse_interval_string(by)
+        multiple, unit = parse_interval_string_no_constraints(by)
         if unit == "ns":
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)

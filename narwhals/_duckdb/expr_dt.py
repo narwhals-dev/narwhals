@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import UNITS_DICT, fetch_rel_time_zone, lit
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -128,7 +128,7 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._with_callable(_truncate)
 
     def offset_by(self, by: str) -> DuckDBExpr:
-        multiple, unit = parse_interval_string(by)
+        multiple, unit = parse_interval_string_no_constraints(by)
         format = lit(f"{multiple!s} {UNITS_DICT[unit]}")
 
         def _offset_by(expr: Expression) -> Expression:

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
-from narwhals._duration import parse_interval_string
+from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
 from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
@@ -326,7 +326,9 @@ class PolarsExprDateTimeNamespace:
         )
 
     def offset_by(self, by: str) -> PolarsExpr:
-        parse_interval_string(by)  # Ensure consistent error message is raised.
+        parse_interval_string_no_constraints(
+            by
+        )  # Ensure consistent error message is raised.
         return self._compliant_expr._with_native(
             self._compliant_expr.native.dt.offset_by(by)
         )
