@@ -216,11 +216,7 @@ class PolarsExpr:
         return self._with_native(self.native.__invert__())
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            result = (~self.native.is_null()).cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover

@@ -40,7 +40,7 @@ cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
-polars = ["polars>=0.20.3"]
+polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
@@ -287,6 +287,7 @@ exclude_also = [
   'if "pyspark" in str\(constructor',
   'if "pyspark_connect" in str\(constructor',
   'pytest.skip\(',
+  'assert_never\(',
 ]
 
 [tool.mypy]

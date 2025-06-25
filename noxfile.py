@@ -46,7 +46,7 @@ def pytest_coverage(session: Session) -> None:
 def min_and_old_versions(session: Session, pandas_version: str) -> None:
     session.install(
         f"pandas=={pandas_version}",
-        "polars==0.20.3",
+        "polars==0.20.4",
         "numpy==1.17.5",
         "pyarrow==11.0.0",
         "scipy==1.5.0",
