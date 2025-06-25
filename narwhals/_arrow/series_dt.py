@@ -6,6 +6,12 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
+from narwhals._constants import (
+    MS_PER_SECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
 from narwhals._duration import parse_interval_string
 
 if TYPE_CHECKING:
@@ -26,9 +32,9 @@ if TYPE_CHECKING:
 
 class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
-        "ns": 1_000_000_000,
-        "us": 1_000_000,
-        "ms": 1_000,
+        "ns": NS_PER_SECOND,
+        "us": US_PER_SECOND,
+        "ms": MS_PER_SECOND,
         "s": 1,
     }
     _TIMESTAMP_DATETIME_OP_FACTOR: ClassVar[
@@ -40,9 +46,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         ("us", "ms"): (floordiv_compat, 1_000),
         ("ms", "ns"): (pc.multiply, 1_000_000),
         ("ms", "us"): (pc.multiply, 1_000),
-        ("s", "ns"): (pc.multiply, 1_000_000_000),
-        ("s", "us"): (pc.multiply, 1_000_000),
-        ("s", "ms"): (pc.multiply, 1_000),
+        ("s", "ns"): (pc.multiply, NS_PER_SECOND),
+        ("s", "us"): (pc.multiply, US_PER_SECOND),
+        ("s", "ms"): (pc.multiply, MS_PER_SECOND),
     }
 
     @property
@@ -87,7 +93,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
                 raise AssertionError(msg)
             return self.with_native(result)
         elif isinstance(ser.dtype, dtypes.Date):
-            time_s = pc.multiply(self.native.cast(pa.int32()), lit(86_400))
+            time_s = pc.multiply(self.native.cast(pa.int32()), lit(SECONDS_PER_DAY))
             factor = self._TIMESTAMP_DATE_FACTOR[time_unit]
             return self.with_native(pc.multiply(time_s, lit(factor)))
         else:
@@ -147,10 +153,10 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def total_seconds(self) -> ArrowSeries:
         unit_to_seconds_factor = {
-            "s": 1,  # seconds
-            "ms": 1e3,  # milli
-            "us": 1e6,  # micro
-            "ns": 1e9,  # nano
+            "s": 1,
+            "ms": MS_PER_SECOND,
+            "us": US_PER_SECOND,
+            "ns": NS_PER_SECOND,
         }
         factor = lit(unit_to_seconds_factor[self.unit], type=pa.int64())
         return self.with_native(pc.divide(self.native, factor).cast(pa.int64()))

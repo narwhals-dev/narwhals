@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._constants import US_PER_SECOND
 from narwhals._duration import parse_interval_string
 from narwhals._spark_like.utils import (
     UNITS_DICT,
@@ -80,20 +81,20 @@ class SparkLikeExprDateTimeNamespace:
     def millisecond(self) -> SparkLikeExpr:
         def _millisecond(expr: Column) -> Column:
             return self._compliant_expr._F.floor(
-                (self._compliant_expr._F.unix_micros(expr) % 1_000_000) / 1000
+                (self._compliant_expr._F.unix_micros(expr) % US_PER_SECOND) / 1000
             )
 
         return self._compliant_expr._with_callable(_millisecond)
 
     def microsecond(self) -> SparkLikeExpr:
         def _microsecond(expr: Column) -> Column:
-            return self._compliant_expr._F.unix_micros(expr) % 1_000_000
+            return self._compliant_expr._F.unix_micros(expr) % US_PER_SECOND
 
         return self._compliant_expr._with_callable(_microsecond)
 
     def nanosecond(self) -> SparkLikeExpr:
         def _nanosecond(expr: Column) -> Column:
-            return (self._compliant_expr._F.unix_micros(expr) % 1_000_000) * 1000
+            return (self._compliant_expr._F.unix_micros(expr) % US_PER_SECOND) * 1000
 
         return self._compliant_expr._with_callable(_nanosecond)
 
@@ -186,7 +187,7 @@ class SparkLikeExprDateTimeNamespace:
         if format.endswith((".%f", "%.f")):
             import re
 
-            micros = F.unix_micros(_input) % 1_000_000
+            micros = F.unix_micros(_input) % US_PER_SECOND
             micros_str = F.lpad(micros.cast("string"), 6, "0")
             suffix = (F.lit("."), micros_str)
             format_ = re.sub(r"(.%|%.)f$", "", format)
