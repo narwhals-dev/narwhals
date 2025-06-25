@@ -113,6 +113,8 @@ Which should you use? In general we recommend:
 
 - Since Narwhals 1.45:
 
+    - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
+      it defaults to `False`, but in Narwhals 2.0 it will become a required argument in the main namespace.
     - `LazyFrame.with_row_index` requires `order_by` to be specified as it is an order-dependent operation, in the main Narwhals namespace.
 
 - Since Narwhals 1.43:

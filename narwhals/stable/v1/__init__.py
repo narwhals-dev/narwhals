@@ -1335,38 +1335,46 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.sum_horizontal(*exprs))
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
-
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `True`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.all_horizontal(*exprs))
+    return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
-
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `False`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.any_horizontal(*exprs))
+    return _stableify(nw.any_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:

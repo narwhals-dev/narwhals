@@ -209,7 +209,7 @@ class BaseFrame(Generic[_FrameT]):
                 for name, v in constraints.items()
             )
             predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints)
+                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
             )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
