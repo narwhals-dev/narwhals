@@ -14,6 +14,7 @@
         - month
         - nanosecond
         - ordinal_day
+        - offset_by
         - replace_time_zone
         - second
         - timestamp

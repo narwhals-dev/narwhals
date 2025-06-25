@@ -127,6 +127,15 @@ class DuckDBExprDateTimeNamespace:
 
         return self._compliant_expr._with_callable(_truncate)
 
+    def offset_by(self, by: str) -> DuckDBExpr:
+        multiple, unit = parse_interval_string(by)
+        format = lit(f"{multiple!s} {UNITS_DICT[unit]}")
+
+        def _offset_by(expr: Expression) -> Expression:
+            return FunctionExpression("date_add", format, expr)
+
+        return self._compliant_expr._with_callable(_offset_by)
+
     def _no_op_time_zone(self, time_zone: str) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
             native_series_list = self._compliant_expr(df)

@@ -91,6 +91,7 @@ class IbisExprDateTimeNamespace:
             raise NotImplementedError(msg)
 
     nanosecond = not_implemented()
+    offset_by = not_implemented()
     total_minutes = not_implemented()
     total_seconds = not_implemented()
     total_milliseconds = not_implemented()

@@ -194,3 +194,25 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         return self.with_native(
             pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
         )
+
+    def offset_by(self, by: str) -> ArrowSeries:
+        from narwhals._arrow.utils import create_timedelta
+
+        multiple, unit = parse_interval_string(by)
+        native = self.native
+        if unit in {"y", "q", "mo"}:
+            msg = f"Offsetting by {unit} is not yet supported."
+            raise NotImplementedError(msg)
+        if unit == "d":
+            offset = create_timedelta(multiple, unit)
+            original_timezone = native.type.tz
+            native_without_timezone = pc.cast(native, pa.timestamp("us"))
+            result = pc.add(native_without_timezone, offset)
+            if original_timezone is not None:
+                result = pc.assume_timezone(result, original_timezone)
+        elif unit == "ns":
+            result = pc.add(native, pa.scalar(multiple, type=pa.duration("ns")))
+        else:
+            offset = create_timedelta(multiple, unit)
+            result = pc.add(native, offset)
+        return self.with_native(result)

@@ -1001,6 +1001,9 @@ class EagerExprDateTimeNamespace(
     def truncate(self, every: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
 
+    def offset_by(self, by: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("dt", "offset_by", by=by)
+
 
 class EagerExprListNamespace(
     EagerExprNamespace[EagerExprT], ListNamespace[EagerExprT], Generic[EagerExprT]

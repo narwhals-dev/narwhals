@@ -11,6 +11,7 @@ from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from datetime import timedelta
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -73,6 +74,26 @@ UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
 
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
+
+
+def create_timedelta(multiple: int, unit: IntervalUnit) -> timedelta:
+    from datetime import timedelta
+
+    if unit == "d":
+        return timedelta(days=multiple)
+    elif unit == "h":
+        return timedelta(hours=multiple)
+    elif unit == "m":
+        return timedelta(minutes=multiple)
+    elif unit == "s":
+        return timedelta(seconds=multiple)
+    elif unit == "ms":
+        return timedelta(milliseconds=multiple)
+    elif unit == "us":
+        return timedelta(microseconds=multiple)
+    else:
+        msg = f"Creating timedelta with {unit} unit is not supported."
+        raise NotImplementedError(msg)
 
 
 def extract_py_scalar(value: Any, /) -> Any:

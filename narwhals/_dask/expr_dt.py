@@ -160,3 +160,16 @@ class DaskExprDateTimeNamespace:
         return self._compliant_expr._with_callable(
             lambda expr: expr.dt.floor(freq), "truncate"
         )
+
+    def offset_by(self, by: str) -> DaskExpr:
+        def func(s: dx.Series, by: str) -> dx.Series:
+            from narwhals._arrow.utils import create_timedelta
+
+            multiple, unit = parse_interval_string(by)
+            if unit in {"y", "q", "mo", "d", "ns"}:
+                msg = f"Offsetting by {unit} is not supported yet for dask."
+                raise NotImplementedError(msg)
+            offset = create_timedelta(multiple, unit)
+            return s + offset
+
+        return self._compliant_expr._with_callable(func, "offset_by", by=by)

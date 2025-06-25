@@ -325,6 +325,12 @@ class PolarsExprDateTimeNamespace:
             self._compliant_expr.native.dt.truncate(every)
         )
 
+    def offset_by(self, by: str) -> PolarsExpr:
+        parse_interval_string(by)  # Ensure consistent error message is raised.
+        return self._compliant_expr._with_native(
+            self._compliant_expr.native.dt.offset_by(by)
+        )
+
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:
             pos, kwds = extract_args_kwargs(args, kwargs)

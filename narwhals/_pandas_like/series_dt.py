@@ -235,3 +235,52 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(
             self.native.dt.floor(f"{multiple}{UNIT_DICT.get(unit, unit)}")
         )
+
+    def offset_by(self, by: str) -> PandasLikeSeries:
+        import pandas as pd
+
+        from narwhals._arrow.utils import UNITS_DICT
+
+        multiple, unit = parse_interval_string(by)
+        if unit in {"y", "q", "mo"}:
+            msg = f"Offsetting by {unit} is not yet supported."
+            raise NotImplementedError(msg)
+        native = self.native
+        if self.implementation.is_cudf():
+            msg = "Not implemented for cuDF."
+            raise NotImplementedError(msg)
+        dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
+        if dtype_backend == "pyarrow":
+            import pyarrow as pa  # ignore-banned-import
+            import pyarrow.compute as pc  # ignore-banned-import
+
+            from narwhals._arrow.utils import create_timedelta
+
+            ca = native.array._pa_array
+            if unit == "d":
+                offset = create_timedelta(multiple, unit)
+                original_timezone = ca.type.tz
+                native_without_timezone = pc.cast(ca, pa.timestamp("us"))
+                result = pc.add(native_without_timezone, offset)
+                if original_timezone is not None:
+                    result = pc.assume_timezone(result, original_timezone)
+            elif unit == "ns":
+                result = pc.add(ca, pa.scalar(multiple, type=pa.duration("ns")))
+            else:
+                offset = create_timedelta(multiple, unit)
+                result = pc.add(ca, offset)
+            result = native.__class__(
+                result, dtype=native.dtype, index=native.index, name=native.name
+            )
+        else:
+            offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])
+            if unit == "d":
+                original_timezone = native.dt.tz
+                native_without_timezone = native.dt.tz_localize(None)
+                result = native_without_timezone + offset
+                if original_timezone is not None:
+                    result = result.dt.tz_localize(original_timezone)
+            else:
+                result = native + offset
+
+        return self.with_native(result)
