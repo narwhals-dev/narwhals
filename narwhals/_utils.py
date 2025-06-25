@@ -23,6 +23,7 @@ from typing import (
 )
 from warnings import warn
 
+from narwhals._constants import MAX_REPR_LENGTH, MAX_WHILE_REPEAT
 from narwhals._enum import NoAutoEnum
 from narwhals._typing_compat import deprecated
 from narwhals.dependencies import (
@@ -1296,7 +1297,7 @@ def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str
             return token
 
         counter += 1
-        if counter > 100:
+        if counter > MAX_WHILE_REPEAT:
             msg = (
                 "Internal Error: Narwhals was not able to generate a column name with "
                 f"{n_bytes=} and not in {columns}"
@@ -2029,7 +2030,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         if param_name:
             left_pad = " " * 4
             val = repr(obj)
-            if len(val) > 40:  # truncate long reprs
+            if len(val) > MAX_REPR_LENGTH:
                 val = f"{qualified_type_name(obj)}(...)"
             assign = f"{left_pad}{param_name}="
             underline = (" " * len(assign)) + ("^" * len(val))

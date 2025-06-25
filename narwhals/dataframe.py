@@ -897,14 +897,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
 
         if isinstance(item, tuple):
-            if len(item) > 2:
+            if len(item) > 2:  # noqa: PLR2004
                 tuple_msg = (
                     "Tuples cannot be passed to DataFrame.__getitem__ directly.\n\n"
                     "Hint: instead of `df[indices]`, did you mean `df[indices, :]`?"
                 )
                 raise TypeError(tuple_msg)
             rows = None if not item or is_slice_none(item[0]) else item[0]
-            columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]
+            columns = None if len(item) < 2 or is_slice_none(item[1]) else item[1]  # noqa: PLR2004
             if rows is None and columns is None:
                 return self
         elif is_index_selector(item):

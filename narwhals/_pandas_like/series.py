@@ -556,7 +556,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             return None
         elif len(ser_not_null) == 1:
             return float("nan")
-        elif len(ser_not_null) == 2:
+        elif len(ser_not_null) == 2:  # noqa: PLR2004
             return 0.0
         else:
             m = ser_not_null - ser_not_null.mean()
