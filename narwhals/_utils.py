@@ -105,6 +105,10 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _T4 = TypeVar("_T4")
+    _T5 = TypeVar("_T5")
+    _T6 = TypeVar("_T6")
+    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -716,6 +720,76 @@ def isinstance_or_issubclass(
 def isinstance_or_issubclass(
     obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
 ) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[
+    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
+]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[
+    _T1
+    | _T2
+    | _T3
+    | _T4
+    | _T5
+    | _T6
+    | _T7
+    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
+]: ...
 
 
 @overload
