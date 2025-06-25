@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
-from duckdb import CoalesceOperator, FunctionExpression, StarExpression
+from duckdb import CoalesceOperator, StarExpression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._compliant import LazyExpr
@@ -13,6 +13,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
+    F,
     col,
     lit,
     narwhals_to_native_dtype,
@@ -109,7 +110,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 window_expression(
-                    FunctionExpression(func_name, expr),
+                    F(func_name, expr),
                     inputs.partition_by,
                     inputs.order_by,
                     descending=reverse,
@@ -166,9 +167,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             }
             return [
                 when(
-                    window_expression(FunctionExpression("count", expr), **window_kwargs)
+                    window_expression(F("count", expr), **window_kwargs)
                     >= lit(min_samples),
-                    window_expression(FunctionExpression(func_, expr), **window_kwargs),
+                    window_expression(F(func_, expr), **window_kwargs),
                 )
                 for expr in self(df)
             ]
@@ -395,19 +396,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(invert)
 
     def abs(self) -> Self:
-        return self._with_elementwise(lambda expr: FunctionExpression("abs", expr))
+        return self._with_elementwise(lambda expr: F("abs", expr))
 
     def mean(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("mean", expr))
+        return self._with_callable(lambda expr: F("mean", expr))
 
     def skew(self) -> Self:
         def func(expr: Expression) -> Expression:
-            count = FunctionExpression("count", expr)
+            count = F("count", expr)
             # Adjust population skewness by correction factor to get sample skewness
             sample_skewness = (
-                FunctionExpression("skewness", expr)
+                F("skewness", expr)
                 * (count - lit(2))
-                / FunctionExpression("sqrt", count * (count - lit(1)))
+                / F("sqrt", count * (count - lit(1)))
             )
             return when(count == lit(0), lit(None)).otherwise(
                 when(count == lit(1), lit(float("nan"))).otherwise(
@@ -418,21 +419,19 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_callable(func)
 
     def kurtosis(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("kurtosis_pop", expr))
+        return self._with_callable(lambda expr: F("kurtosis_pop", expr))
 
     def median(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("median", expr))
+        return self._with_callable(lambda expr: F("median", expr))
 
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
-            return CoalesceOperator(FunctionExpression("bool_and", expr), lit(True))  # noqa: FBT003
+            return CoalesceOperator(F("bool_and", expr), lit(True))  # noqa: FBT003
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
-                    window_expression(
-                        FunctionExpression("bool_and", expr), inputs.partition_by
-                    ),
+                    window_expression(F("bool_and", expr), inputs.partition_by),
                     lit(True),  # noqa: FBT003
                 )
                 for expr in self(df)
@@ -442,14 +441,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def any(self) -> Self:
         def f(expr: Expression) -> Expression:
-            return CoalesceOperator(FunctionExpression("bool_or", expr), lit(False))  # noqa: FBT003
+            return CoalesceOperator(F("bool_or", expr), lit(False))  # noqa: FBT003
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
-                    window_expression(
-                        FunctionExpression("bool_or", expr), inputs.partition_by
-                    ),
+                    window_expression(F("bool_or", expr), inputs.partition_by),
                     lit(False),  # noqa: FBT003
                 )
                 for expr in self(df)
@@ -462,7 +459,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     ) -> Self:
         def func(expr: Expression) -> Expression:
             if interpolation == "linear":
-                return FunctionExpression("quantile_cont", expr, lit(quantile))
+                return F("quantile_cont", expr, lit(quantile))
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
             raise NotImplementedError(msg)
 
@@ -474,17 +471,15 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
         def _clip_lower(expr: Expression, lower_bound: Any) -> Expression:
-            return FunctionExpression("greatest", expr, lower_bound)
+            return F("greatest", expr, lower_bound)
 
         def _clip_upper(expr: Expression, upper_bound: Any) -> Expression:
-            return FunctionExpression("least", expr, upper_bound)
+            return F("least", expr, upper_bound)
 
         def _clip_both(
             expr: Expression, lower_bound: Any, upper_bound: Any
         ) -> Expression:
-            return FunctionExpression(
-                "greatest", FunctionExpression("least", expr, upper_bound), lower_bound
-            )
+            return F("greatest", F("least", expr, upper_bound), lower_bound)
 
         if lower_bound is None:
             return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
@@ -496,15 +491,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def sum(self) -> Self:
         def f(expr: Expression) -> Expression:
-            return CoalesceOperator(FunctionExpression("sum", expr), lit(0))
+            return CoalesceOperator(F("sum", expr), lit(0))
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 CoalesceOperator(
-                    window_expression(
-                        FunctionExpression("sum", expr), inputs.partition_by
-                    ),
-                    lit(0),
+                    window_expression(F("sum", expr), inputs.partition_by), lit(0)
                 )
                 for expr in self(df)
             ]
@@ -514,64 +506,54 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def n_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
             # https://stackoverflow.com/a/79338887/4451315
-            return FunctionExpression(
-                "array_unique", FunctionExpression("array_agg", expr)
-            ) + FunctionExpression(
+            return F("array_unique", F("array_agg", expr)) + F(
                 "max", when(expr.isnotnull(), lit(0)).otherwise(lit(1))
             )
 
         return self._with_callable(func)
 
     def count(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("count", expr))
+        return self._with_callable(lambda expr: F("count", expr))
 
     def len(self) -> Self:
-        return self._with_callable(lambda _expr: FunctionExpression("count"))
+        return self._with_callable(lambda _expr: F("count"))
 
     def std(self, ddof: int) -> Self:
         if ddof == 0:
-            return self._with_callable(
-                lambda expr: FunctionExpression("stddev_pop", expr)
-            )
+            return self._with_callable(lambda expr: F("stddev_pop", expr))
         if ddof == 1:
-            return self._with_callable(
-                lambda expr: FunctionExpression("stddev_samp", expr)
-            )
+            return self._with_callable(lambda expr: F("stddev_samp", expr))
 
         def _std(expr: Expression) -> Expression:
-            n_samples = FunctionExpression("count", expr)
+            n_samples = F("count", expr)
             return (
-                FunctionExpression("stddev_pop", expr)
-                * FunctionExpression("sqrt", n_samples)
-                / (FunctionExpression("sqrt", (n_samples - lit(ddof))))
+                F("stddev_pop", expr)
+                * F("sqrt", n_samples)
+                / (F("sqrt", (n_samples - lit(ddof))))
             )
 
         return self._with_callable(_std)
 
     def var(self, ddof: int) -> Self:
         if ddof == 0:
-            return self._with_callable(lambda expr: FunctionExpression("var_pop", expr))
+            return self._with_callable(lambda expr: F("var_pop", expr))
         if ddof == 1:
-            return self._with_callable(lambda expr: FunctionExpression("var_samp", expr))
+            return self._with_callable(lambda expr: F("var_samp", expr))
 
         def _var(expr: Expression) -> Expression:
-            n_samples = FunctionExpression("count", expr)
-            return (
-                FunctionExpression("var_pop", expr) * n_samples / (n_samples - lit(ddof))
-            )
+            n_samples = F("count", expr)
+            return F("var_pop", expr) * n_samples / (n_samples - lit(ddof))
 
         return self._with_callable(_var)
 
     def max(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("max", expr))
+        return self._with_callable(lambda expr: F("max", expr))
 
     def min(self) -> Self:
-        return self._with_callable(lambda expr: FunctionExpression("min", expr))
+        return self._with_callable(lambda expr: F("min", expr))
 
     def null_count(self) -> Self:
-        return self._with_callable(
-            lambda expr: FunctionExpression("sum", expr.isnull().cast("int"))
-        )
+        return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 
     @requires.backend_version((1, 3))
     def over(
@@ -592,29 +574,23 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: expr.isnull())
 
     def is_nan(self) -> Self:
-        return self._with_elementwise(lambda expr: FunctionExpression("isnan", expr))
+        return self._with_elementwise(lambda expr: F("isnan", expr))
 
     def is_finite(self) -> Self:
-        return self._with_elementwise(lambda expr: FunctionExpression("isfinite", expr))
+        return self._with_elementwise(lambda expr: F("isfinite", expr))
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_elementwise(
-            lambda expr: FunctionExpression("contains", lit(other), expr)
-        )
+        return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     def round(self, decimals: int) -> Self:
-        return self._with_elementwise(
-            lambda expr: FunctionExpression("round", expr, lit(decimals))
-        )
+        return self._with_elementwise(lambda expr: F("round", expr, lit(decimals)))
 
     @requires.backend_version((1, 3))
     def shift(self, n: int) -> Self:
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
             return [
                 window_expression(
-                    FunctionExpression("lag", expr, lit(n)),
-                    inputs.partition_by,
-                    inputs.order_by,
+                    F("lag", expr, lit(n)), inputs.partition_by, inputs.order_by
                 )
                 for expr in self(df)
             ]
@@ -626,9 +602,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
             return [
                 window_expression(
-                    FunctionExpression("row_number"),
-                    (*inputs.partition_by, expr),
-                    inputs.order_by,
+                    F("row_number"), (*inputs.partition_by, expr), inputs.order_by
                 )
                 == lit(1)
                 for expr in self(df)
@@ -641,7 +615,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
             return [
                 window_expression(
-                    FunctionExpression("row_number"),
+                    F("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
                     descending=True,
@@ -658,9 +632,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
                 expr
-                - window_expression(
-                    FunctionExpression("lag", expr), inputs.partition_by, inputs.order_by
-                )
+                - window_expression(F("lag", expr), inputs.partition_by, inputs.order_by)
                 for expr in self(df)
             ]
 
@@ -769,7 +741,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 )
                 return [
                     window_expression(
-                        FunctionExpression(fill_func, expr),
+                        F(fill_func, expr),
                         inputs.partition_by,
                         inputs.order_by,
                         rows_start=rows_start,
@@ -797,7 +769,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def is_unique(self) -> Self:
         def _is_unique(expr: Expression, *partition_by: str | Expression) -> Expression:
             return window_expression(
-                FunctionExpression("count", StarExpression()), (expr, *partition_by)
+                F("count", StarExpression()), (expr, *partition_by)
             ) == lit(1)
 
         def _unpartitioned_is_unique(expr: Expression) -> Expression:
@@ -816,11 +788,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     @requires.backend_version((1, 3))
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:
-            func = FunctionExpression("rank")
+            func = F("rank")
         elif method == "dense":
-            func = FunctionExpression("dense_rank")
+            func = F("dense_rank")
         else:  # method == "ordinal"
-            func = FunctionExpression("row_number")
+            func = F("row_number")
 
         def _rank(
             expr: Expression,
@@ -828,7 +800,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             descending: bool,
             partition_by: Sequence[str | Expression],
         ) -> Expression:
-            count_expr = FunctionExpression("count", StarExpression())
+            count_expr = F("count", StarExpression())
             window_kwargs: WindowExpressionKwargs = {
                 "partition_by": partition_by,
                 "order_by": (expr,),
@@ -870,26 +842,24 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def log(self, base: float) -> Self:
         def _log(expr: Expression) -> Expression:
-            log = FunctionExpression("log", expr)
+            log = F("log", expr)
             return (
                 when(expr < lit(0), lit(float("nan")))
                 .when(expr == lit(0), lit(float("-inf")))
-                .otherwise(log / FunctionExpression("log", lit(base)))
+                .otherwise(log / F("log", lit(base)))
             )
 
         return self._with_elementwise(_log)
 
     def exp(self) -> Self:
         def _exp(expr: Expression) -> Expression:
-            return FunctionExpression("exp", expr)
+            return F("exp", expr)
 
         return self._with_elementwise(_exp)
 
     def sqrt(self) -> Self:
         def _sqrt(expr: Expression) -> Expression:
-            return when(expr < lit(0), lit(float("nan"))).otherwise(
-                FunctionExpression("sqrt", expr)
-            )
+            return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
 
         return self._with_elementwise(_sqrt)
 

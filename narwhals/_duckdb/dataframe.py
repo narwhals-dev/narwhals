@@ -5,10 +5,11 @@ from operator import and_
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import FunctionExpression, StarExpression
+from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
     DeferredTimeZone,
+    F,
     col,
     evaluate_exprs,
     lit,
@@ -384,11 +385,9 @@ class DuckDBLazyFrame(
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             name = count_name if keep == "none" else idx_name
-            idx_expr = window_expression(FunctionExpression("row_number"), subset_).alias(
-                idx_name
-            )
+            idx_expr = window_expression(F("row_number"), subset_).alias(idx_name)
             count_expr = window_expression(
-                FunctionExpression("count", StarExpression()), subset_, ()
+                F("count", StarExpression()), subset_, ()
             ).alias(count_name)
             return self._with_native(
                 self.native.select(StarExpression(), idx_expr, count_expr)
@@ -440,14 +439,12 @@ class DuckDBLazyFrame(
         rel = self.native
         original_columns = self.columns
 
-        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
-            "len", col_to_explode
-        ) > lit(0)
+        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > lit(
+            0
+        )
         non_null_rel = rel.filter(not_null_condition).select(
             *(
-                FunctionExpression("unnest", col_to_explode).alias(name)
-                if name in columns
-                else name
+                F("unnest", col_to_explode).alias(name) if name in columns else name
                 for name in original_columns
             )
         )
@@ -496,10 +493,9 @@ class DuckDBLazyFrame(
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
-        expr = (
-            window_expression(FunctionExpression("row_number"), order_by=order_by)
-            - lit(1)
-        ).alias(name)
+        expr = (window_expression(F("row_number"), order_by=order_by) - lit(1)).alias(
+            name
+        )
         return self._with_native(self.native.select(expr, StarExpression()))
 
     gather_every = not_implemented.deprecated(
