@@ -22,6 +22,7 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     parse_version,
+    requires,
     validate_backend_version,
 )
 from narwhals.dependencies import get_duckdb
@@ -493,10 +494,16 @@ class DuckDBLazyFrame(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
 
+    @requires.backend_version((1, 3))
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        expr = window_expression(
+            FunctionExpression("row_number", StarExpression()), order_by=order_by
+        ).alias(name)
+        return self._with_native(self.native.select(expr))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()
