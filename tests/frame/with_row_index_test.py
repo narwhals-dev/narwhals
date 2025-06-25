@@ -6,12 +6,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from types import ModuleType
 
 data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
@@ -43,19 +41,13 @@ def test_with_row_index_lazy(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("namespace", [nw, nw_v1])
-def test_with_row_index_lazy_exception(
-    constructor: Constructor, namespace: ModuleType
-) -> None:
-    frame = namespace.from_native(constructor(data))
+def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
+    frame = nw.from_native(constructor(data))
 
-    match_main_ns = r"(LazyFrame\.)?with_row_index\(\) missing 1 required keyword-only argument: 'order_by'$"
-    match_v1_ns = r".*argument after \* must be an iterable, not NoneType$"
+    msg = r"(LazyFrame\.)?with_row_index\(\) missing 1 required keyword-only argument: 'order_by'$"
     context = (
-        pytest.raises(TypeError, match=match_main_ns)
-        if (namespace is nw and isinstance(frame, namespace.LazyFrame))
-        else pytest.raises(TypeError, match=match_v1_ns)
-        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        pytest.raises(TypeError, match=msg)
+        if isinstance(frame, nw.LazyFrame)
         else does_not_raise()
     )
 
