@@ -324,7 +324,7 @@ class ArrowDataFrame(
             self.native.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def select(self, *exprs: ArrowExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -348,7 +348,7 @@ class ArrowDataFrame(
         value = other.native[0]
         return pa.chunked_array([pa.repeat(value, length)])
 
-    def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def with_columns(self, *exprs: ArrowExpr) -> Self:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
@@ -430,7 +430,7 @@ class ArrowDataFrame(
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
-    def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
@@ -492,9 +492,7 @@ class ArrowDataFrame(
             df.append_column(name, row_indices).select([name, *cols])
         )
 
-    def filter(
-        self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
-    ) -> ArrowDataFrame:
+    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):
             mask_native: Mask | ChunkedArrayAny = predicate
         else:
@@ -672,12 +670,12 @@ class ArrowDataFrame(
         return ArrowSeries.from_native(native, context=self)
 
     def unique(
-        self: ArrowDataFrame,
+        self,
         subset: Sequence[str] | None,
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
-    ) -> ArrowDataFrame:
+    ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import

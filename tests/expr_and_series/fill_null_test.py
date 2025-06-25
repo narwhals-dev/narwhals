@@ -33,6 +33,17 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_fill_null_pandas_downcast() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [True, None]}))
+    result = df.select(nw.col("a").fill_null(False))  # noqa: FBT003
+    expected = {"a": [True, False]}
+    assert_equal_data(result, expected)
+    assert result["a"].to_native().dtype == "object"
+
+
 def test_fill_null_series_expression(constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
