@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, cast
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import (
@@ -16,7 +16,6 @@ from narwhals._compliant.typing import (
     NativeSeriesT,
     WindowFunction,
 )
-from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -43,7 +42,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 """Anything that is convertible into a `CompliantExpr`."""
 
 
-class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
+class CompliantWhen(Protocol[FrameT, SeriesT, ExprT]):
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT] | None
@@ -75,7 +74,7 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
         return obj
 
 
-class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
+class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol[FrameT, SeriesT, ExprT]):
     _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
@@ -116,7 +115,7 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
 
 class LazyThen(
     CompliantThen[CompliantLazyFrameT, NativeExprT, LazyExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT, LazyExprT],
 ):
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
@@ -149,7 +148,7 @@ class LazyThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
 ):
     def _if_then_else(
         self,
@@ -183,7 +182,7 @@ class EagerWhen(
 
 class LazyWhen(
     CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT, LazyExprT],
 ):
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
