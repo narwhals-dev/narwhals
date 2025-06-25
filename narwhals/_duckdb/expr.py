@@ -826,27 +826,18 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             expr: Expression,
             *,
             descending: bool,
-            partition_by: Sequence[str | Expression] | None = None,
+            partition_by: Sequence[str | Expression],
         ) -> Expression:
             count_expr = FunctionExpression("count", StarExpression())
-            if partition_by is not None:
-                window_kwargs: WindowExpressionKwargs = {
-                    "partition_by": partition_by,
-                    "order_by": (expr,),
-                    "descending": descending,
-                    "nulls_last": True,
-                }
-                count_window_kwargs: WindowExpressionKwargs = {
-                    "partition_by": (*partition_by, expr)
-                }
-            else:
-                window_kwargs = {
-                    "partition_by": (),
-                    "order_by": [expr],
-                    "descending": descending,
-                    "nulls_last": True,
-                }
-                count_window_kwargs = {"partition_by": (expr,)}
+            window_kwargs: WindowExpressionKwargs = {
+                "partition_by": partition_by,
+                "order_by": (expr,),
+                "descending": descending,
+                "nulls_last": True,
+            }
+            count_window_kwargs: WindowExpressionKwargs = {
+                "partition_by": (*partition_by, expr)
+            }
             if method == "max":
                 rank_expr = (
                     window_expression(func, **window_kwargs)
@@ -862,7 +853,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return when(expr.isnotnull(), rank_expr)
 
         def _unpartitioned_rank(expr: Expression) -> Expression:
-            return _rank(expr, descending=descending)
+            return _rank(expr, partition_by=(), descending=descending)
 
         def _partitioned_rank(
             df: DuckDBLazyFrame, inputs: DuckDBWindowInputs

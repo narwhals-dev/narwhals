@@ -384,9 +384,9 @@ class DuckDBLazyFrame(
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
             name = count_name if keep == "none" else idx_name
-            idx_expr = window_expression(
-                FunctionExpression("row_number"), subset_, ()
-            ).alias(idx_name)
+            idx_expr = window_expression(FunctionExpression("row_number"), subset_).alias(
+                idx_name
+            )
             count_expr = window_expression(
                 FunctionExpression("count", StarExpression()), subset_, ()
             ).alias(count_name)
