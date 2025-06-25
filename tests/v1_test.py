@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -391,3 +392,22 @@ def test_all_horizontal() -> None:
     with pytest.deprecated_call(match="ignore_nulls"):
         result = df.select(nw.all_horizontal("a", "b"))
     assert_equal_data(result, expected)
+
+
+def test_with_row_index(constructor: Constructor) -> None:
+    data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
+
+    frame = nw_v1.from_native(constructor(data))
+
+    msg = r".*argument after \* must be an iterable, not NoneType$"
+    context = (
+        pytest.raises(TypeError, match=msg)
+        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        else does_not_raise()
+    )
+
+    with context:
+        result = frame.with_row_index()
+
+        expected = {"index": [0, 1], **data}
+        assert_equal_data(result, expected)
