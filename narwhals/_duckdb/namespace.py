@@ -118,7 +118,7 @@ class DuckDBNamespace(
     def all_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             it = (
-                (CoalesceOperator(expr, lit(False)) for expr in cols)  # noqa: FBT003
+                (CoalesceOperator(expr, lit(True)) for expr in cols)  # noqa: FBT003
                 if ignore_nulls
                 else cols
             )

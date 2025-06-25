@@ -182,9 +182,8 @@ class DaskLazyFrame(
         if subset is None:
             return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
-        return self.filter(
-            ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
-        )
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     @property
     def schema(self) -> dict[str, DType]:

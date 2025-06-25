@@ -9,15 +9,25 @@ import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-@pytest.mark.parametrize("expr1", ["a", nw.col("a")])
-@pytest.mark.parametrize("expr2", ["b", nw.col("b")])
-def test_allh(constructor: Constructor, expr1: Any, expr2: Any) -> None:
+def test_allh(constructor: Constructor) -> None:
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
-    result = df.select(all=nw.all_horizontal(expr1, expr2, ignore_nulls=True))
+    result = df.select(all=nw.all_horizontal("a", nw.col("b"), ignore_nulls=True))
 
     expected = {"all": [False, False, True]}
     assert_equal_data(result, expected)
+
+
+def test_anyh_ignore_nulls(constructor: Constructor) -> None:
+    if "dask" in str(constructor):
+        # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
+        # test it below separately
+        pytest.skip()
+    data = {"a": [True, True, False], "b": [True, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(any=nw.all_horizontal("a", "b", ignore_nulls=True))
+    expected = [True, True, False]
+    assert_equal_data(result, {"any": expected})
 
 
 def test_allh_kleene(constructor: Constructor, request: pytest.FixtureRequest) -> None:
