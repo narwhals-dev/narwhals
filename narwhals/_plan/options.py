@@ -27,7 +27,13 @@ class FunctionFlags(enum.Flag):
     """Automatically explode on unit length if it ran as final aggregation."""
 
     ROW_SEPARABLE = 1 << 8
-    """`drop_nulls` is the only one we've got that is *just* this.
+    """Given a function `f` and a column of values `[v1, ..., vn]`.
+
+    `f` is row-separable *iff*:
+
+        f([v1, ..., vn]) = concat(f(v1, ... vm), f(vm+1, ..., vn))
+
+    In isolation, used on `drop_nulls`, `int_range`
 
     https://github.com/pola-rs/polars/pull/22573
     """

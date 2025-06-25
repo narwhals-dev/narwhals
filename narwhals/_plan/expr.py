@@ -26,6 +26,7 @@ from narwhals._plan.typing import (
     MapIR,
     Ns,
     OperatorT,
+    RangeT,
     RightSelectorT,
     RightT,
     RightT2,
@@ -35,6 +36,7 @@ from narwhals._plan.typing import (
     Seq,
 )
 from narwhals._utils import flatten
+from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
@@ -509,6 +511,36 @@ class RollingExpr(FunctionExpr[RollingT]): ...
 
 class AnonymousExpr(FunctionExpr["MapBatches"]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
+
+
+class RangeExpr(FunctionExpr[RangeT]):
+    """E.g. `int_range(...)`.
+
+    Special-cased as it is only allowed scalar inputs, and is row_separable.
+
+    Contradicts the check in `FunctionExpr`, so we've got something *like* [`ensure_range_bounds_contain_exactly_one_value`].
+
+    [`ensure_range_bounds_contain_exactly_one_value`]:https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/function_expr/range/int_range.rs#L9-L14
+    """
+
+    def __init__(
+        self,
+        *,
+        input: Seq[ExprIR],  # noqa: A002
+        function: RangeT,
+        options: FunctionOptions,
+        **kwds: t.Any,
+    ) -> None:
+        # NOTE: `IntRange` has 2x scalar inputs, so always triggered error in parent
+        if len(input) < 2:
+            msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
+            raise InvalidOperationError(msg)
+        super(ExprIR, self).__init__(
+            **dict(input=input, function=function, options=options, **kwds)
+        )
+
+    def __repr__(self) -> str:
+        return f"{self.function!r}({list(self.input)!r})"
 
 
 class Filter(ExprIR):

@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast, overload
 
 from narwhals._plan.typing import (
+    DTypeT,
     ExprIRT,
     ExprIRT2,
     ExprT,
     IRNamespaceT,
     MapIR,
     NamedOrExprIRT,
+    NonNestedDTypeT,
     Ns,
     Seq,
 )
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals.typing import IntoDType, NonNestedDType, NonNestedLiteral
+    from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
     # NOTE: This isn't important to the proposal, just wanted IDE support
@@ -446,9 +448,14 @@ def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN)
     return mapping.get(type(obj), dtypes.Unknown)()
 
 
-def into_dtype(dtype: IntoDType, /) -> DType:
+@overload
+def into_dtype(dtype: type[NonNestedDTypeT], /) -> NonNestedDTypeT: ...
+@overload
+def into_dtype(dtype: DTypeT, /) -> DTypeT: ...
+def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDTypeT:
     if isinstance(dtype, type) and issubclass(dtype, DType):
-        return dtype()
+        # NOTE: `mypy` needs to learn intersections
+        return dtype()  # type: ignore[return-value]
     return dtype
 
 

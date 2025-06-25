@@ -79,7 +79,9 @@ repos:
             narwhals/_utils\.py|
             narwhals/stable/v1/_dtypes.py|
             narwhals/.*__init__.py|
-            narwhals/.*typing\.py
+            narwhals/.*typing\.py|
+            narwhals/_plan/demo\.py|
+            narwhals/_plan/ranges\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`

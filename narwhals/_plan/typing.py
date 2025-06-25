@@ -7,13 +7,15 @@ from narwhals._typing_compat import TypeVar
 if t.TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals import dtypes
     from narwhals._compliant import CompliantNamespace as Namespace
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, NamedIR, SelectorIR
     from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.functions import RollingWindow
-    from narwhals.typing import NonNestedLiteral
+    from narwhals._plan.ranges import RangeFunction
+    from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 __all__ = [
     "FunctionT",
@@ -26,6 +28,7 @@ __all__ = [
     "NonNestedLiteralT",
     "OperatorFn",
     "OperatorT",
+    "RangeT",
     "RightSelectorT",
     "RightT",
     "RollingT",
@@ -36,8 +39,9 @@ __all__ = [
 ]
 
 
-FunctionT = TypeVar("FunctionT", bound="Function")
-RollingT = TypeVar("RollingT", bound="RollingWindow")
+FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
+RollingT = TypeVar("RollingT", bound="RollingWindow", default="RollingWindow")
+RangeT = TypeVar("RangeT", bound="RangeFunction", default="RangeFunction")
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 LeftT2 = TypeVar("LeftT2", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
@@ -55,6 +59,9 @@ SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
 IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")
+
+DTypeT = TypeVar("DTypeT", bound="dtypes.DType")
+NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
 
 NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"

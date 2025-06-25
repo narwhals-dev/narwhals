@@ -170,6 +170,15 @@ def test_meta_root_names(
             "ROOT-ALIAS",
             id="Filter",
         ),
+        pytest.param(
+            nwd.int_range(0, 10), pl.int_range(0, 10), "literal", id="IntRange-Literal"
+        ),
+        pytest.param(
+            nwd.int_range(nwd.col("b"), 10),
+            pl.int_range(pl.col("b"), 10),
+            "b",
+            id="IntRange-Column",
+        ),
     ],
 )
 def test_meta_output_name(nw_expr: DummyExpr, pl_expr: pl.Expr, expected: str) -> None:

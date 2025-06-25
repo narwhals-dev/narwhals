@@ -81,20 +81,6 @@ class SeriesLiteral(LiteralValue["DummySeries"]):
         return self.value
 
 
-class RangeLiteral(LiteralValue):
-    """Don't need yet, but might push forward the discussions.
-
-    - https://github.com/narwhals-dev/narwhals/issues/2463#issuecomment-2844654064
-    - https://github.com/narwhals-dev/narwhals/issues/2307#issuecomment-2832422364.
-    """
-
-    __slots__ = ("dtype", "high", "low")
-
-    low: int
-    high: int
-    dtype: DType
-
-
 def _is_scalar(
     obj: ScalarLiteral[NonNestedLiteralT] | Any,
 ) -> TypeIs[ScalarLiteral[NonNestedLiteralT]]:

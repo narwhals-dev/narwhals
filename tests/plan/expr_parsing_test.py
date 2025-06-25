@@ -16,7 +16,7 @@ from narwhals._plan import (
 )
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
-from narwhals._plan.expr import BinaryExpr, FunctionExpr
+from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
 from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
@@ -154,6 +154,11 @@ def test_invalid_agg_non_elementwise() -> None:
     pattern = re.compile(r"cannot use.+diff.+aggregated.+min", re.IGNORECASE)
     with pytest.raises(InvalidOperationError):
         nwd.col("a").min().diff()
+
+
+def test_agg_non_elementwise_range_special() -> None:
+    e = nwd.int_range(0, 100)
+    assert isinstance(e._ir, RangeExpr)
 
 
 # NOTE: Non-`polars`` rule

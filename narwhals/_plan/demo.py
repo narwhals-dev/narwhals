@@ -18,6 +18,7 @@ from narwhals._plan.common import (
 from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
+from narwhals._plan.ranges import IntRange
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
@@ -29,6 +30,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.dummy import DummyExpr
     from narwhals._plan.expr import SortBy
     from narwhals._plan.typing import IntoExpr, IntoExprColumn
+    from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -172,6 +174,27 @@ def when(
         *predicates, **constraints
     )
     return When._from_ir(condition)
+
+
+def int_range(
+    start: int | IntoExprColumn = 0,
+    end: int | IntoExprColumn | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType] = Version.MAIN.dtypes.Int64,
+    eager: bool = False,
+) -> DummyExpr:
+    if end is None:
+        end = start
+        start = 0
+    if eager:
+        msg = f"{eager=}"
+        raise NotImplementedError(msg)
+    return (
+        IntRange(step=step, dtype=into_dtype(dtype))
+        .to_function_expr(*parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )
 
 
 def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
