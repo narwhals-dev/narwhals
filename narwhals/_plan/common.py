@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
+    from narwhals._plan import expr
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
@@ -313,6 +314,26 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     def _repr_html_(self) -> str:
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
 
+    def is_elementwise_top_level(self) -> bool:
+        """Return True if the outermost node is elementwise.
+
+        Based on [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]
+
+        This check:
+        - Is not recursive
+        - Is not valid on `ExprIR` *prior* to being expanded
+
+        [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/properties.rs#L16-L44
+        """
+        from narwhals._plan import expr
+
+        ir = self.expr
+        if is_function_expr(ir):
+            return ir.options.is_elementwise()
+        if is_literal(ir):
+            return ir.is_scalar
+        return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.Ternary, expr.Cast))
+
 
 class IRNamespace(Immutable):
     __slots__ = ("_ir",)
@@ -424,6 +445,12 @@ def is_function_expr(obj: Any) -> TypeIs[FunctionExpr[Any]]:
     from narwhals._plan.expr import FunctionExpr
 
     return isinstance(obj, FunctionExpr)
+
+
+def is_literal(obj: Any) -> TypeIs[expr.Literal[Any]]:
+    from narwhals._plan import expr
+
+    return isinstance(obj, expr.Literal)
 
 
 def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr[Any]]:
