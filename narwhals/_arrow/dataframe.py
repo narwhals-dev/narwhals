@@ -324,7 +324,7 @@ class ArrowDataFrame(
             self.native.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def select(self, *exprs: ArrowExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -348,7 +348,7 @@ class ArrowDataFrame(
         value = other.native[0]
         return pa.chunked_array([pa.repeat(value, length)])
 
-    def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def with_columns(self, *exprs: ArrowExpr) -> Self:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
@@ -430,11 +430,12 @@ class ArrowDataFrame(
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
-    def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -481,18 +482,21 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str) -> Self:
-        df = self.native
-        cols = self.columns
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        plx = self.__narwhals_namespace__()
+        if order_by is None:
+            import numpy as np  # ignore-banned-import
 
-        row_indices = pa.array(range(df.num_rows))
-        return self._with_native(
-            df.append_column(name, row_indices).select([name, *cols])
-        )
+            data = pa.array(np.arange(len(self), dtype=np.int64))
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(data, context=self, name=name)
+            )
+        else:
+            rank = plx.col(order_by[0]).rank("ordinal", descending=False)
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
-    def filter(
-        self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
-    ) -> ArrowDataFrame:
+    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):
             mask_native: Mask | ChunkedArrayAny = predicate
         else:
@@ -670,12 +674,12 @@ class ArrowDataFrame(
         return ArrowSeries.from_native(native, context=self)
 
     def unique(
-        self: ArrowDataFrame,
+        self,
         subset: Sequence[str] | None,
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
-    ) -> ArrowDataFrame:
+    ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import

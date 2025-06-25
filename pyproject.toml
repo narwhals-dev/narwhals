@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.43.1"
+version = "1.44.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -285,6 +285,7 @@ exclude_also = [
   'if "pyspark" in str\(constructor',
   'if "pyspark_connect" in str\(constructor',
   'pytest.skip\(',
+  'assert_never\(',
 ]
 
 [tool.mypy]

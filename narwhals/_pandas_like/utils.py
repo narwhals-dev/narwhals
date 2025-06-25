@@ -93,13 +93,9 @@ def align_and_extract_native(
     If the comparison isn't supported, return `NotImplemented` so that the
     "right-hand-side" operation (e.g. `__radd__`) can be tried.
     """
-    from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.series import PandasLikeSeries
 
     lhs_index = lhs.native.index
-
-    if isinstance(rhs, PandasLikeDataFrame):
-        return NotImplemented
 
     if lhs._broadcast and isinstance(rhs, PandasLikeSeries) and not rhs._broadcast:
         return lhs.native.iloc[0], rhs.native
@@ -576,7 +572,7 @@ def select_columns_by_name(
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
         if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
+            column_names,
             available=df.columns.tolist(),  # type: ignore[attr-defined]
         ):
             raise error
@@ -585,7 +581,7 @@ def select_columns_by_name(
         return df[column_names]  # type: ignore[index]
     except KeyError as e:
         if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
+            column_names,
             available=df.columns.tolist(),  # type: ignore[attr-defined]
         ):
             raise error from e

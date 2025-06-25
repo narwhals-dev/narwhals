@@ -23,7 +23,7 @@ from narwhals._translate import (
     ToNarwhals,
     ToNarwhalsT_co,
 )
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals._utils import (
     Version,
     _StoresNative,
@@ -253,7 +253,7 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -369,7 +369,7 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
@@ -404,6 +404,10 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _with_native(
+        self, df: NativeFrameT, *, validate_column_names: bool = True
+    ) -> Self: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -479,9 +483,8 @@ class EagerDataFrame(
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(columns)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(columns)
 
         if not is_slice_none(rows):
             if isinstance(rows, int):
@@ -492,8 +495,7 @@ class EagerDataFrame(
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(rows)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(rows)
 
         return compliant

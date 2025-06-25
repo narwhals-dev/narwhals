@@ -74,6 +74,11 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeVar, deprecated
 
+    if sys.version_info >= (3, 11):
+        from typing import Never, assert_never
+    else:
+        from typing_extensions import Never, assert_never
+
     P = ParamSpec("P")
     R = TypeVar("R")
 
@@ -103,9 +108,24 @@ else:  # pragma: no cover
 
         deprecated = _deprecated_compat
 
+    _ASSERT_NEVER_REPR_MAX_LENGTH = 100
+    _BUG_URL = (
+        "https://github.com/narwhals-dev/narwhals/issues/new?template=bug_report.yml"
+    )
+
+    def assert_never(arg: Never, /) -> Never:
+        value = repr(arg)
+        if len(value) > _ASSERT_NEVER_REPR_MAX_LENGTH:
+            value = value[:_ASSERT_NEVER_REPR_MAX_LENGTH] + "..."
+        msg = (
+            f"Expected code to be unreachable, but got: {value}.\n"
+            f"Please report an issue at {_BUG_URL}"
+        )
+        raise AssertionError(msg)
+
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
     from typing import Protocol as Protocol38
 
 
-__all__ = ["Protocol38", "TypeVar", "deprecated"]
+__all__ = ["Protocol38", "TypeVar", "assert_never", "deprecated"]

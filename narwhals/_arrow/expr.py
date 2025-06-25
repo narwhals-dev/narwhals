@@ -129,8 +129,11 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return self._reuse_series("shift", n=n)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
-        assert self._metadata is not None  # noqa: S101
-        if partition_by and not self._metadata.is_scalar_like:
+        if (
+            partition_by
+            and self._metadata is not None
+            and not self._metadata.is_scalar_like
+        ):
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
@@ -141,7 +144,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
                 token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token).sort(
+                df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
                 result = self(df.drop([token], strict=True))

@@ -23,6 +23,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -564,8 +565,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             ge = pc.greater_equal(self.native, lower_bound)
             le = pc.less_equal(self.native, upper_bound)
             res = pc.and_kleene(ge, le)
-        else:  # pragma: no cover
-            raise AssertionError
+        else:
+            assert_never(closed)
         return self._with_native(res)
 
     def is_null(self) -> Self:
@@ -1052,7 +1053,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
 
-        result = pc.if_else(null_mask, lit(None, native_series.type), rank)
+        result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
     @requires.backend_version((13,))
