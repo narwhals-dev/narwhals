@@ -31,9 +31,15 @@ from typing import TYPE_CHECKING, Any
 # - We'll need to decide on a style to use, and then add **runtime** validation to ensure we stay conistent
 #   - E.g. "<thing> is deprecated since narwhals <version>. Use <alternative> instead. <Extended description>"
 #   - Where only the <alternative> and <Extended description> sections are optional.
+def _validate_deprecation_message(message: str, /) -> str:
+    return message
+
+
 def _deprecated_compat(
     message: str, /, *, category: type[DeprecationWarning] | None = DeprecationWarning
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:  # pragma: no cover
+    message = _validate_deprecation_message(message)
+
     def decorate(func: Callable[P, R], /) -> Callable[P, R]:
         if category is None:
             func.__deprecated__ = message  # type: ignore[attr-defined]
