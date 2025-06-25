@@ -274,10 +274,14 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa
     raise AssertionError(msg)
 
 
+def parse_into_expression(into_expression: str | Expression) -> Expression:
+    return col(into_expression) if isinstance(into_expression, str) else into_expression
+
+
 def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f"{col(x) if isinstance(x, str) else x}" for x in partition_by])
+    by_sql = ", ".join([f"{parse_into_expression(x)}" for x in partition_by])
     return f"partition by {by_sql}"
 
 
@@ -288,13 +292,9 @@ def generate_order_by_sql(
         return ""
     nulls = "nulls first" if nulls_first else "nulls last"
     if ascending:
-        by_sql = ", ".join(
-            [f"{col(x) if isinstance(x, str) else x} asc {nulls}" for x in order_by]
-        )
+        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
     else:
-        by_sql = ", ".join(
-            [f"{col(x) if isinstance(x, str) else x} desc {nulls}" for x in order_by]
-        )
+        by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
     return f"order by {by_sql}"
 
 
