@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -210,9 +210,8 @@ def test_offset_by_tz(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "sqlframe", "pyspark")):
+    if any(x in str(constructor) for x in ("ibis", "sqlframe")):
         # ibis and sqlframe not implemented.
-        # pyspark localizes to UTC here.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pandas", "pyarrow")
@@ -252,3 +251,15 @@ def test_offset_by_dst(
     df = nw.from_native(constructor(data_dst))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
+
+
+def test_truncate_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(df["a"].dt.offset_by("1h"))
+    expected = {
+        "a": [
+            datetime(2021, 3, 1, 13, 34, 56, 49012),
+            datetime(2020, 1, 2, 3, 4, 14, 715123),
+        ]
+    }
+    assert_equal_data(result, expected)
