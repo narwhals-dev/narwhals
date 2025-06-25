@@ -406,9 +406,8 @@ class PandasLikeDataFrame(
                 self.native.dropna(axis=0), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
-        return self.filter(
-            ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
-        )
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
