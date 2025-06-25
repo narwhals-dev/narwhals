@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from textwrap import dedent
 
 PANDAS_AND_NUMPY_VERSION = [
     ("1.1.5", "1.19.5"),
@@ -56,16 +57,13 @@ PYARROW_VERSION = [
 pandas_version, numpy_version = random.choice(PANDAS_AND_NUMPY_VERSION)
 polars_version = random.choice(POLARS_VERSION)
 pyarrow_version = random.choice(PYARROW_VERSION)
+requirements = dedent(f"""
+    pandas=={pandas_version}
+    numpy=={numpy_version}
+    polars=={polars_version}
+    pyarrow=={pyarrow_version}
+""").lstrip()
 
-content = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
-with open("random-requirements.txt", "w") as fd:
-    fd.write(content)
-
-with open("pyproject.toml") as fd:
-    content = fd.read()
-content = content.replace(
-    'filterwarnings = [\n  "error",\n]',
-    "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]",
-)
-with open("pyproject.toml", "w") as fd:
-    fd.write(content)
+if __name__ == "__main__":
+    with open("random-requirements.txt", "w") as fd:
+        fd.write(requirements)
