@@ -496,10 +496,11 @@ class DuckDBLazyFrame(
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
-        expr = window_expression(
-            FunctionExpression("row_number", StarExpression()), order_by=order_by
+        expr = (
+            window_expression(FunctionExpression("row_number"), order_by=order_by)
+            - lit(1)
         ).alias(name)
-        return self._with_native(self.native.select(expr))
+        return self._with_native(self.native.select(expr, StarExpression()))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

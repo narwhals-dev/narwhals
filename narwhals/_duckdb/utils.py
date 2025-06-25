@@ -300,7 +300,7 @@ def generate_order_by_sql(
 
 def window_expression(
     expr: Expression,
-    partition_by: Sequence[str | Expression],
+    partition_by: Sequence[str | Expression] = (),
     order_by: Sequence[str | Expression] = (),
     rows_start: str = "",
     rows_end: str = "",
