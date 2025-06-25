@@ -85,15 +85,25 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
+    def all_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return reduce(operator.and_, cols)
+            it = (
+                (col.fill_null(lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
         return self._expr.from_elementwise(func, *exprs)
 
-    def any_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
+    def any_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return reduce(operator.or_, cols)
+            it = (
+                (col.fill_null(lit(False)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.or_, it)
 
         return self._expr.from_elementwise(func, *exprs)
 

@@ -82,11 +82,16 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def all_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            return [reduce(operator.and_, align(*series))]
+            it = (
+                (s.fill_null(True, None, None) for s in series)  # noqa: FBT003
+                if ignore_nulls
+                else series
+            )
+            return [reduce(operator.and_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -97,11 +102,16 @@ class ArrowNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            return [reduce(operator.or_, align(*series))]
+            it = (
+                (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
+                if ignore_nulls
+                else series
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,

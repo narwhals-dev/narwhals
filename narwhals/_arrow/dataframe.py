@@ -434,7 +434,8 @@ class ArrowDataFrame(
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -481,14 +482,19 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str) -> Self:
-        df = self.native
-        cols = self.columns
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        plx = self.__narwhals_namespace__()
+        if order_by is None:
+            import numpy as np  # ignore-banned-import
 
-        row_indices = pa.array(range(df.num_rows))
-        return self._with_native(
-            df.append_column(name, row_indices).select([name, *cols])
-        )
+            data = pa.array(np.arange(len(self), dtype=np.int64))
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(data, context=self, name=name)
+            )
+        else:
+            rank = plx.col(order_by[0]).rank("ordinal", descending=False)
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
     def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):

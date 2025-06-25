@@ -663,7 +663,7 @@ class EagerExpr(
 
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
-        predicate = plx.all_horizontal(*predicates)
+        predicate = plx.all_horizontal(*predicates, ignore_nulls=False)
         return self._reuse_series("filter", predicate=predicate)
 
     def drop_nulls(self) -> Self:
