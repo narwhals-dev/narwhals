@@ -32,7 +32,9 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
 def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 3) and order_by == "abc":
+    if (
+        "pandas" in str(constructor) and PANDAS_VERSION < (1, 3) and order_by == "abc"
+    ):  # pragma: no cover
         reason = "ValueError: first not supported for non-numeric data."
         pytest.skip(reason=reason)
 
