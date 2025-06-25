@@ -70,17 +70,20 @@ else:  # pragma: no cover
 
             return wrapper
 
-    if sys.version_info >= (3, 11):
-        from typing import assert_never
-    else:
-        _ASSERT_NEVER_REPR_MAX_LENGTH = 100
+    _ASSERT_NEVER_REPR_MAX_LENGTH = 100
+    _BUG_URL = (
+        "https://github.com/narwhals-dev/narwhals/issues/new?template=bug_report.yml"
+    )
 
-        def assert_never(arg: Never, /) -> Never:
-            value = repr(arg)
-            if len(value) > _ASSERT_NEVER_REPR_MAX_LENGTH:
-                value = value[:_ASSERT_NEVER_REPR_MAX_LENGTH] + "..."
-            msg = f"Expected code to be unreachable, but got: {value}"
-            raise AssertionError(msg)
+    def assert_never(arg: Never, /) -> Never:
+        value = repr(arg)
+        if len(value) > _ASSERT_NEVER_REPR_MAX_LENGTH:
+            value = value[:_ASSERT_NEVER_REPR_MAX_LENGTH] + "..."
+        msg = (
+            f"Expected code to be unreachable, but got: {value}.\n"
+            f"Please report an issue at {_BUG_URL}"
+        )
+        raise AssertionError(msg)
 
     # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
     # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
