@@ -395,6 +395,27 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
         )
 
+    def to_date(self, format: str | None = None) -> ExprT:
+        """Convert to date dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            TODO
+        """
+        return self._expr._with_elementwise_op(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_date(format=format)
+        )
+
     def to_uppercase(self) -> ExprT:
         r"""Transform string to uppercase variant.
 

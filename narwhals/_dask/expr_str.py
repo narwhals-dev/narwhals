@@ -87,6 +87,9 @@ class DaskExprStringNamespace:
             format=format,
         )
 
+    def to_date(self, format: str | None) -> DaskExpr:
+        return self.to_datetime(format=format).dt.date()
+
     def to_uppercase(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda expr: expr.str.upper(), "to_uppercase"
