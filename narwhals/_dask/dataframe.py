@@ -6,6 +6,7 @@ import dask.dataframe as dd
 import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
+from narwhals._expression_parsing import ExprKind
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._utils import (
     Implementation,
@@ -191,7 +192,8 @@ class DaskLazyFrame(
         if subset is None:
             return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -213,12 +215,28 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._with_native(
-            add_row_index(self.native, name, self._backend_version, self._implementation)
-        )
+        if order_by is None:
+            return self._with_native(
+                add_row_index(
+                    self.native, name, self._backend_version, self._implementation
+                )
+            )
+        else:
+            plx = self.__narwhals_namespace__()
+            columns = self.columns
+            const_expr = (
+                plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+            )
+            row_index_expr = (
+                plx.col(name)
+                .cum_sum(reverse=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1
+            )
+            return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
@@ -427,7 +445,7 @@ class DaskLazyFrame(
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
         return (
-            self.with_row_index(row_index_token)
+            self.with_row_index(row_index_token, order_by=None)
             .filter(
                 (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
