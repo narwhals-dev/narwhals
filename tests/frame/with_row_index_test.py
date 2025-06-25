@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -32,6 +32,10 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
 def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 3) and order_by == "abc":
+        reason = "ValueError: first not supported for non-numeric data."
+        pytest.skip(reason=reason)
+
     result = (
         nw.from_native(constructor(data))
         .with_row_index(name="foo bar", order_by=order_by)
