@@ -8,6 +8,8 @@ import duckdb
 from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
@@ -38,6 +40,9 @@ lit = duckdb.ConstantExpression
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
 
+F = duckdb.FunctionExpression
+"""Alias for `duckdb.FunctionExpression`."""
+
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     """Concatenate many strings, NULL inputs are skipped.
@@ -54,11 +59,7 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
     [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-
     """
-    return (
-        duckdb.FunctionExpression("concat_ws", lit(separator), *exprs)
-        if separator
-        else duckdb.FunctionExpression("concat", *exprs)
-    )
+    return F("concat_ws", lit(separator), *exprs) if separator else F("concat", *exprs)
 
 
 def evaluate_exprs(
@@ -272,16 +273,59 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa
     raise AssertionError(msg)
 
 
+def parse_into_expression(into_expression: str | Expression) -> Expression:
+    return col(into_expression) if isinstance(into_expression, str) else into_expression
+
+
 def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     if not partition_by:
         return ""
-    by_sql = ", ".join([f"{col(x) if isinstance(x, str) else x}" for x in partition_by])
+    by_sql = ", ".join([f"{parse_into_expression(x)}" for x in partition_by])
     return f"partition by {by_sql}"
 
 
-def generate_order_by_sql(*order_by: str, ascending: bool) -> str:
+def generate_order_by_sql(
+    *order_by: str | Expression, ascending: bool, nulls_first: bool
+) -> str:
+    if not order_by:
+        return ""
+    nulls = "nulls first" if nulls_first else "nulls last"
     if ascending:
-        by_sql = ", ".join([f"{col(x)} asc nulls first" for x in order_by])
+        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
     else:
-        by_sql = ", ".join([f"{col(x)} desc nulls last" for x in order_by])
+        by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
     return f"order by {by_sql}"
+
+
+def window_expression(
+    expr: Expression,
+    partition_by: Sequence[str | Expression] = (),
+    order_by: Sequence[str | Expression] = (),
+    rows_start: str = "",
+    rows_end: str = "",
+    *,
+    descending: bool = False,
+    nulls_last: bool = False,
+    ignore_nulls: bool = False,
+) -> Expression:
+    # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
+    # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
+    try:
+        from duckdb import SQLExpression
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    pb = generate_partition_by_sql(*partition_by)
+    ob = generate_order_by_sql(
+        *order_by, ascending=not descending, nulls_first=not nulls_last
+    )
+
+    if rows_start and rows_end:
+        rows = f"rows between {rows_start} and {rows_end}"
+    elif rows_start or rows_end:  # pragma: no cover
+        msg = "Either both `rows_start` and `rows_end` must be specified, or neither."
+    else:
+        rows = ""
+
+    func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
+    return SQLExpression(f"{func} over ({pb} {ob} {rows})")

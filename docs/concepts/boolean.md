@@ -111,3 +111,12 @@ Here, too, pandas backed by NumPy types differs, as its boolean columns cannot s
 
 - For `nw.col('a') | nw.col('b')`, pandas returns `True` if at least one column contains a `True` value, and `False` otherwise.
 - For `nw.col('a') & nw.col('b')`, pandas returns `True` if both columns contain `True` values, and `False` otherwise.
+
+In `any_horizontal` and `all_horizontal` there is an `ignore_nulls` argument, which behaves as follows:
+
+- If `True`, then null values are ignored and contribute nothing to the final result. If there are
+    no values, the result is:
+
+    - `False` for `any_horizontal`.
+    - `True` for `all_horizontal`.
+- If `False`, then Kleene logic is followed. If using pandas backed by classical NumPy types, then this option is not supported.
