@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-import contextlib
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import FunctionExpression, StarExpression
+from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
     DeferredTimeZone,
+    F,
     col,
     evaluate_exprs,
-    generate_order_by_sql,
-    generate_partition_by_sql,
     lit,
     native_to_narwhals_dtype,
+    window_expression,
 )
 from narwhals._utils import (
     Implementation,
@@ -51,9 +50,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-
-with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression
 
 
 class DuckDBLazyFrame(
@@ -383,24 +379,15 @@ class DuckDBLazyFrame(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset_ := subset if keep == "any" else (subset or self.columns):
-            if self._backend_version < (1, 3):
-                msg = (
-                    "At least version 1.3 of DuckDB is required for `unique` operation\n"
-                    "with `subset` specified."
-                )
-                raise NotImplementedError(msg)
             # Sanitise input
             if error := self._check_columns_exist(subset_):
                 raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-            partition_by_sql = generate_partition_by_sql(*(subset_))
             name = count_name if keep == "none" else idx_name
-            idx_expr = SQLExpression(
-                f"{FunctionExpression('row_number')} over ({partition_by_sql})"
-            ).alias(idx_name)
-            count_expr = SQLExpression(
-                f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
+            idx_expr = window_expression(F("row_number"), subset_).alias(idx_name)
+            count_expr = window_expression(
+                F("count", StarExpression()), subset_, ()
             ).alias(count_name)
             return self._with_native(
                 self.native.select(StarExpression(), idx_expr, count_expr)
@@ -452,14 +439,12 @@ class DuckDBLazyFrame(
         rel = self.native
         original_columns = self.columns
 
-        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
-            "len", col_to_explode
-        ) > lit(0)
+        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > lit(
+            0
+        )
         non_null_rel = rel.filter(not_null_condition).select(
             *(
-                FunctionExpression("unnest", col_to_explode).alias(name)
-                if name in columns
-                else name
+                F("unnest", col_to_explode).alias(name) if name in columns else name
                 for name in original_columns
             )
         )
@@ -508,11 +493,10 @@ class DuckDBLazyFrame(
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
-        order_by_sql = generate_order_by_sql(*order_by, ascending=True)
-        row_index_expr = SQLExpression(
-            f"{FunctionExpression('row_number')} over ({order_by_sql}) - 1"
-        ).alias(name)
-        return self._with_native(self.native.select(row_index_expr, StarExpression()))
+        expr = (window_expression(F("row_number"), order_by=order_by) - lit(1)).alias(
+            name
+        )
+        return self._with_native(self.native.select(expr, StarExpression()))
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
