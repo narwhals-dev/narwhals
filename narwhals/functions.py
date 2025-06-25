@@ -1621,7 +1621,7 @@ def all_horizontal(
     if ignore_nulls is None:
         issue_deprecation_warning(
             "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.44",
+            _version="1.45",
         )
         ignore_nulls = False
     flat_exprs = flatten(exprs)
@@ -1729,7 +1729,7 @@ def any_horizontal(
     if ignore_nulls is None:
         issue_deprecation_warning(
             "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.44",
+            _version="1.45",
         )
         ignore_nulls = False
     flat_exprs = flatten(exprs)

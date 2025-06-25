@@ -111,7 +111,7 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
-- Since Narwhals 1.44:
+- Since Narwhals 1.45:
 
     - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
       it defaults to `False`, but in Narwhals 2.0 it will become a required argument in the main namespace.
