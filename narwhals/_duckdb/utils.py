@@ -40,6 +40,9 @@ lit = duckdb.ConstantExpression
 when = duckdb.CaseExpression
 """Alias for `duckdb.CaseExpression`."""
 
+F = duckdb.FunctionExpression
+"""Alias for `duckdb.FunctionExpression`."""
+
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     """Concatenate many strings, NULL inputs are skipped.
@@ -56,11 +59,7 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
     [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-
     """
-    return (
-        duckdb.FunctionExpression("concat_ws", lit(separator), *exprs)
-        if separator
-        else duckdb.FunctionExpression("concat", *exprs)
-    )
+    return F("concat_ws", lit(separator), *exprs) if separator else F("concat", *exprs)
 
 
 def evaluate_exprs(

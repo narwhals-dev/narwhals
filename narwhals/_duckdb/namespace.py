@@ -6,14 +6,14 @@ from itertools import chain
 from typing import TYPE_CHECKING, Callable
 
 import duckdb
-from duckdb import CoalesceOperator, Expression, FunctionExpression
+from duckdb import CoalesceOperator, Expression
 from duckdb.typing import BIGINT, VARCHAR
 
 from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
-from narwhals._duckdb.utils import concat_str, lit, narwhals_to_native_dtype, when
+from narwhals._duckdb.utils import F, concat_str, lit, narwhals_to_native_dtype, when
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -139,13 +139,13 @@ class DuckDBNamespace(
 
     def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
-            return FunctionExpression("greatest", *cols)
+            return F("greatest", *cols)
 
         return self._expr_from_elementwise(func, *exprs)
 
     def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
-            return FunctionExpression("least", *cols)
+            return F("least", *cols)
 
         return self._expr_from_elementwise(func, *exprs)
 
@@ -187,7 +187,7 @@ class DuckDBNamespace(
 
     def len(self) -> DuckDBExpr:
         def func(_df: DuckDBLazyFrame) -> list[Expression]:
-            return [FunctionExpression("count")]
+            return [F("count")]
 
         return self._expr(
             call=func,
