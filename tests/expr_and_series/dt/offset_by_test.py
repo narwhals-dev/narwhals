@@ -88,9 +88,85 @@ def test_offset_by(
 ) -> None:
     if any(x in str(constructor) for x in ("ibis", "sqlframe")):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("ns") and any(
-        x in str(constructor) for x in ("dask", "duckdb", "pyarrow", "pyspark", "polars")
+    if any(x in by for x in ("y", "q", "mo")) and any(
+        x in str(constructor) for x in ("dask", "pandas", "pyarrow")
     ):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
+        request.applymarker(pytest.mark.xfail())
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").dt.offset_by(by))
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("by", "expected"),
+    [
+        (
+            "2us",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 49014),
+                datetime(2020, 1, 2, 2, 4, 14, 715125),
+            ],
+        ),
+        (
+            "2ms",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 51012),
+                datetime(2020, 1, 2, 2, 4, 14, 717123),
+            ],
+        ),
+        (
+            "10s",
+            [
+                datetime(2021, 3, 1, 12, 35, 6, 49012),
+                datetime(2020, 1, 2, 2, 4, 24, 715123),
+            ],
+        ),
+        (
+            "7m",
+            [
+                datetime(2021, 3, 1, 12, 41, 56, 49012),
+                datetime(2020, 1, 2, 2, 11, 14, 715123),
+            ],
+        ),
+        (
+            "7h",
+            [
+                datetime(2021, 3, 1, 19, 34, 56, 49012),
+                datetime(2020, 1, 2, 9, 4, 14, 715123),
+            ],
+        ),
+        (
+            "13d",
+            [
+                datetime(2021, 3, 14, 12, 34, 56, 49012),
+                datetime(2020, 1, 15, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "3mo",
+            [
+                datetime(2021, 6, 1, 12, 34, 56, 49012),
+                datetime(2020, 4, 2, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "2q",
+            [
+                datetime(2021, 9, 1, 12, 34, 56, 49012),
+                datetime(2020, 7, 2, 2, 4, 14, 715123),
+            ],
+        ),
+    ],
+)
+def test_offset_by_multiples(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    by: str,
+    expected: list[datetime],
+) -> None:
+    if any(x in str(constructor) for x in ("ibis", "sqlframe")):
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pandas", "pyarrow")

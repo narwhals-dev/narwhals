@@ -133,7 +133,9 @@ class SparkLikeExprDateTimeNamespace:
         sf = import_functions(self._compliant_expr._implementation)
 
         def _offset_by(expr: Column) -> Column:
-            return sf.timestamp_add(UNITS_DICT[unit], multiple, expr)
+            return sf.timestamp_add(
+                UNITS_DICT[unit], self._compliant_expr._F.lit(multiple), expr
+            )
 
         return self._compliant_expr._with_callable(_offset_by)
 
