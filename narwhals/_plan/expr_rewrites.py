@@ -5,7 +5,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import expr_parsing as parse
-from narwhals._plan.common import NamedIR, is_function_expr, is_window_expr, map_ir
+from narwhals._plan.common import (
+    NamedIR,
+    is_aggregation,
+    is_binary_expr,
+    is_function_expr,
+    is_window_expr,
+    map_ir,
+)
 from narwhals._plan.expr_expansion import (
     IntoFrozenSchema,
     into_named_irs,
@@ -59,8 +66,8 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     return window
 
 
-# TODO @dangotbanned: Full implementation
-def rewrite_binary_agg_over(child: ExprIR, /) -> ExprIR:
+# TODO @dangotbanned: Tests
+def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
     """Requested in [discord-1], clarified in [discord-2].
 
     Before:
@@ -74,4 +81,12 @@ def rewrite_binary_agg_over(child: ExprIR, /) -> ExprIR:
     [discord-1]: https://discord.com/channels/1235257048170762310/1383078215303696544/1384850753008435372
     [discord-2]: https://discord.com/channels/1235257048170762310/1383078215303696544/1384869107203047588
     """
-    raise NotImplementedError
+    if (
+        is_window_expr(window)
+        and is_binary_expr(window.expr)
+        and (is_aggregation(window.expr.right))
+    ):
+        binary_expr = window.expr
+        rhs = window.expr.right
+        return binary_expr.with_right(window.with_expr(rhs))
+    return window

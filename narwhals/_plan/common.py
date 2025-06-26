@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeIs, TypeVar, cast, overload
 
 from narwhals._plan.typing import (
     DTypeT,
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expr
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
-    from narwhals._plan.expr import FunctionExpr, WindowExpr
+    from narwhals._plan.expr import Agg, BinaryExpr, FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -445,6 +445,24 @@ def is_function_expr(obj: Any) -> TypeIs[FunctionExpr[Any]]:
     from narwhals._plan.expr import FunctionExpr
 
     return isinstance(obj, FunctionExpr)
+
+
+def is_binary_expr(obj: Any) -> TypeIs[BinaryExpr]:
+    from narwhals._plan.expr import BinaryExpr
+
+    return isinstance(obj, BinaryExpr)
+
+
+# TODO @dangotbanned: Rename `Agg` -> `AggExpr`
+def is_agg_expr(obj: Any) -> TypeIs[Agg]:
+    from narwhals._plan.expr import Agg
+
+    return isinstance(obj, Agg)
+
+
+def is_aggregation(obj: Any) -> TypeIs[Agg | FunctionExpr[Any]]:
+    """Superset of `ExprIR.is_scalar`, excludes literals & len."""
+    return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar)
 
 
 def is_literal(obj: Any) -> TypeIs[expr.Literal[Any]]:
