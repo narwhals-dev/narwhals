@@ -117,7 +117,7 @@ class SparkLikeExprStringNamespace:
     def to_date(self, format: str | None) -> SparkLikeExpr:
         F = self._compliant_expr._F  # noqa: N806
         return self._compliant_expr._with_callable(
-            lambda expr: F.to_date(expr, format=format)
+            lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
     def zfill(self, width: int) -> SparkLikeExpr:

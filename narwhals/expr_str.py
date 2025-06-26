@@ -403,14 +403,25 @@ class ExprStringNamespace(Generic[ExprT]):
             there is no guarantee that the result will be equal.
 
         Arguments:
-            format: Format to use for conversion. If set to None (default), the format is
-                inferred from the data.
+            format: Format to use for conversion. If set to None (default), the format is inferred from the data.
 
         Returns:
             A new expression.
 
         Examples:
-            TODO
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"a": ["2020-01-01", "2020-01-02"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").str.to_date(format="%Y-%m-%d"))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |pyarrow.Table               |
+            |a: date32[day]              |
+            |----                        |
+            |a: [[2020-01-01,2020-01-02]]|
+            └────────────────────────────┘
         """
         return self._expr._with_elementwise_op(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_date(format=format)

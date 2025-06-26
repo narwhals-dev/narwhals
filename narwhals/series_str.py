@@ -414,7 +414,18 @@ class SeriesStringNamespace(Generic[SeriesT]):
             A new expression.
 
         Examples:
-            TODO
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([["2020-01-01", "2020-01-02"]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.to_date(format="%Y-%m-%d").to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2020-01-01,
+                2020-01-02
+              ]
+            ]
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_date(format=format)
