@@ -6,7 +6,7 @@ from warnings import warn
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
-from narwhals._typing_compat import TypeVar
+from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
@@ -482,8 +482,7 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
-    raise AssertionError(msg)
+    assert_never(obj)
 
 
 @overload

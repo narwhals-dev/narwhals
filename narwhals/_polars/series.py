@@ -468,13 +468,7 @@ class PolarsSeries:
         return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            not_null_series = ~self.native.is_null()
-            result = not_null_series.cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __contains__(self, other: Any) -> bool:
         try:
