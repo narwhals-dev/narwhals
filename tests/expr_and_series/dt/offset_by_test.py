@@ -210,8 +210,9 @@ def test_offset_by_tz(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "sqlframe")):
+    if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe")):
         # ibis and sqlframe not implemented.
+        # duckdb doesn't support changing time zones.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pandas", "pyarrow")
@@ -220,6 +221,7 @@ def test_offset_by_tz(
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_tz))
+    df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
 
@@ -249,11 +251,12 @@ def test_offset_by_dst(
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_dst))
+    df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
 
 
-def test_truncate_series(constructor_eager: ConstructorEager) -> None:
+def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.offset_by("1h"))
     expected = {
@@ -263,3 +266,15 @@ def test_truncate_series(constructor_eager: ConstructorEager) -> None:
         ]
     }
     assert_equal_data(result, expected)
+
+
+def test_offset_by_invalid_interval(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(x in str(constructor) for x in ("ibis",)):
+        # ibis not implemented.
+        request.applymarker(pytest.mark.xfail())
+    df = nw.from_native(constructor(data))
+    msg = "Invalid `every` string"
+    with pytest.raises(ValueError, match=msg):
+        df.select(nw.col("a").dt.offset_by("1r"))

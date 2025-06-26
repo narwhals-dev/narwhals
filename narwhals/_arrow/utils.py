@@ -91,7 +91,7 @@ def create_timedelta(multiple: int, unit: IntervalUnit) -> timedelta:
         return timedelta(milliseconds=multiple)
     elif unit == "us":
         return timedelta(microseconds=multiple)
-    else:
+    else:  # pragma: no cover
         msg = f"Creating timedelta with {unit} unit is not supported."
         raise NotImplementedError(msg)
 

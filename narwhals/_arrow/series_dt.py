@@ -210,7 +210,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             result = pc.add(native_without_timezone, offset)
             if original_timezone is not None:
                 result = pc.assume_timezone(result, original_timezone)
-        elif unit == "ns":
+        elif unit == "ns":  # pragma: no cover
             result = pc.add(native, pa.scalar(multiple, type=pa.duration("ns")))
         else:
             offset = create_timedelta(multiple, unit)

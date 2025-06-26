@@ -126,7 +126,7 @@ class SparkLikeExprDateTimeNamespace:
         from narwhals._spark_like.utils import import_functions
 
         multiple, unit = parse_interval_string_no_constraints(by)
-        if unit == "ns":
+        if unit == "ns":  # pragma: no cover
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)
 
