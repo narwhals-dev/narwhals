@@ -7,9 +7,15 @@ import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
 from narwhals._constants import (
+    MS_PER_MINUTE,
     MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
+    NS_PER_MINUTE,
     NS_PER_SECOND,
     SECONDS_PER_DAY,
+    SECONDS_PER_MINUTE,
+    US_PER_MINUTE,
     US_PER_SECOND,
 )
 from narwhals._duration import parse_interval_string
@@ -42,9 +48,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     ] = {
         ("ns", "us"): (floordiv_compat, 1_000),
         ("ns", "ms"): (floordiv_compat, 1_000_000),
-        ("us", "ns"): (pc.multiply, 1_000),
+        ("us", "ns"): (pc.multiply, NS_PER_MICROSECOND),
         ("us", "ms"): (floordiv_compat, 1_000),
-        ("ms", "ns"): (pc.multiply, 1_000_000),
+        ("ms", "ns"): (pc.multiply, NS_PER_MILLISECOND),
         ("ms", "us"): (pc.multiply, 1_000),
         ("s", "ns"): (pc.multiply, NS_PER_SECOND),
         ("s", "us"): (pc.multiply, US_PER_SECOND),
@@ -143,10 +149,10 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def total_minutes(self) -> ArrowSeries:
         unit_to_minutes_factor = {
-            "s": 60,  # seconds
-            "ms": 60 * 1e3,  # milli
-            "us": 60 * 1e6,  # micro
-            "ns": 60 * 1e9,  # nano
+            "s": SECONDS_PER_MINUTE,
+            "ms": MS_PER_MINUTE,
+            "us": US_PER_MINUTE,
+            "ns": NS_PER_MINUTE,
         }
         factor = lit(unit_to_minutes_factor[self.unit], type=pa.int64())
         return self.with_native(pc.divide(self.native, factor).cast(pa.int64()))
@@ -187,10 +193,10 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def total_nanoseconds(self) -> ArrowSeries:
         unit_to_nano_factor = {
-            "s": 1e9,  # seconds
-            "ms": 1e6,  # milli
-            "us": 1e3,  # micro
-            "ns": 1,  # nano
+            "s": NS_PER_SECOND,
+            "ms": NS_PER_MILLISECOND,
+            "us": NS_PER_MICROSECOND,
+            "ns": 1,
         }
         factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))

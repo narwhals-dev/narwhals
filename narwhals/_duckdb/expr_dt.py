@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
+from narwhals._constants import (
+    MS_PER_MINUTE,
+    MS_PER_SECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_MINUTE,
+    US_PER_MINUTE,
+    US_PER_SECOND,
+)
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
 from narwhals._utils import not_implemented
@@ -74,19 +81,19 @@ class DuckDBExprDateTimeNamespace:
 
     def total_seconds(self) -> DuckDBExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: lit(60) * F("datepart", lit("minute"), expr)
+            lambda expr: lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
             + F("datepart", lit("second"), expr)
         )
 
     def total_milliseconds(self) -> DuckDBExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: lit(60_000) * F("datepart", lit("minute"), expr)
+            lambda expr: lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
             + F("datepart", lit("millisecond"), expr)
         )
 
     def total_microseconds(self) -> DuckDBExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: lit(60_000_000) * F("datepart", lit("minute"), expr)
+            lambda expr: lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
             + F("datepart", lit("microsecond"), expr)
         )
 

@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._constants import EPOCH_YEAR, NS_PER_SECOND, SECONDS_PER_DAY, US_PER_SECOND
+from narwhals._constants import (
+    EPOCH_YEAR,
+    MS_PER_SECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
 from narwhals._duration import parse_interval_string
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
@@ -125,7 +131,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e3
+        s = self._get_total_seconds() * MS_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
@@ -134,7 +140,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e6
+        s = self._get_total_seconds() * US_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
@@ -143,7 +149,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e9
+        s = self._get_total_seconds() * NS_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1

@@ -11,6 +11,8 @@ import pandas as pd
 from narwhals._compliant.series import EagerSeriesNamespace
 from narwhals._constants import (
     MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
     NS_PER_SECOND,
     SECONDS_PER_DAY,
     US_PER_SECOND,
@@ -523,14 +525,14 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
             result = s // 1_000_000
     elif original_time_unit == "us":
         if time_unit == "ns":
-            result = s * 1_000
+            result = s * NS_PER_MICROSECOND
         elif time_unit == "us":
             result = s
         else:
             result = s // 1_000
     elif original_time_unit == "ms":
         if time_unit == "ns":
-            result = s * 1_000_000
+            result = s * NS_PER_MILLISECOND
         elif time_unit == "us":
             result = s * 1_000
         else:
