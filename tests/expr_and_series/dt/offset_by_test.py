@@ -224,9 +224,9 @@ def test_offset_by_tz(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe")):
+    if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark", "sqlframe")):
         # ibis and sqlframe not implemented.
-        # duckdb doesn't support changing time zones.
+        # duckdb and pyspark don't support changing time zones.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pandas", "pyarrow")

@@ -204,15 +204,19 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             msg = f"Offsetting by {unit} is not yet supported."
             raise NotImplementedError(msg)
         if unit == "d":
-            offset = create_timedelta(multiple, unit)
+            offset: pa.DurationScalar[Any] = pa.scalar(create_timedelta(multiple, unit))
             original_timezone = native.type.tz
-            native_without_timezone = pc.local_timestamp(native)
-            result = pc.add(native_without_timezone, offset)
             if original_timezone is not None:
-                result = pc.assume_timezone(result, original_timezone)
+                native_without_timezone = pc.local_timestamp(native)
+                result: ChunkedArrayAny = pc.assume_timezone(
+                    pc.add(native_without_timezone, offset), original_timezone
+                )  # type: ignore[assignment]
+            else:
+                result = pc.add(native, offset)
         elif unit == "ns":  # pragma: no cover
-            result = pc.add(native, pa.scalar(multiple, type=pa.duration("ns")))
+            offset = pa.scalar(multiple, type=pa.duration("ns"))  # type: ignore[assignment]
+            result = pc.add(native, offset)
         else:
-            offset = create_timedelta(multiple, unit)
+            offset = pa.scalar(create_timedelta(multiple, unit))
             result = pc.add(native, offset)
         return self.with_native(result)
