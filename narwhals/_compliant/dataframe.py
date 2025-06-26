@@ -23,7 +23,7 @@ from narwhals._translate import (
     ToNarwhals,
     ToNarwhalsT_co,
 )
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals._utils import (
     Version,
     _StoresNative,
@@ -479,9 +479,8 @@ class EagerDataFrame(
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(columns)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(columns)
 
         if not is_slice_none(rows):
             if isinstance(rows, int):
@@ -492,8 +491,7 @@ class EagerDataFrame(
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(rows)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(rows)
 
         return compliant
