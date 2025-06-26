@@ -8,7 +8,11 @@ import narwhals as nw
 from narwhals._plan import demo as nwd, expr_parsing as parse, selectors as ndcs
 from narwhals._plan.common import ExprIR, NamedIR, is_expr
 from narwhals._plan.expr import WindowExpr
-from narwhals._plan.expr_rewrites import rewrite_all, rewrite_elementwise_over
+from narwhals._plan.expr_rewrites import (
+    rewrite_all,
+    rewrite_binary_agg_over,
+    rewrite_elementwise_over,
+)
 from narwhals._plan.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
@@ -114,5 +118,36 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     )
     actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == len(expected)
+    for lhs, rhs in zip(actual, expected):
+        assert_expr_ir_equal(lhs, rhs)
+
+
+def test_rewrite_binary_agg_over_simple(schema_2: dict[str, DType]) -> None:
+    expected = (
+        nwd.col("a") - nwd.col("a").mean().over("b"),
+        nwd.col("c") * nwd.col("c").abs().null_count().over("d"),
+    )
+    before = (
+        (nwd.col("a") - nwd.col("a").mean()).over("b"),
+        (nwd.col("c") * nwd.col("c").abs().null_count()).over("d"),
+    )
+    actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
+    assert len(actual) == 2
+    for lhs, rhs in zip(actual, expected):
+        assert_expr_ir_equal(lhs, rhs)
+
+
+def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
+    expected = (
+        named_ir("hi_a", nwd.col("a") / nwd.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_b", nwd.col("b") / nwd.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_c", nwd.col("c") / nwd.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_d", nwd.col("d") / nwd.col("e").drop_nulls().first().over("g")),
+    )
+    before = (
+        (nwd.col("a", "b", "c", "d") / nwd.col("e").drop_nulls().first()).over("g")
+    ).name.prefix("hi_")
+    actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
+    assert len(actual) == 4
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)

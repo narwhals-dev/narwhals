@@ -66,7 +66,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     return window
 
 
-# TODO @dangotbanned: Tests
+# TODO @dangotbanned: Tests (single ✔️, multiple ✔️, complex ❌)
 def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
     """Requested in [discord-1], clarified in [discord-2].
 
