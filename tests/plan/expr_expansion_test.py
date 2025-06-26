@@ -403,6 +403,23 @@ def test_replace_selector(
                 .over(order_by=[nwd.col("k")])
             ],
         ),
+        pytest.param(
+            (ndcs.by_name("a", "b", "c") / nwd.col("e").first())
+            .over("g", "f", order_by="f")
+            .name.prefix("hi_"),
+            [
+                (nwd.col("a") / nwd.col("e").first())
+                .over("g", "f", order_by="f")
+                .alias("hi_a"),
+                (nwd.col("b") / nwd.col("e").first())
+                .over("g", "f", order_by="f")
+                .alias("hi_b"),
+                (nwd.col("c") / nwd.col("e").first())
+                .over("g", "f", order_by="f")
+                .alias("hi_c"),
+            ],
+            id="Selector-BinaryExpr-Over-Prefix",
+        ),
     ],
 )
 def test_prepare_projection(

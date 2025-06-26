@@ -153,6 +153,8 @@ def get_single_leaf_name(ir: ExprIR) -> str | ComputeError:
     for e in ir.iter_right():
         if isinstance(e, (expr.WindowExpr, expr.SortBy, expr.Filter)):
             return get_single_leaf_name(e.expr)
+        if isinstance(e, expr.BinaryExpr):
+            return get_single_leaf_name(e.left)
         # NOTE: `polars` doesn't include `Literal` here
         if isinstance(e, (expr.Column, expr.Len)):
             return e.name
