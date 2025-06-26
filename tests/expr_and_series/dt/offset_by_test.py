@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data, is_windows
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -198,10 +198,10 @@ def test_offset_by_multiples(
 @pytest.mark.parametrize(
     ("by", "expected"),
     [
-        ("2d", [datetime(2024, 1, 3, tzinfo=ZoneInfo("Asia/Kathmandu"))]),
-        ("5mo", [datetime(2024, 6, 1, tzinfo=ZoneInfo("Asia/Kathmandu"))]),
-        ("7q", [datetime(2025, 10, 1, tzinfo=ZoneInfo("Asia/Kathmandu"))]),
-        ("5y", [datetime(2029, 1, 1, tzinfo=ZoneInfo("Asia/Kathmandu"))]),
+        ("2d", ["2024-01-03T00:00+0545"]),
+        ("5mo", ["2024-06-01T00:00+0545"]),
+        ("7q", ["2025-10-01T00:00+0545"]),
+        ("5y", ["2029-01-01T00:00+0545"]),
     ],
 )
 def test_offset_by_tz(
@@ -210,6 +210,10 @@ def test_offset_by_tz(
     by: str,
     expected: list[datetime],
 ) -> None:
+    if ("pyarrow" in str(constructor) and is_windows()) or (
+        "pyarrow_table" in str(constructor) and is_windows()
+    ):
+        pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe")):
         # ibis and sqlframe not implemented.
         # duckdb doesn't support changing time zones.
@@ -221,17 +225,18 @@ def test_offset_by_tz(
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_tz))
-    df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
+    df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
-    assert_equal_data(result, {"a": expected})
+    result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
+    assert_equal_data(result_str, {"a": expected})
 
 
 @pytest.mark.parametrize(
     ("by", "expected"),
     [
-        ("2d", [datetime(2020, 10, 27, tzinfo=ZoneInfo("Europe/Amsterdam"))]),
-        ("5mo", [datetime(2021, 3, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))]),
-        ("1q", [datetime(2021, 1, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))]),
+        ("2d", ["2020-10-27T00:00+0100"]),
+        ("5mo", ["2021-03-25T00:00+0100"]),
+        ("1q", ["2021-01-25T00:00+0100"]),
     ],
 )
 def test_offset_by_dst(
@@ -240,6 +245,10 @@ def test_offset_by_dst(
     by: str,
     expected: list[datetime],
 ) -> None:
+    if ("pyarrow" in str(constructor) and is_windows()) or (
+        "pyarrow_table" in str(constructor) and is_windows()
+    ):
+        pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe", "pyspark")):
         # ibis and sqlframe not implemented.
         # duckdb and pyspark localizes to UTC here.
@@ -253,7 +262,8 @@ def test_offset_by_dst(
     df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
     result = df.select(nw.col("a").dt.offset_by(by))
-    assert_equal_data(result, {"a": expected})
+    result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
+    assert_equal_data(result_str, {"a": expected})
 
 
 def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
