@@ -18,7 +18,7 @@ def test_allh(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_anyh_ignore_nulls(constructor: Constructor) -> None:
+def test_all_ignore_nulls(constructor: Constructor) -> None:
     if "dask" in str(constructor):
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         # test it below separately

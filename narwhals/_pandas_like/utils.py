@@ -611,6 +611,15 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
         raise DuplicateError(msg)
 
 
+def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
+    # cuDF booleans are nullable but the native dtype is still 'bool'.
+    return (
+        s._implementation
+        in {Implementation.PANDAS, Implementation.MODIN, Implementation.DASK}
+        and s.native.dtype == "bool"
+    )
+
+
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
     @property
     def implementation(self) -> Implementation:
