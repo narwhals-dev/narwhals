@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from narwhals.utils import CompliantT_co, _StoresCompliant
+from narwhals._utils import CompliantT_co, _StoresCompliant
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -79,6 +79,7 @@ class StringNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def to_datetime(self, format: str | None) -> CompliantT_co: ...
     def to_lowercase(self) -> CompliantT_co: ...
     def to_uppercase(self) -> CompliantT_co: ...
+    def zfill(self, width: int) -> CompliantT_co: ...
 
 
 class StructNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):

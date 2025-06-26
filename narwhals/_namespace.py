@@ -14,6 +14,7 @@ from typing import (
 )
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
+from narwhals._utils import Implementation, Version
 from narwhals.dependencies import (
     get_cudf,
     get_modin,
@@ -27,9 +28,9 @@ from narwhals.dependencies import (
     is_pyspark_dataframe,
     is_sqlframe_dataframe,
 )
-from narwhals.utils import Implementation, Version
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Sized
     from types import ModuleType
     from typing import ClassVar
 
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._dask.namespace import DaskNamespace
@@ -98,10 +99,35 @@ if TYPE_CHECKING:
         Implementation.POLARS,
     ]
 
+    class _BasePandasLike(Sized, Protocol):
+        index: Any
+        """`mypy` doesn't like the asymmetric `property` setter in `pandas`."""
+
+        def __getitem__(self, key: Any, /) -> Any: ...
+        def __mul__(self, other: float | Collection[float] | Self) -> Self: ...
+        def __floordiv__(self, other: float | Collection[float] | Self) -> Self: ...
+        @property
+        def loc(self) -> Any: ...
+        @property
+        def shape(self) -> tuple[int, ...]: ...
+        def set_axis(self, labels: Any, *, axis: Any = ..., copy: bool = ...) -> Self: ...
+        def copy(self, deep: bool = ...) -> Self: ...  # noqa: FBT001
+        def rename(self, *args: Any, inplace: Literal[False], **kwds: Any) -> Self:
+            """`inplace=False` is required to avoid (incorrect?) default overloads."""
+            ...
+
+    class _BasePandasLikeFrame(NativeFrame, _BasePandasLike, Protocol): ...
+
+    class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
+        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
+
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
 
-    class _NativeCuDF(Protocol):
+    class _CuDFDataFrame(_BasePandasLikeFrame, Protocol):
+        def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
+
+    class _CuDFSeries(_BasePandasLikeSeries, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
 
     class _NativeIbis(Protocol):
@@ -110,10 +136,10 @@ if TYPE_CHECKING:
         def __pandas_result__(self, *args: Any, **kwds: Any) -> Any: ...
         def __polars_result__(self, *args: Any, **kwds: Any) -> Any: ...
 
-    class _ModinDataFrame(Protocol):
+    class _ModinDataFrame(_BasePandasLikeFrame, Protocol):
         _pandas_class: type[pd.DataFrame]
 
-    class _ModinSeries(Protocol):
+    class _ModinSeries(_BasePandasLikeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
@@ -121,7 +147,12 @@ if TYPE_CHECKING:
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
     _NativePandas: TypeAlias = "pd.DataFrame | pd.Series[Any]"
     _NativeModin: TypeAlias = "_ModinDataFrame | _ModinSeries"
-    _NativePandasLike: TypeAlias = "_NativePandas | _NativeCuDF | _NativeModin"
+    _NativeCuDF: TypeAlias = "_CuDFDataFrame | _CuDFSeries"
+    _NativePandasLikeSeries: TypeAlias = "pd.Series[Any] | _CuDFSeries | _ModinSeries"
+    _NativePandasLikeDataFrame: TypeAlias = (
+        "pd.DataFrame | _CuDFDataFrame | _ModinDataFrame"
+    )
+    _NativePandasLike: TypeAlias = "_NativePandasLikeDataFrame |_NativePandasLikeSeries"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
     _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
     _NativePySparkConnect: TypeAlias = "PySparkConnectDataFrame"
@@ -203,7 +234,9 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
-    def from_backend(cls, backend: ModuleType, /) -> Namespace[CompliantNamespaceAny]: ...
+    def from_backend(
+        cls, backend: IntoBackend, /
+    ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(
@@ -273,8 +306,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(
-        cls, native: _NativePandasLike, /
-    ) -> Namespace[PandasLikeNamespace]: ...
+        cls, native: _NativePandas, /
+    ) -> Namespace[PandasLikeNamespace[pd.DataFrame, pd.Series[Any]]]: ...
 
     @overload
     @classmethod
@@ -299,6 +332,24 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_native_object(cls, native: _NativeIbis, /) -> Namespace[IbisNamespace]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativeModin, /
+    ) -> Namespace[PandasLikeNamespace[_ModinDataFrame, _ModinSeries]]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativeCuDF, /
+    ) -> Namespace[PandasLikeNamespace[_CuDFDataFrame, _CuDFSeries]]: ...
+
+    @overload
+    @classmethod
+    def from_native_object(
+        cls, native: _NativePandasLike, /
+    ) -> Namespace[PandasLikeNamespace[Any, Any]]: ...
 
     @overload
     @classmethod

@@ -337,8 +337,6 @@ def test_over_diff(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 1):
-        pytest.skip(reason="bug in old version")
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
@@ -410,9 +408,7 @@ def test_over_without_partition_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
-        # probably bugged
-        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
         df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Iterable, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from narwhals.typing import IntoSeries
     from tests.utils import Constructor
 
@@ -457,3 +459,49 @@ def test_enum_repr() -> None:
 def test_enum_hash() -> None:
     assert nw.Enum(["a", "b"]) in {nw.Enum(["a", "b"])}
     assert nw.Enum(["a", "b"]) not in {nw.Enum(["a", "b", "c"])}
+
+
+def test_datetime_w_tz_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
+    df = nw.from_native(
+        duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "Europe/Amsterdam")
+    duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
+
+    df = nw.from_native(
+        duckdb.sql(
+            """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
+        )
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
+    assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
+
+
+def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no cover
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.skip()
+    pytest.importorskip("pyspark")
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.config(
+        "spark.sql.session.timeZone", "UTC"
+    ).getOrCreate()
+
+    df = nw.from_native(
+        session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.Datetime("us", "UTC")
+    df = nw.from_native(
+        session.createDataFrame([([datetime(2020, 1, 1, tzinfo=timezone.utc)],)], ["a"])
+    )
+    result = df.collect_schema()
+    assert result["a"] == nw.List(nw.Datetime("us", "UTC"))

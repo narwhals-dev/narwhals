@@ -4,20 +4,11 @@ from __future__ import annotations
 
 import re
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Collection,
-    Iterable,
-    Iterator,
-    Protocol,
-    Sequence,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._typing_compat import Protocol38
-from narwhals.utils import (
+from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     dtype_matches_time_unit_and_time_zone,
     get_column_names,
@@ -25,6 +16,7 @@ from narwhals.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Iterator, Sequence
     from datetime import timezone
 
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -41,9 +33,9 @@ if TYPE_CHECKING:
         EvalSeries,
         ScalarKwargs,
     )
+    from narwhals._utils import Implementation, Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
-    from narwhals.utils import Implementation, Version, _FullContext
 
 __all__ = [
     "CompliantSelector",
@@ -211,6 +203,7 @@ class CompliantSelector(
     CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
+    _window_function: None
     _function_name: str
     _depth: int
     _implementation: Implementation
@@ -228,6 +221,7 @@ class CompliantSelector(
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
+        obj._window_function = None
         obj._depth = 0
         obj._function_name = "selector"
         obj._evaluate_output_names = evaluate_output_names

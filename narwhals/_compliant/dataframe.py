@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterator,
-    Literal,
-    Mapping,
-    Protocol,
-    Sequence,
-    Sized,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -21,6 +11,7 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
+    NativeExprT,
     NativeFrameT,
     NativeSeriesT,
 )
@@ -32,10 +23,11 @@ from narwhals._translate import (
     ToNarwhals,
     ToNarwhalsT_co,
 )
-from narwhals._typing_compat import deprecated
-from narwhals.utils import (
+from narwhals._typing_compat import assert_never, deprecated
+from narwhals._utils import (
     Version,
     _StoresNative,
+    check_columns_exist,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -54,11 +46,15 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Implementation, _FullContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
+    from narwhals.exceptions import ColumnNotFoundError
     from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -76,7 +72,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Implementation, _FullContext
 
     Incomplete: TypeAlias = Any
 
@@ -258,7 +253,7 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -269,6 +264,9 @@ class CompliantDataFrame(
     def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class CompliantLazyFrame(
@@ -367,15 +365,28 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
+        assert len(result) == 1  # debug assertion  # noqa: S101
+        return result[0]
+
+    def _evaluate_window_expr(
+        self,
+        expr: LazyExpr[Self, NativeExprT],
+        /,
+        window_inputs: WindowInputs[NativeExprT],
+    ) -> NativeExprT:
+        result = expr.window_function(self, window_inputs)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
     def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
         it = (expr._evaluate_aliases(self) for expr in exprs)
         return list(chain.from_iterable(it))
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(
@@ -389,6 +400,10 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _with_native(
+        self, df: NativeFrameT, *, validate_column_names: bool = True
+    ) -> Self: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -464,9 +479,8 @@ class EagerDataFrame(
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(columns)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(columns)
 
         if not is_slice_none(rows):
             if isinstance(rows, int):
@@ -477,8 +491,7 @@ class EagerDataFrame(
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(rows)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(rows)
 
         return compliant

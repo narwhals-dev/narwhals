@@ -1,23 +1,25 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals.dependencies import get_pandas, get_pyarrow
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     isinstance_or_issubclass,
     parse_version,
 )
+from narwhals.dependencies import get_pandas, get_pyarrow
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
 
-    from narwhals._dask.dataframe import DaskLazyFrame
+    from narwhals._dask.dataframe import DaskLazyFrame, Incomplete
     from narwhals._dask.expr import DaskExpr
-    from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 else:
     try:
         import dask.dataframe.dask_expr as dx
@@ -63,9 +65,9 @@ def add_row_index(
     implementation: Implementation,
 ) -> dd.DataFrame:
     original_cols = frame.columns
-    frame = frame.assign(**{name: 1})
+    df: Incomplete = frame.assign(**{name: 1})
     return select_columns_by_name(
-        frame.assign(**{name: frame[name].cumsum(method="blelloch") - 1}),
+        df.assign(**{name: df[name].cumsum(method="blelloch") - 1}),
         [name, *original_cols],
         backend_version,
         implementation,
@@ -88,7 +90,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> Any:  # noqa: C901, PLR0912
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa: C901, PLR0912
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         return "float64"
@@ -142,19 +144,19 @@ def narwhals_to_native_dtype(dtype: DType | type[DType], version: Version) -> An
         return "timedelta64[ns]"
     if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
         msg = "Converting to List dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         msg = "Converting to Struct dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         msg = "Converting to Array dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Time):  # pragma: no cover
         msg = "Converting to Time dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Binary):  # pragma: no cover
         msg = "Converting to Binary dtype is not supported yet"
-        return NotImplementedError(msg)
+        raise NotImplementedError(msg)
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

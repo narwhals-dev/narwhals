@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
     extract_compliant,
+)
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    issue_deprecation_warning,
 )
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
@@ -18,7 +25,6 @@ from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
-from narwhals.utils import _validate_rolling_arguments, flatten, issue_deprecation_warning
 
 if TYPE_CHECKING:
     from typing import TypeVar
@@ -30,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntoDType,
         IntoExpr,
         NonNestedLiteral,
         NumericLiteral,
@@ -156,7 +163,7 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         """Redefine an object's data type.
 
         Arguments:
@@ -367,6 +374,8 @@ class Expr:
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
+        If there are no non-null elements, the result is `False`.
+
         Returns:
             A new expression.
 
@@ -387,6 +396,8 @@ class Expr:
 
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
+
+        If there are no non-null elements, the result is `True`.
 
         Returns:
             A new expression.
@@ -670,8 +681,34 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).skew())
 
+    def kurtosis(self) -> Self:
+        """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Kurtosis is the fourth central moment divided by the square of the variance.
+        The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
+
+        Returns:
+            An expression representing the kurtosis (Fisher's definition) without bias correction of the column.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3, 4, 5], "b": [1, 1, 2, 10, 100]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").kurtosis())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |      a         b |
+            | 0 -1.3  0.210657 |
+            └──────────────────┘
+        """
+        return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).kurtosis())
+
     def sum(self) -> Expr:
         """Return the sum value.
+
+        If there are no non-null elements, the result is zero.
 
         Returns:
             A new expression.
@@ -993,6 +1030,8 @@ class Expr:
             |└─────┴─────────┘ |
             └──────────────────┘
         """
+        ensure_type(n, int, param_name="n")
+
         return self._with_orderable_window(
             lambda plx: self._to_compliant_expr(plx).shift(n)
         )
@@ -1002,7 +1041,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        return_dtype: DType | type[DType] | None = None,
+        return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
 
@@ -1011,7 +1050,7 @@ class Expr:
         Arguments:
             old: Sequence of values to replace. It also accepts a mapping of values to
                 their replacement as syntactic sugar for
-                `replace_all(old=list(mapping.keys()), new=list(mapping.values()))`.
+                `replace_strict(old=list(mapping.keys()), new=list(mapping.values()))`.
             new: Sequence of values to replace by. Length must match the length of `old`.
             return_dtype: The data type of the resulting expression. If set to `None`
                 (default), the data type is determined automatically based on the other
@@ -1336,9 +1375,11 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            - pandas handles null values differently from other libraries.
+              See [null_handling](../concepts/null_handling.md/)
+              for reference.
+            - For pandas Series of `object` dtype, `fill_null` will not automatically change the
+              Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
 
         Examples:
             >>> import polars as pl
@@ -1542,7 +1583,7 @@ class Expr:
             └────────────────────────────┘
         """
         flat_partition_by = flatten(partition_by)
-        flat_order_by = [order_by] if isinstance(order_by, str) else order_by
+        flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
         if not flat_partition_by and not flat_order_by:  # pragma: no cover
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise ValueError(msg)
@@ -2448,7 +2489,7 @@ class Expr:
             base: Given base, defaults to `e`
 
         Returns:
-            A new expression log values data.
+            A new expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -2475,6 +2516,58 @@ class Expr:
         return self._with_elementwise_op(
             lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
+
+    def exp(self) -> Self:
+        r"""Compute the exponent.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [-1, 0, 1]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(exp=nw.col("values").exp())
+            >>> result
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals DataFrame               |
+            |------------------------------------------------|
+            |pyarrow.Table                                   |
+            |values: int64                                   |
+            |exp: double                                     |
+            |----                                            |
+            |values: [[-1,0,1]]                              |
+            |exp: [[0.36787944117144233,1,2.718281828459045]]|
+            └────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
+
+    def sqrt(self) -> Self:
+        r"""Compute the square root.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"values": [1, 4, 9]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sqrt=nw.col("values").sqrt())
+            >>> result
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |values: int64     |
+            |sqrt: double      |
+            |----              |
+            |values: [[1,4,9]] |
+            |sqrt: [[1,2,3]]   |
+            └──────────────────┘
+        """
+        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).sqrt())
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

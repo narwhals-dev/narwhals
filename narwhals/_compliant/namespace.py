@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Container,
-    Iterable,
-    Mapping,
-    Protocol,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -25,22 +16,30 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
-from narwhals.dependencies import is_numpy_array_2d
-from narwhals.utils import (
+from narwhals._utils import (
     exclude_column_names,
     get_column_names,
     passthrough_column_names,
 )
+from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
+    from collections.abc import Container, Iterable, Mapping, Sequence
+
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import ConcatMethod, Into1DArray, NonNestedLiteral, _2DArray
-    from narwhals.utils import Implementation, Version
+    from narwhals.typing import (
+        ConcatMethod,
+        Into1DArray,
+        IntoDType,
+        NonNestedLiteral,
+        _2DArray,
+    )
 
     Incomplete: TypeAlias = Any
 
@@ -69,11 +68,13 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         return self._expr.from_column_indices(*column_indices, context=self)
 
     def len(self) -> CompliantExprT: ...
-    def lit(
-        self, value: NonNestedLiteral, dtype: DType | type[DType] | None
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
+    def all_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
     ) -> CompliantExprT: ...
-    def all_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
-    def any_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
+    def any_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
+    ) -> CompliantExprT: ...
     def sum_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def mean_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def min_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
@@ -146,14 +147,6 @@ class EagerNamespace(
     def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
     @overload
     def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
-    # TODO @dangotbanned: Align `PandasLike` typing with `_namespace`, then drop this `@overload`
-    # - Using the guards there introduces `_NativeModin`, `_NativeCuDF`
-    # - These types haven't been integrated into the backend
-    # - Most of the `pandas` stuff is still untyped
-    @overload
-    def from_native(
-        self, data: NativeFrameT | NativeSeriesT | Any, /
-    ) -> EagerDataFrameT | EagerSeriesT: ...
     def from_native(
         self, data: NativeFrameT | NativeSeriesT | Any, /
     ) -> EagerDataFrameT | EagerSeriesT:

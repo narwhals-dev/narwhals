@@ -3,7 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from narwhals.utils import _is_naive_format
+from narwhals._spark_like.utils import strptime_to_pyspark_format
+from narwhals._utils import _is_naive_format
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -113,33 +114,29 @@ class SparkLikeExprStringNamespace:
             lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
 
+    def zfill(self, width: int) -> SparkLikeExpr:
+        def func(expr: Column) -> Column:
+            F = self._compliant_expr._F  # noqa: N806
 
-def strptime_to_pyspark_format(format: str) -> str:
-    """Converts a Python strptime datetime format string to a PySpark datetime format string."""
-    # Mapping from Python strptime format to PySpark format
+            length = F.length(expr)
+            less_than_width = length < width
+            hyphen, plus = F.lit("-"), F.lit("+")
+            starts_with_minus = F.startswith(expr, hyphen)
+            starts_with_plus = F.startswith(expr, plus)
+            sub_length = length - F.lit(1)
+            # NOTE: `len` annotated as `int`, but `Column.substr` accepts `int | Column`
+            substring = F.substring(expr, 2, sub_length)  # pyright: ignore[reportArgumentType]
+            padded_substring = F.lpad(substring, width - 1, "0")
+            return (
+                F.when(
+                    starts_with_minus & less_than_width,
+                    F.concat(hyphen, padded_substring),
+                )
+                .when(
+                    starts_with_plus & less_than_width, F.concat(plus, padded_substring)
+                )
+                .when(less_than_width, F.lpad(expr, width, "0"))
+                .otherwise(expr)
+            )
 
-    # see https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html
-    # and https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
-    format_mapping = {
-        "%Y": "y",  # Year with century
-        "%y": "y",  # Year without century
-        "%m": "M",  # Month
-        "%d": "d",  # Day of the month
-        "%H": "H",  # Hour (24-hour clock) 0-23
-        "%I": "h",  # Hour (12-hour clock) 1-12
-        "%M": "m",  # Minute
-        "%S": "s",  # Second
-        "%f": "S",  # Microseconds -> Milliseconds
-        "%p": "a",  # AM/PM
-        "%a": "E",  # Abbreviated weekday name
-        "%A": "E",  # Full weekday name
-        "%j": "D",  # Day of the year
-        "%z": "Z",  # Timezone offset
-        "%s": "X",  # Unix timestamp
-    }
-
-    # Replace Python format specifiers with PySpark specifiers
-    pyspark_format = format
-    for py_format, spark_format in format_mapping.items():
-        pyspark_format = pyspark_format.replace(py_format, spark_format)
-    return pyspark_format.replace("T", " ")
+        return self._compliant_expr._with_callable(func)

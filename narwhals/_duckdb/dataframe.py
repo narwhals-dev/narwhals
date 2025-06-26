@@ -1,39 +1,43 @@
 from __future__ import annotations
 
-import contextlib
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import FunctionExpression, StarExpression
+from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
+    DeferredTimeZone,
+    F,
     col,
     evaluate_exprs,
-    generate_partition_by_sql,
     lit,
     native_to_narwhals_dtype,
+    window_expression,
 )
-from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
     parse_version,
+    requires,
     validate_backend_version,
 )
+from narwhals.dependencies import get_duckdb
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
+    from duckdb.typing import DuckDBPyType
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -41,14 +45,11 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._utils import _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import _FullContext
-
-with contextlib.suppress(ImportError):  # requires duckdb>=1.3.0
-    from duckdb import SQLExpression
 
 
 class DuckDBLazyFrame(
@@ -70,7 +71,7 @@ class DuckDBLazyFrame(
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
         self._backend_version = backend_version
-        self._cached_schema: dict[str, DType] | None = None
+        self._cached_native_schema: dict[str, DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
         validate_backend_version(self._implementation, self._backend_version)
 
@@ -180,7 +181,7 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.select(*selection))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
@@ -212,23 +213,25 @@ class DuckDBLazyFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        if self._cached_schema is None:
-            # Note: prefer `self._cached_schema` over `functools.cached_property`
+        if self._cached_native_schema is None:
+            # Note: prefer `self._cached_native_schema` over `functools.cached_property`
             # due to Python3.13 failures.
-            self._cached_schema = {
-                column_name: native_to_narwhals_dtype(duckdb_dtype, self._version)
-                for column_name, duckdb_dtype in zip(
-                    self.native.columns, self.native.types
-                )
-            }
-        return self._cached_schema
+            self._cached_native_schema = dict(zip(self.columns, self.native.types))
+
+        deferred_time_zone = DeferredTimeZone(self.native)
+        return {
+            column_name: native_to_narwhals_dtype(
+                duckdb_dtype, self._version, deferred_time_zone
+            )
+            for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
+        }
 
     @property
     def columns(self) -> list[str]:
         if self._cached_columns is None:
             self._cached_columns = (
                 list(self.schema)
-                if self._cached_schema is not None
+                if self._cached_native_schema is not None
                 else self.native.columns
             )
         return self._cached_columns
@@ -376,25 +379,15 @@ class DuckDBLazyFrame(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
         if subset_ := subset if keep == "any" else (subset or self.columns):
-            if self._backend_version < (1, 3):
-                msg = (
-                    "At least version 1.3 of DuckDB is required for `unique` operation\n"
-                    "with `subset` specified."
-                )
-                raise NotImplementedError(msg)
             # Sanitise input
-            if any(x not in self.columns for x in subset_):
-                msg = f"Columns {set(subset_).difference(self.columns)} not found in {self.columns}."
-                raise ColumnNotFoundError(msg)
+            if error := self._check_columns_exist(subset_):
+                raise error
             idx_name = generate_temporary_column_name(8, self.columns)
             count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-            partition_by_sql = generate_partition_by_sql(*(subset_))
             name = count_name if keep == "none" else idx_name
-            idx_expr = SQLExpression(
-                f"{FunctionExpression('row_number')} over ({partition_by_sql})"
-            ).alias(idx_name)
-            count_expr = SQLExpression(
-                f"{FunctionExpression('count', StarExpression())} over ({partition_by_sql})"
+            idx_expr = window_expression(F("row_number"), subset_).alias(idx_name)
+            count_expr = window_expression(
+                F("count", StarExpression()), subset_, ()
             ).alias(count_name)
             return self._with_native(
                 self.native.select(StarExpression(), idx_expr, count_expr)
@@ -446,14 +439,12 @@ class DuckDBLazyFrame(
         rel = self.native
         original_columns = self.columns
 
-        not_null_condition = col_to_explode.isnotnull() & FunctionExpression(
-            "len", col_to_explode
-        ) > lit(0)
+        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > lit(
+            0
+        )
         non_null_rel = rel.filter(not_null_condition).select(
             *(
-                FunctionExpression("unnest", col_to_explode).alias(name)
-                if name in columns
-                else name
+                F("unnest", col_to_explode).alias(name) if name in columns else name
                 for name in original_columns
             )
         )
@@ -500,10 +491,16 @@ class DuckDBLazyFrame(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
 
+    @requires.backend_version((1, 3))
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        expr = (window_expression(F("row_number"), order_by=order_by) - lit(1)).alias(
+            name
+        )
+        return self._with_native(self.native.select(expr, StarExpression()))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

@@ -131,9 +131,6 @@ def test_rolling_sum_expr_lazy_grouped(
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor) and center:
-        # center is not implemented for offset-based windows
-        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
@@ -184,26 +181,10 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
             ),
         ),
         (
-            4.2,
-            None,
-            pytest.raises(
-                TypeError,
-                match="argument 'window_size': 'float' object cannot be interpreted as an integer",
-            ),
-        ),
-        (
             2,
             -1,
             pytest.raises(
                 ValueError, match="min_samples must be greater or equal than 1"
-            ),
-        ),
-        (
-            2,
-            4.2,
-            pytest.raises(
-                TypeError,
-                match="argument 'min_samples': 'float' object cannot be interpreted as an integer",
             ),
         ),
         (
@@ -213,6 +194,16 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
         ),
     ],
 )
@@ -244,26 +235,10 @@ def test_rolling_sum_expr_invalid_params(
             ),
         ),
         (
-            4.2,
-            None,
-            pytest.raises(
-                TypeError,
-                match="argument 'window_size': 'float' object cannot be interpreted as an integer",
-            ),
-        ),
-        (
             2,
             -1,
             pytest.raises(
                 ValueError, match="min_samples must be greater or equal than 1"
-            ),
-        ),
-        (
-            2,
-            4.2,
-            pytest.raises(
-                TypeError,
-                match="argument 'min_samples': 'float' object cannot be interpreted as an integer",
             ),
         ),
         (
@@ -273,6 +248,16 @@ def test_rolling_sum_expr_invalid_params(
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
+        ),
+        (
+            4.2,
+            None,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+        ),
+        (
+            2,
+            4.2,
+            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
         ),
     ],
 )
@@ -289,7 +274,6 @@ def test_rolling_sum_series_invalid_params(
 
 
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=3, max_size=10))
-@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.slow

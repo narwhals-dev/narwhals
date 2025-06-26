@@ -1,31 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import align_series_full_broadcast, native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
-from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import ShapeError
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
-    check_column_exists,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -36,6 +24,8 @@ from narwhals.utils import (
     supports_arrow_c_stream,
     validate_backend_version,
 )
+from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -56,6 +46,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._utils import Version, _FullContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -69,7 +60,6 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
-    from narwhals.utils import Version, _FullContext
 
     JoinType: TypeAlias = Literal[
         "left semi",
@@ -334,7 +324,7 @@ class ArrowDataFrame(
             self.native.select(list(column_names)), validate_column_names=False
         )
 
-    def select(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def select(self, *exprs: ArrowExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
@@ -342,7 +332,8 @@ class ArrowDataFrame(
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        reshaped = align_series_full_broadcast(*new_series)
+        align = new_series[0]._align_full_broadcast
+        reshaped = align(*new_series)
         df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
         return self._with_native(df, validate_column_names=True)
 
@@ -354,14 +345,10 @@ class ArrowDataFrame(
                 raise ShapeError(msg)
             return other.native
 
-        import numpy as np  # ignore-banned-import
-
         value = other.native[0]
-        if self._backend_version < (13,) and hasattr(value, "as_py"):
-            value = value.as_py()
-        return pa.chunked_array([np.full(shape=length, fill_value=value)])
+        return pa.chunked_array([pa.repeat(value, length)])
 
-    def with_columns(self: ArrowDataFrame, *exprs: ArrowExpr) -> ArrowDataFrame:
+    def with_columns(self, *exprs: ArrowExpr) -> Self:
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
@@ -440,16 +427,15 @@ class ArrowDataFrame(
     join_asof = not_implemented()
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop), validate_column_names=False)
 
-    def drop_nulls(self: ArrowDataFrame, subset: Sequence[str] | None) -> ArrowDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -496,18 +482,21 @@ class ArrowDataFrame(
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
 
-    def with_row_index(self, name: str) -> Self:
-        df = self.native
-        cols = self.columns
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        plx = self.__narwhals_namespace__()
+        if order_by is None:
+            import numpy as np  # ignore-banned-import
 
-        row_indices = pa.array(range(df.num_rows))
-        return self._with_native(
-            df.append_column(name, row_indices).select([name, *cols])
-        )
+            data = pa.array(np.arange(len(self), dtype=np.int64))
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(data, context=self, name=name)
+            )
+        else:
+            rank = plx.col(order_by[0]).rank("ordinal", descending=False)
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
-    def filter(
-        self: ArrowDataFrame, predicate: ArrowExpr | list[bool | None]
-    ) -> ArrowDataFrame:
+    def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):
             mask_native: Mask | ChunkedArrayAny = predicate
         else:
@@ -667,8 +656,10 @@ class ArrowDataFrame(
         return None
 
     def is_unique(self) -> ArrowSeries:
+        import numpy as np  # ignore-banned-import
+
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(range(len(self)))
+        row_index = pa.array(np.arange(len(self)))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -683,17 +674,18 @@ class ArrowDataFrame(
         return ArrowSeries.from_native(native, context=self)
 
     def unique(
-        self: ArrowDataFrame,
+        self,
         subset: Sequence[str] | None,
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
-    ) -> ArrowDataFrame:
+    ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
-        check_column_exists(self.columns, subset)
+        if subset and (error := self._check_columns_exist(subset)):
+            raise error
         subset = list(subset or self.columns)
 
         if keep in {"any", "first", "last"}:
@@ -735,7 +727,7 @@ class ArrowDataFrame(
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask), validate_column_names=False)
 

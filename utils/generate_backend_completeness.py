@@ -6,12 +6,15 @@ from contextlib import suppress
 from enum import Enum, auto
 from itertools import chain
 from pathlib import Path
-from typing import Any, Final, Iterator, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 import polars as pl
 from jinja2 import Template
 
-from narwhals.utils import not_implemented
+from narwhals._utils import not_implemented
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 TEMPLATE_PATH: Final[Path] = Path("utils") / "api-completeness.md.jinja"
 DESTINATION_PATH: Final[Path] = Path("docs") / "api-completeness"

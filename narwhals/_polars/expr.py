@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
@@ -10,16 +10,18 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals.utils import Implementation, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from typing_extensions import Self
 
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals.dtypes import DType
-    from narwhals.utils import Version
+    from narwhals._utils import Version
+    from narwhals.typing import IntoDType
 
 
 class PolarsExpr:
@@ -61,7 +63,7 @@ class PolarsExpr:
         name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"
         return {name: min_samples}
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
+    def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
         return self._with_native(self.native.cast(dtype_pl))
 
@@ -96,14 +98,16 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_nan())
         return self._with_native(native)
 
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str] | None) -> Self:
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
             native = self.native.over(partition_by or pl.lit(1))
         else:
-            native = self.native.over(partition_by or pl.lit(1), order_by=order_by)
+            native = self.native.over(
+                partition_by or pl.lit(1), order_by=order_by or None
+            )
         return self._with_native(native)
 
     @requires.backend_version((1,))
@@ -137,7 +141,7 @@ class PolarsExpr:
         return self._with_native(native)
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: DType | type[DType] | None
+        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
@@ -153,7 +157,7 @@ class PolarsExpr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any],
         *,
-        return_dtype: DType | type[DType] | None,
+        return_dtype: IntoDType | None,
     ) -> Self:
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
@@ -212,11 +216,7 @@ class PolarsExpr:
         return self._with_native(self.native.__invert__())
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            result = (~self.native.is_null()).cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
@@ -276,6 +276,7 @@ class PolarsExpr:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    exp: Method[Self]
     fill_null: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
@@ -285,6 +286,7 @@ class PolarsExpr:
     is_last_distinct: Method[Self]
     is_null: Method[Self]
     is_unique: Method[Self]
+    kurtosis: Method[Self]
     len: Method[Self]
     log: Method[Self]
     max: Method[Self]
@@ -300,6 +302,7 @@ class PolarsExpr:
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[Self]
+    sqrt: Method[Self]
     std: Method[Self]
     sum: Method[Self]
     sort: Method[Self]
@@ -331,6 +334,35 @@ class PolarsExprDateTimeNamespace:
 class PolarsExprStringNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
+
+    def zfill(self, width: int) -> PolarsExpr:
+        native_expr = self._compliant_expr.native
+        backend_version = self._compliant_expr._backend_version
+        native_result = native_expr.str.zfill(width)
+
+        if backend_version < (0, 20, 5):  # pragma: no cover
+            # Reason:
+            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
+            # in `native_expr.str.slice(1, length)`
+            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
+            raise NotImplementedError(msg)
+
+        if backend_version <= (1, 30, 0):
+            length = native_expr.str.len_chars()
+            less_than_width = length < width
+            plus = "+"
+            starts_with_plus = native_expr.str.starts_with(plus)
+            native_result = (
+                pl.when(starts_with_plus & less_than_width)
+                .then(
+                    native_expr.str.slice(1, length)
+                    .str.zfill(width - 1)
+                    .str.pad_start(width, plus)
+                )
+                .otherwise(native_result)
+            )
+
+        return self._compliant_expr._with_native(native_result)
 
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:

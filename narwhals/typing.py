@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
-from narwhals.dataframe import DataFrame, LazyFrame
 
 if TYPE_CHECKING:
     import datetime as dt
+    from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
-    from typing import Iterable, Sized
 
     import numpy as np
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.series import Series
 
@@ -196,7 +196,7 @@ Examples:
 
 IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 
-FrameT = TypeVar("FrameT", DataFrame[Any], LazyFrame[Any])
+FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
 Use this if your function accepts either `nw.DataFrame` or `nw.LazyFrame` and returns
@@ -358,6 +358,38 @@ NonNestedLiteral: TypeAlias = (
     "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
 )
 PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
+
+NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
+"""Any Narwhals DType that does not have required arguments."""
+
+IntoDType: TypeAlias = "dtypes.DType | type[NonNestedDType]"
+"""Anything that can be converted into a Narwhals DType.
+
+Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
+    >>> df = nw.from_native(df_native)
+    >>> df.select(
+    ...     nw.col("a").cast(nw.Int32),
+    ...     nw.col("b").cast(nw.String()).str.split(".").cast(nw.List(nw.Int8)),
+    ... )
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |shape: (3, 2)     |
+    |┌─────┬──────────┐|
+    |│ a   ┆ b        │|
+    |│ --- ┆ ---      │|
+    |│ i32 ┆ list[i8] │|
+    |╞═════╪══════════╡|
+    |│ 1   ┆ [4, 0]   │|
+    |│ 2   ┆ [5, 0]   │|
+    |│ 3   ┆ [6, 0]   │|
+    |└─────┴──────────┘|
+    └──────────────────┘
+"""
+
 
 # Annotations for `__getitem__` methods
 _T = TypeVar("_T")

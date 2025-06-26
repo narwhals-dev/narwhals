@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
+    from narwhals._compliant.window import WindowInputs
     from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
 
     class ScalarKwargs(TypedDict, total=False):
@@ -70,6 +72,9 @@ NativeExprT = TypeVar("NativeExprT", bound="NativeExpr")
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeSeriesT_contra = TypeVar(
+    "NativeSeriesT_contra", bound="NativeSeries", contravariant=True
+)
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeFrameT_contra = TypeVar(
@@ -144,3 +149,8 @@ See [underwater unicorn magic](https://narwhals-dev.github.io/narwhals/how_it_wo
 
 EvalNames: TypeAlias = Callable[[CompliantFrameT], Sequence[str]]
 """A function from a `Frame` to a sequence of columns names *before* any aliasing takes place."""
+
+WindowFunction: TypeAlias = (
+    "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
+)
+"""A function evaluated with `over(partition_by=..., order_by=...)`."""

@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import enum
 from collections import OrderedDict
+from collections.abc import Iterable, Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING, Iterable, Mapping
+from typing import TYPE_CHECKING
 
-from narwhals.utils import _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from typing import Iterator, Sequence
+    from collections.abc import Iterator, Sequence
 
     from typing_extensions import Self
 
-    from narwhals.typing import TimeUnit
+    from narwhals.typing import IntoDType, TimeUnit
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
@@ -62,7 +63,7 @@ class DType:
         return issubclass(cls, NestedType)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        from narwhals.utils import isinstance_or_issubclass
+        from narwhals._utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
 
@@ -519,9 +520,9 @@ class Field:
     """
 
     name: str
-    dtype: type[DType] | DType
+    dtype: IntoDType
 
-    def __init__(self, name: str, dtype: type[DType] | DType) -> None:
+    def __init__(self, name: str, dtype: IntoDType) -> None:
         self.name = name
         self.dtype = dtype
 
@@ -555,9 +556,7 @@ class Struct(NestedType):
 
     fields: list[Field]
 
-    def __init__(
-        self, fields: Sequence[Field] | Mapping[str, DType | type[DType]]
-    ) -> None:
+    def __init__(self, fields: Sequence[Field] | Mapping[str, IntoDType]) -> None:
         if isinstance(fields, Mapping):
             self.fields = list(starmap(Field, fields.items()))
         else:
@@ -578,11 +577,11 @@ class Struct(NestedType):
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
 
-    def __iter__(self) -> Iterator[tuple[str, DType | type[DType]]]:  # pragma: no cover
+    def __iter__(self) -> Iterator[tuple[str, IntoDType]]:  # pragma: no cover
         for fld in self.fields:
             yield fld.name, fld.dtype
 
-    def __reversed__(self) -> Iterator[tuple[str, DType | type[DType]]]:
+    def __reversed__(self) -> Iterator[tuple[str, IntoDType]]:
         for fld in reversed(self.fields):
             yield fld.name, fld.dtype
 
@@ -590,7 +589,7 @@ class Struct(NestedType):
         class_name = self.__class__.__name__
         return f"{class_name}({dict(self)})"
 
-    def to_schema(self) -> OrderedDict[str, DType | type[DType]]:
+    def to_schema(self) -> OrderedDict[str, IntoDType]:
         """Return Struct dtype as a schema dict.
 
         Returns:
@@ -614,9 +613,9 @@ class List(NestedType):
        List(String)
     """
 
-    inner: DType | type[DType]
+    inner: IntoDType
 
-    def __init__(self, inner: DType | type[DType]) -> None:
+    def __init__(self, inner: IntoDType) -> None:
         self.inner = inner
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
@@ -657,11 +656,11 @@ class Array(NestedType):
         Array(Int32, shape=(2,))
     """
 
-    inner: DType | type[DType]
+    inner: IntoDType
     size: int
     shape: tuple[int, ...]
 
-    def __init__(self, inner: DType | type[DType], shape: int | tuple[int, ...]) -> None:
+    def __init__(self, inner: IntoDType, shape: int | tuple[int, ...]) -> None:
         inner_shape: tuple[int, ...] = inner.shape if isinstance(inner, Array) else ()
         if isinstance(shape, int):
             self.inner = inner

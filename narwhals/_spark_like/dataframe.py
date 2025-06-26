@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
@@ -13,11 +13,8 @@ from narwhals._spark_like.utils import (
     import_window,
     native_to_narwhals_dtype,
 )
-from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
-    check_column_exists,
     find_stacklevel,
     generate_temporary_column_name,
     not_implemented,
@@ -25,8 +22,11 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pyarrow as pa
@@ -39,10 +39,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._utils import Version, _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import Version, _FullContext
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -281,9 +281,10 @@ class SparkLikeLazyFrame(
         if self._cached_schema is None:
             self._cached_schema = {
                 field.name: native_to_narwhals_dtype(
-                    dtype=field.dataType,
-                    version=self._version,
-                    spark_types=self._native_dtypes,
+                    field.dataType,
+                    self._version,
+                    self._native_dtypes,
+                    self.native.sparkSession,
                 )
                 for field in self.native.schema
             }
@@ -293,9 +294,7 @@ class SparkLikeLazyFrame(
         return self.schema
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(
-            compliant_frame=self, columns=columns, strict=strict
-        )
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(*columns_to_drop))
 
     def head(self, n: int) -> Self:
@@ -343,7 +342,8 @@ class SparkLikeLazyFrame(
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self:
-        check_column_exists(self.columns, subset)
+        if subset and (error := self._check_columns_exist(subset)):
+            raise error
         subset = list(subset) if subset else None
         if keep == "none":
             tmp = generate_temporary_column_name(8, self.columns)
@@ -522,6 +522,15 @@ class SparkLikeLazyFrame(
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
         return self._with_native(unpivoted_native_frame)
 
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        row_index_expr = (
+            self._F.row_number().over(
+                self._Window.partitionBy(self._F.lit(1)).orderBy(*order_by)
+            )
+            - 1
+        ).alias(name)
+        return self._with_native(self.native.select(row_index_expr, *self.columns))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
@@ -529,4 +538,3 @@ class SparkLikeLazyFrame(
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

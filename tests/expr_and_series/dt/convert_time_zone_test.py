@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -134,3 +135,44 @@ def test_convert_time_zone_to_none_series(constructor_eager: ConstructorEager) -
     df = nw.from_native(constructor_eager(data))
     with pytest.raises(TypeError, match="Target `time_zone` cannot be `None`"):
         df["a"].dt.convert_time_zone(None)  # type: ignore[arg-type]
+
+
+def test_convert_time_zone_to_connection_tz_duckdb() -> None:
+    pytest.importorskip("duckdb")
+
+    import duckdb
+
+    duckdb.sql("set timezone = 'Asia/Kolkata'")
+    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    result = nw.from_native(rel).with_columns(
+        nw.col("a").dt.convert_time_zone("Asia/Kolkata")
+    )
+    expected = {"a": [datetime(2020, 1, 1, tzinfo=ZoneInfo("Asia/Kolkata"))]}
+    assert_equal_data(result, expected)
+    with pytest.raises(NotImplementedError):
+        result = nw.from_native(rel).with_columns(
+            nw.col("a").dt.convert_time_zone("Asia/Kathmandu")
+        )
+
+
+def test_convert_time_zone_to_connection_tz_pyspark(
+    constructor: Constructor,
+) -> None:  # pragma: no cover
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.skip()
+    pytest.importorskip("pyspark")
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.config(
+        "spark.sql.session.timeZone", "UTC"
+    ).getOrCreate()
+    df = nw.from_native(
+        session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
+    )
+    result = nw.from_native(df).with_columns(nw.col("a").dt.convert_time_zone("UTC"))
+    expected = {"a": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
+    assert_equal_data(result, expected)
+    with pytest.raises(NotImplementedError):
+        result = nw.from_native(df).with_columns(
+            nw.col("a").dt.convert_time_zone("Asia/Kathmandu")
+        )

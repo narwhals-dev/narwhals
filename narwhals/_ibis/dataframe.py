@@ -1,24 +1,13 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     Version,
     not_implemented,
@@ -26,8 +15,11 @@ from narwhals.utils import (
     parse_version,
     validate_backend_version,
 )
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -40,11 +32,11 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals._utils import _FullContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
-    from narwhals.utils import _FullContext
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -176,7 +168,7 @@ class IbisLazyFrame(
         return self._with_native(t)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
-        columns_to_drop = parse_columns_to_drop(self, columns=columns, strict=strict)
+        columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
@@ -421,10 +413,16 @@ class IbisLazyFrame(
         )
         return self._with_native(unpivoted.select(*final_columns))
 
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        to_select = [
+            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.selectors.all(),
+        ]
+        return self._with_native(self.native.select(*to_select))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

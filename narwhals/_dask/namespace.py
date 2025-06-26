@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -18,17 +18,19 @@ from narwhals._dask.utils import (
     validate_comparand,
 )
 from narwhals._expression_parsing import (
+    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     import dask.dataframe.dask_expr as dx
 
-    from narwhals.dtypes import DType
-    from narwhals.typing import ConcatMethod, NonNestedLiteral
-    from narwhals.utils import Version
+    from narwhals._utils import Version
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
 class DaskNamespace(
@@ -53,7 +55,7 @@ class DaskNamespace(
         self._backend_version = backend_version
         self._version = version
 
-    def lit(self, value: NonNestedLiteral, dtype: DType | type[DType] | None) -> DaskExpr:
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
@@ -89,12 +91,21 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+    def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = align_series_full_broadcast(
-                df, *(s for _expr in exprs for s in _expr(df))
+            series = (s for _expr in exprs for s in _expr(df))
+            # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
+            # objects in `object` dtype, so we don't need the same check we have for pandas-like.
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if s.dtype == "bool" else s.fillna(True)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else series
             )
-            return [reduce(operator.and_, series)]
+            return [reduce(operator.and_, align_series_full_broadcast(df, *it))]
 
         return self._expr(
             call=func,
@@ -106,12 +117,21 @@ class DaskNamespace(
             version=self._version,
         )
 
-    def any_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+    def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series = align_series_full_broadcast(
-                df, *(s for _expr in exprs for s in _expr(df))
+            series = (s for _expr in exprs for s in _expr(df))
+            # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
+            # objects in `object` dtype, so we don't need the same check we have for pandas-like.
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if s.dtype == "bool" else s.fillna(False)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else series
             )
-            return [reduce(operator.or_, series)]
+            return [reduce(operator.or_, align_series_full_broadcast(df, *it))]
 
         return self._expr(
             call=func,
@@ -283,23 +303,36 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         return DaskThen
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        condition = self._condition(df)[0]
+        then_value = (
+            self._then_value(df)[0]
+            if isinstance(self._then_value, DaskExpr)
+            else self._then_value
+        )
+        otherwise_value = (
+            self._otherwise_value(df)[0]
+            if isinstance(self._otherwise_value, DaskExpr)
+            else self._otherwise_value
+        )
 
-        if isinstance(self._then_value, DaskExpr):
-            then_value = self._then_value(df)[0]
-        else:
-            then_value = self._then_value
-        (then_series,) = align_series_full_broadcast(df, then_value)
-        validate_comparand(condition, then_series)
+        condition = self._condition(df)[0]
+        # re-evaluate DataFrame if the condition aggregates to force
+        #   then/otherwise to be evaluated against the aggregated frame
+        assert self._condition._metadata is not None  # noqa: S101
+        if self._condition._metadata.is_scalar_like:
+            new_df = df._with_native(condition.to_frame())
+            condition = self._condition.broadcast(ExprKind.AGGREGATION)(df)[0]
+            df = new_df
 
         if self._otherwise_value is None:
-            return [then_series.where(condition)]
-
-        if isinstance(self._otherwise_value, DaskExpr):
-            otherwise_value = self._otherwise_value(df)[0]
-        else:
-            return [then_series.where(condition, self._otherwise_value)]  # pyright: ignore[reportArgumentType]
-        (otherwise_series,) = align_series_full_broadcast(df, otherwise_value)
+            (condition, then_series) = align_series_full_broadcast(
+                df, condition, then_value
+            )
+            validate_comparand(condition, then_series)
+            return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
+        (condition, then_series, otherwise_series) = align_series_full_broadcast(
+            df, condition, then_value, otherwise_value
+        )
+        validate_comparand(condition, then_series)
         validate_comparand(condition, otherwise_series)
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 

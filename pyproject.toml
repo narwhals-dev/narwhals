@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.40.0"
+version = "1.44.0"
 dependencies = []
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
@@ -34,13 +34,13 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
 # https://github.com/narwhals-dev/narwhals/issues/817 
-pandas = ["pandas>=0.25.3"]
+pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
-polars = ["polars>=0.20.3"]
+polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
@@ -124,12 +124,13 @@ include = [
 [tool.ruff]
 line-length = 90
 fix = true
-target-version = "py38"
+target-version = "py39"
 extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
 preview = true
 explicit-preview-rules = true
+typing-modules = ["narwhals._typing_compat"]
 
 extend-safe-fixes = [
   "C419",    # unnecessary-comprehension-in-call
@@ -279,11 +280,9 @@ exclude_also = [
   "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
-  'if "cudf" in str\(constructor',
-  'if "modin" in str\(constructor',
-  'if "pyspark" in str\(constructor',
-  'if "pyspark_connect" in str\(constructor',
-  'pytest.skip\('
+  'if ".*" in str\(constructor',
+  'pytest.skip\(',
+  'assert_never\(',
 ]
 
 [tool.mypy]
@@ -312,20 +311,21 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-  "*._expression_parsing",
-  "*.utils",
-  "*._pandas_like.*",
-  "*._ibis.*",
-  "*._arrow.*",
-  "*._dask.*",
-  "*._spark_like.*",
+  "narwhals._expression_parsing",
+  "narwhals._utils",
+  "narwhals._pandas_like.*",
+  "narwhals._ibis.*",
+  "narwhals._arrow.*",
+  "narwhals._dask.*",
+  "narwhals._spark_like.*",
 ]
 warn_return_any = false
 
 [tool.pyright]
 pythonPlatform = "All"
-# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
-# pythonVersion = "3.8"
+# NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.9"
+reportMissingTypeArgument = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"

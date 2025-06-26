@@ -7,11 +7,8 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
     NoReturn,
-    Sequence,
     TypeVar,
     overload,
 )
@@ -23,16 +20,7 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals.dependencies import get_polars, is_numpy_array
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    InvalidIntoExprError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
-from narwhals.schema import Schema
-from narwhals.translate import to_native
-from narwhals.utils import (
+from narwhals._utils import (
     Implementation,
     find_stacklevel,
     flatten,
@@ -47,8 +35,18 @@ from narwhals.utils import (
     parse_version,
     supports_arrow_c_stream,
 )
+from narwhals.dependencies import get_polars, is_numpy_array
+from narwhals.exceptions import (
+    InvalidIntoExprError,
+    LengthChangingExprError,
+    OrderDependentExprError,
+)
+from narwhals.schema import Schema
+from narwhals.series import Series
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -61,7 +59,6 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals.group_by import GroupBy, LazyGroupBy
-    from narwhals.series import Series
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
@@ -141,9 +138,6 @@ class BaseFrame(Generic[_FrameT]):
     ) -> R:
         return function(self, *args, **kwargs)
 
-    def with_row_index(self, name: str = "index") -> Self:
-        return self._with_compliant(self._compliant_frame.with_row_index(name))
-
     def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
@@ -174,11 +168,9 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                available_columns = self.columns
-                missing_columns = [x for x in flat_exprs if x not in available_columns]
-                raise ColumnNotFoundError.from_missing_and_available_column_names(
-                    missing_columns, available_columns
-                ) from e
+                if error := self._compliant_frame._check_columns_exist(flat_exprs):
+                    raise error from e
+                raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
         if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
@@ -217,7 +209,7 @@ class BaseFrame(Generic[_FrameT]):
                 for name, v in constraints.items()
             )
             predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints)
+                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
             )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
@@ -447,8 +439,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @property
     def _series(self) -> type[Series[Any]]:
-        from narwhals.series import Series
-
         return Series
 
     @property
@@ -1064,11 +1054,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self, name: str = "index") -> Self:
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
+    ) -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
             name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
@@ -1087,7 +1080,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             a: [[1,2]]
             b: [[4,5]]
         """
-        return super().with_row_index(name)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:
@@ -2428,29 +2424,53 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self, name: str = "index") -> Self:
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str]
+    ) -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
             name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
 
         Examples:
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = dd.from_dict({"a": [1, 2], "b": [4, 5]}, npartitions=1)
-            >>> nw.from_native(lf_native).with_row_index().collect()
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 5), (2, 4) df(a, b)")
+            >>> nw.from_native(lf_native).with_row_index(order_by="a").sort("a").collect()
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |     index  a  b  |
-            |  0      0  1  4  |
-            |  1      1  2  5  |
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[0,1]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
+            └──────────────────┘
+            >>> nw.from_native(lf_native).with_row_index(order_by="b").sort("a").collect()
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[1,0]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
             └──────────────────┘
         """
-        return super().with_row_index(name)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:

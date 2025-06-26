@@ -746,6 +746,8 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
 def test_join_duplicate_column_names(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    exception: type[Exception]
+
     if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
         pytest.skip()
     if (
@@ -754,10 +756,17 @@ def test_join_duplicate_column_names(
         # need to investigate.
     ):
         request.applymarker(pytest.mark.xfail)
-    if "sqlframe" in str(constructor):
+    if any(
+        x in str(constructor)
+        for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
+    ) and PANDAS_VERSION >= (3,):  # pragma: no cover
+        from pandas.errors import MergeError
+
+        exception = MergeError
+    elif "sqlframe" in str(constructor):
         import duckdb
 
-        exception: type[Exception] = duckdb.BinderException
+        exception = duckdb.BinderException
     elif "pyspark" in str(constructor):
         from pyspark.errors import AnalysisException
 

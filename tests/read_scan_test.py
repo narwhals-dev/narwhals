@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Literal, Mapping, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.utils import Implementation
+from narwhals._utils import Implementation
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 pytest.importorskip("polars")
 import polars as pl
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import ModuleType
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}

@@ -1,23 +1,27 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
 
-from narwhals.utils import isinstance_or_issubclass
+from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     import ibis.expr.types as ir
+    from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
+    from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.utils import Version
+    from narwhals.typing import IntoDType
 
 lit = ibis.literal
 """Alias for `ibis.literal`."""
@@ -65,20 +69,6 @@ UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
 }
 
 
-class WindowInputs:
-    __slots__ = ("expr", "order_by", "partition_by")
-
-    def __init__(
-        self,
-        expr: ir.Expr | ir.Value | ir.Column,
-        partition_by: Sequence[str],
-        order_by: Sequence[str],
-    ) -> None:
-        self.expr = expr
-        self.partition_by = partition_by
-        self.order_by = order_by
-
-
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
     native_results: list[tuple[str, ir.Value]] = []
     for expr in exprs:
@@ -122,8 +112,9 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
         return dtypes.String()
     if ibis_dtype.is_date():
         return dtypes.Date()
-    if ibis_dtype.is_timestamp():
-        return dtypes.Datetime()
+    if is_timestamp(ibis_dtype):
+        _unit = cast("TimestampUnit", ibis_dtype.unit)
+        return dtypes.Datetime(time_unit=_unit.value, time_zone=ibis_dtype.timezone)
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
@@ -154,6 +145,10 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
     return dtypes.Unknown()  # pragma: no cover
 
 
+def is_timestamp(obj: IbisDataType) -> TypeIs[ibis_dtypes.Timestamp]:
+    return obj.is_timestamp()
+
+
 def is_interval(obj: IbisDataType) -> TypeIs[ibis_dtypes.Interval]:
     return obj.is_interval()
 
@@ -171,7 +166,7 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: DType | type[DType], version: Version
+    dtype: IntoDType, version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes
 
@@ -211,7 +206,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         msg = "Categorical not supported by Ibis"
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return ibis_dtypes.Timestamp()
+        return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
     if isinstance_or_issubclass(dtype, dtypes.Date):
