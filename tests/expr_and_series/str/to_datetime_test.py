@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
+from narwhals._pandas_like.utils import get_dtype_backend
 from tests.utils import (
     PYARROW_VERSION,
     assert_equal_data,
@@ -231,3 +232,22 @@ def test_to_datetime_tz_aware(
             "b": [datetime(2020, 1, 1, 0, 2, 3, tzinfo=timezone.utc)],
         }
         assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("dtype_backend", ["pyarrow", "numpy_nullable"])
+def test_to_datetime_pd_preserves_pyarrow_backend_dtype(
+    dtype_backend: Literal["pyarrow", "numpy_nullable"],
+) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"a": ["2020-01-01T12:34:56", None]}).convert_dtypes(
+            dtype_backend=dtype_backend
+        )
+    )
+    result = df.with_columns(b=nw.col("a").str.to_datetime()).to_native()
+    result_dtype = get_dtype_backend(
+        result["b"].dtype, df._compliant_frame._implementation
+    )
+    assert result_dtype == dtype_backend
