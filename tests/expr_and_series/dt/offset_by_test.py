@@ -5,7 +5,14 @@ from datetime import datetime, timezone
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data, is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_windows,
+)
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -209,8 +216,12 @@ def test_offset_by_tz(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if ("pyarrow" in str(constructor) and is_windows()) or (
-        "pyarrow_table" in str(constructor) and is_windows()
+    if (
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pyarrow_table" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe")):
@@ -244,8 +255,12 @@ def test_offset_by_dst(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if ("pyarrow" in str(constructor) and is_windows()) or (
-        "pyarrow_table" in str(constructor) and is_windows()
+    if (
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pyarrow_table" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe", "pyspark")):
