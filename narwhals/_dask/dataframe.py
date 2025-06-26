@@ -382,9 +382,10 @@ class DaskLazyFrame(
 
         Notice that a native object is returned.
         """
+        other_native: Incomplete = other.native
         return (
             select_columns_by_name(
-                other.native,
+                other_native,
                 column_names=columns_to_select,
                 backend_version=self._backend_version,
                 implementation=self._implementation,
