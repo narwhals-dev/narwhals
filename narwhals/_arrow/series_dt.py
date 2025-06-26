@@ -206,7 +206,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         if unit == "d":
             offset = create_timedelta(multiple, unit)
             original_timezone = native.type.tz
-            native_without_timezone = pc.cast(native, pa.timestamp("us"))
+            native_without_timezone = pc.local_timestamp(native)
             result = pc.add(native_without_timezone, offset)
             if original_timezone is not None:
                 result = pc.assume_timezone(result, original_timezone)
