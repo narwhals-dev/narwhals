@@ -2,13 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 
-MAX_REPR_LENGTH = 40
-"""Length to begin truncating an object repr in an error message."""
-MAX_WHILE_REPEAT = 100
-"""Loop count to trigger an error if we can't generate a unique column name."""
-NON_ELEMENTARY_DEPTH = 2
-"""Threshold for complex group by aggregations in `pandas`, `pyarrow`, `dask`."""
-
 # Temporal (from `polars._utils.constants`)
 SECONDS_PER_DAY = 86_400
 SECONDS_PER_MINUTE = 60

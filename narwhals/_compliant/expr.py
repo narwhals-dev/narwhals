@@ -27,7 +27,6 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._constants import NON_ELEMENTARY_DEPTH
 from narwhals._typing_compat import Protocol38, deprecated
 from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
@@ -300,7 +299,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return self._depth < NON_ELEMENTARY_DEPTH
+        return self._depth < 2  # noqa: PLR2004
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
