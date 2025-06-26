@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
-from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
+from narwhals._duration import Interval, parse_interval_string
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -196,15 +196,14 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         )
 
     def offset_by(self, by: str) -> ArrowSeries:
-        from narwhals._arrow.utils import create_timedelta
-
-        multiple, unit = parse_interval_string_no_constraints(by)
+        interval = Interval.parse_no_constraints(by)
+        unit = interval.unit
         native = self.native
         if unit in {"y", "q", "mo"}:
             msg = f"Offsetting by {unit} is not yet supported."
             raise NotImplementedError(msg)
         if unit == "d":
-            offset: pa.DurationScalar[Any] = pa.scalar(create_timedelta(multiple, unit))
+            offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
             original_timezone = native.type.tz
             if original_timezone is not None:
                 native_without_timezone = pc.local_timestamp(native)
@@ -214,9 +213,9 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
             else:
                 result = pc.add(native, offset)
         elif unit == "ns":  # pragma: no cover
-            offset = pa.scalar(multiple, type=pa.duration("ns"))  # type: ignore[assignment]
+            offset = lit(interval.multiple, type=pa.duration("ns"))  # type: ignore[assignment]
             result = pc.add(native, offset)
         else:
-            offset = pa.scalar(create_timedelta(multiple, unit))
+            offset = lit(interval.to_timedelta())
             result = pc.add(native, offset)
         return self.with_native(result)
