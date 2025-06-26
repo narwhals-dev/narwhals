@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Generic, TypeIs, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from narwhals._plan.typing import (
     DTypeT,
