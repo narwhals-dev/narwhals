@@ -16,6 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
+from narwhals._pandas_like.utils import is_non_nullable_boolean
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -147,7 +148,7 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if s.native.dtype == "bool" else s.fill_null(True, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
                     for s in series
                 )
                 if ignore_nulls
@@ -180,7 +181,7 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if s.native.dtype == "bool" else s.fill_null(False, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
                     for s in series
                 )
                 if ignore_nulls
