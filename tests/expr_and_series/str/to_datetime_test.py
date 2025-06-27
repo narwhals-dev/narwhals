@@ -11,6 +11,7 @@ import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._pandas_like.utils import get_dtype_backend
 from tests.utils import (
+    PANDAS_VERSION,
     PYARROW_VERSION,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
@@ -234,10 +235,12 @@ def test_to_datetime_tz_aware(
         assert_equal_data(result, expected)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     # Remark that pandas doesn't have a numpy-nullable datetime dtype, so
     # `.convert_dtypes(dtype_backend="numpy_nullable")` is a no-op in `_to_datetime(...)`
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
 
     dtype_backend = "pyarrow"
