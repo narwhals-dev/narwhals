@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
+from narwhals._duration import Interval
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
@@ -108,7 +108,8 @@ class SparkLikeExprDateTimeNamespace:
         return self._compliant_expr._with_callable(_weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         if multiple != 1:
             msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
             raise ValueError(msg)
@@ -125,7 +126,8 @@ class SparkLikeExprDateTimeNamespace:
     def offset_by(self, by: str) -> SparkLikeExpr:
         from narwhals._spark_like.utils import import_functions
 
-        multiple, unit = parse_interval_string_no_constraints(by)
+        interval = Interval.parse_no_constraints(by)
+        multiple, unit = interval.multiple, interval.unit
         if unit == "ns":  # pragma: no cover
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)

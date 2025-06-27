@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-__all__ = ["IntervalUnit", "parse_interval_string"]
+__all__ = ["IntervalUnit"]
 
 IntervalUnit: TypeAlias = Literal["ns", "us", "ms", "s", "m", "h", "d", "mo", "q", "y"]
 """A Polars duration string interval unit.
@@ -44,51 +44,6 @@ UNIT_TO_TIMEDELTA: Mapping[IntervalUnit, TimedeltaKwd] = {
     "ms": "milliseconds",
     "us": "microseconds",
 }
-
-
-def parse_interval_string(every: str) -> tuple[int, IntervalUnit]:
-    """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
-
-    Returns:
-        A tuple of multiple and unit parsed from the interval string.
-    """
-    if match := PATTERN_INTERVAL.match(every):
-        multiple = int(match["multiple"])
-        unit = cast("IntervalUnit", match["unit"])
-        if unit == "mo" and multiple not in MONTH_MULTIPLES:
-            msg = f"Only the following multiples are supported for 'mo' unit: {MONTH_MULTIPLES}.\nGot: {multiple}."
-            raise ValueError(msg)
-        if unit == "q" and multiple not in QUARTER_MULTIPLES:
-            msg = f"Only the following multiples are supported for 'q' unit: {QUARTER_MULTIPLES}.\nGot: {multiple}."
-            raise ValueError(msg)
-        if unit == "y" and multiple != 1:
-            msg = (
-                f"Only multiple 1 is currently supported for 'y' unit.\nGot: {multiple}."
-            )
-            raise ValueError(msg)
-        return multiple, unit
-    msg = (
-        f"Invalid `every` string: {every}. Expected string of kind <number><unit>, "
-        f"where 'unit' is one of: {get_args(IntervalUnit)}."
-    )
-    raise ValueError(msg)
-
-
-def parse_interval_string_no_constraints(every: str) -> tuple[int, IntervalUnit]:
-    """Parse a string like "1d", "2h", "3m" into a tuple of (number, unit).
-
-    Returns:
-        A tuple of multiple and unit parsed from the interval string.
-    """
-    if match := PATTERN_INTERVAL.match(every):
-        multiple = int(match["multiple"])
-        unit = cast("IntervalUnit", match["unit"])
-        return multiple, unit
-    msg = (
-        f"Invalid `every` string: {every}. Expected string of kind <number><unit>, "
-        f"where 'unit' is one of: {get_args(IntervalUnit)}."
-    )
-    raise ValueError(msg)
 
 
 class Interval:

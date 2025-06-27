@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from narwhals._arrow.utils import lit
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
+from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
     PandasLikeSeriesNamespace,
@@ -197,7 +198,8 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(result)
 
     def truncate(self, every: str) -> PandasLikeSeries:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         native = self.native
         if self.implementation.is_cudf():
             if multiple != 1:
@@ -242,7 +244,8 @@ class PandasLikeSeriesDateTimeNamespace(
 
         from narwhals._arrow.utils import UNITS_DICT
 
-        multiple, unit = parse_interval_string_no_constraints(by)
+        interval = Interval.parse_no_constraints(by)
+        multiple, unit = interval.multiple, interval.unit
         if unit in {"y", "q", "mo"}:
             msg = f"Offsetting by {unit} is not yet supported."
             raise NotImplementedError(msg)
@@ -255,13 +258,9 @@ class PandasLikeSeriesDateTimeNamespace(
             import pyarrow as pa  # ignore-banned-import
             import pyarrow.compute as pc  # ignore-banned-import
 
-            from narwhals._arrow.utils import create_timedelta
-
             ca = native.array._pa_array
             if unit == "d":
-                offset: pa.DurationScalar[Any] = pa.scalar(
-                    create_timedelta(multiple, unit)
-                )
+                offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
                 original_timezone = ca.type.tz
                 if original_timezone is not None:
                     native_without_timezone = pc.local_timestamp(ca)
@@ -271,9 +270,10 @@ class PandasLikeSeriesDateTimeNamespace(
                 else:
                     result = pc.add(ca, offset)
             elif unit == "ns":  # pragma: no cover
-                result = pc.add(ca, pa.scalar(multiple, type=pa.duration("ns")))
+                offset = lit(interval.multiple, type=pa.duration("ns"))  # type: ignore[assignment]
+                result = pc.add(ca, offset)
             else:
-                offset = pa.scalar(create_timedelta(multiple, unit))
+                offset = lit(interval.to_timedelta())
                 result = pc.add(ca, offset)
             result_pd = native.__class__(
                 result, dtype=native.dtype, index=native.index, name=native.name

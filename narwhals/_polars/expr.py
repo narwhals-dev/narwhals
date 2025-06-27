@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
-from narwhals._duration import Interval, parse_interval_string
+from narwhals._duration import Interval
 from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
@@ -316,7 +316,7 @@ class PolarsExprDateTimeNamespace:
         self._compliant_expr = expr
 
     def truncate(self, every: str) -> PolarsExpr:
-        parse_interval_string(every)  # Ensure consistent error message is raised.
+        Interval.parse(every)  # Ensure consistent error message is raised.
         return self._compliant_expr._with_native(
             self._compliant_expr.native.dt.truncate(every)
         )

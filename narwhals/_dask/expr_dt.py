@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
+from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
     calculate_timestamp_date,
@@ -152,24 +152,24 @@ class DaskExprDateTimeNamespace:
         )
 
     def truncate(self, every: str) -> DaskExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        unit = interval.unit
         if unit in {"mo", "q", "y"}:
             msg = f"Truncating to {unit} is not supported yet for dask."
             raise NotImplementedError(msg)
-        freq = f"{multiple}{UNIT_DICT.get(unit, unit)}"
+        freq = f"{interval.multiple}{UNIT_DICT.get(unit, unit)}"
         return self._compliant_expr._with_callable(
             lambda expr: expr.dt.floor(freq), "truncate"
         )
 
     def offset_by(self, by: str) -> DaskExpr:
         def func(s: dx.Series, by: str) -> dx.Series:
-            from narwhals._arrow.utils import create_timedelta
-
-            multiple, unit = parse_interval_string_no_constraints(by)
+            interval = Interval.parse_no_constraints(by)
+            unit = interval.unit
             if unit in {"y", "q", "mo", "d", "ns"}:
                 msg = f"Offsetting by {unit} is not supported yet for dask."
                 raise NotImplementedError(msg)
-            offset = create_timedelta(multiple, unit)
-            return s + offset
+            offset = interval.to_timedelta()
+            return s.add(offset)
 
         return self._compliant_expr._with_callable(func, "offset_by", by=by)

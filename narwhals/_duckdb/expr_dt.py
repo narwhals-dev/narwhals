@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from duckdb import FunctionExpression
 
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
-from narwhals._duration import parse_interval_string, parse_interval_string_no_constraints
+from narwhals._duration import Interval
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -92,7 +92,8 @@ class DuckDBExprDateTimeNamespace:
         )
 
     def truncate(self, every: str) -> DuckDBExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         if multiple != 1:
             # https://github.com/duckdb/duckdb/issues/17554
             msg = f"Only multiple 1 is currently supported for DuckDB.\nGot {multiple!s}."
@@ -108,8 +109,8 @@ class DuckDBExprDateTimeNamespace:
         return self._compliant_expr._with_callable(_truncate)
 
     def offset_by(self, by: str) -> DuckDBExpr:
-        multiple, unit = parse_interval_string_no_constraints(by)
-        format = lit(f"{multiple!s} {UNITS_DICT[unit]}")
+        interval = Interval.parse_no_constraints(by)
+        format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
         def _offset_by(expr: Expression) -> Expression:
             return FunctionExpression("date_add", format, expr)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._utils import not_implemented
 
@@ -69,7 +69,8 @@ class IbisExprDateTimeNamespace:
         return fn
 
     def truncate(self, every: str) -> IbisExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         if unit == "q":
             multiple, unit = 3 * multiple, "mo"
         if multiple != 1:
