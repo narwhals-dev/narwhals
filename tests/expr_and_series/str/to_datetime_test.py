@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa
 import pytest
@@ -243,7 +243,7 @@ def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     pytest.importorskip("pyarrow")
     import pandas as pd
 
-    dtype_backend = "pyarrow"
+    dtype_backend: Literal["pyarrow", "numpy_nullable"] = "pyarrow"
 
     df = nw.from_native(
         pd.DataFrame({"a": ["2020-01-01T12:34:56", None]}).convert_dtypes(
