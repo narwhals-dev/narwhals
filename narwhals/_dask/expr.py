@@ -684,3 +684,4 @@ class DaskExpr(
     _alias_native = not_implemented()
     window_function = not_implemented()  # pyright: ignore[reportAssignmentType]
     _from_elementwise_horizontal_op = not_implemented()
+    _with_binary = not_implemented()
