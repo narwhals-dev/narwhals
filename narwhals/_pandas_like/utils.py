@@ -325,15 +325,32 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
-def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
-    """Return `True` if `dtype` is `"numpy_nullable"`."""
-    # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
-    # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
-    sentinel = object()
-    return (
-        isinstance(dtype, pd.api.extensions.ExtensionDtype)
-        and getattr(dtype, "base", sentinel) is None
-    )
+if Implementation.PANDAS._backend_version() >= (1, 2):
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        """Return `True` if `dtype` is `"numpy_nullable"`."""
+        # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+        # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
+        sentinel = object()
+        return (
+            isinstance(dtype, pd.api.extensions.ExtensionDtype)
+            and getattr(dtype, "base", sentinel) is None
+        )
+else:
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        # NOTE: `base` attribute was added between 1.1-1.2
+        # Checking by isinstance requires using an import path that is no longer valid
+        # `1.1`: https://github.com/pandas-dev/pandas/blob/b5958ee1999e9aead1938c0bba2b674378807b3d/pandas/core/arrays/masked.py#L37
+        # `1.2`: https://github.com/pandas-dev/pandas/blob/7c48ff4409c622c582c56a5702373f726de08e96/pandas/core/arrays/masked.py#L41
+        # `1.5`: https://github.com/pandas-dev/pandas/blob/35b0d1dcadf9d60722c055ee37442dc76a29e64c/pandas/core/dtypes/dtypes.py#L1609
+        if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+            from pandas.core.arrays.masked import (  # type: ignore[attr-defined]
+                BaseMaskedDtype as OldBaseMaskedDtype,  # pyright: ignore[reportAttributeAccessIssue]
+            )
+
+            return isinstance(dtype, OldBaseMaskedDtype)
+        return False
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:

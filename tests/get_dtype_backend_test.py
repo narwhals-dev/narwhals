@@ -120,7 +120,7 @@ def brute_force_construct_dtype(
     alias: str, dtypes: Iterable[type[ExtensionDtype]]
 ) -> Iterator[ExtensionDtype]:
     """Skips dtypes that are not compatible on the tested version of pandas."""
-    for dtype in dtypes:
+    for dtype in dtypes:  # pragma: no cover
         with suppress(TypeError):
             result = dtype.construct_from_string(alias)
             yield result
