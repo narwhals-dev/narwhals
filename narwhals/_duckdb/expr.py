@@ -222,7 +222,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     @classmethod
-    def from_elementwise(
+    def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[Expression]], Expression], *exprs: Self
     ) -> Self:
         def call(df: DuckDBLazyFrame) -> list[Expression]:

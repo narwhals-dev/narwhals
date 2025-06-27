@@ -115,7 +115,7 @@ class SparkLikeNamespace(
             )
             return reduce(operator.and_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -126,19 +126,19 @@ class SparkLikeNamespace(
             )
             return reduce(operator.or_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def max_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.greatest(*cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def min_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.least(*cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -146,7 +146,7 @@ class SparkLikeNamespace(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -167,7 +167,7 @@ class SparkLikeNamespace(
                 ),
             )
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod

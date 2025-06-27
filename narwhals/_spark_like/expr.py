@@ -282,7 +282,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     @classmethod
-    def from_elementwise(
+    def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[Column]], Column], *exprs: Self
     ) -> Self:
         def call(df: SparkLikeLazyFrame) -> list[Column]:

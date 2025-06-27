@@ -208,7 +208,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     @classmethod
-    def from_elementwise(
+    def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: Self
     ) -> Self:
         def call(df: IbisLazyFrame) -> list[ir.Value]:

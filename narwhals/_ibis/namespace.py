@@ -94,7 +94,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             )
             return reduce(operator.and_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def any_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
@@ -105,26 +105,26 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             )
             return reduce(operator.or_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def max_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.greatest(*cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def min_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.least(*cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = (col.fill_null(lit(0)) for col in cols)
             return reduce(operator.add, cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
@@ -133,7 +133,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
                 operator.add, (col.isnull().ifelse(lit(0), lit(1)) for col in cols)
             )
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     @requires.backend_version((10, 0))
     def when(self, predicate: IbisExpr) -> IbisWhen:

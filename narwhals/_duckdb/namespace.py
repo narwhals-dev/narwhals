@@ -100,7 +100,7 @@ class DuckDBNamespace(
             )
             return reduce(operator.and_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def any_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
@@ -111,25 +111,25 @@ class DuckDBNamespace(
             )
             return reduce(operator.or_, it)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return F("greatest", *cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return F("least", *cols)
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             return reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
@@ -138,7 +138,7 @@ class DuckDBNamespace(
                 operator.add, (CoalesceOperator(col, lit(0)) for col in cols)
             ) / reduce(operator.add, (col.isnotnull().cast(BIGINT) for col in cols))
 
-        return self._expr.from_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def when(self, predicate: DuckDBExpr) -> DuckDBWhen:
         return DuckDBWhen.from_expr(predicate, context=self)
