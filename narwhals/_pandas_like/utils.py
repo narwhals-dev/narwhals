@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import re
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
@@ -344,10 +343,7 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
         return None
     if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
         return "pyarrow"
-    with suppress(AttributeError):
-        if is_dtype_masked(dtype):
-            return "numpy_nullable"
-    return None
+    return "numpy_nullable" if is_dtype_masked(dtype) else None
 
 
 @functools.lru_cache(maxsize=16)
