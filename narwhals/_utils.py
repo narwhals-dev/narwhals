@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
 from functools import lru_cache, wraps
@@ -12,14 +13,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Container,
     Generic,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -46,18 +42,16 @@ from narwhals.dependencies import (
     is_narwhals_series_int,
     is_numpy_array_1d,
     is_numpy_array_1d_int,
-    is_pandas_dataframe,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_pandas_series,
     is_polars_series,
     is_pyarrow_chunked_array,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import AbstractSet as Set
 
     import pandas as pd
     import polars as pl
@@ -112,6 +106,10 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _T4 = TypeVar("_T4")
+    _T5 = TypeVar("_T5")
+    _T6 = TypeVar("_T6")
+    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -615,13 +613,13 @@ class Implementation(NoAutoEnum):
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
-    Implementation.PANDAS: (0, 25, 3),
-    Implementation.MODIN: (0, 25, 3),
+    Implementation.PANDAS: (1, 1, 3),
+    Implementation.MODIN: (0, 8, 2),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
-    Implementation.POLARS: (0, 20, 3),
+    Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
@@ -654,18 +652,6 @@ def _import_native_namespace(module_name: str) -> ModuleType:
     return import_module(module_name)
 
 
-def remove_prefix(text: str, prefix: str) -> str:  # pragma: no cover
-    if text.startswith(prefix):
-        return text[len(prefix) :]
-    return text
-
-
-def remove_suffix(text: str, suffix: str) -> str:  # pragma: no cover
-    if text.endswith(suffix):
-        return text[: -len(suffix)]
-    return text  # pragma: no cover
-
-
 def flatten(args: Any) -> list[Any]:
     return list(args[0] if (len(args) == 1 and _is_iterable(args[0])) else args)
 
@@ -679,12 +665,13 @@ def tupleify(arg: Any) -> Any:
 def _is_iterable(arg: Any | Iterable[Any]) -> bool:
     from narwhals.series import Series
 
-    if is_pandas_dataframe(arg) or is_pandas_series(arg):
-        msg = f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}. Perhaps you forgot a `nw.from_native` somewhere?"
-        raise TypeError(msg)
-    if (pl := get_polars()) is not None and isinstance(
-        arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+    if (
+        (pd := get_pandas()) is not None and isinstance(arg, (pd.Series, pd.DataFrame))
+    ) or (
+        (pl := get_polars()) is not None
+        and isinstance(arg, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
     ):
+        # Non-exhaustive check for common potential mistakes.
         msg = (
             f"Expected Narwhals class or scalar, got: {qualified_type_name(arg)!r}.\n\n"
             "Hint: Perhaps you\n"
@@ -747,6 +734,76 @@ def isinstance_or_issubclass(
 def isinstance_or_issubclass(
     obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
 ) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[
+    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
+]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[
+    _T1
+    | _T2
+    | _T3
+    | _T4
+    | _T5
+    | _T6
+    | _T7
+    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
+]: ...
 
 
 @overload
@@ -1212,7 +1269,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
 
 def generate_unique_token(
-    n_bytes: int, columns: Sequence[str]
+    n_bytes: int, columns: Container[str]
 ) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
@@ -1222,7 +1279,7 @@ def generate_unique_token(
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1246,7 +1303,9 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """
     counter = 0
     while True:
-        token = token_hex(n_bytes)
+        # Prepend `'nw'` to ensure it always starts with a character
+        # https://github.com/narwhals-dev/narwhals/issues/2510
+        token = f"nw{token_hex(n_bytes - 1)}"
         if token not in columns:
             return token
 
@@ -1518,7 +1577,7 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    subset: Sequence[str], /, *, available: Sequence[str]
+    subset: Collection[str], /, *, available: Collection[str]
 ) -> ColumnNotFoundError | None:
     if missing := set(subset).difference(available):
         return ColumnNotFoundError.from_missing_and_available_column_names(
@@ -1527,7 +1586,7 @@ def check_columns_exist(
     return None
 
 
-def check_column_names_are_unique(columns: Sequence[str]) -> None:
+def check_column_names_are_unique(columns: Collection[str]) -> None:
     len_unique_columns = len(set(columns))
     if len(columns) != len_unique_columns:
         from collections import Counter
@@ -1651,7 +1710,7 @@ def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
 
 
 def _remap_full_join_keys(
-    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    left_on: Collection[str], right_on: Collection[str], suffix: str
 ) -> dict[str, str]:
     """Remap join keys to avoid collisions.
 
@@ -1799,7 +1858,8 @@ class not_implemented:  # noqa: N801
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
         who = getattr(instance, "_implementation", self._name_owner)
-        raise _not_implemented_error(self._name, who)
+        _raise_not_implemented_error(self._name, who)
+        return None  # pragma: no cover
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         # NOTE: Purely to duck-type as assignable to **any** instance method
@@ -1822,13 +1882,13 @@ class not_implemented:  # noqa: N801
         return deprecated(message)(obj)
 
 
-def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
         f"{what!r} is not implemented for: {who!r}.\n\n"
         "If you would like to see this functionality in `narwhals`, "
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
-    return NotImplementedError(msg)
+    raise NotImplementedError(msg)
 
 
 class requires:  # noqa: N801

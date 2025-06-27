@@ -131,9 +131,6 @@ def test_rolling_sum_expr_lazy_grouped(
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor) and center:
-        # center is not implemented for offset-based windows
-        request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
@@ -277,7 +274,6 @@ def test_rolling_sum_series_invalid_params(
 
 
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=3, max_size=10))
-@pytest.mark.skipif(PANDAS_VERSION < (1,), reason="too old for pyarrow")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.slow

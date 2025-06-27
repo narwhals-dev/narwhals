@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -9,6 +9,8 @@ from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
@@ -210,7 +212,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:
                 token = generate_temporary_column_name(8, df.columns)
-                df = df.with_row_index(token).sort(
+                df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
@@ -259,7 +261,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     token = generate_temporary_column_name(8, columns)
                     df = (
                         df.simple_select(*columns)
-                        .with_row_index(token)
+                        .with_row_index(token, order_by=None)
                         .sort(*order_by, descending=reverse, nulls_last=reverse)
                     )
                     sorting_indices = df.get_column(token)
@@ -400,3 +402,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
     def exp(self) -> Self:
         return self._reuse_series("exp")
+
+    def sqrt(self) -> Self:
+        return self._reuse_series("sqrt")

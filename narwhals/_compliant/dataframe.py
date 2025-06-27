@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterator,
-    Literal,
-    Mapping,
-    Protocol,
-    Sequence,
-    Sized,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -23,6 +13,7 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     NativeExprT,
     NativeFrameT,
+    NativeSeriesT,
 )
 from narwhals._translate import (
     ArrowConvertible,
@@ -32,7 +23,7 @@ from narwhals._translate import (
     ToNarwhals,
     ToNarwhalsT_co,
 )
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals._utils import (
     Version,
     _StoresNative,
@@ -262,7 +253,7 @@ class CompliantDataFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
     @overload
     def write_csv(self, file: None) -> str: ...
     @overload
@@ -374,7 +365,7 @@ class CompliantLazyFrame(
         value_name: str,
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
@@ -401,14 +392,18 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
     def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def _with_native(
+        self, df: NativeFrameT, *, validate_column_names: bool = True
+    ) -> Self: ...
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
@@ -449,10 +444,14 @@ class EagerDataFrame(
     ) -> list[str]:
         return list(columns or (f"column_{x}" for x in range(data.shape[1])))
 
-    def _gather(self, rows: SizedMultiIndexSelector[Any]) -> Self: ...
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
-    def _select_multi_index(self, columns: SizedMultiIndexSelector[Any]) -> Self: ...
-    def _select_multi_name(self, columns: SizedMultiNameSelector[Any]) -> Self: ...
+    def _select_multi_index(
+        self, columns: SizedMultiIndexSelector[NativeSeriesT]
+    ) -> Self: ...
+    def _select_multi_name(
+        self, columns: SizedMultiNameSelector[NativeSeriesT]
+    ) -> Self: ...
     def _select_slice_index(self, columns: _SliceIndex | range) -> Self: ...
     def _select_slice_name(self, columns: _SliceName) -> Self: ...
     def __getitem__(  # noqa: C901, PLR0912
@@ -480,9 +479,8 @@ class EagerDataFrame(
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(columns)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(columns)
 
         if not is_slice_none(rows):
             if isinstance(rows, int):
@@ -493,8 +491,7 @@ class EagerDataFrame(
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
                 compliant = compliant._gather(rows)
-            else:  # pragma: no cover
-                msg = f"Unreachable code, got unexpected type: {type(rows)}"
-                raise AssertionError(msg)
+            else:
+                assert_never(rows)
 
         return compliant

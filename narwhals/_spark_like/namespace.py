@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable
 
 from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
@@ -19,6 +19,8 @@ from narwhals._spark_like.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
@@ -71,7 +73,7 @@ class SparkLikeNamespace(
         else:
             return import_native_dtypes(self._implementation)
 
-    def _with_elementwise(
+    def _expr_from_callable(
         self, func: Callable[[Iterable[Column]], Column], *exprs: SparkLikeExpr
     ) -> SparkLikeExpr:
         def call(df: SparkLikeLazyFrame) -> list[Column]:
@@ -129,29 +131,39 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def all_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            return reduce(operator.and_, cols)
+            it = (
+                (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
-    def any_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            return reduce(operator.or_, cols)
+            it = (
+                (self._F.coalesce(col, self._F.lit(False)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.or_, it)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def max_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.greatest(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def min_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.least(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -159,7 +171,7 @@ class SparkLikeNamespace(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -180,7 +192,7 @@ class SparkLikeNamespace(
                 ),
             )
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr_from_callable(func, *exprs)
 
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod

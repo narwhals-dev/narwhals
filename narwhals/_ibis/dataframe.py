@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.types as ir
@@ -28,6 +19,7 @@ from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -421,10 +413,16 @@ class IbisLazyFrame(
         )
         return self._with_native(unpivoted.select(*final_columns))
 
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        to_select = [
+            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.selectors.all(),
+        ]
+        return self._with_native(self.native.select(*to_select))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()

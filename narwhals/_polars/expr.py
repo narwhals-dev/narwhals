@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
@@ -13,6 +13,8 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from typing_extensions import Self
 
     from narwhals._expression_parsing import ExprKind, ExprMetadata
@@ -214,11 +216,7 @@ class PolarsExpr:
         return self._with_native(self.native.__invert__())
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            result = (~self.native.is_null()).cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
@@ -288,6 +286,7 @@ class PolarsExpr:
     is_last_distinct: Method[Self]
     is_null: Method[Self]
     is_unique: Method[Self]
+    kurtosis: Method[Self]
     len: Method[Self]
     log: Method[Self]
     max: Method[Self]
@@ -303,6 +302,7 @@ class PolarsExpr:
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[Self]
+    sqrt: Method[Self]
     std: Method[Self]
     sum: Method[Self]
     sort: Method[Self]
@@ -334,6 +334,35 @@ class PolarsExprDateTimeNamespace:
 class PolarsExprStringNamespace:
     def __init__(self, expr: PolarsExpr) -> None:
         self._compliant_expr = expr
+
+    def zfill(self, width: int) -> PolarsExpr:
+        native_expr = self._compliant_expr.native
+        backend_version = self._compliant_expr._backend_version
+        native_result = native_expr.str.zfill(width)
+
+        if backend_version < (0, 20, 5):  # pragma: no cover
+            # Reason:
+            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
+            # in `native_expr.str.slice(1, length)`
+            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
+            raise NotImplementedError(msg)
+
+        if backend_version <= (1, 30, 0):
+            length = native_expr.str.len_chars()
+            less_than_width = length < width
+            plus = "+"
+            starts_with_plus = native_expr.str.starts_with(plus)
+            native_result = (
+                pl.when(starts_with_plus & less_than_width)
+                .then(
+                    native_expr.str.slice(1, length)
+                    .str.zfill(width - 1)
+                    .str.pad_start(width, plus)
+                )
+                .otherwise(native_result)
+            )
+
+        return self._compliant_expr._with_native(native_result)
 
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:

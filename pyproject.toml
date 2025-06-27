@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.42.1"
+version = "1.44.0"
 dependencies = []
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
@@ -34,13 +34,13 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
 # https://github.com/narwhals-dev/narwhals/issues/817 
-pandas = ["pandas>=0.25.3"]
+pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
-polars = ["polars>=0.20.3"]
+polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
@@ -125,7 +125,7 @@ include = [
 [tool.ruff]
 line-length = 90
 fix = true
-target-version = "py38"
+target-version = "py39"
 extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
@@ -168,8 +168,10 @@ ignore = [
   "PD003",   # pandas-use-of-dot-is-null
   "PD010",   # pandas-use-of-dot-pivot-or-unstack
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
+  "PLC0415", # `import` should be at the top-level of a file
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
+  "PLW1641", # Object does not implement `__hash__` method
   "RET505",  # superfluous-else-return
   "SLF001",  # private-member-access
   "TD003",   # missing-todo-link
@@ -283,11 +285,9 @@ exclude_also = [
   "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
-  'if "cudf" in str\(constructor',
-  'if "modin" in str\(constructor',
-  'if "pyspark" in str\(constructor',
-  'if "pyspark_connect" in str\(constructor',
+  'if ".*" in str\(constructor',
   'pytest.skip\(',
+  'assert_never\(',
 ]
 
 [tool.mypy]
@@ -328,8 +328,8 @@ warn_return_any = false
 
 [tool.pyright]
 pythonPlatform = "All"
-# NOTE (stubs do unsafe `TypeAlias` and `TypeVar` imports)
-# pythonVersion = "3.8"
+# NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
+# pythonVersion = "3.9"
 reportMissingTypeArgument = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"

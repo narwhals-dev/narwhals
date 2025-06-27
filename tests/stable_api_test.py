@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from inspect import getdoc
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def remove_docstring_examples(doc: str) -> str:
@@ -89,7 +92,7 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if (doc := getdoc(getattr(nw, item))) is None:
             continue
-        if item in {"from_native", "narwhalify"}:
+        if item in {"from_native", "narwhalify", "get_level"}:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
             continue

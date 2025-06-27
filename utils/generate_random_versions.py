@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 
 PANDAS_AND_NUMPY_VERSION = [
-    # ("1.0.5", "1.18.5"),  # fails to build in CI  # noqa: ERA001
     ("1.1.5", "1.19.5"),
     ("1.2.5", "1.20.3"),
     ("1.3.5", "1.21.6"),
@@ -14,7 +13,6 @@ PANDAS_AND_NUMPY_VERSION = [
     ("2.2.2", "1.26.4"),
 ]
 POLARS_VERSION = [
-    "0.20.3",
     "0.20.4",
     "0.20.5",
     "0.20.6",

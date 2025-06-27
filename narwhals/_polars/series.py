@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import polars as pl
 
@@ -24,6 +15,7 @@ from narwhals._utils import Implementation, requires, validate_backend_version
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
     from typing import TypeVar
 
@@ -92,6 +84,7 @@ INHERITED_METHODS = frozenset(
         "is_sorted",
         "is_unique",
         "item",
+        "kurtosis",
         "len",
         "log",
         "max",
@@ -106,6 +99,7 @@ INHERITED_METHODS = frozenset(
         "sample",
         "shift",
         "skew",
+        "sqrt",
         "std",
         "sum",
         "tail",
@@ -474,13 +468,7 @@ class PolarsSeries:
         return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            not_null_series = ~self.native.is_null()
-            result = not_null_series.cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __contains__(self, other: Any) -> bool:
         try:
@@ -642,6 +630,7 @@ class PolarsSeries:
     is_sorted: Method[bool]
     is_unique: Method[Self]
     item: Method[Any]
+    kurtosis: Method[float | None]
     len: Method[int]
     log: Method[Self]
     max: Method[Any]
@@ -656,6 +645,7 @@ class PolarsSeries:
     sample: Method[Self]
     shift: Method[Self]
     skew: Method[float | None]
+    sqrt: Method[Self]
     std: Method[float]
     sum: Method[float]
     tail: Method[Self]
@@ -689,6 +679,12 @@ class PolarsSeriesDateTimeNamespace:
 class PolarsSeriesStringNamespace:
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
+
+    def zfill(self, width: int) -> PolarsSeries:
+        series = self._compliant_series
+        name = series.name
+        ns = series.__narwhals_namespace__()
+        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:

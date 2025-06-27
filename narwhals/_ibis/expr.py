@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterator,
-    Literal,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
@@ -25,6 +16,8 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     import ibis.expr.types as ir
     from typing_extensions import Self
 
@@ -673,6 +666,12 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(_exp)
 
+    def sqrt(self) -> Self:
+        def _sqrt(expr: ir.NumericColumn) -> ir.Value:
+            return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
+
+        return self._with_callable(_sqrt)
+
     @property
     def str(self) -> IbisExprStringNamespace:
         return IbisExprStringNamespace(self)
@@ -695,4 +694,5 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
+    kurtosis = not_implemented()
     unique = not_implemented()

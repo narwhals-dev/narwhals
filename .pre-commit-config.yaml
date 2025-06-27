@@ -3,12 +3,12 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.11.12'
+  rev: 'v0.12.1'
   hooks:
     # Run the formatter.
     - id: ruff-format
     # Run the linter.
-    - id: ruff
+    - id: ruff-check
       args: [--fix]
     - id: ruff
       name: check-docstrings
@@ -36,6 +36,8 @@ repos:
                 narwhals/dataframe\.py|
                 # TODO: gradually enable
                 narwhals/dependencies\.py|
+                # TODO: gradually enable
+                narwhals/stable/v1/dependencies\.py|
                 # private, so less urgent to document too well
                 narwhals/_.*|
                 ^utils/.*

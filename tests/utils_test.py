@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -24,9 +24,10 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import PANDAS_VERSION, get_module_version_as_tuple
+from tests.utils import get_module_version_as_tuple
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from types import ModuleType
 
     from typing_extensions import Self
@@ -244,7 +245,6 @@ def test_maybe_reset_index_polars() -> None:
     assert result_s is series
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 0, 0), reason="too old for convert_dtypes")
 def test_maybe_convert_dtypes_pandas() -> None:
     import numpy as np
 
@@ -477,7 +477,10 @@ def test_deprecate_native_namespace() -> None:
     non_default = cast("ModuleType", "non_default")
 
     assert func1(param, native_namespace=non_default) is None
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning,
+        match="`native_namespace` is deprecated, please use `backend` instead",
+    ):
         result = func2(param, native_namespace=pl)
     assert result is pl
     assert func2(param, backend=pl) is pl

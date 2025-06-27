@@ -1,17 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import partial
 from operator import methodcaller
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    Mapping,
-    Protocol,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -40,7 +32,7 @@ from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
-    from typing import Mapping
+    from collections.abc import Mapping, Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -126,6 +118,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
     def skew(self) -> Self: ...
+    def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
     def var(self, *, ddof: int) -> Self: ...
     def n_unique(self) -> Self: ...
@@ -139,6 +132,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     ) -> Self: ...
     def diff(self) -> Self: ...
     def exp(self) -> Self: ...
+    def sqrt(self) -> Self: ...
     def unique(self) -> Self: ...
     def len(self) -> Self: ...
     def log(self, base: float) -> Self: ...
@@ -336,7 +330,7 @@ class EagerExpr(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any]: ...
+    ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
     def __narwhals_expr__(self) -> None: ...
 
     @classmethod
@@ -612,6 +606,9 @@ class EagerExpr(
     def skew(self) -> Self:
         return self._reuse_series("skew", returns_scalar=True)
 
+    def kurtosis(self) -> Self:
+        return self._reuse_series("kurtosis", returns_scalar=True)
+
     def any(self) -> Self:
         return self._reuse_series("any", returns_scalar=True)
 
@@ -665,7 +662,7 @@ class EagerExpr(
 
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
-        predicate = plx.all_horizontal(*predicates)
+        predicate = plx.all_horizontal(*predicates, ignore_nulls=False)
         return self._reuse_series("filter", predicate=predicate)
 
     def drop_nulls(self) -> Self:
@@ -1128,6 +1125,9 @@ class EagerExprStringNamespace(
 
     def to_uppercase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_uppercase")
+
+    def zfill(self, width: int) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "zfill", width=width)
 
 
 class EagerExprStructNamespace(

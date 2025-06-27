@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Container,
-    Iterable,
-    Mapping,
-    Protocol,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -23,6 +14,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeFrameT,
     NativeFrameT_co,
+    NativeSeriesT,
 )
 from narwhals._utils import (
     exclude_column_names,
@@ -32,6 +24,8 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
+    from collections.abc import Container, Iterable, Mapping, Sequence
+
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
@@ -75,8 +69,12 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     def len(self) -> CompliantExprT: ...
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
-    def all_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
-    def any_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
+    def all_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
+    ) -> CompliantExprT: ...
+    def any_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
+    ) -> CompliantExprT: ...
     def sum_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def mean_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def min_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
@@ -135,7 +133,7 @@ class LazyNamespace(
 
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
@@ -143,9 +141,15 @@ class EagerNamespace(
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
-    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT]: ...
+    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
 
-    def from_native(self, data: Any, /) -> EagerDataFrameT | EagerSeriesT:
+    @overload
+    def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
+    @overload
+    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    def from_native(
+        self, data: NativeFrameT | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
         elif self._series._is_native(data):

@@ -1,16 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
@@ -22,6 +13,7 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
@@ -36,8 +28,6 @@ class PolarsNamespace:
     all: Method[PolarsExpr]
     col: Method[PolarsExpr]
     exclude: Method[PolarsExpr]
-    all_horizontal: Method[PolarsExpr]
-    any_horizontal: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
@@ -133,12 +123,24 @@ class PolarsNamespace:
     def len(self) -> PolarsExpr:
         if self._backend_version < (0, 20, 5):
             return self._expr(
-                pl.count().alias("len"),
-                version=self._version,
-                backend_version=self._backend_version,
+                pl.count().alias("len"), self._version, self._backend_version
             )
+        return self._expr(pl.len(), self._version, self._backend_version)
+
+    def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
+        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
         return self._expr(
-            pl.len(), version=self._version, backend_version=self._backend_version
+            pl.all_horizontal(*(expr.native for expr in it)),
+            self._version,
+            self._backend_version,
+        )
+
+    def any_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
+        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        return self._expr(
+            pl.any_horizontal(*(expr.native for expr in it)),
+            self._version,
+            self._backend_version,
         )
 
     def concat(

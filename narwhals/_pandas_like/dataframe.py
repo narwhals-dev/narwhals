@@ -1,18 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import numpy as np
 
@@ -20,7 +10,6 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    align_series_full_broadcast,
     check_column_names_are_unique,
     get_dtype_backend,
     native_to_narwhals_dtype,
@@ -103,7 +92,9 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 )
 
 
-class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any"]):
+class PandasLikeDataFrame(
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"]
+):
     def __init__(
         self,
         native_dataframe: Any,
@@ -322,9 +313,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             self.native.iloc[:, columns], validate_column_names=False
         )
 
-    def _select_multi_name(
-        self, columns: SizedMultiNameSelector[pd.Series[Any]]
-    ) -> PandasLikeDataFrame:
+    def _select_multi_name(self, columns: SizedMultiNameSelector[pd.Series[Any]]) -> Self:
         return self._with_native(self.native.loc[:, columns])
 
     # --- properties ---
@@ -399,46 +388,58 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             validate_column_names=False,
         )
 
-    def select(self: PandasLikeDataFrame, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+    def select(self, *exprs: PandasLikeExpr) -> Self:
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(self.native.__class__(), validate_column_names=False)
-        new_series = align_series_full_broadcast(*new_series)
+        new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
 
-    def drop_nulls(
-        self: PandasLikeDataFrame, subset: Sequence[str] | None
-    ) -> PandasLikeDataFrame:
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         if subset is None:
             return self._with_native(
                 self.native.dropna(axis=0), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)
 
-    def with_row_index(self, name: str) -> Self:
-        frame = self.native
-        namespace = self.__narwhals_namespace__()
-        row_index = namespace._series.from_iterable(
-            range(len(frame)), context=self, index=frame.index
-        ).alias(name)
-        return self._with_native(namespace._concat_horizontal([row_index.native, frame]))
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        plx = self.__narwhals_namespace__()
+        if order_by is None:
+            size = len(self)
+            if self._implementation.is_cudf():
+                import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+                data = cp.arange(size)
+            else:
+                import numpy as np  # ignore-banned-import
+
+                data = np.arange(size)
+
+            row_index = plx._expr._from_series(
+                plx._series.from_iterable(
+                    data, context=self, index=self.native.index, name=name
+                )
+            )
+        else:
+            rank = plx.col(order_by[0]).rank(method="ordinal", descending=False)
+            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+        return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(x for x in self.native.iloc[index])
 
-    def filter(
-        self: PandasLikeDataFrame, predicate: PandasLikeExpr | list[bool]
-    ) -> PandasLikeDataFrame:
+    def filter(self, predicate: PandasLikeExpr | list[bool]) -> Self:
         if isinstance(predicate, list):
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
@@ -449,9 +450,7 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
             self.native.loc[mask_native], validate_column_names=False
         )
 
-    def with_columns(
-        self: PandasLikeDataFrame, *exprs: PandasLikeExpr
-    ) -> PandasLikeDataFrame:
+    def with_columns(self, *exprs: PandasLikeExpr) -> Self:
         columns = self._evaluate_into_exprs(*exprs)
         if not columns and len(self) == 0:
             return self
@@ -1030,10 +1029,6 @@ class PandasLikeDataFrame(EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "
         separator: str,
     ) -> Self:
         implementation = self._implementation
-        backend_version = self._backend_version
-        if implementation.is_pandas() and backend_version < (1, 1):  # pragma: no cover
-            msg = "pivot is only supported for 'pandas>=1.1'"
-            raise NotImplementedError(msg)
         if implementation.is_modin():
             msg = "pivot is not supported for Modin backend due to https://github.com/modin-project/modin/issues/7409."
             raise NotImplementedError(msg)

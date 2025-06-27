@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -32,6 +23,7 @@ from narwhals._arrow.utils import (
 )
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -41,9 +33,10 @@ from narwhals._utils import (
     validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -199,6 +192,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        lengths = [len(s) for s in series]
+        max_length = max(lengths)
+        fast_path = all(_len == max_length for _len in lengths)
+        if fast_path:
+            return series
+        reshaped = []
+        for s in series:
+            if s._broadcast:
+                compliant = s._with_native(pa.repeat(s.native[0], max_length))
+            elif (actual_len := len(s)) != max_length:
+                msg = f"Expected object of length {max_length}, got {actual_len}."
+                raise ShapeError(msg)
+            else:
+                compliant = s
+            reshaped.append(compliant)
+        return reshaped
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
@@ -394,6 +406,19 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
             return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
 
+    def kurtosis(self, *, _return_py_scalar: bool = True) -> float | None:
+        ser_not_null = self.native.drop_null()
+        if len(ser_not_null) == 0:
+            return None
+        elif len(ser_not_null) == 1:
+            return float("nan")
+        else:
+            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+            m2 = pc.mean(pc.power(m, lit(2)))
+            m4 = pc.mean(pc.power(m, lit(4)))
+            k = pc.subtract(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+            return maybe_extract_py_scalar(k, _return_py_scalar)
+
     def count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(pc.count(self.native), _return_py_scalar)
 
@@ -540,8 +565,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             ge = pc.greater_equal(self.native, lower_bound)
             le = pc.less_equal(self.native, upper_bound)
             res = pc.and_kleene(ge, le)
-        else:  # pragma: no cover
-            raise AssertionError
+        else:
+            assert_never(closed)
         return self._with_native(res)
 
     def is_null(self) -> Self:
@@ -644,7 +669,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             n = int(num_rows * fraction)
 
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(0, num_rows)
+        idx = np.arange(num_rows)
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 
@@ -1028,7 +1053,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         rank = pc.rank(native_series, sort_keys=sort_keys, tiebreaker=tiebreaker)
 
-        result = pc.if_else(null_mask, lit(None, native_series.type), rank)
+        result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
     @requires.backend_version((13,))
@@ -1159,6 +1184,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def exp(self) -> Self:
         return self._with_native(pc.exp(self.native))
+
+    def sqrt(self) -> Self:
+        return self._with_native(pc.sqrt(self.native))
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

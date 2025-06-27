@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, TypedDict, TypeVar
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -60,12 +61,10 @@ CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
-EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
+EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any, Any]"
 EagerSeriesAny: TypeAlias = "EagerSeries[Any]"
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerNamespaceAny: TypeAlias = (
-    "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame]"
-)
+EagerNamespaceAny: TypeAlias = "EagerNamespace[EagerDataFrameAny, EagerSeriesAny, EagerExprAny, NativeFrame, NativeSeries]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any]"
 
@@ -73,6 +72,9 @@ NativeExprT = TypeVar("NativeExprT", bound="NativeExpr")
 NativeExprT_co = TypeVar("NativeExprT_co", bound="NativeExpr", covariant=True)
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeSeriesT_contra = TypeVar(
+    "NativeSeriesT_contra", bound="NativeSeries", contravariant=True
+)
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeFrameT_contra = TypeVar(
@@ -126,7 +128,7 @@ EagerSeriesT = TypeVar("EagerSeriesT", bound=EagerSeriesAny)
 EagerSeriesT_co = TypeVar("EagerSeriesT_co", bound=EagerSeriesAny, covariant=True)
 
 # NOTE: `pyright` gives false (8) positives if this uses `EagerDataFrameAny`?
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any]")
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound="EagerDataFrame[Any, Any, Any, Any]")
 
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
 LazyExprT_contra = TypeVar("LazyExprT_contra", bound=LazyExprAny, contravariant=True)
