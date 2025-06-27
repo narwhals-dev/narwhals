@@ -63,6 +63,8 @@ def test_concat_vertical(constructor: Constructor) -> None:
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
 
+# Warning raised internally by Modin.
+@pytest.mark.filterwarnings("ignore:When grouping with a length-1:FutureWarning")
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
