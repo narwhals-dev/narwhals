@@ -813,17 +813,16 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def _rank(
             expr: Column,
+            partition_by: Sequence[str | Column] = (),
+            order_by: Sequence[str | Column] = (),
             *,
             descending: bool,
-            partition_by: Sequence[str | Column] | None = None,
         ) -> Column:
-            order_by = self._sort(expr, descending=descending, nulls_last=True)
-            if partition_by is not None:
-                window = self.partition_by(*partition_by).orderBy(*order_by)
-                count_window = self.partition_by(*partition_by, expr)
-            else:
-                window = self.partition_by().orderBy(*order_by)
-                count_window = self.partition_by(expr)
+            _order_by = self._sort(
+                expr, *order_by, descending=descending, nulls_last=True
+            )
+            window = self.partition_by(*partition_by).orderBy(*_order_by)
+            count_window = self.partition_by(*partition_by, expr)
             if method == "max":
                 rank_expr = (
                     getattr(self._F, func_name)().over(window)
@@ -847,9 +846,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _partitioned_rank(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            assert not inputs.order_by  # noqa: S101
             return [
-                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                _rank(
+                    expr,
+                    descending=descending,
+                    partition_by=inputs.partition_by,
+                    order_by=inputs.order_by,
+                )
                 for expr in self(df)
             ]
 

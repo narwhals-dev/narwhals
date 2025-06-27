@@ -137,7 +137,10 @@ class ExprKind(Enum):
     """Depends on the rows around it and on their order, e.g. `diff`."""
 
     UNORDERABLE_WINDOW = auto()
-    """Depends on the rows around it but not on their order, e.g. `rank`."""
+    """Depends on the rows around it but not on their order, e.g. `is_unique`."""
+
+    WINDOW = auto()
+    """Depends on the rows around it and possibly their order, e.g. `rank`."""
 
     FILTRATION = auto()
     """Changes length, not affected by row order, e.g. `drop_nulls`."""
@@ -222,6 +225,22 @@ class ExpansionKind(Enum):
 
 
 class ExprMetadata:
+    """Expression metadata.
+
+    Parameters:
+        expansion_kind: What kind of expansion the expression performs.
+        has_windows: Whether it already contains window functions.
+        is_elementwise: Whether it can operate row-by-row without context
+            of the other rows around it.
+        is_literal: Whether it is just a literal wrapped in an expression.
+        is_scalar_like: Whether it is a liter or an aggregation.
+        last_node: The ExprKind of the last node.
+        n_orderable_ops: The number of order-dependent operations. In the
+            lazy case, this number must be `0` by the time the expression
+            is evaluated.
+        preserves_length: Whether the expression preserves the input length.
+    """
+
     __slots__ = (
         "expansion_kind",
         "has_windows",
@@ -323,8 +342,9 @@ class ExprMetadata:
         )
 
     def with_unorderable_window(self) -> ExprMetadata:
+        # Window function which cannot be used with `over(order_by=...)`.
         if self.is_scalar_like:
-            msg = "Can't apply unorderable window (`rank`, `is_unique`) to scalar-like expression."
+            msg = "Can't apply unorderable window (e.g. `is_unique`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
@@ -338,6 +358,7 @@ class ExprMetadata:
         )
 
     def with_orderable_window(self) -> ExprMetadata:
+        # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -346,6 +367,24 @@ class ExprMetadata:
             ExprKind.ORDERABLE_WINDOW,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
+            preserves_length=self.preserves_length,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
+    def with_window(self) -> ExprMetadata:
+        # Window function which may be used with `over(order_by=...)`.
+        if self.is_scalar_like:
+            msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.WINDOW,
+            has_windows=self.has_windows,
+            # rank may be ordered, but it doesn't have to be. So, we don't
+            # increment `n_orderable_ops`.
+            n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_elementwise=False,
             is_scalar_like=False,
@@ -363,7 +402,7 @@ class ExprMetadata:
             )
             raise InvalidOperationError(msg)
         n_orderable_ops = self.n_orderable_ops
-        if not n_orderable_ops:
+        if not n_orderable_ops and self.last_node is not ExprKind.WINDOW:
             msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
             raise InvalidOperationError(msg)
         if self.last_node.is_orderable_window:

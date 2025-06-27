@@ -733,11 +733,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             *,
             descending: bool,
             partition_by: Sequence[str | Expression],
+            order_by: Sequence[str | Expression],
         ) -> Expression:
             count_expr = F("count", StarExpression())
             window_kwargs: WindowExpressionKwargs = {
                 "partition_by": partition_by,
-                "order_by": (expr,),
+                "order_by": (expr, *order_by),
                 "descending": descending,
                 "nulls_last": True,
             }
@@ -759,14 +760,18 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return when(expr.isnotnull(), rank_expr)
 
         def _unpartitioned_rank(expr: Expression) -> Expression:
-            return _rank(expr, partition_by=(), descending=descending)
+            return _rank(expr, partition_by=(), order_by=(), descending=descending)
 
         def _partitioned_rank(
             df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
         ) -> Sequence[Expression]:
-            assert not inputs.order_by  # noqa: S101
             return [
-                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                _rank(
+                    expr,
+                    descending=descending,
+                    partition_by=inputs.partition_by,
+                    order_by=inputs.order_by,
+                )
                 for expr in self(df)
             ]
 

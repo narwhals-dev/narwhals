@@ -49,7 +49,7 @@ def test_misleading_order_by() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().over(order_by="b")
     with pytest.raises(InvalidOperationError):
-        nw.col("a").rank().over(order_by="b")
+        nw.col("a").is_unique().over(order_by="b")
 
 
 def test_double_over() -> None:

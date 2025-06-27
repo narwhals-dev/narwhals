@@ -68,7 +68,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def default_window_func(
             df: IbisLazyFrame, window_inputs: IbisWindowInputs
         ) -> list[ir.Value]:
-            assert not window_inputs.order_by  # noqa: S101
             return [
                 expr.over(ibis.window(group_by=window_inputs.partition_by))
                 for expr in self(df)

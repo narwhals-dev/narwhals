@@ -272,3 +272,23 @@ def test_rank_expr_in_over_desc(
     )
     expected_data = {"a": expected_over_desc[method]}
     assert_equal_data(result, expected_data)
+
+
+def test_rank_with_order_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(
+        constructor(
+            {"a": [1, 1, 2, 2, 3, 3], "b": [3, 1, 4, 3, 5, 6], "i": list(range(6))}
+        )
+    )
+    result = df.with_columns(c=nw.col("a").rank("ordinal").over(order_by="b")).sort("i")
+    expected = {
+        "a": [1, 1, 2, 2, 3, 3],
+        "b": [3, 1, 4, 3, 5, 6],
+        "i": [0, 1, 2, 3, 4, 5],
+        "c": [2, 1, 4, 3, 5, 6],
+    }
+    assert_equal_data(result, expected)
