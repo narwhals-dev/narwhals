@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pyarrow as pa
 import pytest
@@ -234,12 +234,13 @@ def test_to_datetime_tz_aware(
         assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("dtype_backend", ["pyarrow", "numpy_nullable"])
-def test_to_datetime_pd_preserves_pyarrow_backend_dtype(
-    dtype_backend: Literal["pyarrow", "numpy_nullable"],
-) -> None:
+def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
+    # Remark that pandas doesn't have a numpy-nullable datetime dtype, so
+    # `.convert_dtypes(dtype_backend="numpy_nullable")` is a no-op in `_to_datetime(...)`
     pytest.importorskip("pandas")
     import pandas as pd
+
+    dtype_backend = "pyarrow"
 
     df = nw.from_native(
         pd.DataFrame({"a": ["2020-01-01T12:34:56", None]}).convert_dtypes(
