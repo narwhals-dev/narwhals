@@ -194,7 +194,7 @@ class DaftWhen(LazyWhen[DaftLazyFrame, Expression, DaftExpr]):
         )
         other_ = self._otherwise_value
         if other_ is None:
-            result = condition.if_else(then, None)
+            result = condition.if_else(then, lit(None))
         else:
             otherwise = (
                 df._evaluate_window_expr(other_, window_inputs)
