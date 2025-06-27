@@ -68,8 +68,13 @@ class PandasLikeSeriesStringNamespace(
         return result
 
     def _to_datetime(self, format: str | None, *, utc: bool) -> Any:
-        return self.implementation.to_native_namespace().to_datetime(
+        result = self.implementation.to_native_namespace().to_datetime(
             self.native, format=format, utc=utc
+        )
+        return (
+            result.convert_dtypes(dtype_backend="pyarrow")
+            if is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
+            else result
         )
 
     def to_uppercase(self) -> PandasLikeSeries:
