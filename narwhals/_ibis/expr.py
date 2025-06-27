@@ -310,9 +310,15 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.quantile(quantile))
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(expr: ir.NumericValue, lower: Any, upper: Any) -> ir.NumericValue:
+        def _clip(
+            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
+        ) -> ir.NumericValue:
             return expr.clip(lower=lower, upper=upper)
 
+        if lower_bound is None:
+            return self._with_callable(_clip, upper=upper_bound)
+        if upper_bound is None:
+            return self._with_callable(_clip, lower=lower_bound)
         return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def sum(self) -> Self:
