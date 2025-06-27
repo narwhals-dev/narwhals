@@ -327,6 +327,8 @@ def native_to_narwhals_dtype(
 
 def is_dtype_masked(dtype: Any) -> TypeIs[BaseMaskedDtype]:
     """Return `True` if `dtype` is `"numpy_nullable"`."""
+    # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+    # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
     sentinel = object()
     return (
         isinstance(dtype, pd.api.extensions.ExtensionDtype)
