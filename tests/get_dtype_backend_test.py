@@ -14,6 +14,7 @@ pytest.importorskip("pandas")
 import pandas as pd
 
 from narwhals._pandas_like.utils import get_dtype_backend
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -67,6 +68,8 @@ NUMPY_NULLABLE_ALIASES = [
     "Float32",
     "boolean",
 ]
+# NOTE: Added in https://github.com/pandas-dev/pandas/pull/39908
+param_string = ("string[python]",) if PANDAS_VERSION >= (1, 3) else ()
 PANDAS_NON_NULLABLE_ALIASES = [
     "object",
     "int64",
@@ -80,7 +83,7 @@ PANDAS_NON_NULLABLE_ALIASES = [
     "float64",
     "float32",
     "string",
-    "string[python]",
+    *param_string,
     "bool",
     "category",
     "timedelta64[ns]",
@@ -121,6 +124,7 @@ def brute_force_construct_dtype(
     for dtype in dtypes:
         with suppress(TypeError):
             return dtype.construct_from_string(alias)
+    # pragma: no cover
     msg = f"Found no constructor for {alias!r}"
     raise NotImplementedError(msg)
 
@@ -132,7 +136,7 @@ def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype
     return [brute_force_construct_dtype(alias, dtype_classes) for alias in aliases]
 
 
-def construct_dtype(alias: str) -> ExtensionDtype:
+def construct_dtype(alias: str) -> ExtensionDtype:  # pragma: no cover
     dtype = pd.api.types.pandas_dtype(alias)
     if isinstance(dtype, np.dtype):
         return pd.core.dtypes.dtypes.NumpyEADtype(dtype)  # type: ignore[attr-defined, no-any-return]
@@ -141,7 +145,9 @@ def construct_dtype(alias: str) -> ExtensionDtype:
 
 
 # NOTE: Option 2
-def generate_pandas_dtypes_mostly_public(aliases: Iterable[str]) -> list[ExtensionDtype]:
+def generate_pandas_dtypes_mostly_public(
+    aliases: Iterable[str],
+) -> list[ExtensionDtype]:  # pragma: no cover
     """Ideally we'd use this, but `NumpyEADtype` is the ugly duckling."""
     return [construct_dtype(alias) for alias in aliases]
 
