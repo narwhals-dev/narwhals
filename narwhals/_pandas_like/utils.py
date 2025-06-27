@@ -27,6 +27,8 @@ from narwhals.exceptions import DuplicateError, ShapeError
 
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
+    from pandas.core.dtypes.dtypes import BaseMaskedDtype
+    from typing_extensions import TypeIs
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -324,6 +326,15 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
+def is_dtype_masked(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+    """Return `True` if `dtype` is `"numpy_nullable"`."""
+    sentinel = object()
+    return (
+        isinstance(dtype, pd.api.extensions.ExtensionDtype)
+        and getattr(dtype, "base", sentinel) is None
+    )
+
+
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:
     """Get dtype backend for pandas type.
 
@@ -334,11 +345,7 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
         return "pyarrow"
     with suppress(AttributeError):
-        sentinel = object()
-        if (
-            isinstance(dtype, pd.api.extensions.ExtensionDtype)
-            and getattr(dtype, "base", sentinel) is None
-        ):
+        if is_dtype_masked(dtype):
             return "numpy_nullable"
     return None
 
