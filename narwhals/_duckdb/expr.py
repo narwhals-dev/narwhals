@@ -20,11 +20,15 @@ from narwhals._duckdb.utils import (
     when,
     window_expression,
 )
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import (
+    ExprKind,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from duckdb import Expression
     from typing_extensions import Self
@@ -103,9 +107,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def _cum_window_func(
         self,
+        func_name: Literal["sum", "max", "min", "count", "product"],
         *,
         reverse: bool,
-        func_name: Literal["sum", "max", "min", "count", "product"],
     ) -> DuckDBWindowFunction:
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             return [
@@ -125,12 +129,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def _rolling_window_func(
         self,
-        *,
         func_name: Literal["sum", "mean", "std", "var"],
-        center: bool,
         window_size: int,
         min_samples: int,
         ddof: int | None = None,
+        *,
+        center: bool,
     ) -> DuckDBWindowFunction:
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
@@ -213,6 +217,32 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[Expression]], Expression], *exprs: Self
+    ) -> Self:
+        def call(df: DuckDBLazyFrame) -> list[Expression]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
+        ) -> list[Expression]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=context._backend_version,
             version=context._version,
         )
@@ -640,54 +670,36 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     @requires.backend_version((1, 3))
     def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="sum")
-        )
+        return self._with_window_function(self._cum_window_func("sum", reverse=reverse))
 
     @requires.backend_version((1, 3))
     def cum_max(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="max")
-        )
+        return self._with_window_function(self._cum_window_func("max", reverse=reverse))
 
     @requires.backend_version((1, 3))
     def cum_min(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="min")
-        )
+        return self._with_window_function(self._cum_window_func("min", reverse=reverse))
 
     @requires.backend_version((1, 3))
     def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="count")
-        )
+        return self._with_window_function(self._cum_window_func("count", reverse=reverse))
 
     @requires.backend_version((1, 3))
     def cum_prod(self, *, reverse: bool) -> Self:
         return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="product")
+            self._cum_window_func("product", reverse=reverse)
         )
 
     @requires.backend_version((1, 3))
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
-            self._rolling_window_func(
-                func_name="sum",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
+            self._rolling_window_func("sum", window_size, min_samples, center=center)
         )
 
     @requires.backend_version((1, 3))
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
-            self._rolling_window_func(
-                func_name="mean",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
+            self._rolling_window_func("mean", window_size, min_samples, center=center)
         )
 
     @requires.backend_version((1, 3))
@@ -696,11 +708,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     ) -> Self:
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="var",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
+                "var", window_size, min_samples, ddof=ddof, center=center
             )
         )
 
@@ -710,11 +718,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     ) -> Self:
         return self._with_window_function(
             self._rolling_window_func(
-                func_name="std",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
+                "std", window_size, min_samples, ddof=ddof, center=center
             )
         )
 

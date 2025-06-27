@@ -216,11 +216,7 @@ class PolarsExpr:
         return self._with_native(self.native.__invert__())
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            result = (~self.native.is_null()).cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
@@ -341,9 +337,17 @@ class PolarsExprStringNamespace:
 
     def zfill(self, width: int) -> PolarsExpr:
         native_expr = self._compliant_expr.native
+        backend_version = self._compliant_expr._backend_version
         native_result = native_expr.str.zfill(width)
 
-        if self._compliant_expr._backend_version <= (1, 30, 0):
+        if backend_version < (0, 20, 5):  # pragma: no cover
+            # Reason:
+            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
+            # in `native_expr.str.slice(1, length)`
+            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
+            raise NotImplementedError(msg)
+
+        if backend_version <= (1, 30, 0):
             length = native_expr.str.len_chars()
             less_than_width = length < width
             plus = "+"
