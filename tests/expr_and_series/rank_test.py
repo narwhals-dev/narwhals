@@ -280,6 +280,10 @@ def test_rank_with_order_by(
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
         request.applymarker(pytest.mark.xfail)
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+        pytest.skip(reason="bug in old version")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="too old version")
 
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
