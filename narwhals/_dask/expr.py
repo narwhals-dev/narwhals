@@ -683,4 +683,4 @@ class DaskExpr(
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
     _alias_native = not_implemented()
     window_function = not_implemented()  # pyright: ignore[reportAssignmentType]
-    from_elementwise = not_implemented()
+    _from_horizontal_op = not_implemented()
