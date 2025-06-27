@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import polars as pl
 
@@ -97,11 +97,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
-        categories = _DeferredIterable(
-            dtype.categories.to_list
-            if backend_version >= (0, 20, 4)
-            else lambda: cast("list[str]", dtype.categories)
-        )
+        categories = _DeferredIterable(dtype.categories.to_list)
         return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()

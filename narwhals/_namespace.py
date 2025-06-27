@@ -30,6 +30,7 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Sized
     from types import ModuleType
     from typing import ClassVar
 
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._dask.namespace import DaskNamespace
@@ -98,15 +99,36 @@ if TYPE_CHECKING:
         Implementation.POLARS,
     ]
 
+    class _BasePandasLike(Sized, Protocol):
+        index: Any
+        """`mypy` doesn't like the asymmetric `property` setter in `pandas`."""
+
+        def __getitem__(self, key: Any, /) -> Any: ...
+        def __mul__(self, other: float | Collection[float] | Self) -> Self: ...
+        def __floordiv__(self, other: float | Collection[float] | Self) -> Self: ...
+        @property
+        def loc(self) -> Any: ...
+        @property
+        def shape(self) -> tuple[int, ...]: ...
+        def set_axis(self, labels: Any, *, axis: Any = ..., copy: bool = ...) -> Self: ...
+        def copy(self, deep: bool = ...) -> Self: ...  # noqa: FBT001
+        def rename(self, *args: Any, inplace: Literal[False], **kwds: Any) -> Self:
+            """`inplace=False` is required to avoid (incorrect?) default overloads."""
+            ...
+
+    class _BasePandasLikeFrame(NativeFrame, _BasePandasLike, Protocol): ...
+
+    class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
+        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
+
     class _NativeDask(Protocol):
         _partition_type: type[pd.DataFrame]
 
-    class _CuDFDataFrame(NativeFrame, Protocol):
+    class _CuDFDataFrame(_BasePandasLikeFrame, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
 
-    class _CuDFSeries(NativeSeries, Protocol):
+    class _CuDFSeries(_BasePandasLikeSeries, Protocol):
         def to_pylibcudf(self, *args: Any, **kwds: Any) -> Any: ...
-        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
 
     class _NativeIbis(Protocol):
         def sql(self, *args: Any, **kwds: Any) -> Any: ...
@@ -114,13 +136,11 @@ if TYPE_CHECKING:
         def __pandas_result__(self, *args: Any, **kwds: Any) -> Any: ...
         def __polars_result__(self, *args: Any, **kwds: Any) -> Any: ...
 
-    class _ModinDataFrame(NativeFrame, Protocol):
+    class _ModinDataFrame(_BasePandasLikeFrame, Protocol):
         _pandas_class: type[pd.DataFrame]
 
-    class _ModinSeries(NativeSeries, Protocol):
+    class _ModinSeries(_BasePandasLikeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
-
-        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
 
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"

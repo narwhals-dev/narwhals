@@ -239,11 +239,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
-            result = (
-                frame.with_row_count(name)
-                if self._backend_version < (0, 20, 4)
-                else frame.with_row_index(name)
-            )
+            result = frame.with_row_index(name)
         else:
             end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
             result = frame.select(
