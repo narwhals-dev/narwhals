@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import daft
 from daft import Expression
 
-from narwhals._compliant import CompliantThen, LazyWhen
+from narwhals._compliant import LazyThen, LazyWhen
 from narwhals._compliant.namespace import LazyNamespace
 from narwhals._daft.dataframe import DaftLazyFrame
 from narwhals._daft.expr import DaftExpr
@@ -22,6 +22,7 @@ from narwhals._utils import Implementation, not_implemented
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
+    from narwhals._daft.expr import DaftWindowInputs
     from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
@@ -180,5 +181,28 @@ class DaftWhen(LazyWhen[DaftLazyFrame, Expression, DaftExpr]):
             result = condition.if_else(then, otherwise)
         return [result]
 
+    def _window_function(
+        self, df: DaftLazyFrame, window_inputs: DaftWindowInputs
+    ) -> Sequence[Expression]:
+        is_expr = self._condition._is_expr
+        condition = df._evaluate_window_expr(self._condition, window_inputs)
+        then_ = self._then_value
+        then = (
+            df._evaluate_window_expr(then_, window_inputs)
+            if is_expr(then_)
+            else lit(then_)
+        )
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = condition.if_else(then, None)
+        else:
+            otherwise = (
+                df._evaluate_window_expr(other_, window_inputs)
+                if is_expr(other_)
+                else lit(other_)
+            )
+            result = condition.if_else(then, otherwise)
+        return [result]
 
-class DaftThen(CompliantThen[DaftLazyFrame, Expression, DaftExpr], DaftExpr): ...
+
+class DaftThen(LazyThen[DaftLazyFrame, Expression, DaftExpr], DaftExpr): ...

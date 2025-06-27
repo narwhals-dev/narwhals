@@ -307,9 +307,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "truncate",
                     "sumh_broadcasting",
                     "over_pushdown",
+                    "kurtosis_",
+                    "sqrt_",
+                    "exp_",
                     # blocked
                     "shift_",
                     "diff_",
+                    "_distinct_",
                     "cum_",
                     "rolling_",
                     "fill_null_strategies",

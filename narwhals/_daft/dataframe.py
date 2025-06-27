@@ -327,12 +327,18 @@ class DaftLazyFrame(
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         row_index_expr = (
-            daft.functions.row_number().over(
-                daft.Window().partition_by(lit(1)).order_by(*order_by)
+            (
+                daft.functions.row_number().over(
+                    daft.Window().partition_by(lit(1)).order_by(*order_by)
+                )
+                - 1
             )
-            - 1
-        ).alias(name)
-        return self._with_native(self.native.select(row_index_expr, *self.columns))
+            if order_by
+            else daft.functions.monotonically_increasing_id()
+        )
+        return self._with_native(
+            self.native.select(row_index_expr.alias(name), *self.columns)
+        )
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
