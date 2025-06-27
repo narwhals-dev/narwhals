@@ -8,6 +8,10 @@ import ibis
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
@@ -16,7 +20,7 @@ from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self
@@ -203,6 +207,23 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             version=context._version,
         )
 
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: Self
+    ) -> Self:
+        def call(df: IbisLazyFrame) -> list[ir.Value]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
     def _with_callable(
         self, call: Callable[..., ir.Value], /, **expressifiable_args: Self | Any
     ) -> Self:
@@ -218,7 +239,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             native_series_list = self(df)
             other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else value
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
                 for key, value in expressifiable_args.items()
             }
             return [
@@ -233,6 +254,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             backend_version=self._backend_version,
             version=self._version,
         )
+
+    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+        return self._with_callable(op, other=other)
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
@@ -257,78 +281,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
         return cast("ExprT", expr.name(name))
-
-    def __and__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr & other, other=other)
-
-    def __or__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr | other, other=other)
-
-    def __add__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr + other, other=other)
-
-    def __truediv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr / other, other=other)
-
-    def __rtruediv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rtruediv__(other), other=other
-        ).alias("literal")
-
-    def __floordiv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__floordiv__(other), other=other
-        )
-
-    def __rfloordiv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rfloordiv__(other), other=other
-        ).alias("literal")
-
-    def __mod__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr.__mod__(other), other=other)
-
-    def __rmod__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rmod__(other), other=other
-        ).alias("literal")
-
-    def __sub__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr - other, other=other)
-
-    def __rsub__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rsub__(other), other=other
-        ).alias("literal")
-
-    def __mul__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr * other, other=other)
-
-    def __pow__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr**other, other=other)
-
-    def __rpow__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rpow__(other), other=other
-        ).alias("literal")
-
-    def __lt__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr < other, other=other)
-
-    def __gt__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr > other, other=other)
-
-    def __le__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr <= other, other=other)
-
-    def __ge__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr >= other, other=other)
-
-    def __eq__(self, other: IbisExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda expr, other: expr == other, other=other)
-
-    def __ne__(self, other: IbisExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda expr, other: expr != other, other=other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
@@ -358,9 +310,15 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.quantile(quantile))
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(expr: ir.NumericValue, lower: Any, upper: Any) -> ir.NumericValue:
+        def _clip(
+            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
+        ) -> ir.NumericValue:
             return expr.clip(lower=lower, upper=upper)
 
+        if lower_bound is None:
+            return self._with_callable(_clip, upper=upper_bound)
+        if upper_bound is None:
+            return self._with_callable(_clip, lower=lower_bound)
         return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def sum(self) -> Self:
