@@ -294,78 +294,74 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         )
 
     def __eq__(self, other: DaftExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda _input, other: _input == other, other=other)
+        return self._with_binary(lambda _input, other: _input == other, other)
 
     def __ne__(self, other: DaftExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda _input, other: _input != other, other=other)
+        return self._with_binary(lambda _input, other: _input != other, other)
 
     def __add__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input + other, other=other)
+        return self._with_binary(lambda _input, other: _input + other, other)
 
     def __sub__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input - other, other=other)
+        return self._with_binary(lambda _input, other: _input - other, other)
 
     def __rsub__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: other.__sub__(_input), other=other
+        return self._with_binary(
+            lambda _input, other: other.__sub__(_input), other
         ).alias("literal")
 
     def __mul__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input * other, other=other)
+        return self._with_binary(lambda _input, other: _input * other, other=other)
 
     def __truediv__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input / other, other=other)
+        return self._with_binary(lambda _input, other: _input / other, other)
 
     def __rtruediv__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: other.__truediv__(_input), other=other
+        return self._with_binary(
+            lambda _input, other: other.__truediv__(_input), other
         ).alias("literal")
 
     def __floordiv__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__floordiv__(other), other=other
-        )
+        return self._with_binary(lambda _input, other: _input.__floordiv__(other), other)
 
     def __rfloordiv__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: other.__floordiv__(_input), other=other
+        return self._with_binary(
+            lambda _input, other: other.__floordiv__(_input), other
         ).alias("literal")
 
     def __pow__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input**other, other=other)
+        return self._with_binary(lambda _input, other: _input**other, other)
 
     def __rpow__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: other.__pow__(_input), other=other
+        return self._with_binary(
+            lambda _input, other: other.__pow__(_input), other
         ).alias("literal")
 
     def __mod__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: _input.__mod__(other), other=other
-        )
+        return self._with_binary(lambda _input, other: _input.__mod__(other), other)
 
     def __rmod__(self, other: DaftExpr) -> Self:
-        return self._with_callable(
-            lambda _input, other: other.__mod__(_input), other=other
+        return self._with_binary(
+            lambda _input, other: other.__mod__(_input), other
         ).alias("literal")
 
     def __ge__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input >= other, other=other)
+        return self._with_binary(lambda _input, other: _input >= other, other)
 
     def __le__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input <= other, other=other)
+        return self._with_binary(lambda _input, other: _input <= other, other)
 
     def __lt__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input < other, other=other)
+        return self._with_binary(lambda _input, other: _input < other, other)
 
     def __gt__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input > other, other=other)
+        return self._with_binary(lambda _input, other: _input > other, other)
 
     def __and__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input & other, other=other)
+        return self._with_binary(lambda _input, other: _input & other, other)
 
     def __or__(self, other: DaftExpr) -> Self:
-        return self._with_callable(lambda _input, other: _input | other, other=other)
+        return self._with_binary(lambda _input, other: _input | other, other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Expression]", operator.invert)
