@@ -325,7 +325,7 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
-def is_dtype_masked(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
     """Return `True` if `dtype` is `"numpy_nullable"`."""
     # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
     # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
@@ -343,14 +343,17 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     """
     if implementation is Implementation.CUDF:
         return None
-    if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
+    if is_dtype_pyarrow(dtype, implementation):
         return "pyarrow"
-    return "numpy_nullable" if is_dtype_masked(dtype) else None
+    return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
 
 
 @functools.lru_cache(maxsize=16)
-def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
-    return get_dtype_backend(dtype, implementation) == "pyarrow"
+def is_dtype_pyarrow(dtype: Any, implementation: Implementation) -> TypeIs[pd.ArrowDtype]:  # noqa: ARG001
+    return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
+
+
+is_pyarrow_dtype_backend = is_dtype_pyarrow
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
