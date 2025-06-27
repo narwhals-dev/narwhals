@@ -391,7 +391,7 @@ def is_numpy_array_1d_int(arr: Any) -> TypeIs[_1DArrayInt]:
 
 def is_numpy_array_2d(arr: Any) -> TypeIs[_2DArray]:
     """Check whether `arr` is a 2D NumPy Array without importing NumPy."""
-    return is_numpy_array(arr) and arr.ndim == 2  # noqa: PLR2004
+    return is_numpy_array(arr) and arr.ndim == 2
 
 
 def is_numpy_scalar(scalar: Any) -> TypeGuard[_NumpyScalar]:

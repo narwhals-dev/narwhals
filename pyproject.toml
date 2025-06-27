@@ -169,6 +169,7 @@ ignore = [
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
   "PLC0415", # `import` should be at the top-level of a file
   "PLR0913", # too-many-arguments
+  "PLR2004", # magic-value-comparison
   "PLW1641", # Object does not implement `__hash__` method
   "RET505",  # superfluous-else-return
   "SLF001",  # private-member-access
@@ -184,15 +185,11 @@ builtins-ignorelist = ["format"]
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
-"narwhals/_interchange/*" = [
-  "PLR2004", # magic-value-comparison
-]
 "tests/*" = [
   "S101", 
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
-  "PLR2004", # magic-value-comparison
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "PTH123"]

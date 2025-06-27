@@ -299,7 +299,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return self._depth < 2  # noqa: PLR2004
+        return self._depth < 2
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"

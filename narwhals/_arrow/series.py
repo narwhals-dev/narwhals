@@ -397,7 +397,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return None
         elif len(ser_not_null) == 1:
             return float("nan")
-        elif len(ser_not_null) == 2:  # noqa: PLR2004
+        elif len(ser_not_null) == 2:
             return 0.0
         else:
             m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
@@ -1102,14 +1102,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             min_count=0,
         )
         if bins is not None:
-            if len(bins) < 2:  # noqa: PLR2004
+            if len(bins) < 2:
                 counts, bin_right = [], []
 
             elif data_count == pa.scalar(0, type=pa.uint64()):  # type:ignore[comparison-overlap]
                 counts = np.zeros(len(bins) - 1)
                 bin_right = bins[1:]
 
-            elif len(bins) == 2:  # noqa: PLR2004
+            elif len(bins) == 2:
                 counts = [
                     pc.sum(
                         pc.and_(
