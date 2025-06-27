@@ -277,6 +277,10 @@ def test_rank_expr_in_over_desc(
 def test_rank_with_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "dask" in str(constructor):
+        # `rank` is not implemented in Dask
+        request.applymarker(pytest.mark.xfail)
+
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
