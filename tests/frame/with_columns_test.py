@@ -57,7 +57,7 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 def test_with_columns_dtypes_single_row(constructor: Constructor) -> None:
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
         pytest.skip()
-    if any(x in str(constructor) for x in ("daft", "duckdb", "daft", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "daft", "ibis")):
         pytest.skip("not categorical support")
     data = {"a": ["foo"]}
     df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))

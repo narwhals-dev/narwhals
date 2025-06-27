@@ -33,6 +33,8 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
         nw.concat([df_left.lazy()], how="horizontal")
 
 
+# Warning raised internally by Modin.
+@pytest.mark.filterwarnings("ignore:When grouping with a length-1:FutureWarning")
 def test_concat_vertical(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (
