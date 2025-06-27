@@ -308,6 +308,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "sumh_broadcasting",
                     "over_pushdown",
                     # blocked
+                    "shift_",
+                    "diff_",
                     "cum_",
                     "rolling_",
                     "fill_null_strategies",
@@ -320,8 +322,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             # Blockers:
             # - fill_null: https://github.com/Eventual-Inc/Daft/issues/4465
             # - replace_time_zone: https://github.com/Eventual-Inc/Daft/issues/4096
-            # - cum_*: https://github.com/Eventual-Inc/Daft/issues/4526
-            # - rolling_*: https://github.com/Eventual-Inc/Daft/issues/4526
+            # - cum_*, rolling_*, shift, diff: https://github.com/Eventual-Inc/Daft/issues/4526
             #
             # The rest should be doable
             continue

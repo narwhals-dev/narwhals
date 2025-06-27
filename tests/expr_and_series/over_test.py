@@ -411,8 +411,6 @@ def test_over_without_partition_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "daft" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (

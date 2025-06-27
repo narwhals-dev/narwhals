@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator, Literal, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import daft
 import daft.exceptions
+import daft.functions
 
-from narwhals._daft.utils import evaluate_exprs, native_to_narwhals_dtype
+from narwhals._daft.utils import evaluate_exprs, lit, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     Version,
@@ -20,6 +21,7 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
     from types import ModuleType
 
     from typing_extensions import Self, TypeIs
@@ -323,6 +325,15 @@ class DaftLazyFrame(
             )
         )
 
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        row_index_expr = (
+            daft.functions.row_number().over(
+                daft.Window().partition_by(lit(1)).order_by(*order_by)
+            )
+            - 1
+        ).alias(name)
+        return self._with_native(self.native.select(row_index_expr, *self.columns))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
@@ -330,5 +341,4 @@ class DaftLazyFrame(
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()
     explode = not_implemented()

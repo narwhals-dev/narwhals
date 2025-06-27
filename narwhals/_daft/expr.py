@@ -550,7 +550,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             raise NotImplementedError(msg)
 
         return self._with_callable(
-            lambda _input: _input.fill_null(value, strategy=strategy)
+            lambda _input, value: _input.fill_null(value), value=value
         )
 
     def log(self, base: float) -> Self:
@@ -589,3 +589,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     rolling_mean = not_implemented()
     rolling_var = not_implemented()
     rolling_std = not_implemented()
+    kurtosis = not_implemented()
+    exp = not_implemented()
+    sqrt = not_implemented()
