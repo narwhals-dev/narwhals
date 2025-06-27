@@ -18,8 +18,9 @@ expected = {"a": [date(2020, 1, 1), date(2020, 1, 2), None]}
 def test_to_date_with_fmt_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "cudf" in str(constructor_eager) or not uses_pyarrow_backend(
-        constructor=constructor_eager
+    if "cudf" in str(constructor_eager) or (
+        "pandas" in str(constructor_eager)
+        and not uses_pyarrow_backend(constructor=constructor_eager)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -34,8 +35,9 @@ def test_to_date_with_fmt_series(
 def test_to_date_infer_fmt_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "cudf" in str(constructor_eager) or not uses_pyarrow_backend(
-        constructor=constructor_eager
+    if "cudf" in str(constructor_eager) or (
+        "pandas" in str(constructor_eager)
+        and not uses_pyarrow_backend(constructor=constructor_eager)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -48,7 +50,9 @@ def test_to_date_infer_fmt_series(
 def test_to_date_with_fmt_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "cudf" in str(constructor) or not uses_pyarrow_backend(constructor=constructor):
+    if "cudf" in str(constructor) or (
+        "pandas" in str(constructor) and not uses_pyarrow_backend(constructor=constructor)
+    ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -64,7 +68,9 @@ def test_to_date_with_fmt_expr(
 def test_to_date_infer_fmt_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "cudf" in str(constructor) or not uses_pyarrow_backend(constructor=constructor):
+    if "cudf" in str(constructor) or (
+        "pandas" in str(constructor) and not uses_pyarrow_backend(constructor=constructor)
+    ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "duckdb" in str(constructor) or "ibis" in str(constructor):
