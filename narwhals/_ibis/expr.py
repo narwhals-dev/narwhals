@@ -255,6 +255,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             version=self._version,
         )
 
+    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+        return self._with_callable(op, other=other)
+
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
             self._call,
@@ -278,78 +281,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
         return cast("ExprT", expr.name(name))
-
-    def __and__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr & other, other=other)
-
-    def __or__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr | other, other=other)
-
-    def __add__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr + other, other=other)
-
-    def __truediv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr / other, other=other)
-
-    def __rtruediv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rtruediv__(other), other=other
-        ).alias("literal")
-
-    def __floordiv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__floordiv__(other), other=other
-        )
-
-    def __rfloordiv__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rfloordiv__(other), other=other
-        ).alias("literal")
-
-    def __mod__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr.__mod__(other), other=other)
-
-    def __rmod__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rmod__(other), other=other
-        ).alias("literal")
-
-    def __sub__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr - other, other=other)
-
-    def __rsub__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rsub__(other), other=other
-        ).alias("literal")
-
-    def __mul__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr * other, other=other)
-
-    def __pow__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr**other, other=other)
-
-    def __rpow__(self, other: IbisExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__rpow__(other), other=other
-        ).alias("literal")
-
-    def __lt__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr < other, other=other)
-
-    def __gt__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr > other, other=other)
-
-    def __le__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr <= other, other=other)
-
-    def __ge__(self, other: IbisExpr) -> Self:
-        return self._with_callable(lambda expr, other: expr >= other, other=other)
-
-    def __eq__(self, other: IbisExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda expr, other: expr == other, other=other)
-
-    def __ne__(self, other: IbisExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(lambda expr, other: expr != other, other=other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
