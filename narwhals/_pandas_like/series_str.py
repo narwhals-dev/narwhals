@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._pandas_like.utils import (
     PandasLikeSeriesNamespace,
-    get_dtype_backend,
     is_pyarrow_dtype_backend,
 )
 
@@ -69,13 +68,12 @@ class PandasLikeSeriesStringNamespace(
         return result
 
     def _to_datetime(self, format: str | None, *, utc: bool) -> Any:
-        dtype_backend = get_dtype_backend(self.native.dtype, self.implementation)
         result = self.implementation.to_native_namespace().to_datetime(
             self.native, format=format, utc=utc
         )
         return (
-            result.convert_dtypes(dtype_backend=dtype_backend)
-            if dtype_backend
+            result.convert_dtypes(dtype_backend="pyarrow")
+            if is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
             else result
         )
 
