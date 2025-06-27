@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from daft import Window, coalesce, col, lit
 from daft.functions import row_number
@@ -11,15 +11,22 @@ from narwhals._compliant.window import WindowInputs
 from narwhals._daft.expr_dt import DaftExprDateTimeNamespace
 from narwhals._daft.expr_str import DaftExprStringNamespace
 from narwhals._daft.expr_struct import DaftExprStructNamespace
-from narwhals._daft.utils import maybe_evaluate_expr, narwhals_to_native_dtype
+from narwhals._daft.utils import narwhals_to_native_dtype
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from daft import Expression
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, EvalNames, WindowFunction
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        WindowFunction,
+    )
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.namespace import DaftNamespace
     from narwhals._expression_parsing import ExprMetadata
@@ -58,7 +65,11 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         ) -> list[Expression]:
             assert not window_inputs.order_by  # noqa: S101
             return [
-                expr.over(self.partition_by(*window_inputs.partition_by))
+                expr.over(
+                    self.partition_by(*window_inputs.partition_by).order_by(
+                        *window_inputs.order_by
+                    )
+                )
                 for expr in self(df)
             ]
 
@@ -73,7 +84,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self.over([lit(1)], [])
 
     def partition_by(self, *cols: Expression | str) -> Window:
-        """Wraps `Window().paritionBy`, with default and `WindowInputs` handling."""
         return Window().partition_by(*cols or [lit(1)])
 
     def __narwhals_expr__(self) -> None: ...
@@ -114,6 +124,56 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
         return func
 
+    def _rolling_window_func(
+        self,
+        *,
+        func_name: Literal["sum", "mean", "std", "var"],
+        center: bool,
+        window_size: int,
+        min_samples: int,
+        ddof: int | None = None,
+    ) -> DaftWindowFunction:
+        supported_funcs = ["sum", "mean", "std", "var"]
+        if center:
+            half = (window_size - 1) // 2
+            remainder = (window_size - 1) % 2
+            start = -half - remainder
+            end = half
+        else:
+            start = -window_size + 1
+            end = 0
+
+        def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
+            window = (
+                self.partition_by(*inputs.partition_by)
+                .order_by(*inputs.order_by)
+                .rows_between(start, end)
+            )
+            if func_name in {"sum", "mean"}:
+                func_: str = func_name
+            elif func_name == "var" and ddof == 0:
+                func_ = "var_pop"
+            elif func_name in "var" and ddof == 1:
+                func_ = "var_samp"
+            elif func_name == "std" and ddof == 0:
+                func_ = "stddev_pop"
+            elif func_name == "std" and ddof == 1:
+                func_ = "stddev_samp"
+            elif func_name in {"var", "std"}:  # pragma: no cover
+                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
+                raise ValueError(msg)
+            else:  # pragma: no cover
+                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
+                raise ValueError(msg)
+            return [
+                (expr.count().over(window) >= lit(min_samples)).if_else(
+                    getattr(expr, func_)().over(window), lit(None)
+                )
+                for expr in self._call(df)
+            ]
+
+        return func
+
     @classmethod
     def from_column_names(
         cls: type[Self],
@@ -149,13 +209,13 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             version=context._version,
         )
 
-    def _with_callable(
+    def _callable_to_eval_series(
         self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> Self:
+    ) -> EvalSeries[DaftLazyFrame, Expression]:
         def func(df: DaftLazyFrame) -> list[Expression]:
-            native_series_list = self._call(df)
+            native_series_list = self(df)
             other_native_series = {
-                key: maybe_evaluate_expr(df, value)
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
                 for key, value in expressifiable_args.items()
             }
             return [
@@ -163,8 +223,60 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
                 for native_series in native_series_list
             ]
 
+        return func
+
+    def _push_down_window_function(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ) -> DaftWindowFunction:
+        def window_f(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> Sequence[Expression]:
+            # If a function `f` is elementwise, and `g` is another function, then
+            # - `f(g) over (window)`
+            # - `f(g over (window))
+            # are equivalent.
+            # Make sure to only use with if `call` is elementwise!
+            native_series_list = self.window_function(df, window_inputs)
+            other_native_series = {
+                key: df._evaluate_window_expr(value, window_inputs)
+                if self._is_expr(value)
+                else lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return window_f
+
+    def _with_callable(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ) -> Self:
         return self.__class__(
-            func,
+            self._callable_to_eval_series(call, **expressifiable_args),
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def _with_elementwise(
+        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
+    ) -> Self:
+        return self.__class__(
+            self._callable_to_eval_series(call, **expressifiable_args),
+            self._push_down_window_function(call, **expressifiable_args),
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
+        )
+
+    def _with_binary(self, op: Callable[..., Expression], other: Self | Any) -> Self:
+        return self.__class__(
+            self._callable_to_eval_series(op, other=other),
+            self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             backend_version=self._backend_version,
