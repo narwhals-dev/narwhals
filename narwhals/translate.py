@@ -5,6 +5,7 @@ from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
+from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._namespace import (
     is_native_arrow,
     is_native_pandas_like,
@@ -777,8 +778,8 @@ def to_py_scalar(scalar_like: Any) -> Any:
         and isinstance(scalar_like, np.datetime64)
         and scalar_like.dtype == "datetime64[ns]"
     ):
-        ms = scalar_like.item() // 1000
-        scalar = dt.datetime(1970, 1, 1) + dt.timedelta(microseconds=ms)
+        ms = scalar_like.item() // MS_PER_SECOND
+        scalar = EPOCH + dt.timedelta(microseconds=ms)
     elif is_numpy_scalar(scalar_like) or is_cupy_scalar(scalar_like):
         scalar = scalar_like.item()
     elif pd and isinstance(scalar_like, pd.Timestamp):
