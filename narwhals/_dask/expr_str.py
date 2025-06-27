@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import dask.dataframe as dd
 
+from narwhals._utils import not_implemented
+
 if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
 
@@ -87,9 +89,6 @@ class DaskExprStringNamespace:
             format=format,
         )
 
-    def to_date(self, format: str | None) -> DaskExpr:
-        return self.to_datetime(format=format).dt.date()
-
     def to_uppercase(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
             lambda expr: expr.str.upper(), "to_uppercase"
@@ -104,3 +103,5 @@ class DaskExprStringNamespace:
         return self._compliant_expr._with_callable(
             lambda expr, width: expr.str.zfill(width), "zfill", width=width
         )
+
+    to_date = not_implemented()

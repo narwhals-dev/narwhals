@@ -56,6 +56,10 @@ def test_to_date_with_fmt_expr(
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
+    if "dask" in str(constructor):
+        reason = "not implemented"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     result = nw.from_native(constructor(data)).select(
         a=nw.col("a").str.to_date(format="%Y-%m-%d")
     )
@@ -75,6 +79,10 @@ def test_to_date_infer_fmt_expr(
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "duckdb" in str(constructor) or "ibis" in str(constructor):
         reason = "Cannot infer format"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    if "dask" in str(constructor):
+        reason = "not implemented"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     result = nw.from_native(constructor(data)).select(a=nw.col("a").str.to_date())
