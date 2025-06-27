@@ -9,6 +9,7 @@ import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -282,6 +283,8 @@ def test_rank_with_order_by(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip(reason="too old")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")
 
