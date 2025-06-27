@@ -239,7 +239,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             native_series_list = self(df)
             other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else value
+                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
                 for key, value in expressifiable_args.items()
             }
             return [

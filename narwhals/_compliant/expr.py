@@ -953,7 +953,7 @@ class LazyExpr(
         return self._with_binary(lambda expr, other: expr.__ge__(other), other)
 
     def __gt__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr > other, other)
+        return self._with_binary(lambda expr, other: expr.__gt__(other), other)
 
     def __le__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__le__(other), other)
