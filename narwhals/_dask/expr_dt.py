@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
@@ -138,17 +139,19 @@ class DaskExprDateTimeNamespace:
 
     def total_milliseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.total_seconds() * 1000 // 1, "total_milliseconds"
+            lambda expr: expr.dt.total_seconds() * MS_PER_SECOND // 1,
+            "total_milliseconds",
         )
 
     def total_microseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.total_seconds() * 1_000_000 // 1, "total_microseconds"
+            lambda expr: expr.dt.total_seconds() * US_PER_SECOND // 1,
+            "total_microseconds",
         )
 
     def total_nanoseconds(self) -> DaskExpr:
         return self._compliant_expr._with_callable(
-            lambda expr: expr.dt.total_seconds() * 1_000_000_000 // 1, "total_nanoseconds"
+            lambda expr: expr.dt.total_seconds() * NS_PER_SECOND // 1, "total_nanoseconds"
         )
 
     def truncate(self, every: str) -> DaskExpr:
