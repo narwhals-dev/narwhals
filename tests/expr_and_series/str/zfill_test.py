@@ -40,6 +40,9 @@ def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> 
             "in `expr.str.slice(1, length)`"
         )
         pytest.skip(reason=reason)
+    if "daft" in str(constructor):
+        # TODO(unassigned): implement zfill for daft
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(3))

@@ -12,11 +12,15 @@ from narwhals._daft.expr_dt import DaftExprDateTimeNamespace
 from narwhals._daft.expr_str import DaftExprStringNamespace
 from narwhals._daft.expr_struct import DaftExprStructNamespace
 from narwhals._daft.utils import narwhals_to_native_dtype
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import (
+    ExprKind,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from daft import Expression
     from typing_extensions import Self
@@ -205,6 +209,32 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             func,
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
+            backend_version=context._backend_version,
+            version=context._version,
+        )
+
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[Expression]], Expression], *exprs: Self
+    ) -> Self:
+        def call(df: DaftLazyFrame) -> list[Expression]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: DaftLazyFrame, window_inputs: DaftWindowInputs
+        ) -> list[Expression]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             backend_version=context._backend_version,
             version=context._version,
         )

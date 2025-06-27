@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Iterable, Sequence
+from typing import TYPE_CHECKING, Any
 
 import daft
+from daft import Expression
 
 from narwhals._compliant import CompliantThen, LazyWhen
 from narwhals._compliant.namespace import LazyNamespace
@@ -19,6 +20,8 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import ConcatMethod
@@ -44,7 +47,7 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
         return DaftLazyFrame
 
     def lit(self, value: Any, dtype: DType | type[DType] | None) -> DaftExpr:
-        def func(_df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(_df: DaftLazyFrame) -> list[Expression]:
             if dtype is not None:
                 return [
                     lit(value).cast(
@@ -84,37 +87,33 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
 
     concat_str = not_implemented()
 
-    def all_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
-            cols = (c for _expr in exprs for c in _expr(df))
-            return [reduce(operator.and_, cols)]
+    def all_horizontal(self, *exprs: DaftExpr, ignore_nulls: bool) -> DaftExpr:
+        def func(cols: Iterable[Expression]) -> Expression:
+            it = (
+                (daft.coalesce(col, lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
-        return DaftExpr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def any_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
-            cols = (c for _expr in exprs for c in _expr(df))
-            return [reduce(operator.or_, cols)]
+    def any_horizontal(self, *exprs: DaftExpr, ignore_nulls: bool) -> DaftExpr:
+        def func(cols: Iterable[Expression]) -> Expression:
+            it = (
+                (daft.coalesce(col, lit(False)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.or_, it)
 
-        return DaftExpr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     max_horizontal = not_implemented()
     min_horizontal = not_implemented()
 
     def sum_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(df: DaftLazyFrame) -> list[Expression]:
             cols = (col.fill_null(lit(0)) for _expr in exprs for col in _expr(df))
             return [reduce(operator.add, cols)]
 
@@ -127,7 +126,7 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
         )
 
     def mean_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(df: DaftLazyFrame) -> list[Expression]:
             cols = [c for _expr in exprs for c in _expr(df)]
             return [
                 (
@@ -148,7 +147,7 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
         return DaftWhen.from_expr(predicate, context=self)
 
     def len(self) -> DaftExpr:
-        def func(_df: DaftLazyFrame) -> list[daft.Expression]:
+        def func(_df: DaftLazyFrame) -> list[Expression]:
             if not _df.columns:
                 msg = "Cannot use `nw.len()` on Daft DataFrame with zero columns"
                 raise ValueError(msg)
@@ -163,12 +162,12 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
         )
 
 
-class DaftWhen(LazyWhen[DaftLazyFrame, daft.Expression, DaftExpr]):
+class DaftWhen(LazyWhen[DaftLazyFrame, Expression, DaftExpr]):
     @property
     def _then(self) -> type[DaftThen]:
         return DaftThen
 
-    def __call__(self, df: DaftLazyFrame) -> Sequence[daft.Expression]:
+    def __call__(self, df: DaftLazyFrame) -> Sequence[Expression]:
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
@@ -182,4 +181,4 @@ class DaftWhen(LazyWhen[DaftLazyFrame, daft.Expression, DaftExpr]):
         return [result]
 
 
-class DaftThen(CompliantThen[DaftLazyFrame, daft.Expression, DaftExpr], DaftExpr): ...
+class DaftThen(CompliantThen[DaftLazyFrame, Expression, DaftExpr], DaftExpr): ...
