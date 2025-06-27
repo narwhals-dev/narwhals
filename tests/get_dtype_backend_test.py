@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from importlib.util import find_spec
+from itertools import chain
 from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
@@ -14,7 +15,6 @@ pytest.importorskip("pandas")
 import pandas as pd
 
 from narwhals._pandas_like.utils import get_dtype_backend
-from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -68,8 +68,6 @@ NUMPY_NULLABLE_ALIASES = [
     "Float32",
     "boolean",
 ]
-# NOTE: Added in https://github.com/pandas-dev/pandas/pull/39908
-param_string = ("string[python]",) if PANDAS_VERSION >= (1, 3) else ()
 PANDAS_NON_NULLABLE_ALIASES = [
     "object",
     "int64",
@@ -83,7 +81,7 @@ PANDAS_NON_NULLABLE_ALIASES = [
     "float64",
     "float32",
     "string",
-    *param_string,
+    "string[python]",
     "bool",
     "category",
     "timedelta64[ns]",
@@ -120,20 +118,23 @@ def _deep_descendants(root: type[T]) -> list[type[T]]:
 
 def brute_force_construct_dtype(
     alias: str, dtypes: Iterable[type[ExtensionDtype]]
-) -> ExtensionDtype:
+) -> Iterator[ExtensionDtype]:
+    """Skips dtypes that are not compatible on the tested version of pandas."""
     for dtype in dtypes:
         with suppress(TypeError):
-            return dtype.construct_from_string(alias)
-    # pragma: no cover
-    msg = f"Found no constructor for {alias!r}"
-    raise NotImplementedError(msg)
+            result = dtype.construct_from_string(alias)
+            yield result
+            return
 
 
 # NOTE: Option 1
 def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype]:
     """Technically only uses the public api."""
     dtype_classes = _deep_descendants(ExtensionDtype)
-    return [brute_force_construct_dtype(alias, dtype_classes) for alias in aliases]
+    it = chain.from_iterable(
+        brute_force_construct_dtype(alias, dtype_classes) for alias in aliases
+    )
+    return list(it)
 
 
 def construct_dtype(alias: str) -> ExtensionDtype:  # pragma: no cover
@@ -152,9 +153,7 @@ def generate_pandas_dtypes_mostly_public(
     return [construct_dtype(alias) for alias in aliases]
 
 
-@pytest.fixture(
-    params=generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=SIMPLE_DTYPE_ALIASES
-)
+@pytest.fixture(params=generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=str)
 def pandas_dtype(request: pytest.FixtureRequest) -> ExtensionDtype:
     return request.param  # type: ignore[no-any-return]
 
