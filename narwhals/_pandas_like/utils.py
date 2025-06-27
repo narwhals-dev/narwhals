@@ -336,7 +336,7 @@ if Implementation.PANDAS._backend_version() >= (1, 2):
             isinstance(dtype, pd.api.extensions.ExtensionDtype)
             and getattr(dtype, "base", sentinel) is None
         )
-else:
+else:  # pragma: no cover
 
     def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
         # NOTE: `base` attribute was added between 1.1-1.2
