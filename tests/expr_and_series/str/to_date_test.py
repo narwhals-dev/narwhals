@@ -77,7 +77,7 @@ def test_to_date_infer_fmt_expr(
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if "ibis" in str(constructor):
         reason = "Cannot infer format"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
