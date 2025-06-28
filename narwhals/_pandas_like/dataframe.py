@@ -18,6 +18,7 @@ from narwhals._pandas_like.utils import (
     select_columns_by_name,
     set_index,
 )
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
@@ -732,9 +733,7 @@ class PandasLikeDataFrame(
             return self._join_full(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
-        msg = f"Unreachable code, got unexpected join method: {how}"  # pragma: no cover
-        raise AssertionError(msg)
+        assert_never(how)
 
     def join_asof(
         self,

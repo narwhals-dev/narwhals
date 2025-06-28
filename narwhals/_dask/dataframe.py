@@ -8,6 +8,7 @@ import pandas as pd
 from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._expression_parsing import ExprKind
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     _remap_full_join_keys,
@@ -426,9 +427,7 @@ class DaskLazyFrame(
             return self._join_full(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
-        msg = f"Unreachable code, got unexpected join method: {how}"  # pragma: no cover
-        raise AssertionError(msg)
+        assert_never(how)
 
     def join_asof(
         self,
