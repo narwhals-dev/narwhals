@@ -10,7 +10,6 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    check_column_names_are_unique,
     get_dtype_backend,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -22,6 +21,7 @@ from narwhals._utils import (
     Implementation,
     _into_arrow_table,
     _remap_full_join_keys,
+    check_column_names_are_unique,
     exclude_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,

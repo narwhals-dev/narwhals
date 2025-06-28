@@ -1573,7 +1573,12 @@ def check_columns_exist(
 
 
 def check_column_names_are_unique(columns: Collection[str]) -> None:
-    len_unique_columns = len(set(columns))
+    try:
+        len_unique_columns = len(set(columns))
+    except TypeError as exc:  # pragma: no cover
+        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
+        raise TypeError(msg) from exc
+
     if len(columns) != len_unique_columns:
         from collections import Counter
 
