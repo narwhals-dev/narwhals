@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
     import_native_dtypes,
     import_window,
     narwhals_to_native_dtype,
+    true_divide,
 )
 from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
@@ -398,15 +399,27 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
+    def __truediv__(self, other: SparkLikeExpr) -> Self:
+        def _truediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, expr, other)
+
+        return self._with_binary(_truediv, other)
+
+    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
+        def _rtruediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, other, expr)
+
+        return self._with_binary(_rtruediv, other).alias("literal")
+
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(expr / other)
+            return self._F.floor(true_divide(self._F, expr, other))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(other / expr)
+            return self._F.floor(true_divide(self._F, other, expr))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 

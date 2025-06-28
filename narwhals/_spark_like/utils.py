@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
@@ -283,3 +284,9 @@ def strptime_to_pyspark_format(format: str | None) -> str | None:
     for py_format, spark_format in DATETIME_PATTERNS_MAPPING.items():
         pyspark_format = pyspark_format.replace(py_format, spark_format)
     return pyspark_format.replace("T", " ")
+
+
+def true_divide(F: Any, left: Column, right: Column) -> Column:  # noqa: N803
+    # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
+    divide = getattr(F, "try_divide", operator.truediv)
+    return divide(left, right)
