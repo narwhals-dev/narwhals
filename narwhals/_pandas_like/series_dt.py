@@ -268,15 +268,15 @@ class PandasLikeSeriesDateTimeNamespace(
         else:
             interval = Interval.parse_no_constraints(by)
             multiple, unit = interval.multiple, interval.unit
-            if unit in {"y", "q", "mo"}:
+            if unit == "q":
                 msg = f"Offsetting by {unit} is not yet supported."
                 raise NotImplementedError(msg)
             from narwhals._arrow.utils import UNITS_DICT
 
             if unit == "y":
-                offset = pd.DateOffset(years=multiple)  # type: ignore[assignment, arg-type]
+                offset = pd.DateOffset(years=multiple)
             elif unit == "mo":
-                offset = pd.DateOffset(months=multiple)  # type: ignore[assignment, arg-type]
+                offset = pd.DateOffset(months=multiple)
             else:
                 offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[assignment, arg-type]
             if unit == "d":
