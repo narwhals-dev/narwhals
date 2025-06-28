@@ -170,7 +170,7 @@ class DaskExprDateTimeNamespace:
             interval = Interval.parse_no_constraints(by)
             unit = interval.unit
             if unit in {"y", "q", "mo", "d", "ns"}:
-                msg = f"Offsetting by {unit} is not supported yet for dask."
+                msg = f"Offsetting by {unit} is not yet supported."
                 raise NotImplementedError(msg)
             offset = interval.to_timedelta()
             return s.add(offset)

@@ -97,15 +97,17 @@ def test_offset_by(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "sqlframe", "pyspark")):
-        # ibis and sqlframe not implemented.
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+        # sqlframe not implemented.
         # pyspark localizes to UTC here.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pandas", "pyarrow")
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.offset_by(by))
@@ -186,15 +188,17 @@ def test_offset_by_multiples(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "sqlframe", "pyspark")):
-        # ibis and sqlframe not implemented.
+    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+        # sqlframe not implemented.
         # pyspark localizes to UTC here.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pandas", "pyarrow")
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.offset_by(by))
@@ -224,15 +228,18 @@ def test_offset_by_tz(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark", "sqlframe")):
-        # ibis and sqlframe not implemented.
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
+        # sqlframe not implemented.
         # duckdb and pyspark don't support changing time zones.
+        # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pandas", "pyarrow")
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
@@ -263,15 +270,18 @@ def test_offset_by_dst(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb", "ibis", "sqlframe", "pyspark")):
-        # ibis and sqlframe not implemented.
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")):
+        # sqlframe not implemented.
         # duckdb and pyspark localizes to UTC here.
+        # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pandas", "pyarrow")
+        x in str(constructor) for x in ("dask", "pyarrow")
     ):
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
@@ -292,12 +302,7 @@ def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_offset_by_invalid_interval(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if any(x in str(constructor) for x in ("ibis",)):
-        # ibis not implemented.
-        request.applymarker(pytest.mark.xfail())
+def test_offset_by_invalid_interval(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from duckdb import FunctionExpression
-
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,
@@ -121,7 +119,7 @@ class DuckDBExprDateTimeNamespace:
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
         def _offset_by(expr: Expression) -> Expression:
-            return FunctionExpression("date_add", format, expr)
+            return F("date_add", format, expr)
 
         return self._compliant_expr._with_callable(_offset_by)
 

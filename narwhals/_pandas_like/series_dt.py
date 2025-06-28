@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import pandas as pd
+
 from narwhals._arrow.utils import lit
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
@@ -247,13 +249,11 @@ class PandasLikeSeriesDateTimeNamespace(
         )
 
     def offset_by(self, by: str) -> PandasLikeSeries:
-        import pandas as pd
-
         from narwhals._arrow.utils import UNITS_DICT
 
         interval = Interval.parse_no_constraints(by)
         multiple, unit = interval.multiple, interval.unit
-        if unit in {"y", "q", "mo"}:
+        if unit == "q":
             msg = f"Offsetting by {unit} is not yet supported."
             raise NotImplementedError(msg)
         native = self.native
@@ -286,7 +286,12 @@ class PandasLikeSeriesDateTimeNamespace(
                 result, dtype=native.dtype, index=native.index, name=native.name
             )
         else:
-            offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[assignment, arg-type]
+            if unit == "y":
+                offset = pd.DateOffset(years=multiple)  # type: ignore[assignment, arg-type]
+            elif unit == "mo":
+                offset = pd.DateOffset(months=multiple)  # type: ignore[assignment, arg-type]
+            else:
+                offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[assignment, arg-type]
             if unit == "d":
                 original_timezone = native.dt.tz
                 native_without_timezone = native.dt.tz_localize(None)

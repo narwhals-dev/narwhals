@@ -82,6 +82,15 @@ class IbisExprDateTimeNamespace:
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
         return self._compliant_expr._with_callable(fn)
 
+    def offset_by(self, every: str) -> IbisExpr:
+        interval = Interval.parse_no_constraints(every)
+        unit = interval.unit
+        if unit in {"y", "q", "mo", "d", "ns"}:
+            msg = f"Offsetting by {unit} is not yet supported."
+            raise NotImplementedError(msg)
+        offset = interval.to_timedelta()
+        return self._compliant_expr._with_callable(lambda expr: expr.add(offset))
+
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
             return self._compliant_expr._with_callable(
@@ -92,7 +101,6 @@ class IbisExprDateTimeNamespace:
             raise NotImplementedError(msg)
 
     nanosecond = not_implemented()
-    offset_by = not_implemented()
     total_minutes = not_implemented()
     total_seconds = not_implemented()
     total_milliseconds = not_implemented()
