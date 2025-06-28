@@ -8,6 +8,14 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._constants import (
+    MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -519,25 +527,25 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
             result = s // 1_000_000
     elif original_time_unit == "us":
         if time_unit == "ns":
-            result = s * 1_000
+            result = s * NS_PER_MICROSECOND
         elif time_unit == "us":
             result = s
         else:
             result = s // 1_000
     elif original_time_unit == "ms":
         if time_unit == "ns":
-            result = s * 1_000_000
+            result = s * NS_PER_MILLISECOND
         elif time_unit == "us":
             result = s * 1_000
         else:
             result = s
     elif original_time_unit == "s":
         if time_unit == "ns":
-            result = s * 1_000_000_000
+            result = s * NS_PER_SECOND
         elif time_unit == "us":
-            result = s * 1_000_000
+            result = s * US_PER_SECOND
         else:
-            result = s * 1_000
+            result = s * MS_PER_SECOND
     else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
@@ -545,13 +553,13 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
 
 
 def calculate_timestamp_date(s: NativeSeriesT, time_unit: str) -> NativeSeriesT:
-    s = s * 86_400  # number of seconds in a day
+    s = s * SECONDS_PER_DAY
     if time_unit == "ns":
-        result = s * 1_000_000_000
+        result = s * NS_PER_SECOND
     elif time_unit == "us":
-        result = s * 1_000_000
+        result = s * US_PER_SECOND
     else:
-        result = s * 1_000
+        result = s * MS_PER_SECOND
     return result
 
 
