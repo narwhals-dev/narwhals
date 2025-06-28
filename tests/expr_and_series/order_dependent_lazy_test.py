@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.exceptions import OrderDependentExprError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -16,18 +16,18 @@ if TYPE_CHECKING:
 
 def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:
     lf = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
-    with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+    with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
         lf.select(nw.col("a").diff())
-    with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+    with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
         lf.select(nw.sum_horizontal(nw.col("a").diff()))
-    with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+    with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
         lf.select(nw.sum_horizontal(nw.col("a").diff(), nw.col("a")))
 
     for agg in ["max", "min", "mean", "sum", "median", "std", "var"]:
-        with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+        with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
             lf.select(getattr(nw.col("a").diff(), agg)())
     for agg in ["any", "all"]:
-        with pytest.raises(OrderDependentExprError, match="Order-dependent expressions"):
+        with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
             lf.select(getattr((nw.col("a").diff() > 0), agg)())
 
 
