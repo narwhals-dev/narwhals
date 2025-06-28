@@ -98,7 +98,7 @@ def test_floordiv_int_by_zero(
 ) -> None:
     if "pandas" in str(constructor) and PANDAS_VERSION < (2,):
         pytest.skip(reason="converts floordiv by zero to 0")
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
         pytest.skip(reason="bug")
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))
