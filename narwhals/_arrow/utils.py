@@ -260,8 +260,17 @@ def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
 
+    safe_mask = pc.not_equal(
+        right, lit(0, type=right.type)
+    )  # True where division is safe
+    safe_right = pc.if_else(
+        safe_mask, right, lit(1, type=right.type)
+    )  # Replace 0s with 1 (dummy)
+    right_is_zero_result = lit(None, type=left.type)
     if pa.types.is_integer(left.type) and pa.types.is_integer(right.type):
-        divided = pc.divide_checked(left, right)
+        divided = pc.if_else(
+            safe_mask, pc.divide_checked(left, safe_right), right_is_zero_result
+        )
         # TODO @dangotbanned: Use a `TypeVar` in guards
         # Narrowing to a `Union` isn't interacting well with the rest of the stubs
         # https://github.com/zen-xu/pyarrow-stubs/pull/215
@@ -280,7 +289,7 @@ def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
             result = divided  # pragma: no cover
         result = result.cast(left.type)
     else:
-        divided = pc.divide(left, right)
+        divided = pc.if_else(safe_mask, pc.divide(left, safe_right), right_is_zero_result)
         result = pc.floor(divided)
     return result
 
