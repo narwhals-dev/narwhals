@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+from narwhals._compliant.any_namespace import DateTimeNamespace
+from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._duration import parse_interval_string
 from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._utils import not_implemented
@@ -13,48 +15,45 @@ if TYPE_CHECKING:
     from narwhals._ibis.utils import BucketUnit, TruncateUnit
 
 
-class IbisExprDateTimeNamespace:
-    def __init__(self, expr: IbisExpr) -> None:
-        self._compliant_expr = expr
-
+class IbisExprDateTimeNamespace(
+    LazyExprNamespace["IbisExpr"], DateTimeNamespace["IbisExpr"]
+):
     def year(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.year())
+        return self.compliant._with_callable(lambda expr: expr.year())
 
     def month(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.month())
+        return self.compliant._with_callable(lambda expr: expr.month())
 
     def day(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.day())
+        return self.compliant._with_callable(lambda expr: expr.day())
 
     def hour(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.hour())
+        return self.compliant._with_callable(lambda expr: expr.hour())
 
     def minute(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.minute())
+        return self.compliant._with_callable(lambda expr: expr.minute())
 
     def second(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.second())
+        return self.compliant._with_callable(lambda expr: expr.second())
 
     def millisecond(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.millisecond())
+        return self.compliant._with_callable(lambda expr: expr.millisecond())
 
     def microsecond(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.microsecond())
+        return self.compliant._with_callable(lambda expr: expr.microsecond())
 
     def to_string(self, format: str) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.strftime(format))
+        return self.compliant._with_callable(lambda expr: expr.strftime(format))
 
     def weekday(self) -> IbisExpr:
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
-        return self._compliant_expr._with_callable(
-            lambda expr: expr.day_of_week.index() + 1
-        )
+        return self.compliant._with_callable(lambda expr: expr.day_of_week.index() + 1)
 
     def ordinal_day(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.day_of_year())
+        return self.compliant._with_callable(lambda expr: expr.day_of_year())
 
     def date(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.date())
+        return self.compliant._with_callable(lambda expr: expr.date())
 
     def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
         def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
@@ -73,19 +72,17 @@ class IbisExprDateTimeNamespace:
         if unit == "q":
             multiple, unit = 3 * multiple, "mo"
         if multiple != 1:
-            if self._compliant_expr._backend_version < (7, 1):  # pragma: no cover
+            if self.compliant._backend_version < (7, 1):  # pragma: no cover
                 msg = "Truncating datetimes with multiples of the unit is only supported in Ibis >= 7.1."
                 raise NotImplementedError(msg)
             fn = self._bucket({UNITS_DICT_BUCKET[unit]: multiple})
         else:
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
-            return self._compliant_expr._with_callable(
-                lambda _input: _input.cast("timestamp")
-            )
+            return self.compliant._with_callable(lambda _input: _input.cast("timestamp"))
         else:  # pragma: no cover
             msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"
             raise NotImplementedError(msg)
@@ -96,3 +93,5 @@ class IbisExprDateTimeNamespace:
     total_milliseconds = not_implemented()
     total_microseconds = not_implemented()
     total_nanoseconds = not_implemented()
+    convert_time_zone = not_implemented()
+    timestamp = not_implemented()
