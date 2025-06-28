@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from narwhals._compliant.any_namespace import ListNamespace
+from narwhals._compliant.expr import LazyExprNamespace
+from narwhals._ibis.expr import IbisExpr
 
-if TYPE_CHECKING:
-    from narwhals._ibis.expr import IbisExpr
 
-
-class IbisExprListNamespace:
-    def __init__(self, expr: IbisExpr) -> None:
-        self._compliant_expr = expr
-
+class IbisExprListNamespace(LazyExprNamespace[IbisExpr], ListNamespace[IbisExpr]):
     def len(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.length())
+        return self.compliant._with_callable(lambda expr: expr.length())
