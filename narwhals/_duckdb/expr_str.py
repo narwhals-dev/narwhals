@@ -4,16 +4,17 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.expr import LazyExprNamespace
-from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.utils import F, lit, when
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression
 
+    from narwhals._duckdb.expr import DuckDBExpr
+
 
 class DuckDBExprStringNamespace(
-    LazyExprNamespace[DuckDBExpr], StringNamespace[DuckDBExpr]
+    LazyExprNamespace["DuckDBExpr"], StringNamespace["DuckDBExpr"]
 ):
     def starts_with(self, prefix: str) -> DuckDBExpr:
         return self.compliant._with_callable(

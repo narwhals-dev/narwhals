@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
-from narwhals._dask.expr import DaskExpr
 from narwhals._duration import parse_interval_string
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
@@ -18,10 +17,13 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
+    from narwhals._dask.expr import DaskExpr
     from narwhals.typing import TimeUnit
 
 
-class DaskExprDateTimeNamespace(LazyExprNamespace[DaskExpr], DateTimeNamespace[DaskExpr]):
+class DaskExprDateTimeNamespace(
+    LazyExprNamespace["DaskExpr"], DateTimeNamespace["DaskExpr"]
+):
     def date(self) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.dt.date, "date")
 

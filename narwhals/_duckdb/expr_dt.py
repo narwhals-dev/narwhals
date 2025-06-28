@@ -12,7 +12,6 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
 from narwhals._duration import parse_interval_string
 from narwhals._utils import not_implemented
@@ -23,10 +22,11 @@ if TYPE_CHECKING:
     from duckdb import Expression
 
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
+    from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBExprDateTimeNamespace(
-    LazyExprNamespace[DuckDBExpr], DateTimeNamespace[DuckDBExpr]
+    LazyExprNamespace["DuckDBExpr"], DateTimeNamespace["DuckDBExpr"]
 ):
     def year(self) -> DuckDBExpr:
         return self.compliant._with_callable(lambda expr: F("year", expr))

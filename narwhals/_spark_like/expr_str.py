@@ -5,16 +5,17 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.expr import LazyExprNamespace
-from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
+    from narwhals._spark_like.expr import SparkLikeExpr
+
 
 class SparkLikeExprStringNamespace(
-    LazyExprNamespace[SparkLikeExpr], StringNamespace[SparkLikeExpr]
+    LazyExprNamespace["SparkLikeExpr"], StringNamespace["SparkLikeExpr"]
 ):
     def len_chars(self) -> SparkLikeExpr:
         return self.compliant._with_callable(self.compliant._F.char_length)

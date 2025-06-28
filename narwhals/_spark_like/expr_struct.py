@@ -4,14 +4,15 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant.any_namespace import StructNamespace
 from narwhals._compliant.expr import LazyExprNamespace
-from narwhals._spark_like.expr import SparkLikeExpr
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
+    from narwhals._spark_like.expr import SparkLikeExpr
+
 
 class SparkLikeExprStructNamespace(
-    LazyExprNamespace[SparkLikeExpr], StructNamespace[SparkLikeExpr]
+    LazyExprNamespace["SparkLikeExpr"], StructNamespace["SparkLikeExpr"]
 ):
     def field(self, name: str) -> SparkLikeExpr:
         def func(expr: Column) -> Column:

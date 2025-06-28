@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import dask.dataframe as dd
 
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.expr import LazyExprNamespace
-from narwhals._dask.expr import DaskExpr
+
+if TYPE_CHECKING:
+    from narwhals._dask.expr import DaskExpr
 
 
-class DaskExprStringNamespace(LazyExprNamespace[DaskExpr], StringNamespace[DaskExpr]):
+class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["DaskExpr"]):
     def len_chars(self) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.len(), "len")
 

@@ -6,7 +6,6 @@ from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import US_PER_SECOND
 from narwhals._duration import parse_interval_string
-from narwhals._spark_like.expr import SparkLikeExpr
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
@@ -20,10 +19,11 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.expr import SparkLikeExpr
 
 
 class SparkLikeExprDateTimeNamespace(
-    LazyExprNamespace[SparkLikeExpr], DateTimeNamespace[SparkLikeExpr]
+    LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
 ):
     def to_string(self, format: str) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
