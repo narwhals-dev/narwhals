@@ -30,6 +30,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
+from narwhals.translate import to_py_scalar
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
@@ -488,7 +489,29 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __floordiv__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
-        return self._with_native(ser // other).alias(self.name)
+        safe_mask = other != 0
+        if isinstance(other, ser.__class__):
+            other_ = other
+            mask_ = safe_mask
+        else:
+            other_scalar = to_py_scalar(other)
+            mask_scalar = to_py_scalar(safe_mask)
+            size = len(self)
+            if self._implementation.is_cudf():
+                import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+                def series_constructor(value: Any) -> pd.Series[Any]:
+                    return ser.__class__(cp.full(fill_value=value, shape=size), index=ser.index)
+            else:
+                import numpy as np  # ignore-banned-import
+
+                def series_constructor(value: Any) -> pd.Series[Any]:
+                    return ser.__class__(np.full(fill_value=value, shape=size), index=ser.index)
+
+            other_ = series_constructor(other_scalar)
+            safe_mask_ = series_constructor(mask_scalar)
+        result = (ser // other_).where(safe_mask_, None)
+        return self._with_native(result).alias(self.name)
 
     def __rfloordiv__(self, other: Any) -> Self:
         _, other_native = align_and_extract_native(self, other)
