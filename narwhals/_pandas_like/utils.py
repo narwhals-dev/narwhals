@@ -360,17 +360,14 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     """
     if implementation is Implementation.CUDF:
         return None
-    if is_dtype_pyarrow(dtype, implementation):
+    if is_dtype_pyarrow(dtype):
         return "pyarrow"
     return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
 
 
 @functools.lru_cache(maxsize=16)
-def is_dtype_pyarrow(dtype: Any, implementation: Implementation) -> TypeIs[pd.ArrowDtype]:  # noqa: ARG001
+def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
-
-
-is_pyarrow_dtype_backend = is_dtype_pyarrow
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
