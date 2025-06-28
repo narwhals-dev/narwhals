@@ -273,12 +273,13 @@ class PandasLikeSeriesDateTimeNamespace(
                 raise NotImplementedError(msg)
             from narwhals._pandas_like.utils import UNITS_DICT
 
+            offset: pd.DateOffset | pd.Timedelta
             if unit == "y":
                 offset = pd.DateOffset(years=multiple)
             elif unit == "mo":
                 offset = pd.DateOffset(months=multiple)
             else:
-                offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[assignment, arg-type]
+                offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
             if unit == "d":
                 original_timezone = native.dt.tz
                 native_without_timezone = native.dt.tz_localize(None)
