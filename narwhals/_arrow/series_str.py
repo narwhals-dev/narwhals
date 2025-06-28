@@ -57,6 +57,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         timestamp_array = pc.strptime(self.native, format=format, unit="us")
         return self.with_native(timestamp_array)
 
+    def to_date(self, format: str | None) -> ArrowSeries:
+        return self.to_datetime(format=format).dt.date()
+
     def to_uppercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_upper(self.native))
 

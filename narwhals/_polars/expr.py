@@ -408,6 +408,7 @@ class PolarsExprStringNamespace(PolarsExprNamespace):
     contains: Method[PolarsExpr]
     slice: Method[PolarsExpr]
     split: Method[PolarsExpr]
+    to_date: Method[PolarsExpr]
     to_datetime: Method[PolarsExpr]
     to_lowercase: Method[PolarsExpr]
     to_uppercase: Method[PolarsExpr]
