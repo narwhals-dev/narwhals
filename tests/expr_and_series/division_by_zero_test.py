@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -30,7 +36,6 @@ def test_series_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_series_floordiv_int_by_zero(
     left: int,
     right: int,
@@ -38,6 +43,10 @@ def test_series_floordiv_int_by_zero(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2,):
+        pytest.skip(reason="converts floordiv by zero to 0")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 6):
+        pytest.skip(reason="bug")
     data: dict[str, list[int]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     # pyarrow backend floordiv raises divide by zero error
@@ -80,7 +89,6 @@ def test_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_floordiv_int_by_zero(
     left: int,
     right: int,
@@ -88,6 +96,10 @@ def test_floordiv_int_by_zero(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2,):
+        pytest.skip(reason="converts floordiv by zero to 0")
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        pytest.skip(reason="bug")
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))
     # pyarrow backend floordiv raises divide by zero error
