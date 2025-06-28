@@ -668,7 +668,7 @@ class PandasLikeDataFrame(
         return self._with_native(
             self.native.merge(
                 other_native,
-                # TODO(FBruzzesi): Raise issue upstream for Modin
+                # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
                 how="left" if implementation.is_pandas() else "outer",
                 indicator=indicator_token,
                 left_on=left_on,
