@@ -70,7 +70,7 @@ def test_series_floordiv_int_by_zero(
 def test_truediv_by_zero(
     left: float, right: float, expected: float | None, constructor: Constructor
 ) -> None:
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+    if "pyspark" in str(constructor):
         # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_divide.html
         # PySpark always returns null when dividing by zero.
         expected = None
@@ -99,7 +99,7 @@ def test_floordiv_int_by_zero(
     if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
         request.applymarker(pytest.mark.xfail)
     # duckdb backend floordiv return None
-    if "duckdb" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
     # polars backend floordiv returns null
@@ -111,7 +111,7 @@ def test_floordiv_int_by_zero(
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
     # pandas[nullable] backend floordiv always returns 0
-    elif all(x in str(constructor) for x in ["pandas", "nullable"]):
+    elif "pandas_nullable" in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [0]})
     else:
