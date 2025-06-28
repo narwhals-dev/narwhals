@@ -100,6 +100,16 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
         fn = self._to_datetime_naive if _is_naive_format(format) else self._to_datetime
         return self.compliant._with_callable(fn(format))
 
+    def to_date(self, format: str | None) -> IbisExpr:
+        if format is None:
+            msg = "Cannot infer format with Ibis backend"
+            raise NotImplementedError(msg)
+
+        def fn(expr: ir.StringColumn) -> ir.DateValue:
+            return expr.as_date(format)
+
+        return self._compliant_expr._with_callable(fn)
+
     def zfill(self, width: int) -> IbisExpr:
         def func(expr: ir.StringColumn) -> ir.Value:
             length = expr.length()

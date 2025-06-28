@@ -6,6 +6,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._compliant.expr import LazyExprNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
@@ -101,3 +102,5 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         return self.compliant._with_callable(
             lambda expr, width: expr.str.zfill(width), "zfill", width=width
         )
+
+    to_date = not_implemented()

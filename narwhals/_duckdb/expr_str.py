@@ -87,6 +87,13 @@ class DuckDBExprStringNamespace(
             lambda expr: F("strptime", expr, lit(format))
         )
 
+    def to_date(self, format: str | None) -> DuckDBExpr:
+        if format is not None:
+            return self.to_datetime(format=format).dt.date()
+
+        compliant_expr = self.compliant
+        return compliant_expr.cast(compliant_expr._version.dtypes.Date())
+
     def zfill(self, width: int) -> DuckDBExpr:
         # DuckDB does not have a built-in zfill function, so we need to implement it manually
         # using string manipulation functions.
