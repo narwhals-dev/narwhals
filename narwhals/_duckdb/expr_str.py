@@ -80,7 +80,7 @@ class DuckDBExprStringNamespace:
         )
 
     def to_datetime(self, format: str | None) -> DuckDBExpr:
-        if format is not None:
+        if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."
             raise NotImplementedError(msg)
 
