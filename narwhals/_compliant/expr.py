@@ -32,7 +32,7 @@ from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -663,7 +663,7 @@ class EagerExpr(
 
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
-        predicate = plx.all_horizontal(*predicates)
+        predicate = plx.all_horizontal(*predicates, ignore_nulls=False)
         return self._reuse_series("filter", predicate=predicate)
 
     def drop_nulls(self) -> Self:
@@ -894,9 +894,78 @@ class LazyExpr(
     @classmethod
     def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
+    ) -> Self: ...
+
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
+
+    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self: ...
+
+    def __eq__(self, other: Self) -> Self:  # type: ignore[override]
+        return self._with_binary(lambda expr, other: expr.__eq__(other), other)
+
+    def __ne__(self, other: Self) -> Self:  # type: ignore[override]
+        return self._with_binary(lambda expr, other: expr.__ne__(other), other)
+
+    def __add__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__add__(other), other)
+
+    def __sub__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__sub__(other), other)
+
+    def __rsub__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: other - expr, other).alias("literal")
+
+    def __mul__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__mul__(other), other)
+
+    def __truediv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__truediv__(other), other)
+
+    def __rtruediv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: other / expr, other).alias("literal")
+
+    def __floordiv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__floordiv__(other), other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: other // expr, other).alias(
+            "literal"
+        )
+
+    def __pow__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__pow__(other), other)
+
+    def __rpow__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: other**expr, other).alias("literal")
+
+    def __mod__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
+
+    def __rmod__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: other % expr, other).alias("literal")
+
+    def __ge__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__ge__(other), other)
+
+    def __gt__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__gt__(other), other)
+
+    def __le__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__le__(other), other)
+
+    def __lt__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__lt__(other), other)
+
+    def __and__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__and__(other), other)
+
+    def __or__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
 
 class _ExprNamespace(  # type: ignore[misc]

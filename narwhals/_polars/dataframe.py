@@ -236,6 +236,18 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 for name, dtype in collected_schema.items()
             }
 
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        frame = self.native
+        if order_by is None:
+            result = frame.with_row_index(name)
+        else:
+            end = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            result = frame.select(
+                pl.int_range(start=0, end=end).sort_by(order_by).alias(name), pl.all()
+            )
+
+        return self._with_native(result)
+
 
 class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     clone: Method[Self]
@@ -491,11 +503,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
         return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
-    def with_row_index(self, name: str) -> Self:
-        if self._backend_version < (0, 20, 4):
-            return self._with_native(self.native.with_row_count(name))
-        return self._with_native(self.native.with_row_index(name))
-
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
@@ -631,11 +638,6 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         from narwhals._polars.group_by import PolarsLazyGroupBy
 
         return PolarsLazyGroupBy(self, keys, drop_null_keys=drop_null_keys)
-
-    def with_row_index(self, name: str) -> Self:
-        if self._backend_version < (0, 20, 4):
-            return self._with_native(self.native.with_row_count(name))
-        return self._with_native(self.native.with_row_index(name))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         if self._backend_version < (1, 0, 0):

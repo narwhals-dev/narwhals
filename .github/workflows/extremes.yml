@@ -25,7 +25,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-minimum-versions
-        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.3 polars==0.20.3 numpy==1.19.3 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.3 polars==0.20.4 numpy==1.19.3 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
       - name: install-reqs
         run: |
           uv pip install -e . --group tests --system
@@ -35,7 +35,7 @@ jobs:
         run: |
           DEPS=$(uv pip freeze)
           echo "$DEPS" | grep 'pandas==1.1.3'
-          echo "$DEPS" | grep 'polars==0.20.3'
+          echo "$DEPS" | grep 'polars==0.20.4'
           echo "$DEPS" | grep 'numpy==1.19.3'
           echo "$DEPS" | grep 'pyarrow==11.0.0'
           echo "$DEPS" | grep 'scipy==1.6.0'
@@ -62,7 +62,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-pretty-old-versions
-        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.3 numpy==1.19.3 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
+        run: uv pip install pipdeptree tox virtualenv setuptools pandas==1.1.5 polars==0.20.4 numpy==1.19.3 pyarrow==11.0.0 "pyarrow-stubs<17" scipy==1.6.0 scikit-learn==1.1.0 duckdb==1.0 tzdata --system
       - name: install-reqs
         run: uv pip install -e . --group tests --system
       - name: show-deps
@@ -73,7 +73,7 @@ jobs:
         run : |
           DEPS=$(uv pip freeze)
           echo "$DEPS" | grep 'pandas==1.1.5'
-          echo "$DEPS" | grep 'polars==0.20.3'
+          echo "$DEPS" | grep 'polars==0.20.4'
           echo "$DEPS" | grep 'numpy==1.19.3'
           echo "$DEPS" | grep 'pyarrow==11.0.0'
           echo "$DEPS" | grep 'scipy==1.6.0'

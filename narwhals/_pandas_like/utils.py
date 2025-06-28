@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import functools
 import re
-from collections.abc import Sized
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._constants import (
+    MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -18,13 +25,16 @@ from narwhals._utils import (
 )
 from narwhals.exceptions import DuplicateError, ShapeError
 
-T = TypeVar("T", bound=Sized)
-
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import (
+        NativeDataFrameT,
+        NativeNDFrameT,
+        NativeSeriesT,
+    )
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
@@ -123,12 +133,12 @@ def align_and_extract_native(
 
 
 def set_index(
-    obj: T,
+    obj: NativeNDFrameT,
     index: Any,
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' set_axis to set object index.
 
     We can set `copy` / `inplace` based on implementation/version.
@@ -139,30 +149,30 @@ def set_index(
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
         raise ShapeError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
-        obj.index = index  # type: ignore[attr-defined]
+        obj = obj.copy(deep=False)
+        obj.index = index
         return obj
     if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0, copy=False)
     else:  # pragma: no cover
-        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)
 
 
 def rename(
-    obj: T,
+    obj: NativeNDFrameT,
     *args: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
     **kwargs: Any,
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
         backend_version >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined]
-    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
+        return obj.rename(*args, **kwargs, inplace=False)
+    return obj.rename(*args, **kwargs, copy=False, inplace=False)
 
 
 @functools.lru_cache(maxsize=16)
@@ -506,8 +516,8 @@ def int_dtype_mapper(dtype: Any) -> str:
 
 
 def calculate_timestamp_datetime(  # noqa: C901, PLR0912
-    s: pd.Series[int], original_time_unit: str, time_unit: str
-) -> pd.Series[int]:
+    s: NativeSeriesT, original_time_unit: str, time_unit: str
+) -> NativeSeriesT:
     if original_time_unit == "ns":
         if time_unit == "ns":
             result = s
@@ -517,73 +527,67 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
             result = s // 1_000_000
     elif original_time_unit == "us":
         if time_unit == "ns":
-            result = s * 1_000
+            result = s * NS_PER_MICROSECOND
         elif time_unit == "us":
             result = s
         else:
             result = s // 1_000
     elif original_time_unit == "ms":
         if time_unit == "ns":
-            result = s * 1_000_000
+            result = s * NS_PER_MILLISECOND
         elif time_unit == "us":
             result = s * 1_000
         else:
             result = s
     elif original_time_unit == "s":
         if time_unit == "ns":
-            result = s * 1_000_000_000
+            result = s * NS_PER_SECOND
         elif time_unit == "us":
-            result = s * 1_000_000
+            result = s * US_PER_SECOND
         else:
-            result = s * 1_000
+            result = s * MS_PER_SECOND
     else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
     return result
 
 
-def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int]:
-    s = s * 86_400  # number of seconds in a day
+def calculate_timestamp_date(s: NativeSeriesT, time_unit: str) -> NativeSeriesT:
+    s = s * SECONDS_PER_DAY
     if time_unit == "ns":
-        result = s * 1_000_000_000
+        result = s * NS_PER_SECOND
     elif time_unit == "us":
-        result = s * 1_000_000
+        result = s * US_PER_SECOND
     else:
-        result = s * 1_000
+        result = s * MS_PER_SECOND
     return result
 
 
 def select_columns_by_name(
-    df: T,
+    df: NativeDataFrameT,
     column_names: list[str] | _1DArray,  # NOTE: Cannot be a tuple!
     backend_version: tuple[int, ...],
     implementation: Implementation,
-) -> T:
+) -> NativeDataFrameT | Any:
     """Select columns by name.
 
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and all(column_names == df.columns):  # type: ignore[attr-defined]
+    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
         return df
-    if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
+    if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
-        ):
+        if error := check_columns_exist(column_names, available=df.columns.tolist()):
             raise error
-        return df.loc[:, column_names]  # type: ignore[attr-defined]
+        return df.loc[:, column_names]
     try:
-        return df[column_names]  # type: ignore[index]
+        return df[column_names]
     except KeyError as e:
-        if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
-        ):
+        if error := check_columns_exist(column_names, available=df.columns.tolist()):
             raise error from e
         raise
 
@@ -605,6 +609,15 @@ def check_column_names_are_unique(columns: pd.Index[str]) -> None:
                 msg += f"\n- '{key}' {value} times"
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
+    # cuDF booleans are nullable but the native dtype is still 'bool'.
+    return (
+        s._implementation
+        in {Implementation.PANDAS, Implementation.MODIN, Implementation.DASK}
+        and s.native.dtype == "bool"
+    )
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import ibis
 import ibis.expr.types as ir
@@ -32,21 +32,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
         self._backend_version = backend_version
         self._version = version
-
-    def _expr_from_callable(
-        self, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: IbisExpr
-    ) -> IbisExpr:
-        def call(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [func(cols)]
-
-        return self._expr(
-            call=call,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-        )
 
     @property
     def selectors(self) -> IbisSelectorNamespace:
@@ -100,36 +85,46 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
+    def all_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return reduce(operator.and_, cols)
+            it = (
+                (col.fill_null(lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def any_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
+    def any_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return reduce(operator.or_, cols)
+            it = (
+                (col.fill_null(lit(False)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.or_, it)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def max_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.greatest(*cols)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def min_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             return ibis.least(*cols)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = (col.fill_null(lit(0)) for col in cols)
             return reduce(operator.add, cols)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
@@ -138,7 +133,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
                 operator.add, (col.isnull().ifelse(lit(0), lit(1)) for col in cols)
             )
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     @requires.backend_version((10, 0))
     def when(self, predicate: IbisExpr) -> IbisWhen:
