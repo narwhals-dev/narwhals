@@ -20,7 +20,7 @@ from narwhals._pandas_like.utils import (
     calculate_timestamp_datetime,
     get_dtype_backend,
     int_dtype_mapper,
-    is_pyarrow_dtype_backend,
+    is_dtype_pyarrow,
 )
 
 if TYPE_CHECKING:
@@ -101,7 +101,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(self.native.dt.weekday) + 1
 
     def _is_pyarrow(self) -> bool:
-        return is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
+        return is_dtype_pyarrow(self.native.dtype)
 
     def _get_total_seconds(self) -> Any:
         if hasattr(self.native.dt, "total_seconds"):
