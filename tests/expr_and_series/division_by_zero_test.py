@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -30,7 +36,6 @@ def test_series_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_series_floordiv_int_by_zero(
     left: int,
     right: int,
@@ -38,6 +43,10 @@ def test_series_floordiv_int_by_zero(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2,):
+        pytest.skip(reason="converts floordiv by zero to 0")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 6):
+        pytest.skip(reason="bug")
     data: dict[str, list[int]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     # pyarrow backend floordiv raises divide by zero error
@@ -70,6 +79,10 @@ def test_series_floordiv_int_by_zero(
 def test_truediv_by_zero(
     left: float, right: float, expected: float | None, constructor: Constructor
 ) -> None:
+    if "pyspark" in str(constructor):
+        # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_divide.html
+        # PySpark always returns null when dividing by zero.
+        expected = None
     data: dict[str, list[int | float]] = {"a": [left]}
     df = nw.from_native(constructor(data))
     truediv_result = df.select(nw.col("a") / right)
@@ -80,7 +93,6 @@ def test_truediv_by_zero(
     ("left", "right", "expected"),
     [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="converts floordiv by zero to 0")
 def test_floordiv_int_by_zero(
     left: int,
     right: int,
@@ -88,6 +100,10 @@ def test_floordiv_int_by_zero(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2,):
+        pytest.skip(reason="converts floordiv by zero to 0")
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        pytest.skip(reason="bug")
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))
     # pyarrow backend floordiv raises divide by zero error
@@ -95,7 +111,7 @@ def test_floordiv_int_by_zero(
     if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
         request.applymarker(pytest.mark.xfail)
     # duckdb backend floordiv return None
-    if "duckdb" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
     # polars backend floordiv returns null
@@ -107,7 +123,7 @@ def test_floordiv_int_by_zero(
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [None]})
     # pandas[nullable] backend floordiv always returns 0
-    elif all(x in str(constructor) for x in ["pandas", "nullable"]):
+    elif "pandas_nullable" in str(constructor):
         floordiv_result = df.select(nw.col("a") // right)
         assert_equal_data(floordiv_result, {"a": [0]})
     else:

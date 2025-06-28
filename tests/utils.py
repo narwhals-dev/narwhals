@@ -155,3 +155,11 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
 def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
+
+
+def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
+    """Checks if the pandas-like constructor uses pyarrow backend."""
+    return constructor.__name__ in {
+        "pandas_pyarrow_constructor",
+        "modin_pyarrow_constructor",
+    }
