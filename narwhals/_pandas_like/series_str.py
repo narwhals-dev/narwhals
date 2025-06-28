@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._pandas_like.utils import (
-    PandasLikeSeriesNamespace,
-    is_pyarrow_dtype_backend,
-)
+from narwhals._pandas_like.utils import PandasLikeSeriesNamespace, is_dtype_pyarrow
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -46,9 +43,7 @@ class PandasLikeSeriesStringNamespace(
 
     def split(self, by: str) -> PandasLikeSeries:
         implementation = self.implementation
-        if not implementation.is_cudf() and not is_pyarrow_dtype_backend(
-            self.native.dtype, implementation
-        ):
+        if not implementation.is_cudf() and not is_dtype_pyarrow(self.native.dtype):
             msg = (
                 "This operation requires a pyarrow-backed series. "
                 "Please refer to https://narwhals-dev.github.io/narwhals/api-reference/narwhals/#narwhals.maybe_convert_dtypes "
@@ -73,7 +68,7 @@ class PandasLikeSeriesStringNamespace(
         )
         return (
             result.convert_dtypes(dtype_backend="pyarrow")
-            if is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
+            if is_dtype_pyarrow(self.native.dtype)
             else result
         )
 

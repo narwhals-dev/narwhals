@@ -1573,8 +1573,7 @@ def check_columns_exist(
 
 
 def check_column_names_are_unique(columns: Collection[str]) -> None:
-    len_unique_columns = len(set(columns))
-    if len(columns) != len_unique_columns:
+    if len(columns) != len(set(columns)):
         from collections import Counter
 
         counter = Counter(columns)
