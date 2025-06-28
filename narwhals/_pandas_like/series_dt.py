@@ -15,6 +15,7 @@ from narwhals._constants import (
 from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
     UNIT_DICT,
+    UNITS_DICT,
     PandasLikeSeriesNamespace,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
@@ -221,8 +222,6 @@ class PandasLikeSeriesDateTimeNamespace(
             if dtype_backend == "pyarrow":
                 import pyarrow.compute as pc  # ignore-banned-import
 
-                from narwhals._arrow.utils import UNITS_DICT
-
                 ca = native.array._pa_array
                 result_arr = pc.floor_temporal(ca, multiple, UNITS_DICT[unit])
             else:
@@ -271,8 +270,6 @@ class PandasLikeSeriesDateTimeNamespace(
             if unit == "q":
                 msg = f"Offsetting by {unit} is not yet supported."
                 raise NotImplementedError(msg)
-            from narwhals._pandas_like.utils import UNITS_DICT
-
             offset: pd.DateOffset | pd.Timedelta
             if unit == "y":
                 offset = pd.DateOffset(years=multiple)
