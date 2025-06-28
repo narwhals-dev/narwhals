@@ -105,6 +105,12 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             backend_version=self._backend_version, version=self._version
         )
 
+    def __floordiv__(self, other: Any) -> Self:
+        def func(expr: Expression) -> Expression:
+            return when(other == lit(0), lit(None)).otherwise(expr.__floordiv__(other))
+
+        return self._with_callable(func)
+
     def _cum_window_func(
         self,
         func_name: Literal["sum", "max", "min", "count", "product"],

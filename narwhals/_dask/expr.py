@@ -9,6 +9,7 @@ from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
+    align_series_full_broadcast,
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
@@ -218,8 +219,23 @@ class DaskExpr(
         ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__floordiv__(other), "__floordiv__", other=other
+        def _floordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any = other
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return series.__floordiv__(other).where(other != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [_floordiv(df, series) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__floordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            backend_version=self._backend_version,
+            version=self._version,
         )
 
     def __rfloordiv__(self, other: Any) -> Self:

@@ -501,12 +501,16 @@ class PandasLikeSeries(EagerSeries[Any]):
                 import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
                 def series_constructor(value: Any) -> pd.Series[Any]:
-                    return ser.__class__(cp.full(fill_value=value, shape=size), index=ser.index)
+                    return ser.__class__(
+                        cp.full(fill_value=value, shape=size), index=ser.index
+                    )
             else:
                 import numpy as np  # ignore-banned-import
 
                 def series_constructor(value: Any) -> pd.Series[Any]:
-                    return ser.__class__(np.full(fill_value=value, shape=size), index=ser.index)
+                    return ser.__class__(
+                        np.full(fill_value=value, shape=size), index=ser.index
+                    )
 
             other_ = series_constructor(other_scalar)
             safe_mask_ = series_constructor(mask_scalar)
