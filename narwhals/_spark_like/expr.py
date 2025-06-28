@@ -401,19 +401,31 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def __truediv__(self, other: SparkLikeExpr) -> Self:
         def _truediv(expr: Column, other: Column) -> Column:
-            return true_divide(self._F, expr, other)
+            return self._F.when(other != 0, true_divide(self._F, expr, other)).when(
+                other == 0,
+                self._F.when(expr == 0, self._F.lit(float("nan")))
+                .when(expr > 0, self._F.lit(float("inf")))
+                .when(expr < 0, self._F.lit(float("-inf"))),
+            )
 
         return self._with_binary(_truediv, other)
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
         def _rtruediv(expr: Column, other: Column) -> Column:
-            return true_divide(self._F, other, expr)
+            return self._F.when(expr != 0, true_divide(self._F, other, expr)).when(
+                expr == 0,
+                self._F.when(other == 0, self._F.lit(float("nan")))
+                .when(other > 0, self._F.lit(float("inf")))
+                .when(other < 0, self._F.lit(float("-inf"))),
+            )
 
         return self._with_binary(_rtruediv, other).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, expr, other))
+            return self._F.when(
+                other != 0, self._F.floor(true_divide(self._F, expr, other))
+            ).otherwise(None)
 
         return self._with_binary(_floordiv, other)
 
