@@ -560,20 +560,18 @@ class PandasLikeDataFrame(
 
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
-    ) -> Self:
-        return self._with_native(
-            self.native.merge(
-                other.native,
-                left_on=left_on,
-                right_on=right_on,
-                how="inner",
-                suffixes=("", suffix),
-            )
+    ) -> pd.DataFrame:
+        return self.native.merge(
+            other.native,
+            left_on=left_on,
+            right_on=right_on,
+            how="inner",
+            suffixes=("", suffix),
         )
 
     def _join_left(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
-    ) -> Self:
+    ) -> pd.DataFrame:
         result_native = self.native.merge(
             other.native,
             how="left",
@@ -586,27 +584,25 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on)
             if right_key != left_key
         ]
-        return self._with_native(result_native.drop(columns=extra))
+        return result_native.drop(columns=extra)
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
-    ) -> Self:
+    ) -> pd.DataFrame:
         # Pandas coalesces keys in full joins unless there's no collision
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
-        return self._with_native(
-            self.native.merge(
-                other_native,
-                left_on=left_on,
-                right_on=right_suffixed,
-                how="outer",
-                suffixes=("", suffix),
-            )
+        return self.native.merge(
+            other_native,
+            left_on=left_on,
+            right_on=right_suffixed,
+            how="outer",
+            suffixes=("", suffix),
         )
 
-    def _join_cross(self, other: Self, *, suffix: str) -> Self:
+    def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
         implementation = self._implementation
         backend_version = self._backend_version
         if (implementation.is_modin() or implementation.is_cudf()) or (
@@ -615,7 +611,7 @@ class PandasLikeDataFrame(
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=(*self.columns, *other.columns)
             )
-            return self._with_native(
+            return (
                 self.native.assign(**{key_token: 0})
                 .merge(
                     other.native.assign(**{key_token: 0}),
@@ -626,34 +622,28 @@ class PandasLikeDataFrame(
                 )
                 .drop(columns=key_token)
             )
-        return self._with_native(
-            self.native.merge(other.native, how="cross", suffixes=("", suffix))
-        )
+        return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
-    ) -> Self:
+    ) -> pd.DataFrame:
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return self._with_native(
-            self.native.merge(
-                other_native, how="inner", left_on=left_on, right_on=left_on
-            )
+        return self.native.merge(
+            other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
     def _join_anti(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
-    ) -> Self:
+    ) -> pd.DataFrame:
         implementation = self._implementation
 
         if implementation.is_cudf():
-            return self._with_native(
-                self.native.merge(
-                    other.native, how="leftanti", left_on=left_on, right_on=right_on
-                )
+            return self.native.merge(
+                other.native, how="leftanti", left_on=left_on, right_on=right_on
             )
 
         indicator_token = generate_temporary_column_name(
@@ -665,7 +655,7 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return self._with_native(
+        return (
             self.native.merge(
                 other_native,
                 # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
@@ -712,28 +702,31 @@ class PandasLikeDataFrame(
         suffix: str,
     ) -> Self:
         if how == "cross":
-            return self._join_cross(other=other, suffix=suffix)
+            result = self._join_cross(other=other, suffix=suffix)
 
-        if left_on is None or right_on is None:  # pragma: no cover
+        elif left_on is None or right_on is None:  # pragma: no cover
             raise ValueError(left_on, right_on)
 
-        if how == "inner":
-            return self._join_inner(
+        elif how == "inner":
+            result = self._join_inner(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        if how == "anti":
-            return self._join_anti(other=other, left_on=left_on, right_on=right_on)
-        if how == "semi":
-            return self._join_semi(other=other, left_on=left_on, right_on=right_on)
-        if how == "left":
-            return self._join_left(
+        elif how == "anti":
+            result = self._join_anti(other=other, left_on=left_on, right_on=right_on)
+        elif how == "semi":
+            result = self._join_semi(other=other, left_on=left_on, right_on=right_on)
+        elif how == "left":
+            result = self._join_left(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        if how == "full":
-            return self._join_full(
+        elif how == "full":
+            result = self._join_full(
                 other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-        assert_never(how)
+        else:
+            assert_never(how)
+
+        return self._with_native(result)
 
     def join_asof(
         self,
