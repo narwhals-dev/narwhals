@@ -90,7 +90,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def __floordiv__(self, other: Any) -> Self:
         def func(expr: ir.IntegerColumn) -> ir.Value:
             return ibis.cases(
-                (other == lit(0), lit(None)), else_=expr.__floordiv__(other)
+                (other != lit(0), expr.__floordiv__(other)), else_=lit(None)
             )
 
         return self._with_callable(func)

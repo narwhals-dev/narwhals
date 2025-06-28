@@ -492,7 +492,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         safe_mask = other != 0
         if isinstance(other, ser.__class__):
             other_ = other
-            mask_ = safe_mask
+            safe_mask_ = safe_mask
         else:
             other_scalar = to_py_scalar(other)
             mask_scalar = to_py_scalar(safe_mask)
