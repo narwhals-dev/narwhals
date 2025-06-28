@@ -77,6 +77,8 @@ def test_head_aggregation() -> None:
 def test_rank_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().rank()
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").mean().is_unique()
 
 
 def test_diff_aggregation() -> None:
