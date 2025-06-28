@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from narwhals._arrow.utils import lit
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
     EPOCH_YEAR,
@@ -25,7 +24,6 @@ from narwhals._pandas_like.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.typing import TimeUnit
 
@@ -235,7 +233,7 @@ class PandasLikeSeriesDateTimeNamespace(
                     np_unit = "M"
                 else:
                     np_unit = "Y"
-                arr = native.values
+                arr = native.values  # noqa: PD011
                 arr_dtype = arr.dtype
                 result_arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(
                     arr_dtype
@@ -249,43 +247,32 @@ class PandasLikeSeriesDateTimeNamespace(
         )
 
     def offset_by(self, by: str) -> PandasLikeSeries:
-        from narwhals._arrow.utils import UNITS_DICT
-
-        interval = Interval.parse_no_constraints(by)
-        multiple, unit = interval.multiple, interval.unit
-        if unit == "q":
-            msg = f"Offsetting by {unit} is not yet supported."
-            raise NotImplementedError(msg)
-        native = self.native
         if self.implementation.is_cudf():
             msg = "Not implemented for cuDF."
             raise NotImplementedError(msg)
-        dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
-        if dtype_backend == "pyarrow":
+        native = self.native
+        if self._is_pyarrow():
             import pyarrow as pa  # ignore-banned-import
-            import pyarrow.compute as pc  # ignore-banned-import
 
-            ca = native.array._pa_array
-            if unit == "d":
-                offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
-                original_timezone = ca.type.tz
-                if original_timezone is not None:
-                    native_without_timezone = pc.local_timestamp(ca)
-                    result: ChunkedArrayAny = pc.assume_timezone(
-                        pc.add(native_without_timezone, offset), original_timezone
-                    )
-                else:
-                    result = pc.add(ca, offset)
-            elif unit == "ns":  # pragma: no cover
-                offset = lit(interval.multiple, type=pa.duration("ns"))  # type: ignore[assignment]
-                result = pc.add(ca, offset)
-            else:
-                offset = lit(interval.to_timedelta())
-                result = pc.add(ca, offset)
+            compliant = self.compliant
+            ca = pa.chunked_array([compliant.to_arrow()])  # type: ignore[arg-type]
+            result = (
+                compliant._version.namespace.from_backend("pyarrow")
+                .compliant.from_native(ca)
+                .dt.offset_by(by)
+                .native
+            )
             result_pd = native.__class__(
                 result, dtype=native.dtype, index=native.index, name=native.name
             )
         else:
+            interval = Interval.parse_no_constraints(by)
+            multiple, unit = interval.multiple, interval.unit
+            if unit in {"y", "q", "mo"}:
+                msg = f"Offsetting by {unit} is not yet supported."
+                raise NotImplementedError(msg)
+            from narwhals._arrow.utils import UNITS_DICT
+
             if unit == "y":
                 offset = pd.DateOffset(years=multiple)  # type: ignore[assignment, arg-type]
             elif unit == "mo":

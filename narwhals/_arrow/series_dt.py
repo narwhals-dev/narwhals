@@ -211,25 +211,18 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def offset_by(self, by: str) -> ArrowSeries:
         interval = Interval.parse_no_constraints(by)
-        unit = interval.unit
         native = self.native
-        if unit in {"y", "q", "mo"}:
-            msg = f"Offsetting by {unit} is not yet supported."
+        if interval.unit in {"y", "q", "mo"}:
+            msg = f"Offsetting by {interval.unit} is not yet supported."
             raise NotImplementedError(msg)
-        if unit == "d":
+        if interval.unit == "d":
             offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
-            original_timezone = native.type.tz
-            if original_timezone is not None:
-                native_without_timezone = pc.local_timestamp(native)
-                result: ChunkedArrayAny = pc.assume_timezone(
-                    pc.add(native_without_timezone, offset), original_timezone
-                )  # type: ignore[assignment]
-            else:
-                result = pc.add(native, offset)
-        elif unit == "ns":  # pragma: no cover
-            offset = lit(interval.multiple, type=pa.duration("ns"))  # type: ignore[assignment]
-            result = pc.add(native, offset)
+            if time_zone := native.type.tz:
+                native_naive = pc.local_timestamp(native)
+                result = pc.assume_timezone(pc.add(native_naive, offset), time_zone)
+                return self.with_native(result)
+        elif interval.unit == "ns":  # pragma: no cover
+            offset = lit(interval.multiple, pa.duration("ns"))  # type: ignore[assignment]
         else:
             offset = lit(interval.to_timedelta())
-            result = pc.add(native, offset)
-        return self.with_native(result)
+        return self.with_native(pc.add(native, offset))
