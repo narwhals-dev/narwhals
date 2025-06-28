@@ -16,6 +16,7 @@ from narwhals._spark_like.utils import (
     import_functions,
     import_native_dtypes,
     narwhals_to_native_dtype,
+    true_divide,
 )
 
 if TYPE_CHECKING:
@@ -152,20 +153,14 @@ class SparkLikeNamespace(
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
             F = exprs[0]._F  # noqa: N806
-            # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
-            divide = getattr(F, "try_divide", operator.truediv)
-            return divide(
-                reduce(
-                    operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
-                ),
-                reduce(
-                    operator.add,
-                    (
-                        col.isNotNull().cast(self._native_dtypes.IntegerType())
-                        for col in cols
-                    ),
-                ),
+            numerator = reduce(
+                operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
+            denominator = reduce(
+                operator.add,
+                (col.isNotNull().cast(self._native_dtypes.IntegerType()) for col in cols),
+            )
+            return true_divide(F, numerator, denominator)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
