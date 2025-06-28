@@ -271,7 +271,7 @@ class PandasLikeSeriesDateTimeNamespace(
             if unit == "q":
                 msg = f"Offsetting by {unit} is not yet supported."
                 raise NotImplementedError(msg)
-            from narwhals._arrow.utils import UNITS_DICT
+            from narwhals._pandas_like.utils import UNITS_DICT
 
             if unit == "y":
                 offset = pd.DateOffset(years=multiple)
