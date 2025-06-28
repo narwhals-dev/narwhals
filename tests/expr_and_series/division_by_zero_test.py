@@ -70,6 +70,10 @@ def test_series_floordiv_int_by_zero(
 def test_truediv_by_zero(
     left: float, right: float, expected: float | None, constructor: Constructor
 ) -> None:
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_divide.html
+        # PySpark always returns null when dividing by zero.
+        expected = None
     data: dict[str, list[int | float]] = {"a": [left]}
     df = nw.from_native(constructor(data))
     truediv_result = df.select(nw.col("a") / right)
