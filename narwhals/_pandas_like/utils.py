@@ -22,7 +22,7 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
@@ -148,7 +148,7 @@ def set_index(
         expected_len := len(index)
     ) != (actual_len := len(obj)):
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
-        raise ShapeError(msg)
+        raise InvalidOperationError(msg)
     if implementation is Implementation.CUDF:  # pragma: no cover
         obj = obj.copy(deep=False)
         obj.index = index
