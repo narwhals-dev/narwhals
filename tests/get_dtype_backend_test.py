@@ -5,14 +5,12 @@ from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, TypeVar
 
-import numpy as np
 import pytest
-from pandas.api.extensions import ExtensionDtype
 
 from narwhals._utils import Implementation
 
 pytest.importorskip("pandas")
-import pandas as pd
+from pandas.api.extensions import ExtensionDtype
 
 from narwhals._pandas_like.utils import get_dtype_backend
 
@@ -127,7 +125,6 @@ def brute_force_construct_dtype(
             return
 
 
-# NOTE: Option 1
 def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype]:
     """Technically only uses the public api."""
     dtype_classes = _deep_descendants(ExtensionDtype)
@@ -135,22 +132,6 @@ def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype
         brute_force_construct_dtype(alias, dtype_classes) for alias in aliases
     )
     return list(it)
-
-
-def construct_dtype(alias: str) -> ExtensionDtype:  # pragma: no cover
-    dtype = pd.api.types.pandas_dtype(alias)
-    if isinstance(dtype, np.dtype):
-        return pd.core.dtypes.dtypes.NumpyEADtype(dtype)  # type: ignore[attr-defined, no-any-return]
-    else:
-        return dtype
-
-
-# NOTE: Option 2
-def generate_pandas_dtypes_mostly_public(
-    aliases: Iterable[str],
-) -> list[ExtensionDtype]:  # pragma: no cover
-    """Ideally we'd use this, but `NumpyEADtype` is the ugly duckling."""
-    return [construct_dtype(alias) for alias in aliases]
 
 
 @pytest.fixture(params=generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=str)
