@@ -134,13 +134,11 @@ def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype
     return list(it)
 
 
-@pytest.fixture(params=generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=str)
-def pandas_dtype(request: pytest.FixtureRequest) -> ExtensionDtype:
-    return request.param  # type: ignore[no-any-return]
-
-
 @pytest.mark.parametrize(
     "implementation", [Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]
+)
+@pytest.mark.parametrize(
+    "pandas_dtype", generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=str
 )
 def test_get_dtype_backend(
     pandas_dtype: ExtensionDtype, implementation: Implementation
