@@ -91,7 +91,7 @@ class DuckDBExprStringNamespace(
         if format is not None:
             return self.to_datetime(format=format).dt.date()
 
-        compliant_expr = self._compliant_expr
+        compliant_expr = self.compliant
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
 
     def zfill(self, width: int) -> DuckDBExpr:
