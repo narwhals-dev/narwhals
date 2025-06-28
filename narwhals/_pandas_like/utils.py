@@ -23,7 +23,7 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import DuplicateError, ShapeError
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from pandas._typing import Dtype as PandasDtype
@@ -590,25 +590,6 @@ def select_columns_by_name(
         if error := check_columns_exist(column_names, available=df.columns.tolist()):
             raise error from e
         raise
-
-
-def check_column_names_are_unique(columns: pd.Index[str]) -> None:
-    try:
-        len_unique_columns = len(columns.drop_duplicates())
-    except Exception:  # noqa: BLE001  # pragma: no cover
-        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-        raise ValueError(msg) from None
-
-    if len(columns) != len_unique_columns:
-        from collections import Counter
-
-        counter = Counter(columns)
-        msg = ""
-        for key, value in counter.items():
-            if value > 1:
-                msg += f"\n- '{key}' {value} times"
-        msg = f"Expected unique column names, got:{msg}"
-        raise DuplicateError(msg)
 
 
 def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
