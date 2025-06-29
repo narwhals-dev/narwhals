@@ -517,7 +517,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                     other.array._pa_array  # pyright: ignore[reportAttributeAccessIssue]
                     if other_is_series
                     else pa.scalar(other, type=pa.int64())
-                    # TODO(FBruzzesi): How can be improve on pinning down the type?
+                    # TODO(FBruzzesi): Can we be more specific on the type?
                 )
                 result_array = floordiv_compat(native_pa, other_pa)
             else:
@@ -538,8 +538,42 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result_native).alias(self.name)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        _, other_native = align_and_extract_native(self, other)
-        return self._with_native(self.native.__rfloordiv__(other_native)).alias(self.name)
+        native, other = align_and_extract_native(self, other)
+        native = cast("pd.Series[Any]", native)
+        native_cls = type(native)
+        other_is_series = isinstance(other, native_cls)
+        safe_div_mask = native != 0
+
+        if safe_div_mask.all():  # fast path, there are no zero's in other
+            result_native = other // native
+        else:
+            dtype_backend = get_dtype_backend(
+                native.dtype, implementation=self._implementation
+            )
+            array_funcs = self._array_funcs
+            output_dtype = native.dtype if dtype_backend is not None else "float64"
+
+            if dtype_backend == "pyarrow":
+                import pyarrow as pa  # ignore-banned-import
+
+                from narwhals._arrow.utils import floordiv_compat
+
+                native_pa = native.array._pa_array  # type: ignore[attr-defined]
+                other_pa = (
+                    other.array._pa_array  # pyright: ignore[reportAttributeAccessIssue]
+                    if other_is_series
+                    else pa.scalar(other, type=pa.int64())
+                    # TODO(FBruzzesi): Can we be more specific on the type?
+                )
+                result_array = floordiv_compat(other_pa, native_pa)
+            else:
+                fill_array = array_funcs.full(shape=len(native), fill_value=None)
+                result_array = (other // native).where(safe_div_mask, fill_array)
+            result_native = native_cls(
+                result_array, index=native.index, dtype=output_dtype
+            )
+
+        return self._with_native(result_native).alias(self.name)
 
     def __pow__(self, other: Any) -> Self:
         ser, other = align_and_extract_native(self, other)
