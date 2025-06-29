@@ -119,7 +119,10 @@ def brute_force_construct_dtype(
 ) -> Iterator[ExtensionDtype]:
     """Skips dtypes that are not compatible on the tested version of pandas."""
     for dtype in dtypes:  # pragma: no cover
-        with suppress(TypeError):
+        # NOTE: Slightly different errors between implementations
+        # TypeError: https://github.com/pandas-dev/pandas/blob/2cc37625532045f4ac55b27176454bbbc9baf213/pandas/core/dtypes/base.py#L261-L264
+        # NotImplementedError: https://github.com/rapidsai/cudf/blob/22d1b7c75e892f9136e11e47c09e7913910414ea/python/cudf/cudf/core/dtypes.py#L318-L319
+        with suppress(TypeError, NotImplementedError):
             result = dtype.construct_from_string(alias)
             yield result
             return
