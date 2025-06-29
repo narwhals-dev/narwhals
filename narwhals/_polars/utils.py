@@ -12,7 +12,6 @@ from narwhals.exceptions import (
     DuplicateError,
     InvalidOperationError,
     NarwhalsError,
-    ShapeError,
 )
 
 if TYPE_CHECKING:
@@ -231,9 +230,9 @@ def catch_polars_exception(
 ) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
-    elif isinstance(exception, pl.exceptions.ShapeError):
-        return ShapeError(str(exception))
-    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+    elif isinstance(
+        exception, (pl.exceptions.ShapeError, pl.exceptions.InvalidOperationError)
+    ):
         return InvalidOperationError(str(exception))
     elif isinstance(exception, pl.exceptions.DuplicateError):
         return DuplicateError(str(exception))

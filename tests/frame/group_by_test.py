@@ -8,12 +8,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import (
-    ComputeError,
-    InvalidOperationError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
@@ -471,13 +466,10 @@ def test_group_by_expr(
 @pytest.mark.parametrize(
     ("keys", "lazy_context"),
     [
-        (
-            [nw.col("a").drop_nulls()],
-            pytest.raises(LengthChangingExprError),
-        ),  # Filtration
+        ([nw.col("a").drop_nulls()], pytest.raises(InvalidOperationError)),  # Filtration
         (
             [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
-            pytest.raises(LengthChangingExprError),
+            pytest.raises(InvalidOperationError),
         ),  # Transform and Filtration
         (
             [nw.col("a").alias("foo"), nw.col("a").max()],
@@ -485,7 +477,7 @@ def test_group_by_expr(
         ),  # Transform and Aggregation
         (
             [nw.col("a").alias("foo"), nw.col("a").cum_max()],
-            pytest.raises(OrderDependentExprError),
+            pytest.raises(InvalidOperationError),
         ),  # Transform and Window
         ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
         ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal

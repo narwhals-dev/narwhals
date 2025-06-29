@@ -36,11 +36,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
-from narwhals.exceptions import (
-    InvalidIntoExprError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
+from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
@@ -2199,7 +2195,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
                     "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
                 )
-                raise OrderDependentExprError(msg)
+                raise InvalidOperationError(msg)
             if arg._metadata.is_filtration:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
@@ -2209,7 +2205,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
                     "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
                 )
-                raise LengthChangingExprError(msg)
+                raise InvalidOperationError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
