@@ -929,11 +929,6 @@ class LazyExpr(
     def __rtruediv__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: other / expr, other).alias("literal")
 
-    def __rfloordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other // expr, other).alias(
-            "literal"
-        )
-
     def __pow__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__pow__(other), other)
 
