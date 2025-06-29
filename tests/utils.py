@@ -163,3 +163,8 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
         "pandas_pyarrow_constructor",
         "modin_pyarrow_constructor",
     }
+
+
+def is_pandas_like(constructor: Constructor) -> bool:
+    """Return `True` when `constructor` produces a native pandas-like object."""
+    return any(x in str(constructor) for x in ("pandas", "modin", "cudf"))
