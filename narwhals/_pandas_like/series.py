@@ -660,9 +660,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         > Uniques are returned in order of appearance.
         """
-        return self._with_native(
-            self.native.__class__(self.native.unique(), name=self.name)
-        )
+        return self._with_native(type(self.native)(self.native.unique(), name=self.name))
 
     def diff(self) -> Self:
         return self._with_native(self.native.diff())
@@ -1062,7 +1060,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
-        native_cls = native.__class__
+        native_cls = type(native)
         implementation = self._implementation
 
         if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
@@ -1096,7 +1094,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def exp(self) -> Self:
         native = self.native
-        native_cls = native.__class__
+        native_cls = type(native)
         implementation = self._implementation
 
         if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
@@ -1114,7 +1112,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 self._backend_version,
                 self._version,
             )
-            result_native = native.__class__(
+            result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
