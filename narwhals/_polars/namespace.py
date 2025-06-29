@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 class PolarsNamespace:
     all: Method[PolarsExpr]
+    coalesce: Method[PolarsExpr]
     col: Method[PolarsExpr]
     exclude: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]

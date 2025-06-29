@@ -75,6 +75,28 @@ class PandasLikeNamespace(
         self._backend_version = backend_version
         self._version = version
 
+    def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            series = self._series._align_full_broadcast(
+                *(s for _expr in exprs for s in _expr(df))
+            )
+            return [
+                reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
+            ]
+
+        exprs = tuple(
+            expr if self._expr._is_expr(expr) else self.lit(expr, dtype=None)
+            for expr in exprs
+        )
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
             pandas_series = self._series.from_iterable(
@@ -83,6 +105,7 @@ class PandasLikeNamespace(
                 index=df._native_frame.index[0:1],
                 context=self,
             )
+            pandas_series._broadcast = True
             if dtype:
                 return pandas_series.cast(dtype)
             return pandas_series

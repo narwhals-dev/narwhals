@@ -15,6 +15,7 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
+    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
@@ -271,6 +272,35 @@ class ArrowNamespace(
             func=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            init_series, *series = self._series._align_full_broadcast(
+                *chain.from_iterable(expr(df) for expr in exprs)
+            )
+            return [
+                ArrowSeries(
+                    pc.coalesce(init_series.native, *(s.native for s in series)),
+                    name=init_series.name,
+                    backend_version=self._backend_version,
+                    version=self._version,
+                )
+            ]
+
+        exprs = tuple(
+            expr
+            if self._expr._is_expr(expr)
+            else self.lit(expr, dtype=None).broadcast(ExprKind.LITERAL)
+            for expr in exprs
+        )
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
