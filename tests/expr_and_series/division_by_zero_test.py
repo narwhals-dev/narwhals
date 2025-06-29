@@ -29,16 +29,10 @@ def test_expr_truediv_by_zero(constructor: Constructor) -> None:
     )
 
 
-def test_series_floordiv_by_zero(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_series_floordiv_by_zero(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     df = nw.from_native(constructor_eager(data), eager_only=True)
-
-    if df.implementation.is_pandas_like():
-        reason = "floordiv either fails or generate different result"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     result = {"int": df["int"] // 0}
     expected = {"int": expected_floordiv}
@@ -46,18 +40,11 @@ def test_series_floordiv_by_zero(
     assert result["int"].is_null().all()
 
 
-def test_expr_floordiv_by_zero(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_expr_floordiv_by_zero(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
 
     df = nw.from_native(constructor(data))
-
-    if df.implementation.is_pandas_like():
-        reason = "floordiv either fails or generate different result"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
     result = df.select(nw.col("int") // 0)
     expected = {"int": expected_floordiv}
     assert_equal_data(result, expected)
