@@ -431,7 +431,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, other, expr))
+            return self._F.when(
+                expr != 0, self._F.floor(true_divide(self._F, other, expr))
+            ).otherwise(None)
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 
