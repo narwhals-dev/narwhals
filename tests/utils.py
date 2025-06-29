@@ -157,6 +157,14 @@ def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
 
 
+def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
+    """Checks if the pandas-like constructor uses pyarrow backend."""
+    return constructor.__name__ in {
+        "pandas_pyarrow_constructor",
+        "modin_pyarrow_constructor",
+    }
+
+
 def is_pandas_like(constructor: Constructor) -> bool:
     """Return `True` when `constructor` produces a native pandas-like object."""
     return any(x in str(constructor) for x in ("pandas", "modin", "cudf"))

@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import functools
 import re
-from collections.abc import Sized
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
 from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._constants import (
+    MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -16,15 +22,22 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import DuplicateError, ShapeError
-
-T = TypeVar("T", bound=Sized)
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from pandas._typing import Dtype as PandasDtype
+    from pandas.core.dtypes.dtypes import BaseMaskedDtype
+    from typing_extensions import TypeIs
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals._pandas_like.typing import (
+        NativeDataFrameT,
+        NativeNDFrameT,
+        NativeSeriesT,
+    )
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
@@ -123,12 +136,12 @@ def align_and_extract_native(
 
 
 def set_index(
-    obj: T,
+    obj: NativeNDFrameT,
     index: Any,
     *,
     implementation: Implementation,
     backend_version: tuple[int, ...],
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' set_axis to set object index.
 
     We can set `copy` / `inplace` based on implementation/version.
@@ -138,31 +151,31 @@ def set_index(
     ) != (actual_len := len(obj)):
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
         raise ShapeError(msg)
-    if implementation is Implementation.CUDF:  # pragma: no cover
-        obj = obj.copy(deep=False)  # type: ignore[attr-defined]
-        obj.index = index  # type: ignore[attr-defined]
+    if implementation is Implementation.CUDF:
+        obj = obj.copy(deep=False)
+        obj.index = index
         return obj
     if implementation is Implementation.PANDAS and (
         (1, 5) <= backend_version < (3,)
     ):  # pragma: no cover
-        return obj.set_axis(index, axis=0, copy=False)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0, copy=False)
     else:  # pragma: no cover
-        return obj.set_axis(index, axis=0)  # type: ignore[attr-defined]
+        return obj.set_axis(index, axis=0)
 
 
 def rename(
-    obj: T,
+    obj: NativeNDFrameT,
     *args: Any,
     implementation: Implementation,
     backend_version: tuple[int, ...],
     **kwargs: Any,
-) -> T:
+) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
         backend_version >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs)  # type: ignore[attr-defined]
-    return obj.rename(*args, **kwargs, copy=False)  # type: ignore[attr-defined]
+        return obj.rename(*args, **kwargs, inplace=False)
+    return obj.rename(*args, **kwargs, copy=False, inplace=False)
 
 
 @functools.lru_cache(maxsize=16)
@@ -236,7 +249,7 @@ def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
-    if implementation is Implementation.CUDF:  # pragma: no cover
+    if implementation is Implementation.CUDF:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return dtypes.String()
@@ -314,6 +327,34 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
+if Implementation.PANDAS._backend_version() >= (1, 2):
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        """Return `True` if `dtype` is `"numpy_nullable"`."""
+        # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+        # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
+        sentinel = object()
+        return (
+            isinstance(dtype, pd.api.extensions.ExtensionDtype)
+            and getattr(dtype, "base", sentinel) is None
+        )
+else:  # pragma: no cover
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        # NOTE: `base` attribute was added between 1.1-1.2
+        # Checking by isinstance requires using an import path that is no longer valid
+        # `1.1`: https://github.com/pandas-dev/pandas/blob/b5958ee1999e9aead1938c0bba2b674378807b3d/pandas/core/arrays/masked.py#L37
+        # `1.2`: https://github.com/pandas-dev/pandas/blob/7c48ff4409c622c582c56a5702373f726de08e96/pandas/core/arrays/masked.py#L41
+        # `1.5`: https://github.com/pandas-dev/pandas/blob/35b0d1dcadf9d60722c055ee37442dc76a29e64c/pandas/core/dtypes/dtypes.py#L1609
+        if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+            from pandas.core.arrays.masked import (  # type: ignore[attr-defined]
+                BaseMaskedDtype as OldBaseMaskedDtype,  # pyright: ignore[reportAttributeAccessIssue]
+            )
+
+            return isinstance(dtype, OldBaseMaskedDtype)
+        return False
+
+
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:
     """Get dtype backend for pandas type.
 
@@ -321,21 +362,14 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     """
     if implementation is Implementation.CUDF:
         return None
-    if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
+    if is_dtype_pyarrow(dtype):
         return "pyarrow"
-    with suppress(AttributeError):
-        sentinel = object()
-        if (
-            isinstance(dtype, pd.api.extensions.ExtensionDtype)
-            and getattr(dtype, "base", sentinel) is None
-        ):
-            return "numpy_nullable"
-    return None
+    return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
 
 
 @functools.lru_cache(maxsize=16)
-def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
-    return get_dtype_backend(dtype, implementation) == "pyarrow"
+def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
+    return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
@@ -506,8 +540,8 @@ def int_dtype_mapper(dtype: Any) -> str:
 
 
 def calculate_timestamp_datetime(  # noqa: C901, PLR0912
-    s: pd.Series[int], original_time_unit: str, time_unit: str
-) -> pd.Series[int]:
+    s: NativeSeriesT, original_time_unit: str, time_unit: str
+) -> NativeSeriesT:
     if original_time_unit == "ns":
         if time_unit == "ns":
             result = s
@@ -517,94 +551,93 @@ def calculate_timestamp_datetime(  # noqa: C901, PLR0912
             result = s // 1_000_000
     elif original_time_unit == "us":
         if time_unit == "ns":
-            result = s * 1_000
+            result = s * NS_PER_MICROSECOND
         elif time_unit == "us":
             result = s
         else:
             result = s // 1_000
     elif original_time_unit == "ms":
         if time_unit == "ns":
-            result = s * 1_000_000
+            result = s * NS_PER_MILLISECOND
         elif time_unit == "us":
             result = s * 1_000
         else:
             result = s
     elif original_time_unit == "s":
         if time_unit == "ns":
-            result = s * 1_000_000_000
+            result = s * NS_PER_SECOND
         elif time_unit == "us":
-            result = s * 1_000_000
+            result = s * US_PER_SECOND
         else:
-            result = s * 1_000
+            result = s * MS_PER_SECOND
     else:  # pragma: no cover
         msg = f"unexpected time unit {original_time_unit}, please report a bug at https://github.com/narwhals-dev/narwhals"
         raise AssertionError(msg)
     return result
 
 
-def calculate_timestamp_date(s: pd.Series[int], time_unit: str) -> pd.Series[int]:
-    s = s * 86_400  # number of seconds in a day
+def calculate_timestamp_date(s: NativeSeriesT, time_unit: str) -> NativeSeriesT:
+    s = s * SECONDS_PER_DAY
     if time_unit == "ns":
-        result = s * 1_000_000_000
+        result = s * NS_PER_SECOND
     elif time_unit == "us":
-        result = s * 1_000_000
+        result = s * US_PER_SECOND
     else:
-        result = s * 1_000
+        result = s * MS_PER_SECOND
     return result
 
 
 def select_columns_by_name(
-    df: T,
+    df: NativeDataFrameT,
     column_names: list[str] | _1DArray,  # NOTE: Cannot be a tuple!
     backend_version: tuple[int, ...],
     implementation: Implementation,
-) -> T:
+) -> NativeDataFrameT | Any:
     """Select columns by name.
 
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and all(column_names == df.columns):  # type: ignore[attr-defined]
+    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
         return df
-    if (df.columns.dtype.kind == "b") or (  # type: ignore[attr-defined]
+    if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS and backend_version < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
-        if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
-        ):
+        if error := check_columns_exist(column_names, available=df.columns.tolist()):
             raise error
-        return df.loc[:, column_names]  # type: ignore[attr-defined]
+        return df.loc[:, column_names]
     try:
-        return df[column_names]  # type: ignore[index]
+        return df[column_names]
     except KeyError as e:
-        if error := check_columns_exist(
-            column_names,  # type: ignore[arg-type]
-            available=df.columns.tolist(),  # type: ignore[attr-defined]
-        ):
+        if error := check_columns_exist(column_names, available=df.columns.tolist()):
             raise error from e
         raise
 
 
-def check_column_names_are_unique(columns: pd.Index[str]) -> None:
-    try:
-        len_unique_columns = len(columns.drop_duplicates())
-    except Exception:  # noqa: BLE001  # pragma: no cover
-        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-        raise ValueError(msg) from None
+def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
+    # cuDF booleans are nullable but the native dtype is still 'bool'.
+    return (
+        s._implementation
+        in {Implementation.PANDAS, Implementation.MODIN, Implementation.DASK}
+        and s.native.dtype == "bool"
+    )
 
-    if len(columns) != len_unique_columns:
-        from collections import Counter
 
-        counter = Counter(columns)
-        msg = ""
-        for key, value in counter.items():
-            if value > 1:
-                msg += f"\n- '{key}' {value} times"
-        msg = f"Expected unique column names, got:{msg}"
-        raise DuplicateError(msg)
+def import_array_module(implementation: Implementation, /) -> ModuleType:
+    """Returns numpy or cupy module depending on the given implementation."""
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
+        import numpy as np
+
+        return np
+    elif implementation is Implementation.CUDF:
+        import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+        return cp
+    else:  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf, got: {implementation}"
+        raise AssertionError(msg)
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Container, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
 from functools import lru_cache, wraps
@@ -105,6 +105,10 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _T4 = TypeVar("_T4")
+    _T5 = TypeVar("_T5")
+    _T6 = TypeVar("_T6")
+    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -603,7 +607,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
-    Implementation.POLARS: (0, 20, 3),
+    Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
@@ -716,6 +720,76 @@ def isinstance_or_issubclass(
 def isinstance_or_issubclass(
     obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
 ) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[
+    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
+]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[
+    _T1
+    | _T2
+    | _T3
+    | _T4
+    | _T5
+    | _T6
+    | _T7
+    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
+]: ...
 
 
 @overload
@@ -1181,7 +1255,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
 
 def generate_unique_token(
-    n_bytes: int, columns: Sequence[str]
+    n_bytes: int, columns: Container[str]
 ) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
@@ -1191,7 +1265,7 @@ def generate_unique_token(
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1489,7 +1563,7 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    subset: Sequence[str], /, *, available: Sequence[str]
+    subset: Collection[str], /, *, available: Collection[str]
 ) -> ColumnNotFoundError | None:
     if missing := set(subset).difference(available):
         return ColumnNotFoundError.from_missing_and_available_column_names(
@@ -1498,9 +1572,8 @@ def check_columns_exist(
     return None
 
 
-def check_column_names_are_unique(columns: Sequence[str]) -> None:
-    len_unique_columns = len(set(columns))
-    if len(columns) != len_unique_columns:
+def check_column_names_are_unique(columns: Collection[str]) -> None:
+    if len(columns) != len(set(columns)):
         from collections import Counter
 
         counter = Counter(columns)
@@ -1622,7 +1695,7 @@ def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
 
 
 def _remap_full_join_keys(
-    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    left_on: Collection[str], right_on: Collection[str], suffix: str
 ) -> dict[str, str]:
     """Remap join keys to avoid collisions.
 

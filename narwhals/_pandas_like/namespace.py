@@ -16,6 +16,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
+from narwhals._pandas_like.utils import is_non_nullable_boolean
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -131,11 +132,29 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def all_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def all_horizontal(
+        self, *exprs: PandasLikeExpr, ignore_nulls: bool
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
-            return [reduce(operator.and_, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            if not ignore_nulls and any(
+                s.native.dtype == "object" and s.is_null().any() for s in series
+            ):
+                # classical NumPy boolean columns don't support missing values, so
+                # only do the full scan with `is_null` if we have `object` dtype.
+                msg = "Cannot use `ignore_nulls=False` in `all_horizontal` for non-nullable NumPy-backed pandas Series when nulls are present."
+                raise ValueError(msg)
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.and_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -146,11 +165,29 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def any_horizontal(
+        self, *exprs: PandasLikeExpr, ignore_nulls: bool
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
-            return [reduce(operator.or_, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            if not ignore_nulls and any(
+                s.native.dtype == "object" and s.is_null().any() for s in series
+            ):
+                # classical NumPy boolean columns don't support missing values, so
+                # only do the full scan with `is_null` if we have `object` dtype.
+                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series when nulls are present."
+                raise ValueError(msg)
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -297,6 +334,9 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
+                # NOTE: Trying to help `mypy` later
+                # error: Cannot determine type of "values"  [has-type]
+                values: list[PandasLikeSeries]
                 init_value, *values = [
                     s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
                 ]

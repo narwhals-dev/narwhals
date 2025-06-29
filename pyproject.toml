@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.43.1"
+version = "1.44.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -40,7 +40,7 @@ cudf = ["cudf>=24.10.0"]
 pyarrow = ["pyarrow>=11.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
-polars = ["polars>=0.20.3"]
+polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
@@ -167,8 +167,10 @@ ignore = [
   "PD003",   # pandas-use-of-dot-is-null
   "PD010",   # pandas-use-of-dot-pivot-or-unstack
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
+  "PLC0415", # `import` should be at the top-level of a file
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
+  "PLW1641", # Object does not implement `__hash__` method
   "RET505",  # superfluous-else-return
   "SLF001",  # private-member-access
   "TD003",   # missing-todo-link
@@ -280,11 +282,9 @@ exclude_also = [
   "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
-  'if "cudf" in str\(constructor',
-  'if "modin" in str\(constructor',
-  'if "pyspark" in str\(constructor',
-  'if "pyspark_connect" in str\(constructor',
+  'if ".*" in str\(constructor',
   'pytest.skip\(',
+  'assert_never\(',
 ]
 
 [tool.mypy]

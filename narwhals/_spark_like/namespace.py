@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._expression_parsing import (
@@ -16,6 +16,7 @@ from narwhals._spark_like.utils import (
     import_functions,
     import_native_dtypes,
     narwhals_to_native_dtype,
+    true_divide,
 )
 
 if TYPE_CHECKING:
@@ -73,31 +74,6 @@ class SparkLikeNamespace(
         else:
             return import_native_dtypes(self._implementation)
 
-    def _expr_from_callable(
-        self, func: Callable[[Iterable[Column]], Column], *exprs: SparkLikeExpr
-    ) -> SparkLikeExpr:
-        def call(df: SparkLikeLazyFrame) -> list[Column]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [func(cols)]
-
-        def window_function(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> list[Column]:
-            cols = (
-                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
-            )
-            return [func(cols)]
-
-        return self._expr(
-            call=call,
-            window_function=window_function,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
             column = df._F.lit(value)
@@ -131,29 +107,39 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def all_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            return reduce(operator.and_, cols)
+            it = (
+                (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.and_, it)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def any_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
-            return reduce(operator.or_, cols)
+            it = (
+                (self._F.coalesce(col, self._F.lit(False)) for col in cols)  # noqa: FBT003
+                if ignore_nulls
+                else cols
+            )
+            return reduce(operator.or_, it)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def max_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.greatest(*cols)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def min_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             return self._F.least(*cols)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -161,28 +147,22 @@ class SparkLikeNamespace(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
             F = exprs[0]._F  # noqa: N806
-            # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
-            divide = getattr(F, "try_divide", operator.truediv)
-            return divide(
-                reduce(
-                    operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
-                ),
-                reduce(
-                    operator.add,
-                    (
-                        col.isNotNull().cast(self._native_dtypes.IntegerType())
-                        for col in cols
-                    ),
-                ),
+            numerator = reduce(
+                operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
+            denominator = reduce(
+                operator.add,
+                (col.isNotNull().cast(self._native_dtypes.IntegerType()) for col in cols),
+            )
+            return true_divide(F, numerator, denominator)
 
-        return self._expr_from_callable(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def concat(
         self, items: Iterable[SparkLikeLazyFrame], *, how: ConcatMethod

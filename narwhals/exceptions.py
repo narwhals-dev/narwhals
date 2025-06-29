@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable
 
 
 class NarwhalsError(ValueError):
@@ -35,7 +35,7 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
 
     @classmethod
     def from_missing_and_available_column_names(
-        cls, missing_columns: Iterable[str], available_columns: Sequence[str], /
+        cls, missing_columns: Iterable[str], available_columns: Collection[str], /
     ) -> ColumnNotFoundError:
         message = (
             f"The following columns were not found: {sorted(missing_columns)}"

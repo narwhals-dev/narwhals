@@ -6,7 +6,9 @@ import dask.dataframe as dd
 import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
+from narwhals._expression_parsing import ExprKind
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
     _remap_full_join_keys,
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import dask.dataframe.dask_expr as dx
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
@@ -34,6 +36,13 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+
+Incomplete: TypeAlias = "Any"
+"""Using `_pandas_like` utils with `_dask`.
+
+Typing this correctly will complicate the `_pandas_like`-side.
+Very low priority until `dask` adds typing.
+"""
 
 
 class DaskLazyFrame(
@@ -158,8 +167,9 @@ class DaskLazyFrame(
         return self._with_native(self.native.loc[mask])
 
     def simple_select(self, *column_names: str) -> Self:
+        df: Incomplete = self.native
         native = select_columns_by_name(
-            self.native, list(column_names), self._backend_version, self._implementation
+            df, list(column_names), self._backend_version, self._implementation
         )
         return self._with_native(native)
 
@@ -170,8 +180,9 @@ class DaskLazyFrame(
 
     def select(self, *exprs: DaskExpr) -> Self:
         new_series = evaluate_exprs(self, *exprs)
+        df: Incomplete = self.native
         df = select_columns_by_name(
-            self.native.assign(**dict(new_series)),
+            df.assign(**dict(new_series)),
             [s[0] for s in new_series],
             self._backend_version,
             self._implementation,
@@ -182,7 +193,8 @@ class DaskLazyFrame(
         if subset is None:
             return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
-        return self.filter(~plx.any_horizontal(plx.col(*subset).is_null()))
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
+        return self.filter(mask)
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -204,12 +216,28 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
-        return self._with_native(
-            add_row_index(self.native, name, self._backend_version, self._implementation)
-        )
+        if order_by is None:
+            return self._with_native(
+                add_row_index(
+                    self.native, name, self._backend_version, self._implementation
+                )
+            )
+        else:
+            plx = self.__narwhals_namespace__()
+            columns = self.columns
+            const_expr = (
+                plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+            )
+            row_index_expr = (
+                plx.col(name)
+                .cum_sum(reverse=False)
+                .over(partition_by=[], order_by=order_by)
+                - 1
+            )
+            return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
@@ -244,7 +272,123 @@ class DaskLazyFrame(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
-    def join(  # noqa: C901
+    def _join_inner(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> dd.DataFrame:
+        return self.native.merge(
+            other.native,
+            left_on=left_on,
+            right_on=right_on,
+            how="inner",
+            suffixes=("", suffix),
+        )
+
+    def _join_left(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> dd.DataFrame:
+        result_native = self.native.merge(
+            other.native,
+            how="left",
+            left_on=left_on,
+            right_on=right_on,
+            suffixes=("", suffix),
+        )
+        extra = [
+            right_key if right_key not in self.columns else f"{right_key}{suffix}"
+            for left_key, right_key in zip(left_on, right_on)
+            if right_key != left_key
+        ]
+        return result_native.drop(columns=extra)
+
+    def _join_full(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> dd.DataFrame:
+        # dask does not retain keys post-join
+        # we must append the suffix to each key before-hand
+
+        right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
+        other_native = other.native.rename(columns=right_on_mapper)
+        check_column_names_are_unique(other_native.columns)
+        right_suffixed = list(right_on_mapper.values())
+        return self.native.merge(
+            other_native,
+            left_on=left_on,
+            right_on=right_suffixed,
+            how="outer",
+            suffixes=("", suffix),
+        )
+
+    def _join_cross(self, other: Self, *, suffix: str) -> dd.DataFrame:
+        key_token = generate_temporary_column_name(
+            n_bytes=8, columns=(*self.columns, *other.columns)
+        )
+        return (
+            self.native.assign(**{key_token: 0})
+            .merge(
+                other.native.assign(**{key_token: 0}),
+                how="inner",
+                left_on=key_token,
+                right_on=key_token,
+                suffixes=("", suffix),
+            )
+            .drop(columns=key_token)
+        )
+
+    def _join_semi(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> dd.DataFrame:
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
+        )
+        return self.native.merge(
+            other_native, how="inner", left_on=left_on, right_on=left_on
+        )
+
+    def _join_anti(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> dd.DataFrame:
+        indicator_token = generate_temporary_column_name(
+            n_bytes=8, columns=(*self.columns, *other.columns)
+        )
+        other_native = self._join_filter_rename(
+            other=other,
+            columns_to_select=list(right_on),
+            columns_mapping=dict(zip(right_on, left_on)),
+        )
+        df = self.native.merge(
+            other_native,
+            how="left",
+            indicator=indicator_token,  # pyright: ignore[reportArgumentType]
+            left_on=left_on,
+            right_on=left_on,
+        )
+        return df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
+
+    def _join_filter_rename(
+        self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]
+    ) -> dd.DataFrame:
+        """Helper function to avoid creating extra columns and row duplication.
+
+        Used in `"anti"` and `"semi`" join's.
+
+        Notice that a native object is returned.
+        """
+        other_native: Incomplete = other.native
+        return (
+            select_columns_by_name(
+                other_native,
+                column_names=columns_to_select,
+                backend_version=self._backend_version,
+                implementation=self._implementation,
+            )
+            # rename to avoid creating extra columns in join
+            .rename(columns=columns_mapping)
+            .drop_duplicates()
+        )
+
+    def join(
         self,
         other: Self,
         *,
@@ -254,122 +398,30 @@ class DaskLazyFrame(
         suffix: str,
     ) -> Self:
         if how == "cross":
-            key_token = generate_temporary_column_name(
-                n_bytes=8, columns=[*self.columns, *other.columns]
-            )
+            result = self._join_cross(other=other, suffix=suffix)
 
-            return self._with_native(
-                self.native.assign(**{key_token: 0})
-                .merge(
-                    other.native.assign(**{key_token: 0}),
-                    how="inner",
-                    left_on=key_token,
-                    right_on=key_token,
-                    suffixes=("", suffix),
-                )
-                .drop(columns=key_token)
-            )
+        elif left_on is None or right_on is None:  # pragma: no cover
+            raise ValueError(left_on, right_on)
 
-        if how == "anti":
-            indicator_token = generate_temporary_column_name(
-                n_bytes=8, columns=[*self.columns, *other.columns]
+        elif how == "inner":
+            result = self._join_inner(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-
-            if right_on is None:  # pragma: no cover
-                msg = "`right_on` cannot be `None` in anti-join"
-                raise TypeError(msg)
-            other_native = (
-                select_columns_by_name(
-                    other.native,
-                    list(right_on),
-                    self._backend_version,
-                    self._implementation,
-                )
-                .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
-                )
-                .drop_duplicates()
+        elif how == "anti":
+            result = self._join_anti(other=other, left_on=left_on, right_on=right_on)
+        elif how == "semi":
+            result = self._join_semi(other=other, left_on=left_on, right_on=right_on)
+        elif how == "left":
+            result = self._join_left(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-            df = self.native.merge(
-                other_native,
-                how="outer",
-                indicator=indicator_token,  # pyright: ignore[reportArgumentType]
-                left_on=left_on,
-                right_on=left_on,
+        elif how == "full":
+            result = self._join_full(
+                other=other, left_on=left_on, right_on=right_on, suffix=suffix
             )
-            return self._with_native(
-                df[df[indicator_token] == "left_only"].drop(columns=[indicator_token])
-            )
-
-        if how == "semi":
-            if right_on is None:  # pragma: no cover
-                msg = "`right_on` cannot be `None` in semi-join"
-                raise TypeError(msg)
-            other_native = (
-                select_columns_by_name(
-                    other.native,
-                    list(right_on),
-                    self._backend_version,
-                    self._implementation,
-                )
-                .rename(  # rename to avoid creating extra columns in join
-                    columns=dict(zip(right_on, left_on))  # type: ignore[arg-type]
-                )
-                .drop_duplicates()  # avoids potential rows duplication from inner join
-            )
-            return self._with_native(
-                self.native.merge(
-                    other_native, how="inner", left_on=left_on, right_on=left_on
-                )
-            )
-
-        if how == "left":
-            result_native = self.native.merge(
-                other.native,
-                how="left",
-                left_on=left_on,
-                right_on=right_on,
-                suffixes=("", suffix),
-            )
-            extra = []
-            for left_key, right_key in zip(left_on, right_on):  # type: ignore[arg-type]
-                if right_key != left_key and right_key not in self.columns:
-                    extra.append(right_key)
-                elif right_key != left_key:
-                    extra.append(f"{right_key}_right")
-            return self._with_native(result_native.drop(columns=extra))
-
-        if how == "full":
-            # dask does not retain keys post-join
-            # we must append the suffix to each key before-hand
-
-            # help mypy
-            assert left_on is not None  # noqa: S101
-            assert right_on is not None  # noqa: S101
-
-            right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
-            other_native = other.native.rename(columns=right_on_mapper)
-            check_column_names_are_unique(other_native.columns)
-            right_on = list(right_on_mapper.values())  # we now have the suffixed keys
-            return self._with_native(
-                self.native.merge(
-                    other_native,
-                    left_on=left_on,
-                    right_on=right_on,
-                    how="outer",
-                    suffixes=("", suffix),
-                )
-            )
-
-        return self._with_native(
-            self.native.merge(
-                other.native,
-                left_on=left_on,
-                right_on=right_on,
-                how=how,
-                suffixes=("", suffix),
-            )
-        )
+        else:
+            assert_never(how)
+        return self._with_native(result)
 
     def join_asof(
         self,
@@ -417,7 +469,7 @@ class DaskLazyFrame(
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
         return (
-            self.with_row_index(row_index_token)
+            self.with_row_index(row_index_token, order_by=None)
             .filter(
                 (plx.col(row_index_token) >= offset)
                 & ((plx.col(row_index_token) - offset) % n == 0)
