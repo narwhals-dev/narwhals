@@ -72,6 +72,9 @@ class PandasLikeSeriesStringNamespace(
             else result
         )
 
+    def to_date(self, format: str | None) -> PandasLikeSeries:
+        return self.to_datetime(format=format).dt.date()
+
     def to_uppercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.upper())
 

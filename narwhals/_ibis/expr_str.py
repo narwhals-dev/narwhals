@@ -6,6 +6,8 @@ import ibis
 import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._ibis.utils import lit
 from narwhals._utils import _is_naive_format, not_implemented
 
@@ -13,55 +15,52 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
 
 
-class IbisExprStringNamespace:
-    def __init__(self, expr: IbisExpr) -> None:
-        self._compliant_expr = expr
-
+class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["IbisExpr"]):
     def starts_with(self, prefix: str) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.startswith(prefix)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def ends_with(self, suffix: str) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.endswith(suffix)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def contains(self, pattern: str, *, literal: bool) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.contains(pattern) if literal else expr.re_search(pattern)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
-    def slice(self, offset: int, length: int) -> IbisExpr:
+    def slice(self, offset: int, length: int | None) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.StringValue:
             return expr.substr(start=offset, length=length)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def split(self, by: str) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.ArrayValue:
             return expr.split(by)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def len_chars(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.length())
+        return self.compliant._with_callable(lambda expr: expr.length())
 
     def to_lowercase(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.lower())
+        return self.compliant._with_callable(lambda expr: expr.lower())
 
     def to_uppercase(self) -> IbisExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.upper())
+        return self.compliant._with_callable(lambda expr: expr.upper())
 
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"
             raise NotImplementedError(msg)
 
-        return self._compliant_expr._with_callable(lambda expr: expr.strip())
+        return self.compliant._with_callable(lambda expr: expr.strip())
 
     def _replace_all(self, pattern: str, value: str) -> Callable[..., ir.StringValue]:
         def fn(expr: ir.StringColumn) -> ir.StringValue:
@@ -79,7 +78,7 @@ class IbisExprStringNamespace:
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
-        return self._compliant_expr._with_callable(fn(pattern, value))
+        return self.compliant._with_callable(fn(pattern, value))
 
     def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:
         def fn(expr: ir.StringColumn) -> ir.TimestampValue:
@@ -99,7 +98,17 @@ class IbisExprStringNamespace:
             msg = "Cannot infer format with Ibis backend"
             raise NotImplementedError(msg)
         fn = self._to_datetime_naive if _is_naive_format(format) else self._to_datetime
-        return self._compliant_expr._with_callable(fn(format))
+        return self.compliant._with_callable(fn(format))
+
+    def to_date(self, format: str | None) -> IbisExpr:
+        if format is None:
+            msg = "Cannot infer format with Ibis backend"
+            raise NotImplementedError(msg)
+
+        def fn(expr: ir.StringColumn) -> ir.DateValue:
+            return expr.as_date(format)
+
+        return self._compliant_expr._with_callable(fn)
 
     def zfill(self, width: int) -> IbisExpr:
         def func(expr: ir.StringColumn) -> ir.Value:
@@ -118,6 +127,6 @@ class IbisExprStringNamespace:
                 else_=expr,
             )
 
-        return self._compliant_expr._with_callable(func)
+        return self.compliant._with_callable(func)
 
     replace = not_implemented()

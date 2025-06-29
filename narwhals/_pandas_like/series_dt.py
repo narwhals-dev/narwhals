@@ -237,7 +237,7 @@ class PandasLikeSeriesDateTimeNamespace(
                 result_arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(
                     arr_dtype
                 )
-            result_native = native.__class__(
+            result_native = type(native)(
                 result_arr, dtype=native.dtype, index=native.index, name=native.name
             )
             return self.with_native(result_native)
