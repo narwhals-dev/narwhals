@@ -33,7 +33,12 @@ def test_unique_eager(
     assert_equal_data(result, expected)
 
 
-def test_unique_invalid_subset(constructor: Constructor) -> None:
+def test_unique_invalid_subset(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "daft" in str(constructor):
+        # https://github.com/Eventual-Inc/Daft/issues/4151
+        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df_raw = constructor(data)
@@ -55,7 +60,11 @@ def test_unique(
     subset: str | list[str] | None,
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "daft" in str(constructor):
+        # https://github.com/Eventual-Inc/Daft/issues/4151
+        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df_raw = constructor(data)
@@ -74,7 +83,11 @@ def test_unique_full_subset(
     subset: list[str] | None,
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
+    request: pytest.FixtureRequest,
 ) -> None:
+    if "daft" in str(constructor) and keep == "none":
+        # https://github.com/Eventual-Inc/Daft/issues/4151
+        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}

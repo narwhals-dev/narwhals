@@ -37,7 +37,7 @@ def test_explode_single_col(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "daft")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -94,6 +94,7 @@ def test_explode_multiple_cols(
             "pyarrow_table",
             "duckdb",
             "pyspark",
+            "daft",
             "ibis",
         )
     ):
@@ -116,7 +117,7 @@ def test_explode_shape_error(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table")
+        for backend in ("dask", "modin", "cudf", "pyarrow_table", "daft")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -139,7 +140,7 @@ def test_explode_shape_error(
 def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "daft")):
         request.applymarker(pytest.mark.xfail)
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):

@@ -27,6 +27,8 @@ def test_replace_strict(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
+    if "daft" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
         nw.col("a").replace_strict(
@@ -60,11 +62,7 @@ def test_replace_non_full(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "daft", "ibis", "daft")):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     if isinstance(df, nw.LazyFrame):
@@ -85,11 +83,7 @@ def test_replace_strict_mapping(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis", "daft")):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
