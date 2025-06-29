@@ -25,6 +25,8 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeIs
@@ -149,7 +151,7 @@ def set_index(
     ) != (actual_len := len(obj)):
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
         raise ShapeError(msg)
-    if implementation is Implementation.CUDF:  # pragma: no cover
+    if implementation is Implementation.CUDF:
         obj = obj.copy(deep=False)
         obj.index = index
         return obj
@@ -247,7 +249,7 @@ def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
-    if implementation is Implementation.CUDF:  # pragma: no cover
+    if implementation is Implementation.CUDF:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return dtypes.String()
@@ -621,6 +623,21 @@ def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
         in {Implementation.PANDAS, Implementation.MODIN, Implementation.DASK}
         and s.native.dtype == "bool"
     )
+
+
+def import_array_module(implementation: Implementation, /) -> ModuleType:
+    """Returns numpy or cupy module depending on the given implementation."""
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
+        import numpy as np
+
+        return np
+    elif implementation is Implementation.CUDF:
+        import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+        return cp
+    else:  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf, got: {implementation}"
+        raise AssertionError(msg)
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):

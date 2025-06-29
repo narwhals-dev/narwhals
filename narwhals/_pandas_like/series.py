@@ -14,6 +14,7 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
+    import_array_module,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -262,6 +263,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        else:
+            return import_array_module(self._implementation)
+
     def ewm_mean(
         self,
         *,
@@ -307,20 +317,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(s)
 
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
+        implementation = self._implementation
+        backend_version = self._backend_version
         # Scatter, modifying original Series. Use with care!
         values_native = set_index(
             values.native,
             self.native.index[indices.native],
-            implementation=self._implementation,
-            backend_version=self._backend_version,
+            implementation=implementation,
+            backend_version=backend_version,
         )
-        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+        if implementation is Implementation.PANDAS and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
         min_pd_version = (1, 2)
-        if (
-            self._implementation is Implementation.PANDAS
-            and self._backend_version < min_pd_version
-        ):
+        if implementation is Implementation.PANDAS and backend_version < min_pd_version:
             self.native.iloc[indices.native.values] = values_native  # noqa: PD011
         else:
             self.native.iloc[indices.native] = values_native
@@ -386,14 +395,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def arg_true(self) -> Self:
         ser = self.native
         size = len(ser)
-        if self._implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            data = cp.arange(size)
-        else:
-            import numpy as np  # ignore-banned-import
-
-            data = np.arange(size)
+        data = self._array_funcs.arange(size)
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
@@ -658,9 +660,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         > Uniques are returned in order of appearance.
         """
-        return self._with_native(
-            self.native.__class__(self.native.unique(), name=self.name)
-        )
+        return self._with_native(type(self.native)(self.native.unique(), name=self.name))
 
     def diff(self) -> Self:
         return self._with_native(self.native.diff())
@@ -1060,19 +1060,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
+        native_cls = type(native)
         implementation = self._implementation
 
-        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
-
-        if implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            native = self.native
-            log_arr = cp.log(native) / cp.log(base)
-            result_native = type(native)(log_arr, index=native.index, name=native.name)
-            return self._with_native(result_native)
-
-        if dtype_backend == "pyarrow":
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
 
             from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -1087,28 +1078,26 @@ class PandasLikeSeries(EagerSeries[Any]):
                 self._backend_version,
                 self._version,
             )
-            result_native = native.__class__(
+            result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.log(native) / np.log(base)
+            array_funcs = self._array_funcs
+            result_arr = array_funcs.log(native) / array_funcs.log(base)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+
         return self._with_native(result_native)
 
     def exp(self) -> Self:
         native = self.native
+        native_cls = type(native)
         implementation = self._implementation
 
-        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
-
-        if implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            native = self.native
-            exp_arr = cp.exp(native)
-            result_native = type(native)(exp_arr, index=native.index, name=native.name)
-            return self._with_native(result_native)
-
-        if dtype_backend == "pyarrow":
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
 
             from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -1123,11 +1112,17 @@ class PandasLikeSeries(EagerSeries[Any]):
                 self._backend_version,
                 self._version,
             )
-            result_native = native.__class__(
+            result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.exp(native)
+            result_arr = self._array_funcs.exp(native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:

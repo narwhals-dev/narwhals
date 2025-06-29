@@ -32,7 +32,7 @@ def test_expr_truediv_by_zero(constructor: Constructor) -> None:
 def test_series_floordiv_by_zero(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -49,7 +49,7 @@ def test_series_floordiv_by_zero(
 def test_expr_floordiv_by_zero(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
 
     df = nw.from_native(constructor(data))
