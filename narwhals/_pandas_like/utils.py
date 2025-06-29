@@ -25,12 +25,15 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import ModuleType
 
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.typing import NativeIntervalUnit
+    from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals._pandas_like.typing import (
@@ -96,6 +99,19 @@ $"""
 PATTERN_PA_DURATION = re.compile(PA_DURATION_RGX, re.VERBOSE)
 
 UNIT_DICT = {"d": "D", "m": "min"}
+
+UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
+    "y": "year",
+    "q": "quarter",
+    "mo": "month",
+    "d": "day",
+    "h": "hour",
+    "m": "minute",
+    "s": "second",
+    "ms": "millisecond",
+    "us": "microsecond",
+    "ns": "nanosecond",
+}
 
 
 def align_and_extract_native(
