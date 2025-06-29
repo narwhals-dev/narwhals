@@ -1,24 +1,219 @@
 from __future__ import annotations
 
-import collections
 import warnings
-from typing import TYPE_CHECKING, Any, ClassVar
+from functools import lru_cache
+from itertools import chain
+from operator import methodcaller
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._utils import find_stacklevel
+from narwhals._pandas_like.utils import (
+    is_nullable_dtype_backend,
+    native_to_narwhals_dtype,
+)
+from narwhals._typing_compat import TypeVar
+from narwhals._utils import find_stacklevel, generate_temporary_column_name
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+
+    import pandas as pd
+    from pandas.api.typing import (
+        DataFrameGroupBy as _NativeGroupBy,
+        SeriesGroupBy as _SeriesGroupBy,
+    )
+    from typing_extensions import TypeAlias, Unpack
 
     from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._utils import Implementation
+    from narwhals.dtypes import DType
+
+    NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
+    NativeSeriesGroupBy: TypeAlias = "_SeriesGroupBy[Any, tuple[str, ...]]"
+
+NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
+InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
+NativeAggregation: TypeAlias = Literal[
+    "any",
+    "all",
+    "count",
+    "first",
+    "idxmax",
+    "idxmin",
+    "last",
+    "max",
+    "mean",
+    "median",
+    "min",
+    "nunique",
+    "prod",
+    "quantile",
+    "sem",
+    "size",
+    "std",
+    "sum",
+    "var",
+    InefficientNativeAggregation,
+]
+"""https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
+
+_NativeAgg: TypeAlias = "NativeAggregation | Callable[..., Any]"
+"""Equivalent to `pd.NamedAgg.aggfunc`."""
+
+_NamedAgg: TypeAlias = "tuple[str, _NativeAgg]"
+"""Equivalent to `pd.NamedAgg`."""
+
+IterStrT = TypeVar("IterStrT", bound="Iterable[str]")
+
+NonStrHashable: TypeAlias = Any
+"""Because `pandas` allows *"names"* like that 😭"""
+
+T = TypeVar("T")
 
 
-class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", str]):
-    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Any]] = {
+@lru_cache(maxsize=32)
+def _native_agg(
+    name: NativeAggregation, impl: Implementation, /, **kwds: Unpack[ScalarKwargs]
+) -> _NativeAgg:
+    if name == "nunique":
+        return _n_unique
+    if not kwds or kwds.get("ddof") == 1:
+        return name
+    if impl.is_modin():  # pragma: no cover
+        return lambda x: getattr(x, name)(**kwds)
+    return methodcaller(name, **kwds)
+
+
+def _n_unique(self: NativeSeriesGroupBy) -> pd.Series[Any]:
+    """`modin` gets confused by `operator.methodcaller`.
+
+    See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2151945563
+    """
+    return self.nunique(dropna=False)
+
+
+def _remap_non_str(group_by: PandasLikeGroupBy) -> dict[NonStrHashable, str]:
+    """Before aggregating, rename every column that isn't already a `str`.
+
+    - Proxy all incoming expressions through a rename mapper
+    - At the end, rename back to the original
+    - An empty result follows a no-op path in `with_columns.
+    """
+    original = group_by._original_columns
+    exclude = set(group_by.exclude)
+    if remaining := set(original).difference(exclude):
+        union = exclude.union(original)
+        return {
+            name: generate_temporary_column_name(8, union)
+            for name in remaining
+            if not isinstance(name, str)
+        }
+    return {}  # pragma: no cover
+
+
+def collect(iterable: tuple[T, ...] | Iterable[T], /) -> tuple[T, ...]:
+    """Collect `iterable` into a `tuple`, *iff* it is not one already.
+
+    Borrowed from [`ExprIR` PR].
+
+    [`ExprIR` PR]: https://github.com/narwhals-dev/narwhals/blob/1de65d2f82ace95a9bc72667067ffdfa9d28be6d/narwhals/_plan/common.py#L396-L398
+    """
+    return iterable if isinstance(iterable, tuple) else tuple(iterable)
+
+
+class AggExpr:
+    """Wrapper storing the intermediate state per-`PandasLikeExpr`.
+
+    There's a lot of edge cases to handle, so aim to evaluate as little
+    as possible - and store anything that's needed twice.
+
+    Warning:
+        While a `PandasLikeExpr` can be reused - this wrapper is valid **only**
+        in a single `.agg(...)` operation.
+    """
+
+    expr: PandasLikeExpr
+    output_names: tuple[str, ...]
+    aliases: tuple[str, ...]
+
+    def __init__(self, expr: PandasLikeExpr) -> None:
+        self.expr = expr
+        self.output_names = ()
+        self.aliases = ()
+        self._leaf_name: NarwhalsAggregation | Any = ""
+
+    def with_expand_names(self, group_by: PandasLikeGroupBy, /) -> AggExpr:
+        """**Mutating operation**.
+
+        Stores the results of `evaluate_output_names_and_aliases`.
+        """
+        df = group_by.compliant
+        exclude = group_by.exclude
+        output_names, aliases = evaluate_output_names_and_aliases(self.expr, df, exclude)
+        self.output_names, self.aliases = collect(output_names), collect(aliases)
+        return self
+
+    def named_aggs(
+        self, group_by: PandasLikeGroupBy, /
+    ) -> Iterator[tuple[str, _NamedAgg]]:
+        aliases = collect(group_by._aliases_str(self.aliases))
+        native_agg = self.native_agg()
+        if self.is_len() and self.is_anonymous():
+            yield aliases[0], (group_by._anonymous_column_name, native_agg)
+            return
+        for output_name, alias in zip(self.output_names, aliases):
+            yield alias, (output_name, native_agg)
+
+    def _cast_coerced(self, group_by: PandasLikeGroupBy, /) -> Iterator[PandasLikeExpr]:
+        """Yield post-agg casts to correct for weird pandas behavior.
+
+        See https://github.com/narwhals-dev/narwhals/pull/2680#discussion_r2157251589
+        """
+        df = group_by.compliant
+        if self.is_n_unique() and has_non_int_nullable_dtype(df, self.output_names):
+            ns = df.__narwhals_namespace__()
+            yield ns.col(*self.aliases).cast(ns._version.dtypes.Int64())
+
+    def is_len(self) -> bool:
+        return self.leaf_name == "len"
+
+    def is_n_unique(self) -> bool:
+        return self.leaf_name == "n_unique"
+
+    def is_anonymous(self) -> bool:
+        return self.expr._depth == 0
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.expr._implementation
+
+    @property
+    def kwargs(self) -> ScalarKwargs:
+        return self.expr._scalar_kwargs
+
+    @property
+    def leaf_name(self) -> NarwhalsAggregation | Any:
+        if name := self._leaf_name:
+            return name
+        self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
+        return self._leaf_name
+
+    def native_agg(self) -> _NativeAgg:
+        return _native_agg(
+            PandasLikeGroupBy._remap_expr_name(self.leaf_name),
+            self.implementation,
+            **self.kwargs,
+        )
+
+
+class PandasLikeGroupBy(
+    EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", NativeAggregation]
+):
+    _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, NativeAggregation]] = {
         "sum": "sum",
         "mean": "mean",
         "median": "median",
@@ -30,6 +225,21 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         "n_unique": "nunique",
         "count": "count",
     }
+    _original_columns: tuple[str, ...]
+    """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
+
+    _keys: list[str]
+    """Stores the **aliased** version of group keys from `ParseKeysGroupBy`."""
+
+    _output_key_names: list[str]
+    """Stores the **original** version of group keys."""
+
+    _remap_non_str_columns: dict[NonStrHashable, str]
+
+    @property
+    def exclude(self) -> tuple[str, ...]:
+        """Group keys to ignore when expanding multi-output aggregations."""
+        return self._exclude
 
     def __init__(
         self,
@@ -39,19 +249,21 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         *,
         drop_null_keys: bool,
     ) -> None:
-        self._df = df
+        self._original_columns = tuple(df.columns)
         self._drop_null_keys = drop_null_keys
-        self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
-            df, keys=keys
+        ns = df.__narwhals_namespace__()
+        frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
+        self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
+        self._remap_non_str_columns = _remap_non_str(self)
+        self._compliant_frame = frame.with_columns(
+            *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
         )
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
-        if set(self.compliant.native.index.names).intersection(self.compliant.columns):
-            native_frame = self.compliant.native.reset_index(drop=True)
-        else:
-            native_frame = self.compliant.native
-
-        self._grouped = native_frame.groupby(
+        native = self.compliant.native
+        if set(native.index.names).intersection(self.compliant.columns):
+            native = native.reset_index(drop=True)
+        self._grouped: NativeGroupBy = native.groupby(
             list(self._keys),
             sort=False,
             as_index=True,
@@ -59,213 +271,100 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             observed=True,
         )
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: C901, PLR0912, PLR0914, PLR0915
-        implementation = self.compliant._implementation
-        backend_version = self.compliant._backend_version
-        new_names: list[str] = self._keys.copy()
-
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
-        exclude = (*self._keys, *self._output_key_names)
+        agg_exprs: list[AggExpr] = []
         for expr in exprs:
-            _, aliases = evaluate_output_names_and_aliases(expr, self.compliant, exclude)
-            new_names.extend(aliases)
+            agg_exprs.append(AggExpr(expr).with_expand_names(self))
             if not self._is_simple(expr):
                 all_aggs_are_simple = False
 
-        # dict of {output_name: root_name} that we count n_unique on
-        # We need to do this separately from the rest so that we
-        # can pass the `dropna` kwargs.
-        nunique_aggs: dict[str, str] = {}
-        simple_aggs: dict[str, list[str]] = collections.defaultdict(list)
-        simple_aggs_functions: set[str] = set()
-
-        # ddof to (output_names, aliases) mapping
-        std_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
-            lambda: ([], [])
-        )
-        var_aggs: dict[int, tuple[list[str], list[str]]] = collections.defaultdict(
-            lambda: ([], [])
-        )
-
-        expected_old_names: list[str] = []
-        simple_agg_new_names: list[str] = []
-
-        if all_aggs_are_simple:  # noqa: PLR1702
-            for expr in exprs:
-                output_names, aliases = evaluate_output_names_and_aliases(
-                    expr, self.compliant, exclude
-                )
-                if expr._depth == 0:
-                    # e.g. `agg(nw.len())`
-                    function_name = self._remap_expr_name(expr._function_name)
-                    simple_aggs_functions.add(function_name)
-
-                    for alias in aliases:
-                        expected_old_names.append(f"{self._keys[0]}_{function_name}")
-                        simple_aggs[self._keys[0]].append(function_name)
-                        simple_agg_new_names.append(alias)
-                    continue
-
-                # e.g. `agg(nw.mean('a'))`
-                function_name = self._remap_expr_name(self._leaf_name(expr))
-                is_n_unique = function_name == "nunique"
-                is_std = function_name == "std"
-                is_var = function_name == "var"
-                for output_name, alias in zip(output_names, aliases):
-                    if is_n_unique:
-                        nunique_aggs[alias] = output_name
-                    elif is_std and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
-                        std_aggs[ddof][0].append(output_name)
-                        std_aggs[ddof][1].append(alias)
-                    elif is_var and (ddof := expr._scalar_kwargs["ddof"]) != 1:  # pyright: ignore[reportTypedDictNotRequiredAccess]
-                        var_aggs[ddof][0].append(output_name)
-                        var_aggs[ddof][1].append(alias)
-                    else:
-                        expected_old_names.append(f"{output_name}_{function_name}")
-                        simple_aggs[output_name].append(function_name)
-                        simple_agg_new_names.append(alias)
-                        simple_aggs_functions.add(function_name)
-
-            result_aggs = []
-
-            if simple_aggs:
-                # Fast path for single aggregation such as `df.groupby(...).mean()`
-                if (
-                    len(simple_aggs_functions) == 1
-                    and (agg_method := simple_aggs_functions.pop()) != "size"
-                    and len(simple_aggs) > 1
-                ):
-                    result_simple_aggs = getattr(
-                        self._grouped[list(simple_aggs.keys())], agg_method
-                    )()
-                    result_simple_aggs.columns = [
-                        f"{a}_{agg_method}" for a in result_simple_aggs.columns
-                    ]
-                else:
-                    result_simple_aggs = self._grouped.agg(simple_aggs)
-                    result_simple_aggs.columns = [
-                        f"{a}_{b}" for a, b in result_simple_aggs.columns
-                    ]
-                if not (
-                    set(result_simple_aggs.columns) == set(expected_old_names)
-                    and len(result_simple_aggs.columns) == len(expected_old_names)
-                ):  # pragma: no cover
-                    msg = (
-                        f"Safety assertion failed, expected {expected_old_names} "
-                        f"got {result_simple_aggs.columns}, "
-                        "please report a bug at https://github.com/narwhals-dev/narwhals/issues"
-                    )
-                    raise AssertionError(msg)
-
-                # Rename columns, being very careful
-                expected_old_names_indices: dict[str, list[int]] = (
-                    collections.defaultdict(list)
-                )
-                for idx, item in enumerate(expected_old_names):
-                    expected_old_names_indices[item].append(idx)
-                index_map: list[int] = [
-                    expected_old_names_indices[item].pop(0)
-                    for item in result_simple_aggs.columns
-                ]
-                result_simple_aggs.columns = [simple_agg_new_names[i] for i in index_map]
-                result_aggs.append(result_simple_aggs)
-
-            if nunique_aggs:
-                result_nunique_aggs = self._grouped[list(nunique_aggs.values())].nunique(
-                    dropna=False
-                )
-                result_nunique_aggs.columns = list(nunique_aggs.keys())
-
-                result_aggs.append(result_nunique_aggs)
-
-            if std_aggs:
-                for ddof, (std_output_names, std_aliases) in std_aggs.items():
-                    _aggregation = self._grouped[std_output_names].std(ddof=ddof)
-                    # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = std_aliases
-                    result_aggs.append(_aggregation)
-            if var_aggs:
-                for ddof, (var_output_names, var_aliases) in var_aggs.items():
-                    _aggregation = self._grouped[var_output_names].var(ddof=ddof)
-                    # `_aggregation` is a new object so it's OK to operate inplace.
-                    _aggregation.columns = var_aliases
-                    result_aggs.append(_aggregation)
-
-            if result_aggs:
-                output_names_counter = collections.Counter(
-                    c for frame in result_aggs for c in frame
-                )
-                if any(v > 1 for v in output_names_counter.values()):
-                    msg = ""
-                    for key, value in output_names_counter.items():
-                        if value > 1:
-                            msg += f"\n- '{key}' {value} times"
-                        else:  # pragma: no cover
-                            pass
-                    msg = f"Expected unique output names, got:{msg}"
-                    raise ValueError(msg)
-                namespace = self.compliant.__narwhals_namespace__()
-                result = namespace._concat_horizontal(result_aggs)
+        if all_aggs_are_simple:
+            result: pd.DataFrame
+            if named_aggs := self._named_aggs(agg_exprs):
+                result = self._grouped.agg(**named_aggs)  # type: ignore[call-overload]
             else:
-                # No aggregation provided
                 result = self.compliant.__native_namespace__().DataFrame(
-                    list(self._grouped.groups.keys()), columns=self._keys
+                    list(self._grouped.groups), columns=self._keys
                 )
-            # Keep inplace=True to avoid making a redundant copy.
-            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-            result.reset_index(inplace=True)  # noqa: PD002
-            return self.compliant._with_native(
-                select_columns_by_name(result, new_names, backend_version, implementation)
-            ).rename(dict(zip(self._keys, self._output_key_names)))
+        elif self.compliant.native.empty:
+            raise empty_results_error()
+        else:
+            result = self._agg_complex(exprs)
+        return self._select_results(result, agg_exprs)
 
-        if self.compliant.native.empty:
-            # Don't even attempt this, it's way too inconsistent across pandas versions.
-            msg = (
-                "No results for group-by aggregation.\n\n"
-                "Hint: you were probably trying to apply a non-elementary aggregation with a "
-                "pandas-like API.\n"
-                "Please rewrite your query such that group-by aggregations "
-                "are elementary. For example, instead of:\n\n"
-                "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
-                "use:\n\n"
-                "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
-            )
-            raise ValueError(msg)
+    def _named_aggs(self, exprs: Iterable[AggExpr], /) -> dict[str, _NamedAgg]:
+        """Collect all aggregations into a single mapping."""
+        return dict(chain.from_iterable(e.named_aggs(self) for e in exprs))
 
-        warnings.warn(
-            "Found complex group-by expression, which can't be expressed efficiently with the "
-            "pandas API. If you can, please rewrite your query such that group-by aggregations "
-            "are simple (e.g. mean, std, min, max, ...). \n\n"
-            "Please see: "
-            "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
-            UserWarning,
-            stacklevel=find_stacklevel(),
+    @overload
+    def _aliases_str(self, names: list[str], /) -> list[str]: ...
+    @overload
+    def _aliases_str(self, names: IterStrT, /) -> list[str] | IterStrT: ...
+    def _aliases_str(self, names: IterStrT, /) -> list[str] | IterStrT:
+        """If we started with any non `str` column names, return the proxied `str` aliases for `names`."""
+        if remap := self._remap_non_str_columns:
+            return [remap.get(name, name) for name in names]
+        return names
+
+    @property
+    def _anonymous_column_name(self) -> str:
+        # `len` doesn't exist yet, so just pick a column to call size on
+        return next(
+            iter(set(self.compliant.columns).difference(self.exclude)), self._keys[0]
         )
 
-        def func(df: Any) -> Any:
+    @property
+    def _final_renamer(self) -> dict[str, NonStrHashable]:
+        remap = self._remap_non_str_columns
+        temps = chain(self._keys, remap.values())
+        originals = chain(self._output_key_names, remap)
+        return dict(zip(temps, originals))
+
+    def _select_results(
+        self, df: pd.DataFrame, /, agg_exprs: Sequence[AggExpr]
+    ) -> PandasLikeDataFrame:
+        """Responsible for remapping temp column names back to original.
+
+        See `ParseKeysGroupBy`.
+        """
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        df.reset_index(inplace=True)  # noqa: PD002
+        new_names = self._aliases_str(chain.from_iterable(e.aliases for e in agg_exprs))
+        return (
+            self.compliant._with_native(df, validate_column_names=False)
+            .simple_select(*self._keys, *new_names)
+            .rename(self._final_renamer)
+            .with_columns(*chain.from_iterable(e._cast_coerced(self) for e in agg_exprs))
+        )
+
+    def _agg_complex(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
+        warn_complex_group_by()
+        impl = self.compliant._implementation
+        backend_version = self.compliant._backend_version
+        func = self._apply_exprs(exprs)
+        apply = self._grouped.apply
+        if impl.is_pandas() and backend_version >= (2, 2):
+            return apply(func, include_groups=False)
+        else:  # pragma: no cover
+            return apply(func)
+
+    def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
+        ns = self.compliant.__narwhals_namespace__()
+        into_series = ns._series.from_iterable
+
+        def fn(df: pd.DataFrame) -> pd.Series[Any]:
             out_group = []
             out_names = []
             for expr in exprs:
                 results_keys = expr(self.compliant._with_native(df))
-                for result_keys in results_keys:
-                    out_group.append(result_keys.native.iloc[0])
-                    out_names.append(result_keys.name)
-            ns = self.compliant.__narwhals_namespace__()
-            return ns._series.from_iterable(out_group, index=out_names, context=ns).native
+                for keys in results_keys:
+                    out_group.append(keys.native.iloc[0])
+                    out_names.append(keys.name)
+            return into_series(out_group, index=out_names, context=ns).native
 
-        if implementation.is_pandas() and backend_version >= (2, 2):
-            result_complex = self._grouped.apply(func, include_groups=False)
-        else:  # pragma: no cover
-            result_complex = self._grouped.apply(func)
-
-        # Keep inplace=True to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_complex.reset_index(inplace=True)  # noqa: PD002
-        return self.compliant._with_native(
-            select_columns_by_name(
-                result_complex, new_names, backend_version, implementation
-            )
-        ).rename(dict(zip(self._keys, self._output_key_names)))
+        return fn
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         with warnings.catch_warnings():
@@ -274,9 +373,65 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 message=".*a length 1 tuple will be returned",
                 category=FutureWarning,
             )
-
+            with_native = self.compliant._with_native
             for key, group in self._grouped:
-                yield (
-                    key,
-                    self.compliant._with_native(group).simple_select(*self._df.columns),
-                )
+                yield (key, with_native(group).simple_select(*self._original_columns))
+
+
+def has_non_int_nullable_dtype(
+    frame: PandasLikeDataFrame, subset: Sequence[str], /
+) -> bool:
+    """Return True if any column in `subset` may get incorrectly coerced after aggregation."""
+    return any(_has_non_int_nullable_dtype(frame, subset))
+
+
+def _has_non_int_nullable_dtype(
+    frame: PandasLikeDataFrame, subset: Sequence[str], /
+) -> Iterator[bool]:
+    version = frame._version
+    impl = frame._implementation
+    for col in subset:
+        native = frame.native.dtypes[col]
+        if str(native) != "object":
+            dtype = native_to_narwhals_dtype(native, version, impl)
+            yield not (dtype.is_integer()) and (
+                is_nullable_dtype_backend(native, impl)
+                or _is_old_pandas_float(dtype, impl, frame._backend_version)
+            )
+
+
+PANDAS_FLOAT_FIXED = (1, 3, 5)
+"""Keep increasing until random versions doesn't produce `FAILED tests/frame/group_by_test.py::test_group_by_no_preserve_dtype[pandas-float]`"""
+
+
+def _is_old_pandas_float(
+    dtype: DType, impl: Implementation, backend_version: tuple[int, ...]
+) -> bool:
+    return dtype.is_float() and impl.is_pandas() and backend_version < PANDAS_FLOAT_FIXED
+
+
+def empty_results_error() -> ValueError:
+    """Don't even attempt this, it's way too inconsistent across pandas versions."""
+    msg = (
+        "No results for group-by aggregation.\n\n"
+        "Hint: you were probably trying to apply a non-elementary aggregation with a "
+        "pandas-like API.\n"
+        "Please rewrite your query such that group-by aggregations "
+        "are elementary. For example, instead of:\n\n"
+        "    df.group_by('a').agg(nw.col('b').round(2).mean())\n\n"
+        "use:\n\n"
+        "    df.with_columns(nw.col('b').round(2)).group_by('a').agg(nw.col('b').mean())\n\n"
+    )
+    return ValueError(msg)
+
+
+def warn_complex_group_by() -> None:
+    warnings.warn(
+        "Found complex group-by expression, which can't be expressed efficiently with the "
+        "pandas API. If you can, please rewrite your query such that group-by aggregations "
+        "are simple (e.g. mean, std, min, max, ...). \n\n"
+        "Please see: "
+        "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        UserWarning,
+        stacklevel=find_stacklevel(),
+    )
