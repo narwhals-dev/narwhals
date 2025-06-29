@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
 from narwhals._compliant import LazyExpr
 from narwhals._compliant.window import WindowInputs
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import (
+    ExprKind,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -15,12 +19,13 @@ from narwhals._spark_like.utils import (
     import_native_dtypes,
     import_window,
     narwhals_to_native_dtype,
+    true_divide,
 )
 from narwhals._utils import Implementation, not_implemented, parse_version
 from narwhals.dependencies import get_pyspark
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
@@ -277,6 +282,33 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=context._implementation,
         )
 
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[Column]], Column], *exprs: Self
+    ) -> Self:
+        def call(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+        ) -> list[Column]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
+        )
+
     def _callable_to_eval_series(
         self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
     ) -> EvalSeries[SparkLikeLazyFrame, Column]:
@@ -367,79 +399,29 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-    def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__eq__(other), other)
-
-    def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__ne__(other), other)
-
-    def __add__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__add__(other), other)
-
-    def __sub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__sub__(other), other)
-
-    def __rsub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__sub__(expr), other).alias(
-            "literal"
-        )
-
-    def __mul__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mul__(other), other)
-
     def __truediv__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__truediv__(other), other)
+        def _truediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, expr, other)
+
+        return self._with_binary(_truediv, other)
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(
-            lambda expr, other: other.__truediv__(expr), other
-        ).alias("literal")
+        def _rtruediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, other, expr)
+
+        return self._with_binary(_rtruediv, other).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(expr / other)
+            return self._F.floor(true_divide(self._F, expr, other))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(other / expr)
+            return self._F.floor(true_divide(self._F, other, expr))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
-
-    def __pow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__pow__(other), other)
-
-    def __rpow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__pow__(expr), other).alias(
-            "literal"
-        )
-
-    def __mod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
-
-    def __rmod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__mod__(expr), other).alias(
-            "literal"
-        )
-
-    def __ge__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__ge__(other), other)
-
-    def __gt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr > other, other)
-
-    def __le__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__le__(other), other)
-
-    def __lt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__lt__(other), other)
-
-    def __and__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__and__(other), other)
-
-    def __or__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Column]", operator.invert)

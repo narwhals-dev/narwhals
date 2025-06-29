@@ -9,17 +9,11 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    uses_pyarrow_backend,
 )
 
 data = {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]}
 expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
-
-
-def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
-    return constructor.__name__ in {
-        "pandas_pyarrow_constructor",
-        "modin_pyarrow_constructor",
-    }
 
 
 def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> None:

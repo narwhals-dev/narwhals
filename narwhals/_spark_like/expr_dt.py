@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant.any_namespace import DateTimeNamespace
+from narwhals._compliant.expr import LazyExprNamespace
+from narwhals._constants import US_PER_SECOND
 from narwhals._duration import parse_interval_string
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
     strptime_to_pyspark_format,
 )
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -18,12 +22,11 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
-class SparkLikeExprDateTimeNamespace:
-    def __init__(self, expr: SparkLikeExpr) -> None:
-        self._compliant_expr = expr
-
+class SparkLikeExprDateTimeNamespace(
+    LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
+):
     def to_string(self, format: str) -> SparkLikeExpr:
-        F = self._compliant_expr._F  # noqa: N806
+        F = self.compliant._F  # noqa: N806
 
         def _to_string(_input: Column) -> Column:
             # Handle special formats
@@ -54,58 +57,58 @@ class SparkLikeExprDateTimeNamespace:
 
             return F.concat(result, *suffix)
 
-        return self._compliant_expr._with_callable(_to_string)
+        return self.compliant._with_callable(_to_string)
 
     def date(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.to_date)
+        return self.compliant._with_callable(self.compliant._F.to_date)
 
     def year(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.year)
+        return self.compliant._with_callable(self.compliant._F.year)
 
     def month(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.month)
+        return self.compliant._with_callable(self.compliant._F.month)
 
     def day(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.day)
+        return self.compliant._with_callable(self.compliant._F.day)
 
     def hour(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.hour)
+        return self.compliant._with_callable(self.compliant._F.hour)
 
     def minute(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.minute)
+        return self.compliant._with_callable(self.compliant._F.minute)
 
     def second(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.second)
+        return self.compliant._with_callable(self.compliant._F.second)
 
     def millisecond(self) -> SparkLikeExpr:
         def _millisecond(expr: Column) -> Column:
-            return self._compliant_expr._F.floor(
-                (self._compliant_expr._F.unix_micros(expr) % 1_000_000) / 1000
+            return self.compliant._F.floor(
+                (self.compliant._F.unix_micros(expr) % US_PER_SECOND) / 1000
             )
 
-        return self._compliant_expr._with_callable(_millisecond)
+        return self.compliant._with_callable(_millisecond)
 
     def microsecond(self) -> SparkLikeExpr:
         def _microsecond(expr: Column) -> Column:
-            return self._compliant_expr._F.unix_micros(expr) % 1_000_000
+            return self.compliant._F.unix_micros(expr) % US_PER_SECOND
 
-        return self._compliant_expr._with_callable(_microsecond)
+        return self.compliant._with_callable(_microsecond)
 
     def nanosecond(self) -> SparkLikeExpr:
         def _nanosecond(expr: Column) -> Column:
-            return (self._compliant_expr._F.unix_micros(expr) % 1_000_000) * 1000
+            return (self.compliant._F.unix_micros(expr) % US_PER_SECOND) * 1000
 
-        return self._compliant_expr._with_callable(_nanosecond)
+        return self.compliant._with_callable(_nanosecond)
 
     def ordinal_day(self) -> SparkLikeExpr:
-        return self._compliant_expr._with_callable(self._compliant_expr._F.dayofyear)
+        return self.compliant._with_callable(self.compliant._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
         def _weekday(expr: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
-            return (self._compliant_expr._F.dayofweek(expr) + 6) % 7
+            return (self.compliant._F.dayofweek(expr) + 6) % 7
 
-        return self._compliant_expr._with_callable(_weekday)
+        return self.compliant._with_callable(_weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
         multiple, unit = parse_interval_string(every)
@@ -118,13 +121,13 @@ class SparkLikeExprDateTimeNamespace:
         format = UNITS_DICT[unit]
 
         def _truncate(expr: Column) -> Column:
-            return self._compliant_expr._F.date_trunc(format, expr)
+            return self.compliant._F.date_trunc(format, expr)
 
-        return self._compliant_expr._with_callable(_truncate)
+        return self.compliant._with_callable(_truncate)
 
     def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            native_series_list = self._compliant_expr(df)
+            native_series_list = self.compliant(df)
             conn_time_zone = fetch_session_time_zone(df.native.sparkSession)
             if conn_time_zone != time_zone:
                 msg = (
@@ -135,13 +138,13 @@ class SparkLikeExprDateTimeNamespace:
                 raise NotImplementedError(msg)
             return native_series_list
 
-        return self._compliant_expr.__class__(
+        return self.compliant.__class__(
             func,
-            evaluate_output_names=self._compliant_expr._evaluate_output_names,
-            alias_output_names=self._compliant_expr._alias_output_names,
-            backend_version=self._compliant_expr._backend_version,
-            version=self._compliant_expr._version,
-            implementation=self._compliant_expr._implementation,
+            evaluate_output_names=self.compliant._evaluate_output_names,
+            alias_output_names=self.compliant._alias_output_names,
+            backend_version=self.compliant._backend_version,
+            version=self.compliant._version,
+            implementation=self.compliant._implementation,
         )
 
     def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
@@ -151,7 +154,7 @@ class SparkLikeExprDateTimeNamespace:
         self, time_zone: str | None
     ) -> SparkLikeExpr:  # pragma: no cover
         if time_zone is None:
-            return self._compliant_expr._with_callable(
+            return self.compliant._with_callable(
                 lambda _input: _input.cast("timestamp_ntz")
             )
         else:
@@ -159,7 +162,7 @@ class SparkLikeExprDateTimeNamespace:
 
     def _format_iso_week_with_day(self, _input: Column) -> Column:
         """Format datetime as ISO week string with day."""
-        F = self._compliant_expr._F  # noqa: N806
+        F = self.compliant._F  # noqa: N806
 
         year = F.date_format(_input, "yyyy")
         week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
@@ -170,7 +173,7 @@ class SparkLikeExprDateTimeNamespace:
 
     def _format_iso_week(self, _input: Column) -> Column:
         """Format datetime as ISO week string."""
-        F = self._compliant_expr._F  # noqa: N806
+        F = self.compliant._F  # noqa: N806
 
         year = F.date_format(_input, "yyyy")
         week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
@@ -180,16 +183,23 @@ class SparkLikeExprDateTimeNamespace:
         self, _input: Column, format: str
     ) -> tuple[str, tuple[Column, ...]]:
         """Format microseconds if present in format, else it's a no-op."""
-        F = self._compliant_expr._F  # noqa: N806
+        F = self.compliant._F  # noqa: N806
 
         suffix: tuple[Column, ...]
         if format.endswith((".%f", "%.f")):
             import re
 
-            micros = F.unix_micros(_input) % 1_000_000
+            micros = F.unix_micros(_input) % US_PER_SECOND
             micros_str = F.lpad(micros.cast("string"), 6, "0")
             suffix = (F.lit("."), micros_str)
             format_ = re.sub(r"(.%|%.)f$", "", format)
             return format_, suffix
 
         return format, ()
+
+    timestamp = not_implemented()
+    total_seconds = not_implemented()
+    total_minutes = not_implemented()
+    total_milliseconds = not_implemented()
+    total_microseconds = not_implemented()
+    total_nanoseconds = not_implemented()
