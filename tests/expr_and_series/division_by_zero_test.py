@@ -16,12 +16,17 @@ def test_series_truediv_by_zero(constructor_eager: ConstructorEager) -> None:
     expected = {"int": expected_truediv, "float": expected_truediv}
     assert_equal_data(result, expected)
 
+    assert (~result["int"].is_finite()).all()
+
 
 def test_expr_truediv_by_zero(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all() / 0)
     expected = {"int": expected_truediv, "float": expected_truediv}
     assert_equal_data(result, expected)
+    assert_equal_data(
+        result.select((~nw.all().is_finite()).all()), {"int": [True], "float": [True]}
+    )
 
 
 def test_series_floordiv_by_zero(
@@ -38,6 +43,7 @@ def test_series_floordiv_by_zero(
     result = {"int": df["int"] // 0}
     expected = {"int": expected_floordiv}
     assert_equal_data(result, expected)
+    assert result["int"].is_null().all()
 
 
 def test_expr_floordiv_by_zero(
@@ -55,3 +61,4 @@ def test_expr_floordiv_by_zero(
     result = df.select(nw.col("int") // 0)
     expected = {"int": expected_floordiv}
     assert_equal_data(result, expected)
+    assert_equal_data(result.select(nw.col("int").is_null().all()), {"int": [True]})
