@@ -71,7 +71,7 @@ def test_expr_floordiv_by_zero(
 """
 TODO:
 
-- [ ] Add division by series
-- [ ] Add division by lit
+- [x] Add division by series
+- [x] Add division by lit
 - [ ] Add _right_ versions of each test
 """

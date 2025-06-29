@@ -106,10 +106,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     def __floordiv__(self, other: Any) -> Self:
-        def func(expr: Expression) -> Expression:
-            return when(other == lit(0), lit(None)).otherwise(expr.__floordiv__(other))
+        def func(expr: Expression, other: Expression) -> Expression:
+            return when(other != lit(0), expr // other).otherwise(lit(None))
 
-        return self._with_callable(func)
+        return self._with_binary(func, other=other)
 
     def _cum_window_func(
         self,
