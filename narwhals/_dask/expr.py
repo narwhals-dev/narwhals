@@ -220,13 +220,21 @@ class DaskExpr(
 
     def __floordiv__(self, other: Any) -> Self:
         def _floordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any = other
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
         ) -> dx.Series:
             series, other = align_series_full_broadcast(df, series, other)
-            return series.__floordiv__(other).where(other != 0, None)
+            return (series.__floordiv__(other)).where(other != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [_floordiv(df, series) for series in self(df)]
+            if isinstance(other, type(self)):
+                if len(other_ := other(df)) > 1:
+                    msg = "Expected expression with single output, found multiple"
+                    raise ValueError(msg)
+                other_series = other_[0]
+            else:
+                other_series = other
+
+            return [_floordiv(df, series, other_series) for series in self(df)]
 
         return self.__class__(
             func,
