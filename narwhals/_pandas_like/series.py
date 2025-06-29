@@ -490,13 +490,14 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __floordiv__(self, other: Any) -> Self:
         native, other = align_and_extract_native(self, other)
+        native = cast("pd.Series[Any]", native)
         native_cls = type(native)
         other_is_series = isinstance(other, native_cls)
 
         safe_div_mask = other != 0
 
-        if ((not other_is_series) and safe_div_mask is True) or (
-            other_is_series and safe_div_mask.all()
+        if (other_is_series and safe_div_mask.all()) or (
+            (not other_is_series) and safe_div_mask is True
         ):  # fast path, there are no zero's in other
             result_native = native // other
         else:
@@ -511,10 +512,19 @@ class PandasLikeSeries(EagerSeries[Any]):
 
                 from narwhals._arrow.utils import floordiv_compat
 
-                native_pa = native.array._pa_array
-                other_pa = other.array._pa_array if other_is_series else pa.scalar(other)
+                native_pa = native.array._pa_array  # type: ignore[attr-defined]
+                other_pa = (
+                    other.array._pa_array  # pyright: ignore[reportAttributeAccessIssue]
+                    if other_is_series
+                    else pa.scalar(other, type=pa.int64())
+                    # TODO(FBruzzesi): How can be improve on pinning down the type?
+                )
                 result_array = floordiv_compat(native_pa, other_pa)
             else:
+                # Note that we use numpy/cupy where instead of pandas-like Series.where
+                # to avoid handling broadcasting for scalars.
+                # np.where(True, x, y) -> x, np.where(False, x, y) -> y
+                # x.where(True, y) -> raises an exception due to shape mismatch
                 result_array = array_funcs.where(
                     safe_div_mask,
                     native // other,
