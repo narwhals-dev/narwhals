@@ -308,20 +308,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(s)
 
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
+        implementation = self._implementation
+        backend_version = self._backend_version
         # Scatter, modifying original Series. Use with care!
         values_native = set_index(
             values.native,
             self.native.index[indices.native],
-            implementation=self._implementation,
-            backend_version=self._backend_version,
+            implementation=implementation,
+            backend_version=backend_version,
         )
-        if self._implementation is Implementation.PANDAS and parse_version(np) < (2,):
+        if implementation is Implementation.PANDAS and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
         min_pd_version = (1, 2)
-        if (
-            self._implementation is Implementation.PANDAS
-            and self._backend_version < min_pd_version
-        ):
+        if implementation is Implementation.PANDAS and backend_version < min_pd_version:
             self.native.iloc[indices.native.values] = values_native  # noqa: PD011
         else:
             self.native.iloc[indices.native] = values_native
@@ -1055,16 +1054,8 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
+        native_cls = native.__class__
         implementation = self._implementation
-
-        if implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            result_arr = cp.log(native) / cp.log(base)
-            result_native = native.__class___(
-                result_arr, index=native.index, name=native.name
-            )
-            return self._with_native(result_native)
 
         if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
@@ -1081,25 +1072,24 @@ class PandasLikeSeries(EagerSeries[Any]):
                 self._backend_version,
                 self._version,
             )
-            result_native = native.__class__(
+            result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.log(native) / np.log(base)
+            array_funcs = import_array_module(implementation)
+            result_arr = array_funcs.log(native) / array_funcs.log(base)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+
         return self._with_native(result_native)
 
     def exp(self) -> Self:
         native = self.native
+        native_cls = native.__class__
         implementation = self._implementation
-
-        if implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            result_arr = cp.exp(native)
-            result_native = native.__class__(
-                result_arr, index=native.index, name=native.name
-            )
-            return self._with_native(result_native)
 
         if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
@@ -1120,7 +1110,14 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            result_native = np.exp(native)
+            array_funcs = import_array_module(implementation)
+            result_arr = array_funcs.exp(native)
+            result_native = (
+                native_cls(result_arr, index=native.index, name=native.name)
+                if implementation.is_cudf()
+                else result_arr
+            )
+
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:

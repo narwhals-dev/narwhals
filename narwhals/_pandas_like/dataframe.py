@@ -863,8 +863,6 @@ class PandasLikeDataFrame(
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for col_dtype in native_dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np
-
                 arr: Any = np.hstack(
                     [
                         self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
