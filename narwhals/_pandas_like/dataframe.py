@@ -11,6 +11,7 @@ from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLi
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
+    import_array_module,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -418,14 +419,8 @@ class PandasLikeDataFrame(
         plx = self.__narwhals_namespace__()
         if order_by is None:
             size = len(self)
-            if self._implementation.is_cudf():
-                import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-                data = cp.arange(size)
-            else:
-                import numpy as np  # ignore-banned-import
-
-                data = np.arange(size)
+            array_funcs = import_array_module(self._implementation)
+            data = array_funcs.arange(size)
 
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(

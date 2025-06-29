@@ -14,6 +14,7 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
+    import_array_module,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -386,14 +387,8 @@ class PandasLikeSeries(EagerSeries[Any]):
     def arg_true(self) -> Self:
         ser = self.native
         size = len(ser)
-        if self._implementation.is_cudf():
-            import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-            data = cp.arange(size)
-        else:
-            import numpy as np  # ignore-banned-import
-
-            data = np.arange(size)
+        array_funcs = import_array_module(self._implementation)
+        data = array_funcs.arange(size)
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
@@ -1062,17 +1057,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         native = self.native
         implementation = self._implementation
 
-        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
-
         if implementation.is_cudf():
             import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
-            native = self.native
-            log_arr = cp.log(native) / cp.log(base)
-            result_native = type(native)(log_arr, index=native.index, name=native.name)
+            result_arr = cp.log(native) / cp.log(base)
+            result_native = native.__class___(
+                result_arr, index=native.index, name=native.name
+            )
             return self._with_native(result_native)
 
-        if dtype_backend == "pyarrow":
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
 
             from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -1098,17 +1092,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         native = self.native
         implementation = self._implementation
 
-        dtype_backend = get_dtype_backend(native.dtype, implementation=implementation)
-
         if implementation.is_cudf():
             import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
-            native = self.native
-            exp_arr = cp.exp(native)
-            result_native = type(native)(exp_arr, index=native.index, name=native.name)
+            result_arr = cp.exp(native)
+            result_native = native.__class__(
+                result_arr, index=native.index, name=native.name
+            )
             return self._with_native(result_native)
 
-        if dtype_backend == "pyarrow":
+        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
             import pyarrow.compute as pc
 
             from narwhals._arrow.utils import native_to_narwhals_dtype
