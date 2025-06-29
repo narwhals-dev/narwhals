@@ -627,14 +627,14 @@ def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
 
 def import_array_module(implementation: Implementation, /) -> ModuleType:
     """Returns numpy or cupy module depending on the given implementation."""
-    if implementation is Implementation.CUDF:
-        import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-        return cp
-    elif implementation in {Implementation.PANDAS, Implementation.MODIN}:
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
         import numpy as np
 
         return np
+    elif implementation is Implementation.CUDF:
+        import cupy as cp  # ignore-banned-import  # cuDF dependency.
+
+        return cp
     else:  # pragma: no cover
         msg = f"Expected pandas/modin/cudf, got: {implementation}"
         raise AssertionError(msg)
