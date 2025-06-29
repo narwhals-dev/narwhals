@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ClassVar,
     Generic,
     Literal,
     NoReturn,
@@ -411,6 +412,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             )
             ```
     """
+
+    _accessors: ClassVar[set[str]] = set()
 
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
@@ -2173,6 +2176,8 @@ class LazyFrame(BaseFrame[FrameT]):
         narwhals.from_native(native_lazyframe)
         ```
     """
+
+    _accessors: ClassVar[set[str]] = set()
 
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
