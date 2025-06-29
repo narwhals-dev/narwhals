@@ -401,39 +401,31 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def __truediv__(self, other: SparkLikeExpr) -> Self:
         def _truediv(expr: Column, other: Column) -> Column:
-            return self._F.when(other != 0, true_divide(self._F, expr, other)).when(
-                other == 0,
-                self._F.when(expr == 0, self._F.lit(float("nan")))
-                .when(expr > 0, self._F.lit(float("inf")))
-                .when(expr < 0, self._F.lit(float("-inf"))),
-            )
+            return true_divide(self._F, expr, other)
 
         return self._with_binary(_truediv, other)
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
         def _rtruediv(expr: Column, other: Column) -> Column:
-            return self._F.when(expr != 0, true_divide(self._F, other, expr)).when(
-                expr == 0,
-                self._F.when(other == 0, self._F.lit(float("nan")))
-                .when(other > 0, self._F.lit(float("inf")))
-                .when(other < 0, self._F.lit(float("-inf"))),
-            )
+            return true_divide(self._F, other, expr)
 
         return self._with_binary(_rtruediv, other).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.when(
-                other != 0, self._F.floor(true_divide(self._F, expr, other))
-            ).otherwise(None)
+            F = self._F  # noqa: N806
+            return F.when(
+                other != F.lit(0), F.floor(true_divide(F, expr, other))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.when(
-                expr != 0, self._F.floor(true_divide(self._F, other, expr))
-            ).otherwise(None)
+            F = self._F  # noqa: N806
+            return F.when(
+                expr != F.lit(0), F.floor(true_divide(F, other, expr))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 
