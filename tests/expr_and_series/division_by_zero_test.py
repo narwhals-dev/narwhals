@@ -5,11 +5,21 @@ from typing import Any, Callable
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    zip_strict,
+)
 
-data = {"int": [-2, 0, 2], "float": [-2.1, 0.0, 2.1], "denominator": [0, 0, 0]}
-expected_truediv = [float("-inf"), float("nan"), float("inf")]
-expected_floordiv = [None, None, None]
+data: dict[str, list[float]] = {
+    "int": [-2, 0, 2],
+    "float": [-2.1, 0.0, 2.1],
+    "denominator": [0, 0, 0],
+}
+expected_truediv: list[float] = [float("-inf"), float("nan"), float("inf")]
+expected_floordiv: list[float | None] = [None, None, None]
 
 
 @pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
@@ -70,7 +80,9 @@ def test_expr_floordiv_by_zero(
 
 @pytest.mark.parametrize(
     ("numerator", "expected"),
-    list(zip([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])),
+    list(
+        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+    ),
 )
 def test_series_rtruediv_by_zero(
     constructor_eager: ConstructorEager, numerator: float, expected: float
@@ -83,7 +95,9 @@ def test_series_rtruediv_by_zero(
 
 @pytest.mark.parametrize(
     ("numerator", "expected"),
-    list(zip([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])),
+    list(
+        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+    ),
 )
 def test_expr_rtruediv_by_zero(
     constructor: Constructor, numerator: float, expected: float
