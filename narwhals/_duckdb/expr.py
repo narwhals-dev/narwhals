@@ -452,11 +452,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     @requires.backend_version((1, 3))
     def first(self) -> Self:
         def fn(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            order_by = generate_order_by_sql(*inputs.order_by, ascending=True)
-            partition_by = generate_partition_by_sql(*inputs.partition_by)
-            window = f"({partition_by} {order_by})"
-            sql = f"first({{expr}}) over {window}"
-            return [SQLExpression(sql.format(expr=expr)) for expr in self(df)]
+            return [
+                window_expression(F("first", expr), inputs.partition_by, inputs.order_by)
+                for expr in self(df)
+            ]
 
         return self._with_window_function(fn)
 
