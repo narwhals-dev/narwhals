@@ -270,6 +270,15 @@ class PandasLikeDataFrame(
             )
         return other.native
 
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        else:
+            return import_array_module(self._implementation)
+
     def get_column(self, name: str) -> PandasLikeSeries:
         return PandasLikeSeries.from_native(self.native[name], context=self)
 
@@ -419,8 +428,7 @@ class PandasLikeDataFrame(
         plx = self.__narwhals_namespace__()
         if order_by is None:
             size = len(self)
-            array_funcs = import_array_module(self._implementation)
-            data = array_funcs.arange(size)
+            data = self._array_funcs.arange(size)
 
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(

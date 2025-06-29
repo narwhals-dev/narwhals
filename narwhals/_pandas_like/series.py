@@ -263,6 +263,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        else:
+            return import_array_module(self._implementation)
+
     def ewm_mean(
         self,
         *,
@@ -386,8 +395,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def arg_true(self) -> Self:
         ser = self.native
         size = len(ser)
-        array_funcs = import_array_module(self._implementation)
-        data = array_funcs.arange(size)
+        data = self._array_funcs.arange(size)
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
@@ -1076,7 +1084,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            array_funcs = import_array_module(implementation)
+            array_funcs = self._array_funcs
             result_arr = array_funcs.log(native) / array_funcs.log(base)
             result_native = (
                 native_cls(result_arr, index=native.index, name=native.name)
@@ -1110,8 +1118,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
             )
         else:
-            array_funcs = import_array_module(implementation)
-            result_arr = array_funcs.exp(native)
+            result_arr = self._array_funcs.exp(native)
             result_native = (
                 native_cls(result_arr, index=native.index, name=native.name)
                 if implementation.is_cudf()
