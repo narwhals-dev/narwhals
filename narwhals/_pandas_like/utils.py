@@ -640,15 +640,4 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
         raise AssertionError(msg)
 
 
-class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
-    @property
-    def implementation(self) -> Implementation:
-        return self.compliant._implementation
-
-    @property
-    def backend_version(self) -> tuple[int, ...]:
-        return self.compliant._backend_version
-
-    @property
-    def version(self) -> Version:
-        return self.compliant._version
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...

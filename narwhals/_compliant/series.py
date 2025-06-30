@@ -369,6 +369,18 @@ class _SeriesNamespace(  # type: ignore[misc]
         return self._compliant_series
 
     @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.implementation._backend_version()
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version
+
+    @property
     def native(self) -> NativeSeriesT_co:
         return self._compliant_series.native  # type: ignore[no-any-return]
 
