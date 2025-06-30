@@ -569,11 +569,7 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        """Returns backend version.
-
-        As a biproduct of loading the native namespace, we also store it as an attribute
-        under the `_native_namespace` name.
-        """
+        """Returns backend version."""
         if self is Implementation.UNKNOWN:  # pragma: no cover
             msg = "Cannot return backend version from UNKNOWN Implementation"
             raise AssertionError(msg)
