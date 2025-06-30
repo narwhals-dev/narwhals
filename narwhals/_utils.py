@@ -5,7 +5,7 @@ import re
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import lru_cache, wraps
+from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from secrets import token_hex
@@ -24,7 +24,7 @@ from typing import (
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cudf,
     get_dask_dataframe,
@@ -351,8 +351,7 @@ class Implementation(NoAutoEnum):
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
 
-        validate_backend_version(self, self._backend_version())
-
+        self._backend_version()
         module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
         return _import_native_namespace(module_name)
 
@@ -570,30 +569,7 @@ class Implementation(NoAutoEnum):
 
     def _backend_version(self) -> tuple[int, ...]:
         """Returns backend version."""
-        if self is Implementation.UNKNOWN:  # pragma: no cover
-            msg = "Cannot return backend version from UNKNOWN Implementation"
-            raise AssertionError(msg)
-
-        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
-        native_namespace = _import_native_namespace(module_name)
-
-        into_version: ModuleType | str
-        if self.is_sqlframe():
-            import sqlframe._version
-
-            into_version = sqlframe._version
-        elif self.is_pyspark() or self.is_pyspark_connect():  # pragma: no cover
-            import pyspark  # ignore-banned-import
-
-            into_version = pyspark
-        elif self.is_dask():
-            import dask  # ignore-banned-import
-
-            into_version = dask
-        else:
-            into_version = native_namespace
-
-        return parse_version(version=into_version)
+        return backend_version(self)
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
@@ -632,6 +608,41 @@ def _import_native_namespace(module_name: str) -> ModuleType:
     from importlib import import_module
 
     return import_module(module_name)
+
+
+# NOTE: We can safely use an unbounded cache, the size is constrained by `len(Implementation._member_names_)`
+# Faster than `lru_cache`
+# https://docs.python.org/3/library/functools.html#functools.cache
+@cache
+def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
+    if not isinstance(implementation, Implementation):
+        assert_never(implementation)
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
+        msg = "Cannot return backend version from UNKNOWN Implementation"
+        raise AssertionError(msg)
+    into_version: ModuleType | str
+    impl = implementation
+    module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
+    native_namespace = _import_native_namespace(module_name)
+    if impl.is_sqlframe():
+        import sqlframe._version
+
+        into_version = sqlframe._version
+    elif impl.is_pyspark() or impl.is_pyspark_connect():  # pragma: no cover
+        import pyspark  # ignore-banned-import
+
+        into_version = pyspark
+    elif impl.is_dask():
+        import dask  # ignore-banned-import
+
+        into_version = dask
+    else:
+        into_version = native_namespace
+    version = parse_version(into_version)
+    if version < (min_version := MIN_VERSIONS[impl]):
+        msg = f"Minimum version of {impl} supported by Narwhals is {min_version}, found: {version}"
+        raise ValueError(msg)
+    return version
 
 
 def flatten(args: Any) -> list[Any]:
