@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _FullContext
-    from narwhals.typing import RankMethod
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
@@ -122,12 +121,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     ) -> dict[str, Any]:
         return {"_return_py_scalar": False} if returns_scalar else {}
 
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_sum", reverse=reverse)
-
-    def shift(self, n: int) -> Self:
-        return self._reuse_series("shift", n=n)
-
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if (
             partition_by
@@ -185,29 +178,5 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_count", reverse=reverse)
-
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_min", reverse=reverse)
-
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_max", reverse=reverse)
-
-    def cum_prod(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_prod", reverse=reverse)
-
-    def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        return self._reuse_series("rank", method=method, descending=descending)
-
-    def log(self, base: float) -> Self:
-        return self._reuse_series("log", base=base)
-
-    def exp(self) -> Self:
-        return self._reuse_series("exp")
-
-    def sqrt(self) -> Self:
-        return self._reuse_series("sqrt")
 
     ewm_mean = not_implemented()
