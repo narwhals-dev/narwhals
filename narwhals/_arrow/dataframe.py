@@ -76,19 +76,21 @@ if TYPE_CHECKING:
 class ArrowDataFrame(
     EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
 ):
+    _implementation = Implementation.PYARROW
+
     def __init__(
         self,
         native_dataframe: pa.Table,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
         validate_column_names: bool,
+        validate_backend_version: bool = False,
     ) -> None:
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.column_names)
+        if validate_backend_version:
+            self._validate_backend_version()
         self._native_frame = native_dataframe
-        self._implementation = Implementation.PYARROW
-        self._backend_version = backend_version
         self._version = version
 
     @classmethod
@@ -127,12 +129,7 @@ class ArrowDataFrame(
 
     @classmethod
     def from_native(cls, data: pa.Table, /, *, context: _FullContext) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            validate_column_names=True,
-        )
+        return cls(data, version=context._version, validate_column_names=True)
 
     @classmethod
     def from_numpy(
@@ -173,19 +170,11 @@ class ArrowDataFrame(
         return self
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native,
-            backend_version=self._backend_version,
-            version=version,
-            validate_column_names=False,
-        )
+        return self.__class__(self.native, version=version, validate_column_names=False)
 
     def _with_native(self, df: pa.Table, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=validate_column_names,
+            df, version=self._version, validate_column_names=validate_column_names
         )
 
     @property
@@ -568,21 +557,16 @@ class ArrowDataFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=False,
+                self.native, version=self._version, validate_column_names=False
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )

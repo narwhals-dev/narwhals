@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
-import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._expression_parsing import ExprKind
@@ -118,7 +117,7 @@ class DaskLazyFrame(
             return PandasLikeDataFrame(
                 result,
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
@@ -141,7 +140,7 @@ class DaskLazyFrame(
 
             return ArrowDataFrame(
                 pa.Table.from_pandas(result),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )

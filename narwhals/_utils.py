@@ -126,8 +126,10 @@ if TYPE_CHECKING:
         """Implementation of native object (pandas, Polars, PyArrow, ...)."""
 
     class _StoresBackendVersion(Protocol):
-        _backend_version: tuple[int, ...]
-        """Version tuple for a native package."""
+        @property
+        def _backend_version(self) -> tuple[int, ...]:
+            """Version tuple for a native package."""
+            ...
 
     class _StoresVersion(Protocol):
         _version: Version

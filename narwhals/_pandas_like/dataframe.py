@@ -101,16 +101,17 @@ class PandasLikeDataFrame(
         native_dataframe: Any,
         *,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         validate_column_names: bool,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+        if validate_backend_version:
+            self._validate_backend_version()
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
@@ -176,7 +177,6 @@ class PandasLikeDataFrame(
         return cls(
             data,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
             validate_column_names=True,
         )
@@ -237,7 +237,6 @@ class PandasLikeDataFrame(
         return self.__class__(
             self.native,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=version,
             validate_column_names=False,
         )
@@ -246,7 +245,6 @@ class PandasLikeDataFrame(
         return self.__class__(
             df,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
             validate_column_names=validate_column_names,
         )
@@ -509,30 +507,26 @@ class PandasLikeDataFrame(
             return PandasLikeDataFrame(
                 self.native,
                 implementation=self._implementation,
-                backend_version=self._backend_version,
                 version=self._version,
                 validate_column_names=False,
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
-            return PandasLikeDataFrame(
-                self.to_pandas(),
-                implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
-                version=self._version,
-                validate_column_names=False,
-            )
+            kwds: dict[str, Any] = {
+                "implementation": Implementation.PANDAS,
+                "version": self._version,
+                "validate_column_names": False,
+            }
+            if backend is not self._implementation:
+                kwds.update(validate_backend_version=True)
+            return PandasLikeDataFrame(self.to_pandas(), **kwds)
 
         if backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 native_dataframe=self.to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )

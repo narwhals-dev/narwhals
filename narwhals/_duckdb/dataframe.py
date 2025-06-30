@@ -128,26 +128,22 @@ class DuckDBLazyFrame(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self.native.arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.df(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )

@@ -356,7 +356,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeDataFrame(
             self.native.to_frame(),
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
             validate_column_names=False,
         )

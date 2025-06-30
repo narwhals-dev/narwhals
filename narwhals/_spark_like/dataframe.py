@@ -211,33 +211,28 @@ class SparkLikeLazyFrame(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.toPandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         elif backend is None or backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self._collect_to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
 

@@ -394,6 +394,18 @@ class EagerDataFrame(
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+        return self._implementation._backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...

@@ -642,10 +642,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
+            val_count, version=self._version, validate_column_names=True
         )
 
     def zip_with(self, mask: Self, other: Self) -> Self:
@@ -717,12 +714,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         df = pa.Table.from_arrays([self.native], names=[self.name])
-        return ArrowDataFrame(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=False,
-        )
+        return ArrowDataFrame(df, version=self._version, validate_column_names=False)
 
     def to_pandas(self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
@@ -840,7 +832,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=cols),
-            backend_version=self._backend_version,
             version=self._version,
             validate_column_names=True,
         ).simple_select(*output_order)
@@ -1149,10 +1140,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         data["count"] = counts
 
         return ArrowDataFrame(
-            pa.Table.from_pydict(data),
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
+            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
         )
 
     def __iter__(self) -> Iterator[Any]:
