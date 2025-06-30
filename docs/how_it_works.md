@@ -74,7 +74,6 @@ from narwhals._utils import parse_version, Version
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
-    backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
 print(nw.col("a")._to_compliant_expr(pn))
@@ -101,7 +100,6 @@ import pandas as pd
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
-    backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
 
@@ -109,7 +107,6 @@ df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 df = PandasLikeDataFrame(
     df_pd,
     implementation=Implementation.PANDAS,
-    backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
     validate_column_names=True,
 )
@@ -199,7 +196,6 @@ import pandas as pd
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
-    backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
 
@@ -214,7 +210,6 @@ backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._t
 ```python exec="1" result="python" session="pandas_api_mapping" source="above"
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
-    backend_version=parse_version(pd.__version__),
     version=Version.MAIN,
 )
 expr = (nw.col("a") + 1)._to_compliant_expr(pn)
