@@ -27,7 +27,6 @@ class PandasLikeSeriesListNamespace(
             self.version.dtypes.UInt32(),
             get_dtype_backend(result.dtype, implementation),
             implementation,
-            backend_version,
             self.version,
         )
         return self.with_native(result.astype(dtype)).alias(self.native.name)

@@ -529,9 +529,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(
-                expr.to_frame(), col_token, self._backend_version, self._implementation
-            )
+            frame = add_row_index(expr.to_frame(), col_token, self._implementation)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
 
@@ -541,9 +539,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(
-                expr.to_frame(), col_token, self._backend_version, self._implementation
-            )
+            frame = add_row_index(expr.to_frame(), col_token, self._implementation)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
 

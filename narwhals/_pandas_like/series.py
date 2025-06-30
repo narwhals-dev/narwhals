@@ -167,14 +167,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         index: Any = None,
     ) -> Self:
         implementation = context._implementation
-        backend_version = context._backend_version
         version = context._version
         ns = implementation.to_native_namespace()
         kwds: dict[str, Any] = {}
         if dtype:
-            kwds["dtype"] = narwhals_to_native_dtype(
-                dtype, None, implementation, backend_version, version
-            )
+            kwds["dtype"] = narwhals_to_native_dtype(dtype, None, implementation, version)
         else:
             if implementation.is_pandas():
                 kwds["copy"] = False
@@ -211,12 +208,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 )
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
-                native = set_index(
-                    s.native,
-                    idx,
-                    implementation=s._implementation,
-                    backend_version=s._backend_version,
-                )
+                native = set_index(s.native, idx, implementation=s._implementation)
                 compliant = s._with_native(native)
             else:
                 compliant = s
@@ -284,7 +276,6 @@ class PandasLikeSeries(EagerSeries[Any]):
                 values.native,
                 self.native.index[indices],
                 implementation=self._implementation,
-                backend_version=self._backend_version,
             )
         s = self.native.copy(deep=True)
         s.iloc[indices] = values
@@ -299,7 +290,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             values.native,
             self.native.index[indices.native],
             implementation=implementation,
-            backend_version=backend_version,
         )
         if implementation is Implementation.PANDAS and parse_version(np) < (2,):
             values_native = values_native.copy()  # pragma: no cover
@@ -314,7 +304,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
@@ -653,11 +642,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
         dtype = (
             narwhals_to_native_dtype(
-                return_dtype,
-                dtype_backend,
-                self._implementation,
-                self._backend_version,
-                self._version,
+                return_dtype, dtype_backend, self._implementation, self._version
             )
             if return_dtype
             else None
@@ -686,12 +671,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def alias(self, name: str | Hashable) -> Self:
         if name != self.name:
             return self._with_native(
-                rename(
-                    self.native,
-                    name,
-                    implementation=self._implementation,
-                    backend_version=self._backend_version,
-                ),
+                rename(self.native, name, implementation=self._implementation),
                 preserve_broadcast=True,
             )
         return self
@@ -821,12 +801,9 @@ class PandasLikeSeries(EagerSeries[Any]):
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
             result = rename(
-                select_columns_by_name(
-                    result, output_order, self._backend_version, self._implementation
-                ),
+                select_columns_by_name(result, output_order, self._implementation),
                 columns={null_col_pd: null_col_pl},
                 implementation=self._implementation,
-                backend_version=self._backend_version,
             )
         return PandasLikeDataFrame.from_native(result, context=self)
 
@@ -1046,11 +1023,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
             nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
             out_dtype = narwhals_to_native_dtype(
-                nw_dtype,
-                "pyarrow",
-                self._implementation,
-                self._backend_version,
-                self._version,
+                nw_dtype, "pyarrow", self._implementation, self._version
             )
             result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name
@@ -1080,11 +1053,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             result_arr = cast("ChunkedArrayAny", pc.exp(ca))
             nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
             out_dtype = narwhals_to_native_dtype(
-                nw_dtype,
-                "pyarrow",
-                self._implementation,
-                self._backend_version,
-                self._version,
+                nw_dtype, "pyarrow", self._implementation, self._version
             )
             result_native = native_cls(
                 result_arr, dtype=out_dtype, index=native.index, name=native.name

@@ -256,12 +256,7 @@ class PandasLikeDataFrame(
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)
         if other.native.index is not index:
-            return set_index(
-                other.native,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
-            )
+            return set_index(other.native, index, implementation=other._implementation)
         return other.native
 
     @property
@@ -384,12 +379,7 @@ class PandasLikeDataFrame(
     # --- reshape ---
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(
-            select_columns_by_name(
-                self.native,
-                list(column_names),
-                self._backend_version,
-                self._implementation,
-            ),
+            select_columns_by_name(self.native, list(column_names), self._implementation),
             validate_column_names=False,
         )
 
@@ -470,12 +460,7 @@ class PandasLikeDataFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(
-            rename(
-                self.native,
-                columns=mapping,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
+            rename(self.native, columns=mapping, implementation=self._implementation)
         )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
@@ -671,18 +656,14 @@ class PandasLikeDataFrame(
         Notice that a native object is returned.
         """
         implementation = self._implementation
-        backend_version = self._backend_version
-
         return rename(
             select_columns_by_name(
                 other.native,
                 column_names=columns_to_select,
-                backend_version=backend_version,
                 implementation=implementation,
             ),
             columns=columns_mapping,
             implementation=implementation,
-            backend_version=backend_version,
         ).drop_duplicates()
 
     def join(

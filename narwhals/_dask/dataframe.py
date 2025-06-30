@@ -165,9 +165,7 @@ class DaskLazyFrame(
 
     def simple_select(self, *column_names: str) -> Self:
         df: Incomplete = self.native
-        native = select_columns_by_name(
-            df, list(column_names), self._backend_version, self._implementation
-        )
+        native = select_columns_by_name(df, list(column_names), self._implementation)
         return self._with_native(native)
 
     def aggregate(self, *exprs: DaskExpr) -> Self:
@@ -181,7 +179,6 @@ class DaskLazyFrame(
         df = select_columns_by_name(
             df.assign(**dict(new_series)),
             [s[0] for s in new_series],
-            self._backend_version,
             self._implementation,
         )
         return self._with_native(df)
@@ -218,9 +215,7 @@ class DaskLazyFrame(
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         if order_by is None:
             return self._with_native(
-                add_row_index(
-                    self.native, name, self._backend_version, self._implementation
-                )
+                add_row_index(self.native, name, self._implementation)
             )
         else:
             plx = self.__narwhals_namespace__()
@@ -373,14 +368,9 @@ class DaskLazyFrame(
         Notice that a native object is returned.
         """
         other_native: Incomplete = other.native
+        # rename to avoid creating extra columns in join
         return (
-            select_columns_by_name(
-                other_native,
-                column_names=columns_to_select,
-                backend_version=self._backend_version,
-                implementation=self._implementation,
-            )
-            # rename to avoid creating extra columns in join
+            select_columns_by_name(other_native, columns_to_select, self._implementation)
             .rename(columns=columns_mapping)
             .drop_duplicates()
         )

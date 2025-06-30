@@ -135,14 +135,11 @@ class Schema(BaseSchema):
             >>> schema.to_pandas("pyarrow")
             {'a': 'Int64[pyarrow]', 'b': 'timestamp[ns][pyarrow]'}
         """
-        import pandas as pd  # ignore-banned-import
-
         from narwhals._pandas_like.utils import narwhals_to_native_dtype
 
         to_native_dtype = partial(
             narwhals_to_native_dtype,
             implementation=Implementation.PANDAS,
-            backend_version=parse_version(pd),
             version=self._version,
         )
         if dtype_backend is None or isinstance(dtype_backend, str):

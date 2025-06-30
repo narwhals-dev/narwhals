@@ -1035,7 +1035,6 @@ def maybe_set_index(
             native_obj,
             keys,
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
-            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
