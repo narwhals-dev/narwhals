@@ -94,7 +94,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -110,7 +109,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

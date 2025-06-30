@@ -103,7 +103,10 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         )
         obj._alias_output_names = getattr(then, "_alias_output_names", None)
         obj._implementation = when._implementation
-        obj._backend_version = when._backend_version
+        # NOTE: Temp workaround for `EagerExpr` using a property
+        # but haven't transitioned the others yet
+        if not hasattr(obj, "_backend_version"):
+            obj._backend_version = when._backend_version
         obj._version = when._version
         obj._scalar_kwargs = {}
         return obj

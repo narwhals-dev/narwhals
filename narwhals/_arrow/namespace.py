@@ -59,7 +59,6 @@ class ArrowNamespace(
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -78,7 +77,6 @@ class ArrowNamespace(
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

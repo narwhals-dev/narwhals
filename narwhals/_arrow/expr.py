@@ -37,7 +37,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         function_name: str,
         evaluate_output_names: EvalNames[ArrowDataFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
         implementation: Implementation | None = None,
@@ -48,7 +47,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self._depth = depth
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
@@ -81,7 +79,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -101,7 +98,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name="nth",
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -179,7 +175,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

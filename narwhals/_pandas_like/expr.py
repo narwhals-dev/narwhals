@@ -94,7 +94,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         evaluate_output_names: EvalNames[PandasLikeDataFrame],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
@@ -104,7 +103,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
         self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
@@ -149,7 +147,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -169,7 +166,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -319,7 +315,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

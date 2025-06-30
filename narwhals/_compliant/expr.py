@@ -312,6 +312,10 @@ class EagerExpr(
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
     _scalar_kwargs: ScalarKwargs
 
+    @property
+    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+        return self._implementation._backend_version()
+
     def __init__(
         self,
         call: EvalSeries[EagerDataFrameT, EagerSeriesT],
@@ -321,7 +325,6 @@ class EagerExpr(
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
@@ -353,7 +356,6 @@ class EagerExpr(
             evaluate_output_names=evaluate_output_names,
             alias_output_names=alias_output_names,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
             scalar_kwargs=scalar_kwargs,
         )
@@ -367,7 +369,6 @@ class EagerExpr(
             evaluate_output_names=lambda _df: [series.name],
             alias_output_names=None,
             implementation=series._implementation,
-            backend_version=series._backend_version,
             version=series._version,
         )
 
@@ -502,7 +503,6 @@ class EagerExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
@@ -719,7 +719,6 @@ class EagerExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
@@ -1129,7 +1128,6 @@ class EagerExprNameNamespace(
             function_name=expr._function_name,
             evaluate_output_names=expr._evaluate_output_names,
             alias_output_names=self._alias_output_names(func) if alias else None,
-            backend_version=expr._backend_version,
             implementation=expr._implementation,
             version=expr._version,
             scalar_kwargs=expr._scalar_kwargs,

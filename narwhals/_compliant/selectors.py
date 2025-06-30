@@ -227,7 +227,10 @@ class CompliantSelector(
         obj._evaluate_output_names = evaluate_output_names
         obj._alias_output_names = None
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
+        # NOTE: Temp workaround for `EagerExpr` using a property
+        # but haven't transitioned the others yet
+        if not hasattr(obj, "_backend_version"):
+            obj._backend_version = context._backend_version
         obj._version = context._version
         obj._scalar_kwargs = {}
         return obj
