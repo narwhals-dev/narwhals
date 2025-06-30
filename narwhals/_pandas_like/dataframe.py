@@ -11,6 +11,7 @@ from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLi
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
+    import_array_module,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -269,6 +270,15 @@ class PandasLikeDataFrame(
             )
         return other.native
 
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        else:
+            return import_array_module(self._implementation)
+
     def get_column(self, name: str) -> PandasLikeSeries:
         return PandasLikeSeries.from_native(self.native[name], context=self)
 
@@ -393,7 +403,7 @@ class PandasLikeDataFrame(
         new_series = self._evaluate_into_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
-            return self._with_native(self.native.__class__(), validate_column_names=False)
+            return self._with_native(type(self.native)(), validate_column_names=False)
         new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_horizontal([s.native for s in new_series])
@@ -418,14 +428,7 @@ class PandasLikeDataFrame(
         plx = self.__narwhals_namespace__()
         if order_by is None:
             size = len(self)
-            if self._implementation.is_cudf():
-                import cupy as cp  # ignore-banned-import  # cuDF dependency.
-
-                data = cp.arange(size)
-            else:
-                import numpy as np  # ignore-banned-import
-
-                data = np.arange(size)
+            data = self._array_funcs.arange(size)
 
             row_index = plx._expr._from_series(
                 plx._series.from_iterable(
@@ -870,8 +873,6 @@ class PandasLikeDataFrame(
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for col_dtype in native_dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                import numpy as np
-
                 arr: Any = np.hstack(
                     [
                         self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
