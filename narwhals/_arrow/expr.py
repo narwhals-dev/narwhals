@@ -104,9 +104,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowNamespace(version=self._version)
 
     def __narwhals_expr__(self) -> None: ...
 

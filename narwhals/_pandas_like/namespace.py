@@ -65,14 +65,8 @@ class PandasLikeNamespace(
         return PandasSelectorNamespace.from_namespace(self)
 
     # --- not in spec ---
-    def __init__(
-        self,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
+    def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:

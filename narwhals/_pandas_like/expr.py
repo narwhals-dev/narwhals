@@ -110,9 +110,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(
-            self._implementation, self._backend_version, version=self._version
-        )
+        return PandasLikeNamespace(self._implementation, version=self._version)
 
     def __narwhals_expr__(self) -> None: ...
 

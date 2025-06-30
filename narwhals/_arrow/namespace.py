@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 class ArrowNamespace(
     EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
 ):
+    _implementation = Implementation.PYARROW
+
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -44,9 +46,7 @@ class ArrowNamespace(
         return ArrowSeries
 
     # --- not in spec ---
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
-        self._implementation = Implementation.PYARROW
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def len(self) -> ArrowExpr:

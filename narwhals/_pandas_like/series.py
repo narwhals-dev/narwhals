@@ -132,9 +132,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(
-            self._implementation, self._backend_version, self._version
-        )
+        return PandasLikeNamespace(self._implementation, self._version)
 
     def _gather(self, rows: SizedMultiIndexSelector[pd.Series[Any]]) -> Self:
         rows = list(rows) if isinstance(rows, tuple) else rows

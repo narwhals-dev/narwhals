@@ -1728,12 +1728,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         A PyArrow Table.
     """
     if find_spec("pyarrow"):
-        import pyarrow as pa  # ignore-banned-import
-
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        version = context._version
-        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
         msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."

@@ -198,9 +198,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowNamespace(version=self._version)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         other = cast("PythonLiteral | ArrowSeries | None", other)

@@ -215,9 +215,7 @@ class PandasLikeDataFrame(
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(
-            self._implementation, self._backend_version, version=self._version
-        )
+        return PandasLikeNamespace(self._implementation, version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation in {

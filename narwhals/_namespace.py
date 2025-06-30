@@ -262,9 +262,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         if impl.is_pandas_like():
             from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-            ns = PandasLikeNamespace(
-                implementation=impl, backend_version=backend_version, version=version
-            )
+            ns = PandasLikeNamespace(implementation=impl, version=version)
 
         elif impl.is_polars():
             from narwhals._polars.namespace import PolarsNamespace
@@ -273,7 +271,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         elif impl.is_pyarrow():
             from narwhals._arrow.namespace import ArrowNamespace
 
-            ns = ArrowNamespace(backend_version=backend_version, version=version)
+            ns = ArrowNamespace(version=version)
         elif impl.is_spark_like():
             from narwhals._spark_like.namespace import SparkLikeNamespace
 

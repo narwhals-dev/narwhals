@@ -136,6 +136,10 @@ class EagerNamespace(
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
+    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+        return self._implementation._backend_version()
+
+    @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
     def _series(self) -> type[EagerSeriesT]: ...
