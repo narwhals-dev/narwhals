@@ -229,6 +229,7 @@ jobs:
           
       - name: Install narwhals in development mode
         run: |
+          pip uninstall -y narwhals
           pip install -e .
           
       - name: Ensure Python version
