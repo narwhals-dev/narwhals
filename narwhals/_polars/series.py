@@ -11,7 +11,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, requires, validate_backend_version
+from narwhals._utils import Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -122,7 +122,6 @@ class PolarsSeries:
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"

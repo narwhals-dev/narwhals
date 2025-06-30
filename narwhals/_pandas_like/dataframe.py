@@ -29,7 +29,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     parse_version,
     scale_bytes,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -110,7 +109,6 @@ class PandasLikeDataFrame(
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
 

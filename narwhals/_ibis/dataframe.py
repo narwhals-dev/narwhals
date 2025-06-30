@@ -13,7 +13,6 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     parse_version,
-    validate_backend_version,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
@@ -56,7 +55,6 @@ class IbisLazyFrame(
         self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
 
     @staticmethod
     def _is_native(obj: ir.Table | Any) -> TypeIs[ir.Table]:

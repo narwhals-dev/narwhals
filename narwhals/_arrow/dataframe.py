@@ -22,7 +22,6 @@ from narwhals._utils import (
     parse_version,
     scale_bytes,
     supports_arrow_c_stream,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
@@ -91,7 +90,6 @@ class ArrowDataFrame(
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:

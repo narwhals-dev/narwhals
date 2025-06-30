@@ -24,7 +24,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     parse_version,
     requires,
-    validate_backend_version,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
@@ -73,7 +72,6 @@ class DuckDBLazyFrame(
         self._backend_version = backend_version
         self._cached_native_schema: dict[str, DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
 
     @staticmethod
     def _is_native(obj: duckdb.DuckDBPyRelation | Any) -> TypeIs[duckdb.DuckDBPyRelation]:

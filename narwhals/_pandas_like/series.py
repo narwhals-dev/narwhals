@@ -23,12 +23,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import (
-    Implementation,
-    is_list_of,
-    parse_version,
-    validate_backend_version,
-)
+from narwhals._utils import Implementation, is_list_of, parse_version
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -122,7 +117,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         self._implementation = implementation
         self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
         # Flag which indicates if, in the final step before applying an operation,
         # the single value behind the PandasLikeSeries should be extract and treated
         # as a Scalar. For example, in `nw.col('a') - nw.lit(3)`, the latter would

@@ -26,7 +26,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     parse_version,
     requires,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
@@ -119,7 +118,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         self._backend_version = backend_version
         self._implementation = Implementation.POLARS
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
 
     @property
     def native(self) -> NativePolarsFrame:

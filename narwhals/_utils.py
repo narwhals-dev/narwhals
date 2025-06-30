@@ -595,14 +595,6 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
 """Stores non default mapping from Implementation to module name"""
 
 
-def validate_backend_version(
-    implementation: Implementation, backend_version: tuple[int, ...]
-) -> None:
-    if backend_version < (min_version := MIN_VERSIONS[implementation]):
-        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
-        raise ValueError(msg)
-
-
 @lru_cache(maxsize=16)
 def _import_native_namespace(module_name: str) -> ModuleType:
     from importlib import import_module

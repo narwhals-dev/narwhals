@@ -30,7 +30,6 @@ from narwhals._utils import (
     is_list_of,
     not_implemented,
     requires,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -129,7 +128,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self._implementation = Implementation.PYARROW
         self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
         self._broadcast = False
 
     @property
