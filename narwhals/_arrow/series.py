@@ -115,18 +115,13 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
 
 
 class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
+    _implementation = Implementation.PYARROW
+
     def __init__(
-        self,
-        native_series: ChunkedArrayAny,
-        *,
-        name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, native_series: ChunkedArrayAny, *, name: str, version: Version
     ) -> None:
         self._name = name
         self._native_series: ChunkedArrayAny = native_series
-        self._implementation = Implementation.PYARROW
-        self._backend_version = backend_version
         self._version = version
         self._broadcast = False
 
@@ -135,12 +130,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._native_series
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native,
-            name=self._name,
-            backend_version=self._backend_version,
-            version=version,
-        )
+        return self.__class__(self.native, name=self._name, version=version)
 
     def _with_native(
         self, series: ArrayOrScalar, *, preserve_broadcast: bool = False
@@ -178,12 +168,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def from_native(
         cls, data: ChunkedArrayAny, /, *, context: _FullContext, name: str = ""
     ) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            name=name,
-        )
+        return cls(data, version=context._version, name=name)
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
@@ -499,12 +484,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        result = self.__class__(
-            self.native,
-            name=name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        result = self.__class__(self.native, name=name, version=self._version)
         result._broadcast = self._broadcast
         return result
 

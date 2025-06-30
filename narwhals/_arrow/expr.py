@@ -66,10 +66,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             try:
                 return [
                     ArrowSeries(
-                        df.native[column_name],
-                        name=column_name,
-                        backend_version=df._backend_version,
-                        version=df._version,
+                        df.native[column_name], name=column_name, version=df._version
                     )
                     for column_name in evaluate_column_names(df)
                 ]

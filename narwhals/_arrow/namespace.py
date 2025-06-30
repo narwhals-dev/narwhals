@@ -168,12 +168,7 @@ class ArrowNamespace(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -194,12 +189,7 @@ class ArrowNamespace(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -262,7 +252,6 @@ class ArrowNamespace(
             compliant = self._series(
                 concat_str(*it, separator_scalar, null_handling=null_handling),
                 name=name,
-                backend_version=self._backend_version,
                 version=self._version,
             )
             return [compliant]

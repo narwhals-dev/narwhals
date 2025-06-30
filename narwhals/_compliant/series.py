@@ -277,9 +277,20 @@ class CompliantSeries(
 class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _native_series: Any
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _broadcast: bool
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+        return self._implementation._backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:

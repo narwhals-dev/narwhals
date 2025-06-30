@@ -105,17 +105,11 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 
 class PandasLikeSeries(EagerSeries[Any]):
     def __init__(
-        self,
-        native_series: Any,
-        *,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, native_series: Any, *, implementation: Implementation, version: Version
     ) -> None:
         self._name = native_series.name
         self._native_series = native_series
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
         # Flag which indicates if, in the final step before applying an operation,
         # the single value behind the PandasLikeSeries should be extract and treated
@@ -153,18 +147,12 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
-            self.native,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=version,
+            self.native, implementation=self._implementation, version=version
         )
 
     def _with_native(self, series: Any, *, preserve_broadcast: bool = False) -> Self:
         result = self.__class__(
-            series,
-            implementation=self._implementation,
-            backend_version=self._backend_version,
-            version=self._version,
+            series, implementation=self._implementation, version=self._version
         )
         if preserve_broadcast:
             result._broadcast = self._broadcast
@@ -202,12 +190,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @classmethod
     def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
-        return cls(
-            data,
-            implementation=context._implementation,
-            backend_version=context._backend_version,
-            version=context._version,
-        )
+        return cls(data, implementation=context._implementation, version=context._version)
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:

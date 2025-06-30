@@ -133,7 +133,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     PandasLikeSeries(
                         df._native_frame[column_name],
                         implementation=df._implementation,
-                        backend_version=df._backend_version,
                         version=df._version,
                     )
                     for column_name in evaluate_column_names(df)
