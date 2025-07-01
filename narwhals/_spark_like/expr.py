@@ -21,8 +21,7 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
     true_divide,
 )
-from narwhals._utils import Implementation, not_implemented, parse_version
-from narwhals.dependencies import get_pyspark
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -475,12 +474,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def median(self) -> Self:
         def _median(expr: Column) -> Column:
-            if (
-                self._implementation
-                in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
-                and (pyspark := get_pyspark()) is not None
-                and parse_version(pyspark) < (3, 4)
-            ):  # pragma: no cover
+            if self._implementation in {
+                Implementation.PYSPARK,
+                Implementation.PYSPARK_CONNECT,
+            } and Implementation.PYSPARK._backend_version() < (3, 4):  # pragma: no cover
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(expr.cast("double"), 0.5)
 

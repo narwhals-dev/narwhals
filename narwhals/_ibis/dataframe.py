@@ -13,7 +13,6 @@ from narwhals._utils import (
     Version,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
@@ -207,13 +206,7 @@ class IbisLazyFrame(
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
-        import pandas as pd  # ignore-banned-import()
-
-        if parse_version(pd) >= (1, 0, 0):
-            return self.native.to_pandas()
-        else:  # pragma: no cover
-            msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
-            raise NotImplementedError(msg)
+        return self.native.to_pandas()
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
