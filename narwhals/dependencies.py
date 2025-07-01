@@ -85,7 +85,9 @@ def get_dask() -> Any:
 
 def get_dask_dataframe() -> Any:
     """Get dask.dataframe module (if already imported - else return None)."""
-    return sys.modules.get("dask.dataframe", None)
+    if get_dask():
+        return sys.modules.get("dask.dataframe", None)
+    return None
 
 
 def get_duckdb() -> Any:
