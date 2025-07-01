@@ -580,6 +580,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             Implementation.DASK,
             Implementation.DUCKDB,
             Implementation.POLARS,
+            Implementation.IBIS,
         )
         if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
             msg = (

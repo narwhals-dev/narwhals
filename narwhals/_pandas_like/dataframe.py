@@ -782,6 +782,16 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
+        elif backend.is_ibis():
+            import ibis
+
+            from narwhals._ibis.dataframe import IbisLazyFrame
+
+            return IbisLazyFrame(
+                ibis.memtable(pandas_df, columns=self.columns),
+                validate_backend_version=True,
+                version=self._version,
+            )
         raise AssertionError  # pragma: no cover
 
     @property
