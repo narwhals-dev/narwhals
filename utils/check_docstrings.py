@@ -37,7 +37,9 @@ def create_temp_files(examples: list[tuple[Path, str, str]]) -> list[tuple[Path,
     temp_files: list[tuple[Path, str]] = []
 
     for file, name, example in examples:
-        temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False)  # noqa: SIM115
+        temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+            encoding="utf-8", mode="w", suffix=".py", delete=False
+        )
         temp_file.write(example)
         temp_file_path = temp_file.name
         temp_file.close()
