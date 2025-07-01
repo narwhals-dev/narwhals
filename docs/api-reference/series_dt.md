@@ -13,6 +13,7 @@
         - minute
         - month
         - nanosecond
+        - offset_by
         - ordinal_day
         - replace_time_zone
         - second
