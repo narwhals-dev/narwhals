@@ -65,7 +65,7 @@ class PolarsExpr:
         return {name: min_samples}
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
     def ewm_mean(
@@ -145,7 +145,7 @@ class PolarsExpr:
         self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
         )
@@ -161,7 +161,7 @@ class PolarsExpr:
         return_dtype: IntoDType | None,
     ) -> Self:
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
         )

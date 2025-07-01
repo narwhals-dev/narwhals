@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -161,7 +161,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         cls,
         data: Iterable[Any],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
         index: Any = None,
@@ -184,11 +184,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         return is_pandas_like_series(obj)  # pragma: no cover
 
     @classmethod
-    def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
+    def from_native(cls, data: Any, /, *, context: _LimitedContext) -> Self:
         return cls(data, implementation=context._implementation, version=context._version)
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         arr = data if is_numpy_array_1d(data) else [data]
         native = implementation.to_native_namespace().Series(arr, name="")

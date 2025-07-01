@@ -313,10 +313,6 @@ class EagerExpr(
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
     _scalar_kwargs: ScalarKwargs
 
-    @property
-    def _backend_version(self) -> tuple[int, ...]:
-        return self._implementation._backend_version()
-
     def __init__(
         self,
         call: EvalSeries[EagerDataFrameT, EagerSeriesT],

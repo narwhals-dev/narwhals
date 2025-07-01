@@ -56,7 +56,7 @@ if TYPE_CHECKING:
         _AsPyType,
         _BasicDataType,
     )
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -145,7 +145,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         cls,
         data: Iterable[Any],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self:
@@ -166,12 +166,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     @classmethod
     def from_native(
-        cls, data: ChunkedArrayAny, /, *, context: _FullContext, name: str = ""
+        cls, data: ChunkedArrayAny, /, *, context: _LimitedContext, name: str = ""
     ) -> Self:
         return cls(data, version=context._version, name=name)
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )

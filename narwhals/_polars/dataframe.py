@@ -169,7 +169,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+            name: native_to_narwhals_dtype(dtype, self._version)
             for name, dtype in self.native.schema.items()
         }
 
@@ -220,17 +220,13 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def collect_schema(self) -> dict[str, DType]:
         if self._backend_version < (1,):
             return {
-                name: native_to_narwhals_dtype(
-                    dtype, self._version, self._backend_version
-                )
+                name: native_to_narwhals_dtype(dtype, self._version)
                 for name, dtype in self.native.schema.items()
             }
         else:
             collected_schema = self.native.collect_schema()
             return {
-                name: native_to_narwhals_dtype(
-                    dtype, self._version, self._backend_version
-                )
+                name: native_to_narwhals_dtype(dtype, self._version)
                 for name, dtype in collected_schema.items()
             }
 
@@ -356,7 +352,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
             except Exception as e:  # noqa: BLE001
-                raise catch_polars_exception(e, self._backend_version) from None
+                raise catch_polars_exception(e) from None
 
         return func
 
@@ -526,7 +522,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 separator=separator,
             )
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
         return self._from_native_object(result)
 
     def to_polars(self) -> pl.DataFrame:
@@ -546,7 +542,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 other=other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
             )
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
@@ -589,7 +585,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         try:
             return super().collect_schema()
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
     def collect(
         self, backend: Implementation | None, **kwargs: Any
@@ -597,7 +593,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         try:
             result = self.native.collect(**kwargs)
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
         if backend is None or backend is Implementation.POLARS:
             return PolarsDataFrame.from_native(result, context=self)

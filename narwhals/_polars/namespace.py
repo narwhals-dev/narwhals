@@ -143,12 +143,7 @@ class PolarsNamespace:
     def lit(self, value: Any, dtype: IntoDType | None) -> PolarsExpr:
         if dtype is not None:
             return self._expr(
-                pl.lit(
-                    value,
-                    dtype=narwhals_to_native_dtype(
-                        dtype, self._version, self._backend_version
-                    ),
-                ),
+                pl.lit(value, dtype=narwhals_to_native_dtype(dtype, self._version)),
                 version=self._version,
             )
         return self._expr(pl.lit(value), version=self._version)
@@ -226,11 +221,9 @@ class PolarsSelectorNamespace:
 
     def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         native_dtypes = [
-            narwhals_to_native_dtype(
-                dtype, self._version, self._backend_version
-            ).__class__
+            narwhals_to_native_dtype(dtype, self._version).__class__
             if isinstance(dtype, type) and issubclass(dtype, DType)
-            else narwhals_to_native_dtype(dtype, self._version, self._backend_version)
+            else narwhals_to_native_dtype(dtype, self._version)
             for dtype in dtypes
         ]
         return PolarsExpr(pl.selectors.by_dtype(native_dtypes), version=self._version)

@@ -10,7 +10,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import Implementation, Version, parse_version
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -189,14 +189,9 @@ class Schema(BaseSchema):
 
         from narwhals._polars.utils import narwhals_to_native_dtype
 
-        pl_version = parse_version(pl)
+        pl_version = Implementation.POLARS._backend_version()
         schema = (
-            (
-                name,
-                narwhals_to_native_dtype(
-                    dtype, self._version, backend_version=pl_version
-                ),
-            )
+            (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
         )
         return (
