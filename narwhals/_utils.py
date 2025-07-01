@@ -121,35 +121,6 @@ if TYPE_CHECKING:
     class _SupportsGet(Protocol):  # noqa: PYI046
         def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
 
-    class _StoresImplementation(Protocol):
-        _implementation: Implementation
-        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
-
-    class _StoresBackendVersion(Protocol):
-        @property
-        def _backend_version(self) -> tuple[int, ...]:
-            """Version tuple for a native package."""
-            ...
-
-    class _StoresVersion(Protocol):
-        _version: Version
-        """Narwhals API version (V1 or MAIN)."""
-
-    class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
-        """Provides 2 attributes.
-
-        - `_implementation`
-        - `_version`
-        """
-
-    class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
-        """Provides 3 attributes.
-
-        - `_implementation`
-        - `_backend_version`
-        - `_version`
-        """
-
     class _StoresColumns(Protocol):
         @property
         def columns(self) -> Sequence[str]: ...
@@ -191,6 +162,52 @@ class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
         ...
+
+
+class _StoresBackendVersion(Protocol):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        """Version tuple for a native package."""
+        ...
+
+
+class _StoresVersion(Protocol):
+    _version: Version
+    """Narwhals API version (V1 or MAIN)."""
+
+
+class _StoresImplementation(Protocol):
+    _implementation: Implementation
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+
+class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
+    """Provides 2 attributes.
+
+    - `_implementation`
+    - `_version`
+    """
+
+
+class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
+    """Provides 3 attributes.
+
+    - `_implementation`
+    - `_backend_version`
+    - `_version`
+    """
+
+
+class ValidateBackendVersion(_StoresImplementation, Protocol):
+    """Ensure the target `Implementation` is on a supported version."""
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
 
 
 class Version(Enum):

@@ -15,6 +15,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     find_stacklevel,
     generate_temporary_column_name,
     not_implemented,
@@ -51,7 +52,8 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(
     CompliantLazyFrame[
         "SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"
-    ]
+    ],
+    ValidateBackendVersion,
 ):
     def __init__(
         self,
@@ -68,14 +70,6 @@ class SparkLikeLazyFrame(
         self._cached_columns: list[str] | None = None
         if validate_backend_version:
             self._validate_backend_version()
-
-    def _validate_backend_version(self) -> None:
-        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
-
-        **Only use this when moving between backends.**
-        Otherwise, the validation will have taken place already.
-        """
-        _ = self._implementation._backend_version()
 
     @property
     def _backend_version(self) -> tuple[int, ...]:

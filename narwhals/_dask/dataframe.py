@@ -10,6 +10,7 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     _remap_full_join_keys,
     check_column_names_are_unique,
     generate_temporary_column_name,
@@ -43,7 +44,8 @@ Very low priority until `dask` adds typing.
 
 
 class DaskLazyFrame(
-    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
+    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"],
+    ValidateBackendVersion,
 ):
     _implementation = Implementation.DASK
 
@@ -60,14 +62,6 @@ class DaskLazyFrame(
         self._cached_columns: list[str] | None = None
         if validate_backend_version:
             self._validate_backend_version()
-
-    def _validate_backend_version(self) -> None:
-        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
-
-        **Only use this when moving between backends.**
-        Otherwise, the validation will have taken place already.
-        """
-        _ = self._implementation._backend_version()
 
     @staticmethod
     def _is_native(obj: dd.DataFrame | Any) -> TypeIs[dd.DataFrame]:

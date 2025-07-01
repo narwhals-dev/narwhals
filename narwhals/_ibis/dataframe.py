@@ -9,6 +9,7 @@ import ibis.expr.types as ir
 from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     Version,
     not_implemented,
     parse_columns_to_drop,
@@ -43,7 +44,8 @@ if TYPE_CHECKING:
 class IbisLazyFrame(
     CompliantLazyFrame[
         "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
-    ]
+    ],
+    ValidateBackendVersion,
 ):
     _implementation = Implementation.IBIS
 
@@ -56,14 +58,6 @@ class IbisLazyFrame(
         self._cached_columns: list[str] | None = None
         if validate_backend_version:
             self._validate_backend_version()
-
-    def _validate_backend_version(self) -> None:
-        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
-
-        **Only use this when moving between backends.**
-        Otherwise, the validation will have taken place already.
-        """
-        _ = self._implementation._backend_version()
 
     @staticmethod
     def _is_native(obj: ir.Table | Any) -> TypeIs[ir.Table]:

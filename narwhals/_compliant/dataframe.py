@@ -25,6 +25,7 @@ from narwhals._translate import (
 )
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals._utils import (
+    ValidateBackendVersion,
     Version,
     _StoresNative,
     check_columns_exist,
@@ -390,19 +391,12 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
+    ValidateBackendVersion,
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
         return self._implementation._backend_version()
-
-    def _validate_backend_version(self) -> None:
-        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
-
-        **Only use this when moving between backends.**
-        Otherwise, the validation will have taken place already.
-        """
-        _ = self._implementation._backend_version()
 
     def __narwhals_namespace__(
         self,
