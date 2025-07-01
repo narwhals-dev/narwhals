@@ -76,7 +76,7 @@ class ImportPandasChecker(ast.NodeVisitor):
 
 
 def check_import_pandas(filename: str) -> bool:
-    with open(filename, newline="\n", encoding="utf-8") as file:
+    with open(filename, encoding="utf-8") as file:
         content = file.read()
     tree = ast.parse(content, filename=filename)
 
