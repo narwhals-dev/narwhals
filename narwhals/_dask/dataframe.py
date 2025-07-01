@@ -83,7 +83,7 @@ class DaskLazyFrame(
     def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version, version=self._version)
+        return DaskNamespace(version=self._version)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self

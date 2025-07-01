@@ -36,9 +36,13 @@ class PolarsNamespace:
     #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
     when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
-        self._implementation = Implementation.POLARS
+    _implementation = Implementation.POLARS
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def __getattr__(self, attr: str) -> Any:

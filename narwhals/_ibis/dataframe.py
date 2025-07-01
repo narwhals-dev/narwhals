@@ -90,7 +90,7 @@ class IbisLazyFrame(
     def __narwhals_namespace__(self) -> IbisNamespace:
         from narwhals._ibis.namespace import IbisNamespace
 
-        return IbisNamespace(backend_version=self._backend_version, version=self._version)
+        return IbisNamespace(version=self._version)
 
     def get_column(self, name: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries

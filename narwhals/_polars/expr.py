@@ -223,9 +223,7 @@ class PolarsExpr:
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         from narwhals._polars.namespace import PolarsNamespace
 
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:

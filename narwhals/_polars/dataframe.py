@@ -128,9 +128,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self.native.columns
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.POLARS:

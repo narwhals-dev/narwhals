@@ -51,8 +51,7 @@ class DaskNamespace(
     def _lazyframe(self) -> type[DaskLazyFrame]:
         return DaskLazyFrame
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:

@@ -83,7 +83,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._ibis.namespace import IbisNamespace
 
-        return IbisNamespace(backend_version=self._backend_version, version=self._version)
+        return IbisNamespace(version=self._version)
 
     def _cum_window_func(
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]

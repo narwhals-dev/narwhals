@@ -33,8 +33,7 @@ class DuckDBNamespace(
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     @property

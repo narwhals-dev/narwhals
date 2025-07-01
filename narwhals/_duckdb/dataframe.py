@@ -111,9 +111,7 @@ class DuckDBLazyFrame(
     def __narwhals_namespace__(self) -> DuckDBNamespace:
         from narwhals._duckdb.namespace import DuckDBNamespace
 
-        return DuckDBNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return DuckDBNamespace(version=self._version)
 
     def get_column(self, name: str) -> DuckDBInterchangeSeries:
         from narwhals._duckdb.series import DuckDBInterchangeSeries

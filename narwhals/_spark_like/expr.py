@@ -151,13 +151,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> SparkLikeNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
+            version=self._version, implementation=self._implementation
         )
 
     def _with_window_function(self, window_function: SparkWindowFunction) -> Self:

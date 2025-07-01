@@ -33,14 +33,7 @@ if TYPE_CHECKING:
 class SparkLikeNamespace(
     LazyNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame"]
 ):
-    def __init__(
-        self,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation
 

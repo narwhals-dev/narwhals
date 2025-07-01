@@ -131,9 +131,7 @@ class PolarsSeries:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         from narwhals._polars.namespace import PolarsNamespace
 
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     def __narwhals_series__(self) -> Self:
         return self
