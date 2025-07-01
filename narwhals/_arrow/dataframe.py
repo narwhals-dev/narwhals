@@ -19,7 +19,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
     scale_bytes,
     supports_arrow_c_stream,
 )
@@ -45,7 +44,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -94,8 +93,8 @@ class ArrowDataFrame(
         self._version = version
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
-        backend_version = context._backend_version
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
+        backend_version = context._implementation._backend_version()
         if cls._is_native(data):
             native = data
         elif backend_version >= (14,) or isinstance(data, Collection):
@@ -114,7 +113,7 @@ class ArrowDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -128,7 +127,7 @@ class ArrowDataFrame(
         return isinstance(obj, pa.Table)
 
     @classmethod
-    def from_native(cls, data: pa.Table, /, *, context: _FullContext) -> Self:
+    def from_native(cls, data: pa.Table, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version, validate_column_names=True)
 
     @classmethod
@@ -137,7 +136,7 @@ class ArrowDataFrame(
         data: _2DArray,
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -521,9 +520,7 @@ class ArrowDataFrame(
 
             df = self.native  # noqa: F841
             return DuckDBLazyFrame(
-                duckdb.table("df"),
-                backend_version=parse_version(duckdb),
-                version=self._version,
+                duckdb.table("df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -532,18 +529,17 @@ class ArrowDataFrame(
 
             return PolarsLazyFrame(
                 cast("pl.DataFrame", pl.from_arrow(self.native)).lazy(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 dd.from_pandas(self.native.to_pandas()),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
                 version=self._version,
             )
         raise AssertionError  # pragma: no cover
@@ -576,7 +572,7 @@ class ArrowDataFrame(
 
             return PolarsDataFrame(
                 cast("pl.DataFrame", pl.from_arrow(self.native)),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 

@@ -22,7 +22,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
     requires,
 )
 from narwhals.dependencies import get_duckdb
@@ -44,7 +43,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
-    from narwhals._utils import _FullContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
@@ -64,14 +63,27 @@ class DuckDBLazyFrame(
         self,
         df: duckdb.DuckDBPyRelation,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: duckdb.DuckDBPyRelation = df
         self._version = version
-        self._backend_version = backend_version
         self._cached_native_schema: dict[str, DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @staticmethod
     def _is_native(obj: duckdb.DuckDBPyRelation | Any) -> TypeIs[duckdb.DuckDBPyRelation]:
@@ -79,11 +91,9 @@ class DuckDBLazyFrame(
 
     @classmethod
     def from_native(
-        cls, data: duckdb.DuckDBPyRelation, /, *, context: _FullContext
+        cls, data: duckdb.DuckDBPyRelation, /, *, context: _LimitedContext
     ) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+        return cls(data, version=context._version)
 
     def to_narwhals(
         self, *args: Any, **kwds: Any
@@ -147,12 +157,10 @@ class DuckDBLazyFrame(
             )
 
         if backend is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                self.native.pl(), backend_version=parse_version(pl), version=self._version
+                self.native.pl(), validate_backend_version=True, version=self._version
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
@@ -230,27 +238,17 @@ class DuckDBLazyFrame(
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
-        import pandas as pd  # ignore-banned-import()
-
-        if parse_version(pd) >= (1, 0, 0):
-            return self.native.df()
-        else:  # pragma: no cover
-            msg = f"Conversion to pandas requires 'pandas>=1.0.0', found {pd.__version__}"
-            raise NotImplementedError(msg)
+        return self.native.df()
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
         return self.native.arrow()
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, version=version, backend_version=self._backend_version
-        )
+        return self.__class__(self.native, version=version)
 
     def _with_native(self, df: duckdb.DuckDBPyRelation) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[DuckDBExpr], *, drop_null_keys: bool

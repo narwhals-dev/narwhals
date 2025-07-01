@@ -15,7 +15,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
 )
 from narwhals.typing import CompliantLazyFrame
 
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
@@ -46,29 +45,37 @@ Very low priority until `dask` adds typing.
 class DaskLazyFrame(
     CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
 ):
+    _implementation = Implementation.DASK
+
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: dd.DataFrame = native_dataframe
-        self._backend_version = backend_version
-        self._implementation = Implementation.DASK
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
 
     @staticmethod
     def _is_native(obj: dd.DataFrame | Any) -> TypeIs[dd.DataFrame]:
         return isinstance(obj, dd.DataFrame)
 
     @classmethod
-    def from_native(cls, data: dd.DataFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: dd.DataFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[dd.DataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -89,14 +96,10 @@ class DaskLazyFrame(
         return self
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, backend_version=self._backend_version, version=version
-        )
+        return self.__class__(self.native, version=version)
 
     def _with_native(self, df: Any) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def _iter_columns(self) -> Iterator[dx.Series]:
         for _col, ser in self.native.items():  # noqa: PERF102
@@ -129,7 +132,7 @@ class DaskLazyFrame(
 
             return PolarsDataFrame(
                 pl.from_pandas(result),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 

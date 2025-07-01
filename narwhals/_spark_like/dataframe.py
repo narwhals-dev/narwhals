@@ -19,7 +19,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
@@ -58,16 +57,29 @@ class SparkLikeLazyFrame(
         self,
         native_dataframe: SQLFrameDataFrame,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: SQLFrameDataFrame = native_dataframe
-        self._backend_version = backend_version
         self._implementation = implementation
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
@@ -101,13 +113,8 @@ class SparkLikeLazyFrame(
         return is_native_spark_like(obj)
 
     @classmethod
-    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            implementation=context._implementation,
-        )
+    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version, implementation=context._implementation)
 
     def to_narwhals(self) -> LazyFrame[SQLFrameDataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -127,18 +134,12 @@ class SparkLikeLazyFrame(
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
-            self.native,
-            backend_version=self._backend_version,
-            version=version,
-            implementation=self._implementation,
+            self.native, version=version, implementation=self._implementation
         )
 
     def _with_native(self, df: SQLFrameDataFrame) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
+            df, version=self._version, implementation=self._implementation
         )
 
     def _to_arrow_schema(self) -> pa.Schema:  # pragma: no cover
@@ -236,7 +237,7 @@ class SparkLikeLazyFrame(
 
             return PolarsDataFrame(
                 pl.from_arrow(self._collect_to_arrow()),  # type: ignore[arg-type]
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 

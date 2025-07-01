@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
-    from narwhals._utils import _FullContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
@@ -48,23 +48,30 @@ class IbisLazyFrame(
     _implementation = Implementation.IBIS
 
     def __init__(
-        self, df: ir.Table, *, backend_version: tuple[int, ...], version: Version
+        self, df: ir.Table, *, version: Version, validate_backend_version: bool = False
     ) -> None:
         self._native_frame: ir.Table = df
         self._version = version
-        self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
 
     @staticmethod
     def _is_native(obj: ir.Table | Any) -> TypeIs[ir.Table]:
         return isinstance(obj, ir.Table)
 
     @classmethod
-    def from_native(cls, data: ir.Table, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: ir.Table, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
         if self._version is Version.MAIN:
@@ -126,13 +133,11 @@ class IbisLazyFrame(
             )
 
         if backend is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
                 self.native.to_polars(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 
@@ -221,14 +226,10 @@ class IbisLazyFrame(
         return self.native.to_pyarrow()
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, version=version, backend_version=self._backend_version
-        )
+        return self.__class__(self.native, version=version)
 
     def _with_native(self, df: ir.Table) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[IbisExpr], *, drop_null_keys: bool

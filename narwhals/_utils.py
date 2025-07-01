@@ -1716,7 +1716,7 @@ def _remap_full_join_keys(
     return dict(zip(right_on, right_keys_suffixed))
 
 
-def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
+def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.Table:
     """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
 
     Arguments:

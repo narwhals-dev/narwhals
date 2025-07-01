@@ -139,9 +139,7 @@ class PolarsNamespace:
     ) -> PolarsDataFrame | PolarsLazyFrame:
         result = pl.concat((item.native for item in items), how=how)
         if isinstance(result, pl.DataFrame):
-            return self._dataframe(
-                result, backend_version=self._backend_version, version=self._version
-            )
+            return self._dataframe(result, version=self._version)
         return self._lazyframe.from_native(result, context=self)
 
     def lit(self, value: Any, dtype: IntoDType | None) -> PolarsExpr:

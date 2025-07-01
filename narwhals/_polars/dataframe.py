@@ -24,7 +24,6 @@ from narwhals._utils import (
     is_slice_index,
     is_slice_none,
     parse_columns_to_drop,
-    parse_version,
     requires,
 )
 from narwhals.dependencies import is_numpy_array_1d
@@ -42,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -111,13 +110,31 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     unique: Method[Self]
     with_columns: Method[Self]
 
+    _implementation = Implementation.POLARS
+
     def __init__(
-        self, df: NativePolarsFrame, *, backend_version: tuple[int, ...], version: Version
+        self,
+        df: NativePolarsFrame,
+        *,
+        version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: NativePolarsFrame = df
-        self._backend_version = backend_version
-        self._implementation = Implementation.POLARS
         self._version = version
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def native(self) -> NativePolarsFrame:
@@ -138,20 +155,14 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         raise AssertionError(msg)
 
     def _with_native(self, df: NativePolarsFrame) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, backend_version=self._backend_version, version=version
-        )
+        return self.__class__(self.native, version=version)
 
     @classmethod
-    def from_native(cls, data: NativePolarsFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(  # pragma: no cover
@@ -263,8 +274,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     _evaluate_aliases: Any
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
-        if context._backend_version >= (1, 3):
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
+        if context._implementation._backend_version() >= (1, 3):
             native = pl.DataFrame(data)
         else:
             native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
@@ -276,7 +287,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -294,7 +305,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         data: _2DArray,
         /,
         *,
-        context: _FullContext,  # NOTE: Maybe only `Implementation`?
+        context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -454,19 +465,16 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             # NOTE: (F841) is a false positive
             df = self.native  # noqa: F841
             return DuckDBLazyFrame(
-                duckdb.table("df"),
-                backend_version=parse_version(duckdb),
-                version=self._version,
+                duckdb.table("df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 dd.from_pandas(self.native.to_pandas()),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
                 version=self._version,
             )
         raise AssertionError  # pragma: no cover

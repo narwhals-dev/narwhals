@@ -175,15 +175,11 @@ class DaskNamespace(
                     )
                     raise TypeError(msg)
             return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="inner"),
-                backend_version=self._backend_version,
-                version=self._version,
+                dd.concat(dfs, axis=0, join="inner"), version=self._version
             )
         if how == "diagonal":
             return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="outer"),
-                backend_version=self._backend_version,
-                version=self._version,
+                dd.concat(dfs, axis=0, join="outer"), version=self._version
             )
 
         raise NotImplementedError

@@ -173,7 +173,6 @@ class SparkLikeNamespace(
 
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(lambda x, y: x.union(y), dfs),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -183,7 +182,6 @@ class SparkLikeNamespace(
                 native_dataframe=reduce(
                     lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
                 ),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )

@@ -27,7 +27,6 @@ from narwhals._utils import (
     exclude_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,
-    parse_version,
     scale_bytes,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
@@ -47,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -114,7 +113,7 @@ class PandasLikeDataFrame(
             self._validate_backend_version()
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         tbl = _into_arrow_table(data, context)
         if implementation.is_pandas():
@@ -138,7 +137,7 @@ class PandasLikeDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -173,7 +172,7 @@ class PandasLikeDataFrame(
         return is_pandas_like_dataframe(obj)  # pragma: no cover
 
     @classmethod
-    def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
+    def from_native(cls, data: Any, /, *, context: _LimitedContext) -> Self:
         return cls(
             data,
             implementation=context._implementation,
@@ -187,7 +186,7 @@ class PandasLikeDataFrame(
         data: _2DArray,
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -515,14 +514,10 @@ class PandasLikeDataFrame(
             )
 
         if backend is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self.to_polars(),
-                backend_version=parse_version(pl),
-                version=self._version,
+                df=self.to_polars(), validate_backend_version=True, version=self._version
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
@@ -754,8 +749,6 @@ class PandasLikeDataFrame(
 
     # --- lazy-only ---
     def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
-        from narwhals.utils import parse_version
-
         pandas_df = self.to_pandas()
         if backend is None:
             return self
@@ -766,7 +759,7 @@ class PandasLikeDataFrame(
 
             return DuckDBLazyFrame(
                 df=duckdb.table("pandas_df"),
-                backend_version=parse_version(duckdb),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.POLARS:
@@ -776,18 +769,17 @@ class PandasLikeDataFrame(
 
             return PolarsLazyFrame(
                 df=pl.from_pandas(pandas_df).lazy(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(pandas_df),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
                 version=self._version,
             )
         raise AssertionError  # pragma: no cover

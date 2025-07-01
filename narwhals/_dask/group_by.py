@@ -119,6 +119,5 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             )
         return DaskLazyFrame(
             self._grouped.agg(**simple_aggregations).reset_index(),
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
         ).rename(dict(zip(self._keys, self._output_key_names)))
