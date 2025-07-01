@@ -25,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: altair-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-altair
         run: |
@@ -72,7 +72,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: marimo-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
@@ -135,7 +135,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: sklego-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-scikit-lego
         run: git clone https://github.com/koaning/scikit-lego.git --depth 1
@@ -172,7 +172,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: shiny-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-shiny
         run: |
@@ -221,7 +221,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: tea-tasting-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
           python-version: ${{ matrix.python-version }}
       - name: install-tea-tasting-test
@@ -260,7 +260,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: tubular-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-tubular
         run: |
@@ -302,7 +302,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: plotly-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-plotly
         run: |
@@ -347,7 +347,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-hierarchicalforecast
         run: |
@@ -389,7 +389,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: formulaic-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-formulaic
         run: |
@@ -433,7 +433,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pointblank-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-pointblank
         run: |
@@ -473,7 +473,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: validoopsie-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-validoopsie
         run: |
@@ -520,7 +520,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: darts-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-darts
         run: |
