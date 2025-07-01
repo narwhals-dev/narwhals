@@ -87,7 +87,7 @@ jobs:
           cd marimo
           . .venv/bin/activate
           # temporary to get CI green
-          uv pip install "panel<1.6.1"
+          uv pip install "sqlglot<26.32"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -228,6 +228,8 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # temporary to get CI green
+          uv pip install "sqlglot<26.32"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -447,6 +449,8 @@ jobs:
           cd pointblank
           uv pip install . --group dev --system
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system
+          # temporary to get CI green
+          uv pip install "sqlglot<26.32"
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals --system
