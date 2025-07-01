@@ -277,7 +277,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         if context._implementation._backend_version() >= (1, 3):
             native = pl.DataFrame(data)
-        else:
+        else:  # pragma: no cover
             native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
         return cls.from_native(native, context=context)
 

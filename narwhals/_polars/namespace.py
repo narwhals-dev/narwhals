@@ -217,10 +217,6 @@ class PolarsSelectorNamespace:
         self._implementation = context._implementation
         self._version = context._version
 
-    @property
-    def _backend_version(self) -> tuple[int, ...]:
-        return self._implementation._backend_version()
-
     def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         native_dtypes = [
             narwhals_to_native_dtype(dtype, self._version).__class__
