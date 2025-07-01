@@ -478,7 +478,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 version=self._version,
             )
         elif backend.is_ibis():
-            import ibis
+            import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
 
