@@ -534,10 +534,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                 `backend` can be specified in various ways
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`,
+                    `IBIS` or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
 
         Returns:
             A new LazyFrame.
