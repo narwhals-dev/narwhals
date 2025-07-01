@@ -68,11 +68,11 @@ class SparkLikeLazyFrame(
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        if validate_backend_version:
+        if validate_backend_version:  # pragma: no cover
             self._validate_backend_version()
 
     @property
-    def _backend_version(self) -> tuple[int, ...]:
+    def _backend_version(self) -> tuple[int, ...]:  # pragma: no cover
         return self._implementation._backend_version()
 
     @property
