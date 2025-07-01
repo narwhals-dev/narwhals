@@ -81,7 +81,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -148,7 +147,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             func,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -160,7 +158,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

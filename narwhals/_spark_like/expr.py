@@ -71,14 +71,13 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         *,
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
+
         self._version = version
         self._implementation = implementation
         self._metadata: ExprMetadata | None = None
@@ -167,7 +166,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -262,7 +260,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
             implementation=context._implementation,
         )
@@ -277,7 +274,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
             implementation=context._implementation,
         )
@@ -304,7 +300,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             window_function=window_function,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=context._backend_version,
             version=context._version,
             implementation=context._implementation,
         )
@@ -359,7 +354,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -372,7 +366,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._push_down_window_function(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -383,7 +376,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -394,7 +386,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -656,7 +647,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )

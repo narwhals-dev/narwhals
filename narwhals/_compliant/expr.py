@@ -873,6 +873,10 @@ class LazyExpr(
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
     @property
+    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+        return self._implementation._backend_version()
+
+    @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
     @classmethod

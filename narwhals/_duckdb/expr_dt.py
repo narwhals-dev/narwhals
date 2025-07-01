@@ -131,7 +131,6 @@ class DuckDBExprDateTimeNamespace(
             func,
             evaluate_output_names=self.compliant._evaluate_output_names,
             alias_output_names=self.compliant._alias_output_names,
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
         )
 

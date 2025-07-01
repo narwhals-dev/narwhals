@@ -68,13 +68,11 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         *,
         evaluate_output_names: EvalNames[DuckDBLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
@@ -203,7 +201,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -217,7 +214,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -243,7 +239,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             window_function=window_function,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -301,7 +296,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -313,7 +307,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             self._push_down_window_function(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -323,7 +316,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -333,7 +325,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -343,7 +334,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -526,7 +516,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

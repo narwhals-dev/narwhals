@@ -135,14 +135,14 @@ if TYPE_CHECKING:
         _version: Version
         """Narwhals API version (V1 or MAIN)."""
 
-    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
+    class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
         """Provides 2 attributes.
 
-        - `_backend_version`
+        - `_implementation`
         - `_version`
         """
 
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
+    class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
         """Provides 3 attributes.
 
         - `_implementation`
