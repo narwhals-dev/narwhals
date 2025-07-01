@@ -447,19 +447,24 @@ jobs:
       - name: install-deps
         run: |
           cd pointblank
-          uv pip install . --group dev --system
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system
+          uv venv -p ${{ matrix.python-version }}
+          . .venv/bin/activate
+          uv pip install . --group dev
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
           # temporary to get CI green
           uv pip install "sqlglot<26.32"
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd pointblank
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
         run: |
           cd pointblank
+          . .venv/bin/activate
           make test
 
   validoopsie:
