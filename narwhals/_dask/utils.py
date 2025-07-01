@@ -3,13 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._pandas_like.utils import select_columns_by_name
-from narwhals._utils import (
-    Implementation,
-    Version,
-    isinstance_or_issubclass,
-    parse_version,
-)
-from narwhals.dependencies import get_pandas, get_pyarrow
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
+from narwhals.dependencies import get_pyarrow
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -109,7 +104,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
-        if (pd := get_pandas()) is not None and parse_version(pd) >= (2, 0, 0):
+        if Implementation.PANDAS._backend_version() >= (2, 0, 0):
             if get_pyarrow() is not None:
                 return "string[pyarrow]"
             return "string[python]"  # pragma: no cover
@@ -126,7 +121,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa
             # NOTE: `pandas-stubs.core.dtypes.dtypes.CategoricalDtype.categories` is too narrow
             # Should be one of the `ListLike*` types
             # https://github.com/pandas-dev/pandas-stubs/blob/8434bde95460b996323cc8c0fea7b0a8bb00ea26/pandas-stubs/_typing.pyi#L497-L505
-            return pd.CategoricalDtype(dtype.categories, ordered=True)  # pyright: ignore[reportArgumentType]
+            return pd.CategoricalDtype(dtype.categories, ordered=True)  # type: ignore[arg-type]
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
 
