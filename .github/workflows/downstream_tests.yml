@@ -450,6 +450,8 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
+          # temporary to get CI green
+          uv pip install "sqlglot<26.32"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
@@ -457,8 +459,6 @@ jobs:
           . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e .
-          # temporary to get CI green
-          uv pip install "sqlglot<26.32"
       - name: show-deps
         run: |
           cd pointblank
