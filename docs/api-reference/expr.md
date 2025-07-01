@@ -24,6 +24,7 @@
         - exp
         - fill_null
         - filter
+        - first
         - gather_every
         - head
         - clip

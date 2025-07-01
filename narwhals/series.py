@@ -42,6 +42,7 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SingleIndexSelector,
@@ -814,6 +815,25 @@ class Series(Generic[IntoSeriesT]):
                 upper_bound=self._extract_native(upper_bound),
             )
         )
+
+    def first(self) -> PythonLiteral:
+        """Get the first element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 2, 3])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.first()
+            1
+            >>> s_nw.filter(s_nw > 5).first() is None
+            True
+        """
+        return self._compliant_series.first()
 
     def is_in(self, other: Any) -> Self:
         """Check if the elements of this Series are in the other sequence.

@@ -48,6 +48,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
@@ -176,6 +177,7 @@ class CompliantSeries(
         limit: int | None,
     ) -> Self: ...
     def filter(self, predicate: Any) -> Self: ...
+    def first(self) -> PythonLiteral: ...
     def gather_every(self, n: int, offset: int) -> Self: ...
     @unstable
     def hist(
