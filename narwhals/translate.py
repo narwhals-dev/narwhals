@@ -495,7 +495,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace.from_backend(Implementation.DASK)
             .compliant.from_native(native_object)
             .to_narwhals()
         )

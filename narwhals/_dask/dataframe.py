@@ -211,9 +211,7 @@ class DaskLazyFrame(
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         if order_by is None:
-            return self._with_native(
-                add_row_index(self.native, name, self._implementation)
-            )
+            return self._with_native(add_row_index(self.native, name))
         else:
             plx = self.__narwhals_namespace__()
             columns = self.columns

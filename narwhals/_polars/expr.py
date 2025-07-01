@@ -25,9 +25,10 @@ if TYPE_CHECKING:
 
 
 class PolarsExpr:
+    _implementation = Implementation.POLARS
+
     def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
-        self._implementation = Implementation.POLARS
         self._version = version
         self._metadata: ExprMetadata | None = None
 

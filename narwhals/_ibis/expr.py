@@ -80,7 +80,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._ibis.namespace import IbisNamespace
 
         return IbisNamespace(version=self._version)

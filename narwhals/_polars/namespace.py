@@ -213,8 +213,9 @@ class PolarsNamespace:
 
 
 class PolarsSelectorNamespace:
+    _implementation = Implementation.POLARS
+
     def __init__(self, context: _LimitedContext, /) -> None:
-        self._implementation = context._implementation
         self._version = context._version
 
     def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:

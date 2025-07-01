@@ -74,7 +74,6 @@ class DaskExpr(
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
         return DaskNamespace(version=self._version)
@@ -522,7 +521,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(expr.to_frame(), col_token, self._implementation)
+            frame = add_row_index(expr.to_frame(), col_token)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
 
@@ -532,7 +531,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(expr.to_frame(), col_token, self._implementation)
+            frame = add_row_index(expr.to_frame(), col_token)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
 

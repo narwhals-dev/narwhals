@@ -45,7 +45,6 @@ class ArrowNamespace(
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
 
-    # --- not in spec ---
     def __init__(self, *, version: Version) -> None:
         self._version = version
 

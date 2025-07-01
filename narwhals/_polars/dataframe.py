@@ -227,17 +227,12 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         )
 
     def collect_schema(self) -> dict[str, DType]:
-        if self._backend_version < (1,):
-            return {
-                name: native_to_narwhals_dtype(dtype, self._version)
-                for name, dtype in self.native.schema.items()
-            }
-        else:
-            collected_schema = self.native.collect_schema()
-            return {
-                name: native_to_narwhals_dtype(dtype, self._version)
-                for name, dtype in collected_schema.items()
-            }
+        df = self.native
+        schema = df.schema if self._backend_version < (1,) else df.collect_schema()
+        return {
+            name: native_to_narwhals_dtype(dtype, self._version)
+            for name, dtype in schema.items()
+        }
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native

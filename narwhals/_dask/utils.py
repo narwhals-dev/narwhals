@@ -53,15 +53,13 @@ def align_series_full_broadcast(
     ]  # pyright: ignore[reportReturnType]
 
 
-def add_row_index(
-    frame: dd.DataFrame, name: str, implementation: Implementation
-) -> dd.DataFrame:
+def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
     original_cols = frame.columns
     df: Incomplete = frame.assign(**{name: 1})
     return select_columns_by_name(
         df.assign(**{name: df[name].cumsum(method="blelloch") - 1}),
         [name, *original_cols],
-        implementation,
+        Implementation.DASK,
     )
 
 

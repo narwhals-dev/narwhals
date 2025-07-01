@@ -64,7 +64,6 @@ class PandasLikeNamespace(
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
-    # --- not in spec ---
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
         self._version = version

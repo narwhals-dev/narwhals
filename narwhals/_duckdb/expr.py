@@ -96,7 +96,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(version=self._version)
