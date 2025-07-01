@@ -138,12 +138,14 @@ extend-safe-fixes = [
   "PLR6201", # literal-membership
   "TC",      # flake8-type-checking
   "UP",      # pyupgrade
+  "PLW1514", # unspecified-encoding
 ]
 extend-select = [
   "PLR0914", # too-many-locals
   "PLR0916", # too-many-boolean-expressions
   "PLR1702", # too-many-nested-blocks
   "PLR6201", # literal-membership
+  "PLW1514", # unspecified-encoding
 ]
 select = ["ALL"]
 ignore = [
