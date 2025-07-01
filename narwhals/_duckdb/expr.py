@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.typing import WindowExpressionKwargs
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -192,7 +192,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         evaluate_column_names: EvalNames[DuckDBLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             return [col(name) for name in evaluate_column_names(df)]
@@ -205,7 +205,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             columns = df.columns
             return [col(columns[i]) for i in column_indices]

@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -251,7 +251,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         evaluate_column_names: EvalNames[SparkLikeLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
@@ -265,7 +265,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
             return [df._F.col(columns[i]) for i in column_indices]

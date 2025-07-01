@@ -46,7 +46,7 @@ if TYPE_CHECKING:
         WindowFunction,
     )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -74,7 +74,6 @@ class NativeExpr(Protocol):
 
 class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
@@ -91,10 +90,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self: ...
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+    def from_column_indices(
+        cls, *column_indices: int, context: _LimitedContext
+    ) -> Self: ...
     @staticmethod
     def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
         def fn(df: CompliantFrameT) -> Sequence[str]:
@@ -280,7 +281,7 @@ class DepthTrackingExpr(
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         function_name: str = "",
     ) -> Self: ...
 
@@ -313,7 +314,7 @@ class EagerExpr(
     _scalar_kwargs: ScalarKwargs
 
     @property
-    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+    def _backend_version(self) -> tuple[int, ...]:
         return self._implementation._backend_version()
 
     def __init__(
@@ -346,7 +347,7 @@ class EagerExpr(
         function_name: str,
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
-        context: _FullContext,
+        context: _LimitedContext,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
@@ -873,7 +874,7 @@ class LazyExpr(
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
     @property
-    def _backend_version(self) -> tuple[int, ...]:  # type: ignore[override]
+    def _backend_version(self) -> tuple[int, ...]:
         return self._implementation._backend_version()
 
     @property

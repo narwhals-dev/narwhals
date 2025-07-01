@@ -25,14 +25,15 @@ if TYPE_CHECKING:
 
 
 class PolarsExpr:
-    def __init__(
-        self, expr: pl.Expr, version: Version, backend_version: tuple[int, ...]
-    ) -> None:
+    def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
         self._implementation = Implementation.POLARS
         self._version = version
-        self._backend_version = backend_version
         self._metadata: ExprMetadata | None = None
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def native(self) -> pl.Expr:
@@ -42,11 +43,11 @@ class PolarsExpr:
         return "PolarsExpr"
 
     def _with_native(self, expr: pl.Expr) -> Self:
-        return self.__class__(expr, self._version, self._backend_version)
+        return self.__class__(expr, self._version)
 
     @classmethod
     def _from_series(cls, series: Any) -> Self:
-        return cls(series.native, series._version, series._backend_version)
+        return cls(series.native, series._version)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
@@ -179,7 +179,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         evaluate_column_names: EvalNames[IbisLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Column]:
             return [df.native[name] for name in evaluate_column_names(df)]
@@ -192,7 +192,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Column]:
             return [df.native[i] for i in column_indices]
 
