@@ -468,6 +468,9 @@ jobs:
         run: |
           cd pointblank
           . .venv/bin/activate
+          # make sure that we use the .venv when running tests, so that
+          # the local narwhals install is picked up
+          sed -i 's/uv run pytest/uv run --no-sync pytest/g' Makefile
           make test
 
   validoopsie:
