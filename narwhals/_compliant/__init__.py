@@ -5,7 +5,13 @@ from narwhals._compliant.dataframe import (
     CompliantLazyFrame,
     EagerDataFrame,
 )
-from narwhals._compliant.expr import CompliantExpr, DepthTrackingExpr, EagerExpr, LazyExpr
+from narwhals._compliant.expr import (
+    CompliantExpr,
+    DepthTrackingExpr,
+    EagerExpr,
+    LazyExpr,
+    LazyExprNamespace,
+)
 from narwhals._compliant.group_by import (
     CompliantGroupBy,
     DepthTrackingGroupBy,
@@ -93,6 +99,7 @@ __all__ = [
     "EvalSeries",
     "IntoCompliantExpr",
     "LazyExpr",
+    "LazyExprNamespace",
     "LazyGroupBy",
     "LazyNamespace",
     "LazySelectorNamespace",
