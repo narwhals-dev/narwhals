@@ -15,7 +15,12 @@ if t.TYPE_CHECKING:
     from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.functions import RollingWindow
     from narwhals._plan.ranges import RangeFunction
-    from narwhals.typing import NativeSeries, NonNestedDType, NonNestedLiteral
+    from narwhals.typing import (
+        NativeFrame,
+        NativeSeries,
+        NonNestedDType,
+        NonNestedLiteral,
+    )
 
 __all__ = [
     "FunctionT",
@@ -67,6 +72,7 @@ NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
+NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame", default="NativeFrame")
 LiteralT = TypeVar(
     "LiteralT", bound="NonNestedLiteral | DummySeries[t.Any]", default=t.Any
 )

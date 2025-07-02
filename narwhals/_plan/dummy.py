@@ -24,7 +24,7 @@ from narwhals._plan.options import (
     SortOptions,
 )
 from narwhals._plan.selectors import by_name
-from narwhals._plan.typing import NativeSeriesT
+from narwhals._plan.typing import NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
 from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
@@ -764,6 +764,60 @@ class DummyCompliantExpr:
         return DummyExprV1._from_ir(self._ir)
 
 
+class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
+    _compliant: DummyCompliantFrame[NativeFrameT, NativeSeriesT]
+    _version: t.ClassVar[Version] = Version.MAIN
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @property
+    def _series(self) -> type[DummySeries]:
+        return DummySeries
+
+    @classmethod
+    def from_native(cls, native: NativeFrameT, /) -> Self:
+        obj = cls.__new__(cls)
+        obj._compliant = DummyCompliantFrame[NativeFrameT, NativeSeriesT].from_native(
+            native, cls._version
+        )
+        return obj
+
+    def to_native(self) -> NativeFrameT:
+        return self._compliant.native
+
+    def __len__(self) -> int:
+        return len(self._compliant)
+
+
+class DummyCompliantFrame(Generic[NativeFrameT, NativeSeriesT]):
+    _native: NativeFrameT
+    _version: Version
+
+    @property
+    def native(self) -> NativeFrameT:
+        return self._native
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @property
+    def _series(self) -> type[DummyCompliantSeries[NativeSeriesT]]:
+        return DummyCompliantSeries[NativeSeriesT]
+
+    @classmethod
+    def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+
 class DummySeries(Generic[NativeSeriesT]):
     _compliant: DummyCompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
@@ -781,15 +835,15 @@ class DummySeries(Generic[NativeSeriesT]):
         return self._compliant.name
 
     @classmethod
-    def from_native(cls, native: NativeSeriesT, /) -> Self:
+    def from_native(cls, native: NativeSeriesT, name: str = "", /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = DummyCompliantSeries[NativeSeriesT].from_native(
-            native, cls._version
+            native, name, version=cls._version
         )
         return obj
 
     def to_native(self) -> NativeSeriesT:
-        return self._compliant._native
+        return self._compliant.native
 
     def __iter__(self) -> t.Iterator[t.Any]:
         yield from self.to_native()
@@ -805,6 +859,10 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
     _version: Version
 
     @property
+    def native(self) -> NativeSeriesT:
+        return self._native
+
+    @property
     def version(self) -> Version:
         return self._version
 
@@ -817,12 +875,20 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
         return self._name
 
     @classmethod
-    def from_native(cls, native: NativeSeriesT, /, version: Version) -> Self:
-        name: str = "<PLACEHOLDER>"
-        if _hasattr_static(native, "name"):
-            name = getattr(native, "name", name)
+    def from_native(
+        cls, native: NativeSeriesT, name: str = "", /, *, version: Version
+    ) -> Self:
+        name = name or (
+            getattr(native, "name", name) if _hasattr_static(native, "name") else name
+        )
         obj = cls.__new__(cls)
         obj._native = native
         obj._name = name
         obj._version = version
         return obj
+
+    def _with_native(self, native: NativeSeriesT) -> Self:
+        return self.from_native(native, self.name, version=self.version)
+
+    def alias(self, name: str) -> Self:
+        return self.from_native(self.native, name, version=self.version)

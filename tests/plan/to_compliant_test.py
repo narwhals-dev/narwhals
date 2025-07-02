@@ -7,13 +7,18 @@ import pytest
 import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan.common import is_expr
-from narwhals._plan.impl_arrow import evaluate as evaluate_pyarrow
+from narwhals._plan.impl_arrow import ArrowDataFrame
 from narwhals.utils import Version
 from tests.namespace_test import backends
 
 if TYPE_CHECKING:
     from narwhals._namespace import BackendName
     from narwhals._plan.dummy import DummyExpr
+
+
+@pytest.fixture
+def data_small() -> dict[str, Any]:
+    return {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4], "d": [8, 7, 8]}
 
 
 def _ids_ir(expr: DummyExpr | Any) -> str:
@@ -44,28 +49,21 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (nwd.col("a"), ["A", "B", "A"]),
-        (nwd.col("a", "b"), [["A", "B", "A"], [1, 2, 3]]),
-        (nwd.lit(1), [1, 1, 1]),
-        (nwd.lit(2.0), [2.0, 2.0, 2.0]),
-        (nwd.lit(None, nw.String()), [None, None, None]),
+        (nwd.col("a"), {"a": ["A", "B", "A"]}),
+        (nwd.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
+        (nwd.lit(1), {"literal": [1, 1, 1]}),
+        (nwd.lit(2.0), {"literal": [2.0, 2.0, 2.0]}),
+        (nwd.lit(None, nw.String()), {"literal": [None, None, None]}),
     ],
     ids=_ids_ir,
 )
-def test_evaluate_pyarrow(expr: DummyExpr, expected: Any) -> None:
+def test_select(
+    expr: DummyExpr, expected: dict[str, Any], data_small: dict[str, Any]
+) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    data: dict[str, Any] = {
-        "a": ["A", "B", "A"],
-        "b": [1, 2, 3],
-        "c": [9, 2, 4],
-        "d": [8, 7, 8],
-    }
-    frame = pa.table(data)
-    result = evaluate_pyarrow(expr._ir, frame)
-    if len(result) == 1:
-        assert result[0].to_pylist() == expected
-    else:
-        results = [col.to_pylist() for col in result]
-        assert results == expected
+    frame = pa.table(data_small)
+    df = ArrowDataFrame.from_native(frame, Version.MAIN)
+    result = df.select(expr).to_dict(as_series=False)
+    assert result == expected
