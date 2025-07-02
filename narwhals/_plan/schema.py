@@ -1,21 +1,26 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import lru_cache
 from types import MappingProxyType
 from typing import TYPE_CHECKING, TypeVar, overload
 
-from narwhals._plan.common import _IMMUTABLE_HASH_NAME, Immutable
+from narwhals._plan.common import _IMMUTABLE_HASH_NAME, Immutable, NamedIR
+from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
-    from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
+    from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
     from typing_extensions import TypeAlias
 
+    from narwhals._plan.contexts import ExprContext
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
 
-IntoFrozenSchema: TypeAlias = "Mapping[str, DType] | FrozenSchema"
+IntoFrozenSchema: TypeAlias = (
+    "Mapping[str, DType] | Iterator[tuple[str, DType]] | FrozenSchema"
+)
 """A schema to freeze, or an already frozen one.
 
 As `DType` instances (`.values()`) are hashable, we can coerce the schema
@@ -32,6 +37,29 @@ class FrozenSchema(Immutable):
 
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
+
+    def project(
+        self, exprs: Seq[NamedIR], context: ExprContext
+    ) -> tuple[Seq[NamedIR], FrozenSchema]:
+        if context.is_select():
+            return exprs, self._select(exprs)
+        if context.is_with_columns():
+            raise NotImplementedError(context)
+        raise TypeError(context)
+
+    def _select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
+        """Return a new schema, equivalent to performing `df.select(*exprs)`.
+
+        Arguments:
+            exprs: Expanded, unaliased expressions.
+
+        Notes:
+            - New columns all use the `Unknown` dtype
+            - Any `cast` nodes are not reflected in the schema
+        """
+        names = (e.name for e in exprs)
+        default = Unknown()
+        return freeze_schema((name, self.get(name, default)) for name in names)
 
     @property
     def __immutable_hash__(self) -> int:
@@ -96,12 +124,13 @@ def freeze_schema(mapping: IntoFrozenSchema, /) -> FrozenSchema: ...
 @overload
 def freeze_schema(**schema: DType) -> FrozenSchema: ...
 def freeze_schema(
-    mapping: IntoFrozenSchema | None = None, /, **schema: DType
+    iterable: IntoFrozenSchema | None = None, /, **schema: DType
 ) -> FrozenSchema:
-    if mapping and isinstance(mapping, FrozenSchema):
-        return mapping
-    schema_hash = tuple((mapping or schema).items())
-    return _freeze_schema_cache(schema_hash)
+    if isinstance(iterable, FrozenSchema):
+        return iterable
+    into = iterable or schema
+    hashable = tuple(into.items() if isinstance(into, Mapping) else into)
+    return _freeze_schema_cache(hashable)
 
 
 @lru_cache(maxsize=100)
