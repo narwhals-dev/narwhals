@@ -740,8 +740,7 @@ class EagerExpr(
         return self._reuse_series(
             "quantile",
             returns_scalar=True,
-            quantile=quantile,
-            interpolation=interpolation,
+            scalar_kwargs={"quantile": quantile, "interpolation": interpolation},
         )
 
     def head(self, n: int) -> Self:

@@ -21,19 +21,33 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
-    from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
+    from narwhals.typing import (
+        FillNullStrategy,
+        NativeFrame,
+        NativeSeries,
+        RankMethod,
+        RollingInterpolationMethod,
+    )
 
     class ScalarKwargs(TypedDict, total=False):
         """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
 
+        adjust: bool
+        alpha: float | None
         center: int
+        com: float | None
         ddof: int
         descending: bool
+        half_life: float | None
+        ignore_nulls: bool
+        interpolation: RollingInterpolationMethod
         limit: int | None
         method: RankMethod
         min_samples: int
         n: int
+        quantile: float
         reverse: bool
+        span: float | None
         strategy: FillNullStrategy | None
         window_size: int
 
