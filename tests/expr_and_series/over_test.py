@@ -441,8 +441,13 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
 
     quantile_expr = nw.col("a").quantile(quantile=0.5, interpolation="linear")
+    native_frame = constructor(data)
+
+    if "dask" in str(constructor):
+        native_frame = native_frame.repartition(npartitions=1)  # type: ignore[union-attr]
+
     result = (
-        nw.from_native(constructor(data))
+        nw.from_native(native_frame)
         .with_columns(
             quantile_over_b=quantile_expr.over("b"), quantile_global=quantile_expr
         )

@@ -39,7 +39,17 @@ NativeAggregationT_co = TypeVar(
     "NativeAggregationT_co", bound="str | Callable[..., Any]", covariant=True
 )
 NarwhalsAggregation: TypeAlias = Literal[
-    "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
+    "sum",
+    "mean",
+    "median",
+    "max",
+    "min",
+    "std",
+    "var",
+    "len",
+    "n_unique",
+    "count",
+    "quantile",
 ]
 
 
