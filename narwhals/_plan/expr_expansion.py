@@ -173,6 +173,11 @@ class FrozenSchema(Immutable):
     def __len__(self) -> int:
         return self._mapping.__len__()
 
+    def __repr__(self) -> str:
+        sep, nl, indent = ",", "\n", " "
+        items = f"{sep}{nl}{indent}".join(repr(tuple(els)) for els in self.items())
+        return f"{type(self).__name__}([{nl}{indent}{items}{sep}{nl}])"
+
 
 def freeze_schema(**schema: DType) -> FrozenSchema:
     schema_hash = tuple(schema.items())
