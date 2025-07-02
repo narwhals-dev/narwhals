@@ -9,12 +9,12 @@ import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.expr import Alias, Columns
 from narwhals._plan.expr_expansion import (
-    freeze_schema,
     prepare_projection,
     replace_selector,
     rewrite_special_aliases,
 )
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
+from narwhals._plan.schema import freeze_schema
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
 from tests.plan.utils import assert_expr_ir_equal
 

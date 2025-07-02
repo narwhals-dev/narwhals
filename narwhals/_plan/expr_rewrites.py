@@ -13,16 +13,13 @@ from narwhals._plan.common import (
     is_window_expr,
     map_ir,
 )
-from narwhals._plan.expr_expansion import (
-    IntoFrozenSchema,
-    into_named_irs,
-    prepare_projection,
-)
+from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._plan.common import ExprIR
+    from narwhals._plan.schema import IntoFrozenSchema
     from narwhals._plan.typing import IntoExpr, MapIR, Seq
 
 
