@@ -14,6 +14,7 @@ from narwhals._compliant.group_by import (
 )
 from narwhals._compliant.namespace import (
     CompliantNamespace,
+    DepthTrackingNamespace,
     EagerNamespace,
     LazyNamespace,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "CompliantThen",
     "CompliantWhen",
     "DepthTrackingGroupBy",
+    "DepthTrackingNamespace",
     "EagerDataFrame",
     "EagerDataFrameT",
     "EagerExpr",
