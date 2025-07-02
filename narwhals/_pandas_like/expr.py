@@ -261,7 +261,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 function_name, self._scalar_kwargs
             )
 
-            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0915
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
@@ -298,9 +298,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
                 elif function_name.startswith("ewm"):
-                    rolling = grouped[list(output_names)].ewm(**pandas_kwargs)
-                    assert pandas_function_name is not None  # help mypy  # noqa: S101
-                    res_native = getattr(rolling, pandas_function_name)()
+                    if self._implementation.is_pandas() and (
+                        backend_version := self._backend_version
+                    ) < (1, 2):  # pragma: no cover
+                        msg = (
+                            "Exponentially weighted calculation is not available in over "
+                            f"context for pandas versions older than 1.2.0, found {backend_version}."
+                        )
+                        raise NotImplementedError(msg)
+                    ewm = grouped[list(output_names)].ewm(**pandas_kwargs)
+                    res_native = getattr(ewm, pandas_function_name)()
                 elif function_name == "fill_null":
                     assert "strategy" in self._scalar_kwargs  # noqa: S101
                     assert "limit" in self._scalar_kwargs  # noqa: S101
