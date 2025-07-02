@@ -28,7 +28,7 @@ from narwhals._plan.typing import NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
 from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
@@ -172,6 +172,9 @@ class DummyExpr:
         nulls_last: bool | t.Iterable[bool] = False,
     ) -> Self:
         sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
+        if length_changing := next((e for e in sort_by if e.is_scalar), None):
+            msg = f"All expressions passed to `sort_by` must preserve length, but got:\n{length_changing!r}"
+            raise InvalidOperationError(msg)
         desc = (descending,) if isinstance(descending, bool) else tuple(descending)
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
         options = SortMultipleOptions(descending=desc, nulls_last=nulls)
@@ -876,7 +879,7 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
 
     @classmethod
     def from_native(
-        cls, native: NativeSeriesT, name: str = "", /, *, version: Version
+        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self:
         name = name or (
             getattr(native, "name", name) if _hasattr_static(native, "name") else name

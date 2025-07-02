@@ -8,7 +8,7 @@ from __future__ import annotations
 # ruff: noqa: ARG001
 import typing as t
 from functools import singledispatch
-from itertools import chain
+from itertools import chain, repeat
 
 from narwhals._plan import expr
 from narwhals._plan.contexts import ExprContext
@@ -22,7 +22,7 @@ if t.TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._arrow.typing import ScalarAny
+    from narwhals._arrow.typing import Order, ScalarAny  # type: ignore[attr-defined]
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.typing import IntoExpr
@@ -179,6 +179,30 @@ def sort(node: expr.Sort, frame: ArrowDataFrame) -> NativeSeries:
     return native.take(sorted_indices)
 
 
+@_evaluate_inner.register(expr.SortBy)
+def sort_by(node: expr.SortBy, frame: ArrowDataFrame) -> NativeSeries:
+    opts = node.options
+    if len(opts.nulls_last) != 1:
+        msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {opts.nulls_last!r}"
+        raise NotImplementedError(msg)
+    placement = "at_end" if opts.nulls_last[0] else "at_start"
+    from_native = ArrowSeries.from_native
+    by = (
+        from_native(_evaluate_inner(e, frame), str(idx)) for idx, e in enumerate(node.by)
+    )
+    df = frame.from_series(from_native(_evaluate_inner(node.expr, frame), "<TEMP>"), *by)
+    names = df.columns[1:]
+    if len(opts.descending) == 1:
+        descending: t.Iterable[bool] = repeat(opts.descending[0], len(names))
+    else:
+        descending = opts.descending
+    sorting: list[tuple[str, Order]] = [
+        (key, "descending" if desc else "ascending")
+        for key, desc in zip(names, descending)
+    ]
+    return df.native.sort_by(sorting, null_placement=placement).column(0)
+
+
 @_evaluate_inner.register(expr.Filter)
 def filter_(node: expr.Filter, frame: ArrowDataFrame) -> NativeSeries:
     return _evaluate_inner(node.expr, frame).filter(_evaluate_inner(node.by, frame))
@@ -221,11 +245,6 @@ def rolling_expr(node: expr.RollingExpr[t.Any], frame: ArrowDataFrame) -> Native
 
 @_evaluate_inner.register(expr.WindowExpr)
 def window_expr(node: expr.WindowExpr, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
-
-
-@_evaluate_inner.register(expr.SortBy)
-def sort_by(node: expr.SortBy, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
