@@ -44,7 +44,8 @@ def cols(node: expr.Columns, frame: NativeFrame) -> Evaluated:
 
 @evaluate.register(expr.Literal)
 def lit(
-    node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries], frame: NativeFrame
+    node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[NativeSeries]],
+    frame: NativeFrame,
 ) -> Evaluated:
     import pyarrow as pa
 

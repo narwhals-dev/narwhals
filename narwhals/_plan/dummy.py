@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic
 
 from narwhals._plan import (
     aggregation as agg,
@@ -24,6 +24,7 @@ from narwhals._plan.options import (
     SortOptions,
 )
 from narwhals._plan.selectors import by_name
+from narwhals._plan.typing import NativeSeriesT
 from narwhals._plan.window import Over
 from narwhals._utils import Version, _hasattr_static
 from narwhals.dtypes import DType
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
-        NativeSeries,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -764,8 +764,8 @@ class DummyCompliantExpr:
         return DummyExprV1._from_ir(self._ir)
 
 
-class DummySeries:
-    _compliant: DummyCompliantSeries
+class DummySeries(Generic[NativeSeriesT]):
+    _compliant: DummyCompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
@@ -781,24 +781,26 @@ class DummySeries:
         return self._compliant.name
 
     @classmethod
-    def from_native(cls, native: NativeSeries, /) -> Self:
+    def from_native(cls, native: NativeSeriesT, /) -> Self:
         obj = cls.__new__(cls)
-        obj._compliant = DummyCompliantSeries.from_native(native, cls._version)
+        obj._compliant = DummyCompliantSeries[NativeSeriesT].from_native(
+            native, cls._version
+        )
         return obj
 
-    def to_native(self) -> NativeSeries:
+    def to_native(self) -> NativeSeriesT:
         return self._compliant._native
 
     def __iter__(self) -> t.Iterator[t.Any]:
         yield from self.to_native()
 
 
-class DummySeriesV1(DummySeries):
+class DummySeriesV1(DummySeries[NativeSeriesT]):
     _version: t.ClassVar[Version] = Version.V1
 
 
-class DummyCompliantSeries:
-    _native: NativeSeries
+class DummyCompliantSeries(Generic[NativeSeriesT]):
+    _native: NativeSeriesT
     _name: str
     _version: Version
 
@@ -815,7 +817,7 @@ class DummyCompliantSeries:
         return self._name
 
     @classmethod
-    def from_native(cls, native: NativeSeries, /, version: Version) -> Self:
+    def from_native(cls, native: NativeSeriesT, /, version: Version) -> Self:
         name: str = "<PLACEHOLDER>"
         if _hasattr_static(native, "name"):
             name = getattr(native, "name", name)

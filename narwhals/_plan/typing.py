@@ -15,7 +15,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.functions import RollingWindow
     from narwhals._plan.ranges import RangeFunction
-    from narwhals.typing import NonNestedDType, NonNestedLiteral
+    from narwhals.typing import NativeSeries, NonNestedDType, NonNestedLiteral
 
 __all__ = [
     "FunctionT",
@@ -66,7 +66,10 @@ NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
 NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
-LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | DummySeries", default=t.Any)
+NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
+LiteralT = TypeVar(
+    "LiteralT", bound="NonNestedLiteral | DummySeries[t.Any]", default=t.Any
+)
 MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
 
@@ -90,5 +93,5 @@ Using instead of `Sequence`, as a `list` can be passed there (can't break immuta
 Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 """Placeholder for `map_batches(function=...)`."""
 
-IntoExprColumn: TypeAlias = "DummyExpr | DummySeries | str"
+IntoExprColumn: TypeAlias = "DummyExpr | DummySeries[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
