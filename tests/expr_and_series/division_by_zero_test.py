@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Callable
 
 import pytest
@@ -125,6 +126,13 @@ def test_series_rfloordiv_by_zero(
 def test_expr_rfloordiv_by_zero(constructor: Constructor, numerator: float) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
+
+    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU"):
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/pola-rs/polars/issues/23365")
+        )
+
+    data: dict[str, list[int]] = {"a": [left]}
 
     df = nw.from_native(constructor(data))
     result = df.select(numerator // nw.col("denominator"))
