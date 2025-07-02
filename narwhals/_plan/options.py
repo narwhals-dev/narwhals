@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
+    import pyarrow.compute as pc
+
     from narwhals._plan.typing import Seq
     from narwhals.typing import RankMethod
 
@@ -146,6 +148,14 @@ class SortOptions(Immutable):
     @staticmethod
     def default() -> SortOptions:
         return SortOptions(descending=False, nulls_last=False)
+
+    def to_arrow(self) -> pc.ArraySortOptions:
+        import pyarrow.compute as pc
+
+        return pc.ArraySortOptions(
+            order=("descending" if self.descending else "ascending"),
+            null_placement=("at_end" if self.nulls_last else "at_start"),
+        )
 
 
 class SortMultipleOptions(Immutable):

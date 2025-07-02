@@ -5,6 +5,7 @@ Acting like a trimmed down, native-only `CompliantExpr`, `CompliantSeries`, etc.
 
 from __future__ import annotations
 
+# ruff: noqa: ARG001
 import typing as t
 from functools import singledispatch
 from itertools import chain
@@ -21,12 +22,13 @@ if t.TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._arrow.typing import ScalarAny
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NonNestedLiteral, PythonLiteral
 
 
 NativeFrame: TypeAlias = "pa.Table"
@@ -138,28 +140,53 @@ def col(node: expr.Column, frame: ArrowDataFrame) -> NativeSeries:
     return frame.native.column(node.name)
 
 
+def _lit_native(value: PythonLiteral | ScalarAny, frame: ArrowDataFrame) -> NativeSeries:
+    """Will need to support returning a native scalar as well."""
+    import pyarrow as pa
+
+    from narwhals._arrow.utils import chunked_array
+
+    lit: t.Any = pa.scalar
+    scalar: t.Any = value if isinstance(value, pa.Scalar) else lit(value)
+    array = pa.repeat(scalar, len(frame))
+    return chunked_array(array)
+
+
 @_evaluate_inner.register(expr.Literal)
 def lit_(
     node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[NativeSeries]],
     frame: ArrowDataFrame,
 ) -> NativeSeries:
-    import pyarrow as pa
-
     if is_literal_scalar(node):
-        lit: t.Any = pa.scalar
-        array = pa.repeat(lit(node.unwrap()), len(frame))
-        return pa.chunked_array([array])
+        return _lit_native(node.unwrap(), frame)
     return node.unwrap().to_native()
-
-
-@_evaluate_inner.register(expr.Len)
-def len_(node: expr.Len, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
 
 
 @_evaluate_inner.register(expr.Cast)
 def cast_(node: expr.Cast, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
+    from narwhals._arrow.utils import narwhals_to_native_dtype
+
+    data_type = narwhals_to_native_dtype(node.dtype, frame.version)
+    return _evaluate_inner(node.expr, frame).cast(data_type)
+
+
+@_evaluate_inner.register(expr.Sort)
+def sort(node: expr.Sort, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    native = _evaluate_inner(node.expr, frame)
+    sorted_indices = pc.array_sort_indices(native, options=node.options.to_arrow())
+    return native.take(sorted_indices)
+
+
+@_evaluate_inner.register(expr.Filter)
+def filter_(node: expr.Filter, frame: ArrowDataFrame) -> NativeSeries:
+    return _evaluate_inner(node.expr, frame).filter(_evaluate_inner(node.by, frame))
+
+
+@_evaluate_inner.register(expr.Len)
+def len_(node: expr.Len, frame: ArrowDataFrame) -> NativeSeries:
+    return _lit_native(len(frame), frame)
 
 
 @_evaluate_inner.register(expr.Ternary)
@@ -197,18 +224,8 @@ def window_expr(node: expr.WindowExpr, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
-@_evaluate_inner.register(expr.Sort)
-def sort(node: expr.Sort, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
-
-
 @_evaluate_inner.register(expr.SortBy)
 def sort_by(node: expr.SortBy, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
-
-
-@_evaluate_inner.register(expr.Filter)
-def filter_(node: expr.Filter, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
