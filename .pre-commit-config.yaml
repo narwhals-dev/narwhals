@@ -81,7 +81,8 @@ repos:
             narwhals/.*__init__.py|
             narwhals/.*typing\.py|
             narwhals/_plan/demo\.py|
-            narwhals/_plan/ranges\.py
+            narwhals/_plan/ranges\.py|
+            narwhals/_plan/schema\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`
