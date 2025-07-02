@@ -7,6 +7,8 @@ from narwhals._compliant.typing import NativeExprT_co
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+__all__ = ["WindowInputs"]
+
 
 class WindowInputs(Generic[NativeExprT_co]):
     __slots__ = ("order_by", "partition_by")

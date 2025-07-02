@@ -3,8 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import WindowInputs
+from narwhals._compliant import LazyExpr, WindowInputs
 from narwhals._expression_parsing import (
     ExprKind,
     combine_alias_output_names,

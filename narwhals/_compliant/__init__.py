@@ -44,6 +44,7 @@ from narwhals._compliant.when_then import (
     LazyThen,
     LazyWhen,
 )
+from narwhals._compliant.window import WindowInputs
 
 __all__ = [
     "CompliantDataFrame",
@@ -81,4 +82,5 @@ __all__ = [
     "LazyWhen",
     "NativeFrameT_co",
     "NativeSeriesT_co",
+    "WindowInputs",
 ]
