@@ -29,7 +29,6 @@ if TYPE_CHECKING:
         center: int
         ddof: int
         descending: bool
-        half_life: float | None
         limit: int | None
         method: RankMethod
         min_samples: int
