@@ -56,7 +56,16 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
 
-__all__ = ["CompliantSeries", "EagerSeries"]
+__all__ = [
+    "CompliantSeries",
+    "EagerSeries",
+    "EagerSeriesCatNamespace",
+    "EagerSeriesDateTimeNamespace",
+    "EagerSeriesListNamespace",
+    "EagerSeriesNamespace",
+    "EagerSeriesStringNamespace",
+    "EagerSeriesStructNamespace",
+]
 
 
 class CompliantSeries(

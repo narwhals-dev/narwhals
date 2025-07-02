@@ -24,7 +24,16 @@ from narwhals._compliant.selectors import (
     EagerSelectorNamespace,
     LazySelectorNamespace,
 )
-from narwhals._compliant.series import CompliantSeries, EagerSeries
+from narwhals._compliant.series import (
+    CompliantSeries,
+    EagerSeries,
+    EagerSeriesCatNamespace,
+    EagerSeriesDateTimeNamespace,
+    EagerSeriesListNamespace,
+    EagerSeriesNamespace,
+    EagerSeriesStringNamespace,
+    EagerSeriesStructNamespace,
+)
 from narwhals._compliant.typing import (
     CompliantExprT,
     CompliantFrameT,
@@ -71,6 +80,12 @@ __all__ = [
     "EagerNamespace",
     "EagerSelectorNamespace",
     "EagerSeries",
+    "EagerSeriesCatNamespace",
+    "EagerSeriesDateTimeNamespace",
+    "EagerSeriesListNamespace",
+    "EagerSeriesNamespace",
+    "EagerSeriesStringNamespace",
+    "EagerSeriesStructNamespace",
     "EagerSeriesT",
     "EagerWhen",
     "EvalNames",
