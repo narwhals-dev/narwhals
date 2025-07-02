@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 
-with open("output.txt") as fd:
+with open("output.txt", encoding="utf-8") as fd:
     content = fd.read()
 
 if "exited with errors" in content:
