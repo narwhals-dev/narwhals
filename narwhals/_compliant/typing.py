@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
 
 if TYPE_CHECKING:
@@ -21,47 +21,22 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
-    from narwhals.typing import (
-        FillNullStrategy,
-        IntoDType,
-        NativeFrame,
-        NativeSeries,
-        RankMethod,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
 
     class ScalarKwargs(TypedDict, total=False):
         """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
 
-        adjust: bool
-        alpha: float | None
-        base: float
         center: int
-        com: float | None
         ddof: int
-        decimals: int
         descending: bool
-        fraction: float | None
         half_life: float | None
-        ignore_nulls: bool
-        interpolation: RollingInterpolationMethod
         limit: int | None
-        maintain_order: bool
         method: RankMethod
         min_samples: int
-        n: int | None
-        new: Sequence[Any]
-        nulls_last: bool
-        offset: int
-        old: Sequence[Any] | Mapping[Any, Any]
-        quantile: float
-        return_dtype: IntoDType | None
+        n: int
         reverse: bool
-        seed: int | None
-        span: float | None
         strategy: FillNullStrategy | None
         window_size: int
-        with_replacement: bool
 
 
 __all__ = [

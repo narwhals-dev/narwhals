@@ -677,20 +677,17 @@ class EagerExpr(
         return_dtype: IntoDType | None,
     ) -> Self:
         return self._reuse_series(
-            "replace_strict",
-            scalar_kwargs={"old": old, "new": new, "return_dtype": return_dtype},
+            "replace_strict", old=old, new=new, return_dtype=return_dtype
         )
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
-        return self._reuse_series(
-            "sort", scalar_kwargs={"descending": descending, "nulls_last": nulls_last}
-        )
+        return self._reuse_series("sort", descending=descending, nulls_last=nulls_last)
 
     def abs(self) -> Self:
         return self._reuse_series("abs")
 
     def unique(self) -> Self:
-        return self._reuse_series("unique", scalar_kwargs={"maintain_order": False})
+        return self._reuse_series("unique", maintain_order=False)
 
     def diff(self) -> Self:
         return self._reuse_series("diff")
@@ -704,13 +701,7 @@ class EagerExpr(
         seed: int | None,
     ) -> Self:
         return self._reuse_series(
-            "sample",
-            scalar_kwargs={
-                "n": n,
-                "fraction": fraction,
-                "with_replacement": with_replacement,
-                "seed": seed,
-            },
+            "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
         )
 
     def alias(self, name: str) -> Self:
@@ -749,7 +740,8 @@ class EagerExpr(
         return self._reuse_series(
             "quantile",
             returns_scalar=True,
-            scalar_kwargs={"quantile": quantile, "interpolation": interpolation},
+            quantile=quantile,
+            interpolation=interpolation,
         )
 
     def head(self, n: int) -> Self:
@@ -759,15 +751,13 @@ class EagerExpr(
         return self._reuse_series("tail", scalar_kwargs={"n": n})
 
     def round(self, decimals: int) -> Self:
-        return self._reuse_series("round", scalar_kwargs={"decimals": decimals})
+        return self._reuse_series("round", decimals=decimals)
 
     def len(self) -> Self:
         return self._reuse_series("len", returns_scalar=True)
 
     def gather_every(self, n: int, offset: int) -> Self:
-        return self._reuse_series(
-            "gather_every", scalar_kwargs={"n": n, "offset": offset}
-        )
+        return self._reuse_series("gather_every", n=n, offset=offset)
 
     def mode(self) -> Self:
         return self._reuse_series("mode")
@@ -875,7 +865,7 @@ class EagerExpr(
         )
 
     def log(self, base: float) -> Self:
-        return self._reuse_series("log", scalar_kwargs={"base": base})
+        return self._reuse_series("log", base=base)
 
     def exp(self) -> Self:
         return self._reuse_series("exp")

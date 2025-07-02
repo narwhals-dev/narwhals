@@ -182,15 +182,13 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     ) -> Self:
         return self._reuse_series(
             "ewm_mean",
-            scalar_kwargs={
-                "com": com,
-                "span": span,
-                "half_life": half_life,
-                "alpha": alpha,
-                "adjust": adjust,
-                "min_samples": min_samples,
-                "ignore_nulls": ignore_nulls,
-            },
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_samples=min_samples,
+            ignore_nulls=ignore_nulls,
         )
 
     def over(  # noqa: C901, PLR0915
