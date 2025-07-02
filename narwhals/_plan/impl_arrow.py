@@ -9,7 +9,7 @@ import typing as t
 from functools import singledispatch
 
 from narwhals._plan import expr
-from narwhals._plan.literal import is_literal_scalar, is_literal_series
+from narwhals._plan.literal import is_literal_scalar
 
 if t.TYPE_CHECKING:
     import pyarrow as pa
@@ -24,6 +24,8 @@ if t.TYPE_CHECKING:
     Evaluated: TypeAlias = t.Sequence[NativeSeries]
 
 
+# TODO @dangotbanned: Update to operate on the output of `expr_expansion` or `expr_rewrites`
+# No longer need: `Alias`, `Columns`, `Nth`, `All`, `Exclude`, `IndexColumns`, `RootSelector`, `BinarySelector`, `RenameAlias`, `KeepName`
 @singledispatch
 def evaluate(node: ExprIR, frame: NativeFrame) -> Evaluated:
     raise NotImplementedError(type(node))
@@ -34,6 +36,7 @@ def col(node: expr.Column, frame: NativeFrame) -> Evaluated:
     return [frame.column(node.name)]
 
 
+# TODO @dangotbanned: Remove after updating tests
 @evaluate.register(expr.Columns)
 def cols(node: expr.Columns, frame: NativeFrame) -> Evaluated:
     return frame.select(list(node.names)).columns
@@ -49,40 +52,11 @@ def lit(
         lit: t.Any = pa.scalar
         array = pa.repeat(lit(node.unwrap()), len(frame))
         return [pa.chunked_array([array])]
-    elif is_literal_series(node):
-        ca = node.unwrap().to_native()
-        return [t.cast("NativeSeries", ca)]
-    else:
-        raise NotImplementedError(type(node.value))
-
-
-@evaluate.register(expr.Alias)
-def alias(node: expr.Alias, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
+    return [node.unwrap().to_native()]
 
 
 @evaluate.register(expr.Len)
 def len_(node: expr.Len, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.Nth)
-def nth(node: expr.Nth, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.IndexColumns)
-def index_columns(node: expr.IndexColumns, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.All)
-def all_(node: expr.All, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.Exclude)
-def exclude(node: expr.Exclude, frame: NativeFrame) -> Evaluated:
     raise NotImplementedError(type(node))
 
 
@@ -126,21 +100,6 @@ def window_expr(node: expr.WindowExpr, frame: NativeFrame) -> Evaluated:
     raise NotImplementedError(type(node))
 
 
-@evaluate.register(expr.RootSelector)
-def selector(node: expr.RootSelector, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.BinarySelector)
-def binary_selector(node: expr.BinarySelector, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.RenameAlias)
-def rename_alias(node: expr.RenameAlias, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
 @evaluate.register(expr.Sort)
 def sort(node: expr.Sort, frame: NativeFrame) -> Evaluated:
     raise NotImplementedError(type(node))
@@ -158,9 +117,4 @@ def filter_(node: expr.Filter, frame: NativeFrame) -> Evaluated:
 
 @evaluate.register(expr.AnonymousExpr)
 def anonymous_expr(node: expr.AnonymousExpr, frame: NativeFrame) -> Evaluated:
-    raise NotImplementedError(type(node))
-
-
-@evaluate.register(expr.KeepName)
-def keep_name(node: expr.KeepName, frame: NativeFrame) -> Evaluated:
     raise NotImplementedError(type(node))
