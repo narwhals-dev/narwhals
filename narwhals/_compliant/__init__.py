@@ -5,7 +5,7 @@ from narwhals._compliant.dataframe import (
     CompliantLazyFrame,
     EagerDataFrame,
 )
-from narwhals._compliant.expr import CompliantExpr, EagerExpr, LazyExpr
+from narwhals._compliant.expr import CompliantExpr, DepthTrackingExpr, EagerExpr, LazyExpr
 from narwhals._compliant.group_by import (
     CompliantGroupBy,
     DepthTrackingGroupBy,
@@ -71,6 +71,7 @@ __all__ = [
     "CompliantSeriesT",
     "CompliantThen",
     "CompliantWhen",
+    "DepthTrackingExpr",
     "DepthTrackingGroupBy",
     "DepthTrackingNamespace",
     "EagerDataFrame",
