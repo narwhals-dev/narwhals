@@ -307,6 +307,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                         raise NotImplementedError(msg)
                     ewm = grouped[list(output_names)].ewm(**pandas_kwargs)
+                    assert pandas_function_name is not None  # help mypy  # noqa: S101
                     res_native = getattr(ewm, pandas_function_name)()
                 elif function_name == "fill_null":
                     assert "strategy" in self._scalar_kwargs  # noqa: S101
