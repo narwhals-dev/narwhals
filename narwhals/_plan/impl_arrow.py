@@ -10,7 +10,7 @@ import typing as t
 from functools import singledispatch
 from itertools import chain, repeat
 
-from narwhals._plan import aggregation, expr
+from narwhals._plan import aggregation as agg, expr
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.dummy import DummyCompliantFrame, DummyCompliantSeries
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
@@ -33,6 +33,8 @@ if t.TYPE_CHECKING:
 
 NativeFrame: TypeAlias = "pa.Table"
 NativeSeries: TypeAlias = "pa.ChunkedArray[t.Any]"
+
+UnaryFn: TypeAlias = "t.Callable[[NativeSeries], ScalarAny]"
 
 
 def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
@@ -218,26 +220,80 @@ def ternary(node: expr.Ternary, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
-@_evaluate_inner.register(aggregation.Last)
-@_evaluate_inner.register(aggregation.First)
-def first_last(
-    node: aggregation.First | aggregation.Last, frame: ArrowDataFrame
-) -> NativeSeries:
+@_evaluate_inner.register(agg.Last)
+@_evaluate_inner.register(agg.First)
+def agg_first_last(node: agg.First | agg.Last, frame: ArrowDataFrame) -> NativeSeries:
     native = _evaluate_inner(node.expr, frame)
     if height := len(native):
-        result = native[height - 1 if isinstance(node, aggregation.Last) else 0]
+        result = native[height - 1 if isinstance(node, agg.Last) else 0]
     else:
         result = None
     return _lit_native(result, frame)
 
 
-@_evaluate_inner.register(expr.OrderableAgg)
-def orderable_agg(node: expr.OrderableAgg, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
+@_evaluate_inner.register(agg.ArgMax)
+@_evaluate_inner.register(agg.ArgMin)
+def agg_arg_min_max(node: agg.ArgMin | agg.ArgMax, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    native = _evaluate_inner(node.expr, frame)
+    fn = pc.min if isinstance(node, agg.ArgMin) else pc.max
+    result = pc.index(native, fn(native))
+    return _lit_native(result, frame)
+
+
+@_evaluate_inner.register(agg.Sum)
+def agg_sum(node: agg.Sum, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    result = pc.sum(_evaluate_inner(node.expr, frame), min_count=0)
+    return _lit_native(result, frame)
+
+
+@_evaluate_inner.register(agg.NUnique)
+def agg_n_unique(node: agg.NUnique, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    result = pc.count(_evaluate_inner(node.expr, frame).unique(), mode="all")
+    return _lit_native(result, frame)
+
+
+@_evaluate_inner.register(agg.Var)
+@_evaluate_inner.register(agg.Std)
+def agg_std_var(node: agg.Std | agg.Var, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    fn = pc.stddev if isinstance(node, agg.Std) else pc.variance
+    result = fn(_evaluate_inner(node.expr, frame), ddof=node.ddof)
+    return _lit_native(result, frame)
+
+
+@_evaluate_inner.register(agg.Quantile)
+def agg_quantile(node: agg.Quantile, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    result = pc.quantile(
+        _evaluate_inner(node.expr, frame),
+        q=node.quantile,
+        interpolation=node.interpolation,
+    )[0]
+    return _lit_native(result, frame)
 
 
 @_evaluate_inner.register(expr.Agg)
-def agg(node: expr.Agg, frame: ArrowDataFrame) -> NativeSeries:
+def agg_expr(node: expr.Agg, frame: ArrowDataFrame) -> NativeSeries:
+    import pyarrow.compute as pc
+
+    mapping: dict[type[expr.Agg], UnaryFn] = {
+        agg.Count: pc.count,
+        agg.Max: pc.max,
+        agg.Mean: pc.mean,
+        agg.Median: pc.approximate_median,
+        agg.Min: pc.min,
+    }
+    if fn := mapping.get(type(node)):
+        result = fn(_evaluate_inner(node.expr, frame))
+        return _lit_native(result, frame)
     raise NotImplementedError(type(node))
 
 
