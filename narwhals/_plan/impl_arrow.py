@@ -142,6 +142,9 @@ def col(node: expr.Column, frame: ArrowDataFrame) -> NativeSeries:
     return frame.native.column(node.name)
 
 
+# NOTE: Using a very naïve approach to broadcasting **for now**
+# - We already have something that works in main
+# - Another approach would be to keep everything wrapped (or aggregated into)  `expr.Literal`
 def _lit_native(value: PythonLiteral | ScalarAny, frame: ArrowDataFrame) -> NativeSeries:
     """Will need to support returning a native scalar as well."""
     import pyarrow as pa
