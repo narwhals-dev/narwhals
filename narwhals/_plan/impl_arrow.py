@@ -5,36 +5,46 @@ Acting like a trimmed down, native-only `CompliantExpr`, `CompliantSeries`, etc.
 
 from __future__ import annotations
 
-# ruff: noqa: ARG001
 import typing as t
+from collections.abc import Sequence, Sized
+
+# ruff: noqa: ARG001
 from functools import singledispatch
 from itertools import chain, repeat
 
 from narwhals._plan import aggregation as agg, expr
+from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.dummy import DummyCompliantFrame, DummyCompliantSeries
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals._plan.literal import is_literal_scalar
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if t.TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._arrow.typing import Order, ScalarAny  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        Incomplete,
+        Order,
+        ScalarAny,
+    )
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import NonNestedLiteral, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 
 NativeFrame: TypeAlias = "pa.Table"
 NativeSeries: TypeAlias = "pa.ChunkedArray[t.Any]"
 
 UnaryFn: TypeAlias = "t.Callable[[NativeSeries], ScalarAny]"
+SeriesT = TypeVar("SeriesT")
 
 
 def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
@@ -127,6 +137,124 @@ class ArrowDataFrame(DummyCompliantFrame[NativeFrame, NativeSeries]):
 class ArrowSeries(DummyCompliantSeries[NativeSeries]):
     def to_list(self) -> list[t.Any]:
         return self.native.to_pylist()
+
+
+class SupportsBroadcast(Sized, t.Protocol[SeriesT]):
+    """Minimal broadcasting for `Expr` results."""
+
+    @classmethod
+    def from_series(cls, series: SeriesT, /) -> Self: ...
+    def to_series(self) -> SeriesT: ...
+    def broadcast(self, length: int, /) -> SeriesT: ...
+    @classmethod
+    def align(cls, *exprs: SupportsBroadcast[SeriesT]) -> Sequence[SeriesT]:
+        lengths = [len(e) for e in exprs]
+        max_length = max(lengths)
+        fast_path = all(len_ == max_length for len_ in lengths)
+        if fast_path:
+            return [e.to_series() for e in exprs]
+        return [e.broadcast(max_length) for e in exprs]
+
+
+# NOTE: General expression result
+# Mostly elementwise
+class ArrowExpr(SupportsBroadcast[ArrowSeries]):
+    _series: ArrowSeries
+
+    @classmethod
+    def from_series(cls, series: ArrowSeries) -> Self:
+        obj = cls.__new__(cls)
+        obj._series = series
+        return obj
+
+    def to_series(self) -> ArrowSeries:
+        return self._series
+
+    def __len__(self) -> int:
+        return len(self._series)
+
+    def broadcast(self, length: int, /) -> ArrowSeries:
+        if (actual_len := len(self)) != length:
+            msg = f"Expected object of length {length}, got {actual_len}."
+            raise ShapeError(msg)
+        return self._series
+
+
+# NOTE: Aggregation result or scalar
+# Should handle broadcasting, without exposing it
+class ArrowLiteral(SupportsBroadcast[ArrowSeries]):
+    _native_scalar: ScalarAny
+    _name: str
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __len__(self) -> int:
+        return 1
+
+    def broadcast(self, length: int, /) -> ArrowSeries:
+        import pyarrow as pa
+
+        from narwhals._arrow.utils import chunked_array
+
+        if length == 1:
+            chunked = chunked_array([[self._native_scalar]])
+        else:
+            # NOTE: Same issue as `pa.scalar` overlapping overloads
+            # https://github.com/zen-xu/pyarrow-stubs/pull/209
+            pa_repeat: Incomplete = pa.repeat
+            arr = pa_repeat(self._native_scalar, length)
+            chunked = chunked_array(arr)
+        return ArrowSeries.from_native(chunked, self.name)
+
+    @classmethod
+    def from_series(cls, series: ArrowSeries) -> Self:
+        if len(series) == 1:
+            return cls.from_scalar(series.native[0], series.name)
+        elif len(series) == 0:
+            return cls.from_python(None, series.name, dtype=series.dtype)
+        else:
+            msg = f"Too long {len(series)!r}"
+            raise InvalidOperationError(msg)
+
+    def to_series(self) -> ArrowSeries:
+        return self.broadcast(1)
+
+    @classmethod
+    def from_python(
+        cls,
+        value: PythonLiteral,
+        name: str = "literal",
+        /,
+        *,
+        dtype: IntoDType | None = None,
+    ) -> Self:
+        import pyarrow as pa
+
+        from narwhals._arrow.utils import narwhals_to_native_dtype
+
+        version = Version.MAIN
+        dtype_pa: pa.DataType | None = None
+        if dtype:
+            dtype = into_dtype(dtype)
+            if not isinstance(dtype, version.dtypes.Unknown):
+                dtype_pa = narwhals_to_native_dtype(dtype, version)
+        # NOTE: PR that fixed this was closed
+        # https://github.com/zen-xu/pyarrow-stubs/pull/208
+        lit: Incomplete = pa.scalar
+        return cls.from_scalar(lit(value, dtype_pa), name)
+
+    @classmethod
+    def from_scalar(cls, scalar: ScalarAny, name: str = "literal", /) -> Self:
+        obj = cls.__new__(cls)
+        obj._native_scalar = scalar
+        obj._name = name
+        return obj
+
+    @classmethod
+    def from_ir(cls, value: expr.Literal[NonNestedLiteral], /) -> Self:
+        return cls.from_python(value.unwrap(), value.name)
 
 
 # NOTE: Should mean we produce 1x CompliantSeries for the entire expression

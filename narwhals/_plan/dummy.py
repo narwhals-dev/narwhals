@@ -895,3 +895,6 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
 
     def alias(self, name: str) -> Self:
         return self.from_native(self.native, name, version=self.version)
+
+    def __len__(self) -> int:
+        return len(self.native)
