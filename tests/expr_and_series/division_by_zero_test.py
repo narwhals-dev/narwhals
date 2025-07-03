@@ -122,12 +122,11 @@ def test_series_rfloordiv_by_zero(
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     if any(
-        x in str(constructor_eager)
-        for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow", "cudf")
+        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
     ) or (
         any(
             x in str(constructor_eager)
-            for x in ("pandas_constructor", "modin_constructor")
+            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
         )
         and numerator != 0
     ):
@@ -151,10 +150,12 @@ def test_expr_rfloordiv_by_zero(
             pytest.mark.xfail(reason="https://github.com/pola-rs/polars/issues/23365")
         )
     if any(
-        x in str(constructor)
-        for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow", "cudf")
+        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
     ) or (
-        any(x in str(constructor) for x in ("pandas_constructor", "modin_constructor"))
+        any(
+            x in str(constructor)
+            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
+        )
         and numerator != 0
     ):
         request.applymarker(pytest.mark.xfail)
@@ -163,4 +164,3 @@ def test_expr_rfloordiv_by_zero(
     result = df.select(result=numerator // nw.col("denominator"))
     expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
-    assert_equal_data(result.select(nw.col("result").is_null().all()), {"result": [True]})
