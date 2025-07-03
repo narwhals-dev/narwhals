@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import PythonLiteral
 
 WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
@@ -116,7 +116,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         evaluate_output_names: EvalNames[PandasLikeDataFrame],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
@@ -126,7 +125,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
         self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
@@ -134,9 +132,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(
-            self._implementation, self._backend_version, version=self._version
-        )
+        return PandasLikeNamespace(self._implementation, version=self._version)
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -146,7 +142,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         evaluate_column_names: EvalNames[PandasLikeDataFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         function_name: str = "",
     ) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -155,7 +151,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     PandasLikeSeries(
                         df._native_frame[column_name],
                         implementation=df._implementation,
-                        backend_version=df._backend_version,
                         version=df._version,
                     )
                     for column_name in evaluate_column_names(df)
@@ -172,12 +167,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             native = df.native
             return [
@@ -192,7 +186,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -299,11 +292,11 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         res_native = getattr(rolling, pandas_function_name)()
                 elif function_name.startswith("ewm"):
                     if self._implementation.is_pandas() and (
-                        backend_version := self._backend_version
+                        self._implementation._backend_version()
                     ) < (1, 2):  # pragma: no cover
                         msg = (
                             "Exponentially weighted calculation is not available in over "
-                            f"context for pandas versions older than 1.2.0, found {backend_version}."
+                            f"context for pandas versions older than 1.2.0, found {self._implementation._backend_version()}."
                         )
                         raise NotImplementedError(msg)
                     ewm = grouped[list(output_names)].ewm(**pandas_kwargs)
@@ -350,6 +343,5 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )

@@ -86,8 +86,6 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
-          # temporary to get CI green
-          uv pip install "sqlglot<26.32"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -178,24 +176,35 @@ jobs:
         run: |
           git clone https://github.com/posit-dev/py-shiny.git
           cd py-shiny
+          uv venv -p ${{ matrix.python-version }}
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
-      - name: install-shiny-dev
-        env:
-          UV_SYSTEM_PYTHON: 1
         run: |
           cd py-shiny
+          . .venv/bin/activate
+          uv pip install --upgrade tox virtualenv setuptools
+      - name: install-shiny-dev
+        run: |
+          cd py-shiny
+          . .venv/bin/activate
+          # temporary to get CI green
+          uv pip install "chatlas<0.9.0"
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd py-shiny
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd py-shiny
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run `make narwhals-test-integration`
         run: |
           cd py-shiny
+          . .venv/bin/activate
           # Isort seems to behave slightly differently in CI
           # so we ignore its output
           make format -s
@@ -228,8 +237,6 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
-          # temporary to get CI green
-          uv pip install "sqlglot<26.32"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -450,8 +457,6 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
-          # temporary to get CI green
-          uv pip install "sqlglot<26.32"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |

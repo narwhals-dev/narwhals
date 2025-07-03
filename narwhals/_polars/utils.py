@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import polars as pl
 
-from narwhals._utils import Version, _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import (
+    Implementation,
+    Version,
+    _DeferredIterable,
+    isinstance_or_issubclass,
+)
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
@@ -28,6 +33,8 @@ if TYPE_CHECKING:
     NativeT = TypeVar(
         "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
     )
+
+BACKEND_VERSION = Implementation.POLARS._backend_version()
 
 
 @overload
@@ -57,7 +64,7 @@ def extract_args_kwargs(
 
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
-    dtype: pl.DataType, version: Version, backend_version: tuple[int, ...]
+    dtype: pl.DataType, version: Version
 ) -> DType:
     dtypes = version.dtypes
     if dtype == pl.Float64:
@@ -115,19 +122,15 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         )
     if isinstance_or_issubclass(dtype, pl.Struct):
         fields = [
-            dtypes.Field(name, native_to_narwhals_dtype(tp, version, backend_version))
+            dtypes.Field(name, native_to_narwhals_dtype(tp, version))
             for name, tp in dtype
         ]
         return dtypes.Struct(fields)
     if isinstance_or_issubclass(dtype, pl.List):
-        return dtypes.List(
-            native_to_narwhals_dtype(dtype.inner, version, backend_version)
-        )
+        return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance_or_issubclass(dtype, pl.Array):
-        outer_shape = dtype.width if backend_version < (0, 20, 30) else dtype.size
-        return dtypes.Array(
-            native_to_narwhals_dtype(dtype.inner, version, backend_version), outer_shape
-        )
+        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+        return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
     if dtype == pl.Decimal:
         return dtypes.Decimal()
     if dtype == pl.Time:
@@ -138,7 +141,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: IntoDType, version: Version, backend_version: tuple[int, ...]
+    dtype: IntoDType, version: Version
 ) -> pl.DataType:
     dtypes = version.dtypes
     if dtype == dtypes.Float64:
@@ -194,27 +197,22 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pl.Duration(dtype.time_unit)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.List):
-        return pl.List(narwhals_to_native_dtype(dtype.inner, version, backend_version))
+        return pl.List(narwhals_to_native_dtype(dtype.inner, version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         fields = [
-            pl.Field(
-                field.name,
-                narwhals_to_native_dtype(field.dtype, version, backend_version),
-            )
+            pl.Field(field.name, narwhals_to_native_dtype(field.dtype, version))
             for field in dtype.fields
         ]
         return pl.Struct(fields)
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         size = dtype.size
-        kwargs = {"width": size} if backend_version < (0, 20, 30) else {"shape": size}
-        return pl.Array(
-            narwhals_to_native_dtype(dtype.inner, version, backend_version), **kwargs
-        )
+        kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
+        return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
     return pl.Unknown()  # pragma: no cover
 
 
-def _is_polars_exception(exception: Exception, backend_version: tuple[int, ...]) -> bool:
-    if backend_version >= (1,):
+def _is_polars_exception(exception: Exception) -> bool:
+    if BACKEND_VERSION >= (1,):
         # Old versions of Polars didn't have PolarsError.
         return isinstance(exception, pl.exceptions.PolarsError)
     # Last attempt, for old Polars versions.
@@ -226,9 +224,7 @@ def _is_cudf_exception(exception: Exception) -> bool:
     return str(exception).startswith("CUDF failure")
 
 
-def catch_polars_exception(
-    exception: Exception, backend_version: tuple[int, ...]
-) -> NarwhalsError | Exception:
+def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
     elif isinstance(exception, pl.exceptions.ShapeError):
@@ -239,7 +235,7 @@ def catch_polars_exception(
         return DuplicateError(str(exception))
     elif isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
-    if _is_polars_exception(exception, backend_version) or _is_cudf_exception(exception):
+    if _is_polars_exception(exception) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception

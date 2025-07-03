@@ -53,7 +53,6 @@ __all__ = [
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     def all(self) -> CompliantExprT:
@@ -126,6 +125,10 @@ class LazyNamespace(
     Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT_co],
 ):
     @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
+    @property
     def _lazyframe(self) -> type[CompliantLazyFrameT]: ...
 
     def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
@@ -140,6 +143,10 @@ class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
     Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property

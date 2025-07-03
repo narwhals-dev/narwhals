@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
-import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._expression_parsing import ExprKind
@@ -11,13 +10,12 @@ from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     _remap_full_join_keys,
     check_column_names_are_unique,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
-    validate_backend_version,
 )
 from narwhals.typing import CompliantLazyFrame
 
@@ -32,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
@@ -46,32 +44,32 @@ Very low priority until `dask` adds typing.
 
 
 class DaskLazyFrame(
-    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"]
+    CompliantLazyFrame["DaskExpr", "dd.DataFrame", "LazyFrame[dd.DataFrame]"],
+    ValidateBackendVersion,
 ):
+    _implementation = Implementation.DASK
+
     def __init__(
         self,
         native_dataframe: dd.DataFrame,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: dd.DataFrame = native_dataframe
-        self._backend_version = backend_version
-        self._implementation = Implementation.DASK
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
+        if validate_backend_version:
+            self._validate_backend_version()
 
     @staticmethod
     def _is_native(obj: dd.DataFrame | Any) -> TypeIs[dd.DataFrame]:
         return isinstance(obj, dd.DataFrame)
 
     @classmethod
-    def from_native(cls, data: dd.DataFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: dd.DataFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[dd.DataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -86,20 +84,16 @@ class DaskLazyFrame(
     def __narwhals_namespace__(self) -> DaskNamespace:
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version, version=self._version)
+        return DaskNamespace(version=self._version)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, backend_version=self._backend_version, version=version
-        )
+        return self.__class__(self.native, version=version)
 
     def _with_native(self, df: Any) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def _iter_columns(self) -> Iterator[dx.Series]:
         for _col, ser in self.native.items():  # noqa: PERF102
@@ -120,7 +114,7 @@ class DaskLazyFrame(
             return PandasLikeDataFrame(
                 result,
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
@@ -132,7 +126,7 @@ class DaskLazyFrame(
 
             return PolarsDataFrame(
                 pl.from_pandas(result),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 
@@ -143,7 +137,7 @@ class DaskLazyFrame(
 
             return ArrowDataFrame(
                 pa.Table.from_pandas(result),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
@@ -168,9 +162,7 @@ class DaskLazyFrame(
 
     def simple_select(self, *column_names: str) -> Self:
         df: Incomplete = self.native
-        native = select_columns_by_name(
-            df, list(column_names), self._backend_version, self._implementation
-        )
+        native = select_columns_by_name(df, list(column_names), self._implementation)
         return self._with_native(native)
 
     def aggregate(self, *exprs: DaskExpr) -> Self:
@@ -184,7 +176,6 @@ class DaskLazyFrame(
         df = select_columns_by_name(
             df.assign(**dict(new_series)),
             [s[0] for s in new_series],
-            self._backend_version,
             self._implementation,
         )
         return self._with_native(df)
@@ -220,11 +211,7 @@ class DaskLazyFrame(
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         if order_by is None:
-            return self._with_native(
-                add_row_index(
-                    self.native, name, self._backend_version, self._implementation
-                )
-            )
+            return self._with_native(add_row_index(self.native, name))
         else:
             plx = self.__narwhals_namespace__()
             columns = self.columns
@@ -376,14 +363,9 @@ class DaskLazyFrame(
         Notice that a native object is returned.
         """
         other_native: Incomplete = other.native
+        # rename to avoid creating extra columns in join
         return (
-            select_columns_by_name(
-                other_native,
-                column_names=columns_to_select,
-                backend_version=self._backend_version,
-                implementation=self._implementation,
-            )
-            # rename to avoid creating extra columns in join
+            select_columns_by_name(other_native, columns_to_select, self._implementation)
             .rename(columns=columns_mapping)
             .drop_duplicates()
         )

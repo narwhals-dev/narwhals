@@ -5,12 +5,12 @@ from collections.abc import Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
 
 from narwhals._utils import (
+    Implementation,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
     is_compliant_series,
     is_index_selector,
-    parse_version,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_scalar
@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._utils import Implementation
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -202,11 +201,11 @@ class Series(Generic[IntoSeriesT]):
         if supports_arrow_c_stream(native_series):
             return native_series.__arrow_c_stream__(requested_schema=requested_schema)
         try:
-            import pyarrow as pa  # ignore-banned-import
+            pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa) < (16, 0):  # pragma: no cover
+        if pa_version < (16, 0):  # pragma: no cover
             msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
         from narwhals._arrow.utils import chunked_array

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
 
 
 class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
@@ -36,7 +36,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         function_name: str,
         evaluate_output_names: EvalNames[ArrowDataFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
         implementation: Implementation | None = None,
@@ -47,7 +46,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         self._depth = depth
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
@@ -58,17 +56,14 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         evaluate_column_names: EvalNames[ArrowDataFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         function_name: str = "",
     ) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             try:
                 return [
                     ArrowSeries(
-                        df.native[column_name],
-                        name=column_name,
-                        backend_version=df._backend_version,
-                        version=df._version,
+                        df.native[column_name], name=column_name, version=df._version
                     )
                     for column_name in evaluate_column_names(df)
                 ]
@@ -83,12 +78,11 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             tbl = df.native
             cols = df.columns
@@ -103,16 +97,13 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name="nth",
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowNamespace(version=self._version)
 
     def __narwhals_expr__(self) -> None: ...
 
@@ -175,7 +166,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

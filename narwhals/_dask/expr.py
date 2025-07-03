@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -55,7 +55,6 @@ class DaskExpr(
         function_name: str,
         evaluate_output_names: EvalNames[DaskLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> None:
@@ -64,7 +63,6 @@ class DaskExpr(
         self._function_name = function_name
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._scalar_kwargs = scalar_kwargs or {}
         self._metadata: ExprMetadata | None = None
@@ -75,10 +73,9 @@ class DaskExpr(
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._dask.namespace import DaskNamespace
 
-        return DaskNamespace(backend_version=self._backend_version, version=self._version)
+        return DaskNamespace(version=self._version)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -92,7 +89,6 @@ class DaskExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
         )
@@ -103,7 +99,7 @@ class DaskExpr(
         evaluate_column_names: EvalNames[DaskLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         function_name: str = "",
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -123,12 +119,11 @@ class DaskExpr(
             function_name=function_name,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             return [df.native.iloc[:, i] for i in column_indices]
 
@@ -138,7 +133,6 @@ class DaskExpr(
             function_name="nth",
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -169,7 +163,6 @@ class DaskExpr(
             function_name=f"{self._function_name}->{expr_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             scalar_kwargs=scalar_kwargs,
         )
@@ -181,7 +174,6 @@ class DaskExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
         )
@@ -528,9 +520,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(
-                expr.to_frame(), col_token, self._backend_version, self._implementation
-            )
+            frame = add_row_index(expr.to_frame(), col_token)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
 
@@ -540,9 +530,7 @@ class DaskExpr(
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
             col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
-            frame = add_row_index(
-                expr.to_frame(), col_token, self._backend_version, self._implementation
-            )
+            frame = add_row_index(expr.to_frame(), col_token)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
 
@@ -635,7 +623,6 @@ class DaskExpr(
             function_name=self._function_name + "->over",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
