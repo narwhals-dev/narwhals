@@ -18,7 +18,6 @@ from narwhals._arrow.utils import (
 )
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
-    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
@@ -277,12 +276,6 @@ class ArrowNamespace(EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.T
                 )
             ]
 
-        exprs = tuple(
-            expr
-            if self._expr._is_expr(expr)
-            else self.lit(expr, dtype=None).broadcast(ExprKind.LITERAL)
-            for expr in exprs
-        )
         return self._expr._from_callable(
             func=func,
             depth=max(x._depth for x in exprs) + 1,

@@ -209,10 +209,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             cols = chain.from_iterable(expr(df) for expr in exprs)
             return [ibis.coalesce(*cols)]
 
-        exprs = tuple(
-            expr if self._expr._is_expr(expr) else self.lit(expr, dtype=None)
-            for expr in exprs
-        )
         return self._expr(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
