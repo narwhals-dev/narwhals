@@ -93,7 +93,6 @@ class PandasLikeNamespace(
                 index=df._native_frame.index[0:1],
                 context=self,
             )
-
             if dtype:
                 return pandas_series.cast(dtype)
             return pandas_series
