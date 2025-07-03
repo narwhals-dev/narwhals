@@ -6,12 +6,11 @@ from typing import TYPE_CHECKING, Any, cast
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._compliant.series import _SeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import isinstance_or_issubclass
-from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping
 
     from typing_extensions import TypeAlias, TypeIs
 
@@ -238,14 +237,10 @@ def extract_native(
     If one of the two sides has a `_broadcast` flag, then extract the scalar
     underneath it so that PyArrow can do its own broadcasting.
     """
-    from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.series import ArrowSeries
 
     if rhs is None:  # pragma: no cover
         return lhs.native, lit(None, type=lhs._type)
-
-    if isinstance(rhs, ArrowDataFrame):
-        return NotImplemented
 
     if isinstance(rhs, ArrowSeries):
         if lhs._broadcast and not rhs._broadcast:
@@ -259,31 +254,6 @@ def extract_native(
         raise TypeError(msg)
 
     return lhs.native, rhs if isinstance(rhs, pa.Scalar) else lit(rhs)
-
-
-def align_series_full_broadcast(*series: ArrowSeries) -> Sequence[ArrowSeries]:
-    # Ensure all of `series` are of the same length.
-    lengths = [len(s) for s in series]
-    max_length = max(lengths)
-    fast_path = all(_len == max_length for _len in lengths)
-
-    if fast_path:
-        return series
-
-    reshaped = []
-    for s in series:
-        if s._broadcast:
-            value = s.native[0]
-            if s._backend_version < (13,) and hasattr(value, "as_py"):
-                value = value.as_py()
-            reshaped.append(s._with_native(pa.array([value] * max_length, type=s._type)))
-        else:
-            if (actual_len := len(s)) != max_length:
-                msg = f"Expected object of length {max_length}, got {actual_len}."
-                raise ShapeError(msg)
-            reshaped.append(s)
-
-    return reshaped
 
 
 def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
@@ -467,6 +437,4 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ChunkedArrayAny"]):
-    def __init__(self, series: ArrowSeries, /) -> None:
-        self._compliant_series = series
+class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...

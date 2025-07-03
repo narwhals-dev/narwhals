@@ -15,8 +15,10 @@
         - starts_with
         - strip_chars
         - tail
+        - to_date
         - to_datetime
         - to_lowercase
         - to_uppercase
+        - zfill
       show_source: false
       show_bases: false

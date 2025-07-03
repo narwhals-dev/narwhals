@@ -13,7 +13,6 @@ PANDAS_AND_NUMPY_VERSION = [
     ("2.2.2", "1.26.4"),
 ]
 POLARS_VERSION = [
-    "0.20.3",
     "0.20.4",
     "0.20.5",
     "0.20.6",
@@ -58,14 +57,14 @@ polars_version = random.choice(POLARS_VERSION)
 pyarrow_version = random.choice(PYARROW_VERSION)
 
 content = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
-with open("random-requirements.txt", "w") as fd:
+with open("random-requirements.txt", "w", encoding="utf-8") as fd:
     fd.write(content)
 
-with open("pyproject.toml") as fd:
+with open("pyproject.toml", encoding="utf-8") as fd:
     content = fd.read()
 content = content.replace(
     'filterwarnings = [\n  "error",\n]',
     "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]",
 )
-with open("pyproject.toml", "w") as fd:
+with open("pyproject.toml", "w", encoding="utf-8") as fd:
     fd.write(content)

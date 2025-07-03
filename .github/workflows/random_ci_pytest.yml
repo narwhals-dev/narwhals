@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pytest-random-ci-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: generate-random-versions
         run: python utils/generate_random_versions.py
