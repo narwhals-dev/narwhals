@@ -32,7 +32,6 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     issue_deprecation_warning,
-    parse_version,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
@@ -503,11 +502,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if supports_arrow_c_stream(native_frame):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
-            import pyarrow as pa  # ignore-banned-import
+            pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa) < (14, 0):  # pragma: no cover
+        if pa_version < (14, 0):  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
@@ -534,10 +533,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                 `backend` can be specified in various ways
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`,
+                    `IBIS` or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
 
         Returns:
             A new LazyFrame.
@@ -580,6 +579,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             Implementation.DASK,
             Implementation.DUCKDB,
             Implementation.POLARS,
+            Implementation.IBIS,
         )
         if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
             msg = (
@@ -1196,7 +1196,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def iter_rows(
-        self, *, named: Literal[False], buffer_size: int = ...
+        self, *, named: Literal[False] = ..., buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload

@@ -24,7 +24,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: typing-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Create venv
         run: uv venv .venv

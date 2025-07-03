@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     DepthTrackingExprT_contra,
     EagerExprT_contra,
     LazyExprT_contra,
+    NarwhalsAggregation,
     NativeExprT_co,
 )
 from narwhals._typing_compat import Protocol38
@@ -22,25 +23,14 @@ from narwhals._utils import is_sequence_of
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from typing_extensions import TypeAlias
-
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
 
-__all__ = [
-    "CompliantGroupBy",
-    "DepthTrackingGroupBy",
-    "EagerGroupBy",
-    "LazyGroupBy",
-    "NarwhalsAggregation",
-]
+__all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy", "LazyGroupBy"]
 
 NativeAggregationT_co = TypeVar(
     "NativeAggregationT_co", bound="str | Callable[..., Any]", covariant=True
 )
-NarwhalsAggregation: TypeAlias = Literal[
-    "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
-]
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")

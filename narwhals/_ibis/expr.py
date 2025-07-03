@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import WindowInputs
+from narwhals._compliant import LazyExpr, WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
@@ -52,13 +51,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
         self._window_function: IbisWindowFunction | None = window_function
@@ -82,10 +79,9 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._ibis.namespace import IbisNamespace
 
-        return IbisNamespace(backend_version=self._backend_version, version=self._version)
+        return IbisNamespace(version=self._version)
 
     def __floordiv__(self, other: Any) -> Self:
         def func(expr: ir.IntegerColumn, other: ir.IntegerColumn) -> ir.Value:
@@ -193,7 +189,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
         evaluate_column_names: EvalNames[IbisLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Column]:
             return [df.native[name] for name in evaluate_column_names(df)]
@@ -202,12 +198,11 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Column]:
             return [df.native[i] for i in column_indices]
 
@@ -215,7 +210,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -232,7 +226,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             call=call,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -263,7 +256,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -276,7 +268,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -286,7 +277,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -352,7 +342,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -401,7 +390,6 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

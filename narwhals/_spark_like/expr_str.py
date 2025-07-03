@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._utils import _is_naive_format, not_implemented
 

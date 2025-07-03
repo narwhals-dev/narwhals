@@ -5,7 +5,13 @@ from narwhals._compliant.dataframe import (
     CompliantLazyFrame,
     EagerDataFrame,
 )
-from narwhals._compliant.expr import CompliantExpr, EagerExpr, LazyExpr
+from narwhals._compliant.expr import (
+    CompliantExpr,
+    DepthTrackingExpr,
+    EagerExpr,
+    LazyExpr,
+    LazyExprNamespace,
+)
 from narwhals._compliant.group_by import (
     CompliantGroupBy,
     DepthTrackingGroupBy,
@@ -14,6 +20,7 @@ from narwhals._compliant.group_by import (
 )
 from narwhals._compliant.namespace import (
     CompliantNamespace,
+    DepthTrackingNamespace,
     EagerNamespace,
     LazyNamespace,
 )
@@ -23,7 +30,16 @@ from narwhals._compliant.selectors import (
     EagerSelectorNamespace,
     LazySelectorNamespace,
 )
-from narwhals._compliant.series import CompliantSeries, EagerSeries
+from narwhals._compliant.series import (
+    CompliantSeries,
+    EagerSeries,
+    EagerSeriesCatNamespace,
+    EagerSeriesDateTimeNamespace,
+    EagerSeriesListNamespace,
+    EagerSeriesNamespace,
+    EagerSeriesStringNamespace,
+    EagerSeriesStructNamespace,
+)
 from narwhals._compliant.typing import (
     CompliantExprT,
     CompliantFrameT,
@@ -44,6 +60,7 @@ from narwhals._compliant.when_then import (
     LazyThen,
     LazyWhen,
 )
+from narwhals._compliant.window import WindowInputs
 
 __all__ = [
     "CompliantDataFrame",
@@ -60,7 +77,9 @@ __all__ = [
     "CompliantSeriesT",
     "CompliantThen",
     "CompliantWhen",
+    "DepthTrackingExpr",
     "DepthTrackingGroupBy",
+    "DepthTrackingNamespace",
     "EagerDataFrame",
     "EagerDataFrameT",
     "EagerExpr",
@@ -68,12 +87,19 @@ __all__ = [
     "EagerNamespace",
     "EagerSelectorNamespace",
     "EagerSeries",
+    "EagerSeriesCatNamespace",
+    "EagerSeriesDateTimeNamespace",
+    "EagerSeriesListNamespace",
+    "EagerSeriesNamespace",
+    "EagerSeriesStringNamespace",
+    "EagerSeriesStructNamespace",
     "EagerSeriesT",
     "EagerWhen",
     "EvalNames",
     "EvalSeries",
     "IntoCompliantExpr",
     "LazyExpr",
+    "LazyExprNamespace",
     "LazyGroupBy",
     "LazyNamespace",
     "LazySelectorNamespace",
@@ -81,4 +107,5 @@ __all__ = [
     "LazyWhen",
     "NativeFrameT_co",
     "NativeSeriesT_co",
+    "WindowInputs",
 ]
