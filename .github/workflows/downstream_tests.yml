@@ -197,7 +197,10 @@ jobs:
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd py-shiny
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run `make narwhals-test-integration`
         run: |
           cd py-shiny
