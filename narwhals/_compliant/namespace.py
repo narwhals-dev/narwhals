@@ -43,7 +43,12 @@ if TYPE_CHECKING:
 
     Incomplete: TypeAlias = Any
 
-__all__ = ["CompliantNamespace", "EagerNamespace"]
+__all__ = [
+    "CompliantNamespace",
+    "DepthTrackingNamespace",
+    "EagerNamespace",
+    "LazyNamespace",
+]
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):

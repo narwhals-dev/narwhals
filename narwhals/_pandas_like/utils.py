@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
-from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._constants import (
     MS_PER_SECOND,
     NS_PER_MICROSECOND,

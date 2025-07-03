@@ -12,7 +12,7 @@ from narwhals._utils import find_stacklevel
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
