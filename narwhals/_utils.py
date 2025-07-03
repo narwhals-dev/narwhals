@@ -1562,6 +1562,41 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
+def generate_repr_html(header: str, native_html: str) -> str | None:
+    import io
+    import xml.etree.ElementTree as ET
+
+    style_css = (
+        ".dataframe caption { "
+        "caption-side: bottom; "
+        "text-align: center; "
+        "font-weight: bold; "
+        "padding-top: 8px;"
+        "}"
+    )
+    try:
+        tree = ET.parse(io.StringIO(native_html.replace("<style scoped>", "<style>")))  # noqa: S314
+    except (SyntaxError, TypeError):
+        return None
+    table = tree.find("table")
+    if table is None:
+        return None
+    caption = ET.Element("caption")
+    caption.text = header
+    table.insert(0, caption)
+    style = tree.find("style")
+    if style is not None:
+        text_existing = style.text or ""
+        style.text = f"{text_existing}\n{style_css}"
+    else:
+        style = ET.Element("style")
+        style.text = style_css
+        tree.getroot().insert(0, style)
+    buf = io.BytesIO()
+    tree.write(buf, "utf-8", method="html")
+    return buf.getvalue().decode()
+
+
 def check_columns_exist(
     subset: Collection[str], /, *, available: Collection[str]
 ) -> ColumnNotFoundError | None:

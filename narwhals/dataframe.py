@@ -22,9 +22,11 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import (
     Implementation,
+    _hasattr_static,
     find_stacklevel,
     flatten,
     generate_repr,
+    generate_repr_html,
     is_compliant_dataframe,
     is_compliant_lazyframe,
     is_index_selector,
@@ -489,6 +491,12 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
+
+    def _repr_html_(self) -> str | None:  # pragma: no cover
+        native: Any = self.to_native()
+        if _hasattr_static(native, "_repr_html_") and (html := native._repr_html_()):
+            return generate_repr_html("Narwhals DataFrame", html)
+        return None
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
