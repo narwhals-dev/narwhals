@@ -561,6 +561,16 @@ class ArrowDataFrame(
                 backend_version=parse_version(dask),
                 version=self._version,
             )
+        elif backend.is_ibis():
+            import ibis  # ignore-banned-import
+
+            from narwhals._ibis.dataframe import IbisLazyFrame
+
+            return IbisLazyFrame(
+                ibis.memtable(self.native, columns=self.columns),
+                backend_version=parse_version(ibis),
+                version=self._version,
+            )
         raise AssertionError  # pragma: no cover
 
     def collect(
