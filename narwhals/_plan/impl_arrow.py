@@ -10,7 +10,7 @@ import typing as t
 from functools import singledispatch
 from itertools import chain, repeat
 
-from narwhals._plan import expr
+from narwhals._plan import aggregation, expr
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.dummy import DummyCompliantFrame, DummyCompliantSeries
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
@@ -218,13 +218,26 @@ def ternary(node: expr.Ternary, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
-@_evaluate_inner.register(expr.Agg)
-def agg(node: expr.Agg, frame: ArrowDataFrame) -> NativeSeries:
-    raise NotImplementedError(type(node))
+@_evaluate_inner.register(aggregation.Last)
+@_evaluate_inner.register(aggregation.First)
+def first_last(
+    node: aggregation.First | aggregation.Last, frame: ArrowDataFrame
+) -> NativeSeries:
+    native = _evaluate_inner(node.expr, frame)
+    if height := len(native):
+        result = native[height - 1 if isinstance(node, aggregation.Last) else 0]
+    else:
+        result = None
+    return _lit_native(result, frame)
 
 
 @_evaluate_inner.register(expr.OrderableAgg)
 def orderable_agg(node: expr.OrderableAgg, frame: ArrowDataFrame) -> NativeSeries:
+    raise NotImplementedError(type(node))
+
+
+@_evaluate_inner.register(expr.Agg)
+def agg(node: expr.Agg, frame: ArrowDataFrame) -> NativeSeries:
     raise NotImplementedError(type(node))
 
 
