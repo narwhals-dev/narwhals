@@ -36,6 +36,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.expr import Expr
+from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -48,7 +49,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
@@ -1862,6 +1862,11 @@ def coalesce(
     └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+
+    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    if non_exprs:
+        msg = f"All arguments must be of type {str!r}, {Expr!r}, or {Series!r}.\nGot: {', '.join(repr((type(e), e)) for e in non_exprs)}"
+        raise TypeError(msg)
 
     return Expr(
         lambda plx: apply_n_ary_operation(
