@@ -218,7 +218,7 @@ class DaskExpr(
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if isinstance(other, type(self)):
-                if len(other_ := other(df)) > 1:
+                if len(other_ := other(df)) > 1:  # pragma: no cover
                     msg = "Expected expression with single output, found multiple"
                     raise ValueError(msg)
                 other_series = other_[0]
@@ -245,7 +245,7 @@ class DaskExpr(
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if isinstance(other, type(self)):
-                if len(other_ := other(df)) > 1:
+                if len(other_ := other(df)) > 1:  # pragma: no cover
                     msg = "Expected expression with single output, found multiple"
                     raise ValueError(msg)
                 other_series = other_[0]
