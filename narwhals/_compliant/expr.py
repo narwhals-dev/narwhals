@@ -652,7 +652,7 @@ class EagerExpr(
         limit: int | None,
     ) -> Self:
         return self._reuse_series(
-            "fill_null", value=value, strategy=strategy, limit=limit
+            "fill_null", value=value, scalar_kwargs={"strategy": strategy, "limit": limit}
         )
 
     def is_in(self, other: Any) -> Self:
@@ -739,16 +739,16 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "quantile",
+            returns_scalar=True,
             quantile=quantile,
             interpolation=interpolation,
-            returns_scalar=True,
         )
 
     def head(self, n: int) -> Self:
-        return self._reuse_series("head", n=n)
+        return self._reuse_series("head", scalar_kwargs={"n": n})
 
     def tail(self, n: int) -> Self:
-        return self._reuse_series("tail", n=n)
+        return self._reuse_series("tail", scalar_kwargs={"n": n})
 
     def round(self, decimals: int) -> Self:
         return self._reuse_series("round", decimals=decimals)
@@ -768,9 +768,11 @@ class EagerExpr(
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
+            scalar_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+            },
         )
 
     def rolling_std(
@@ -778,15 +780,22 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            ddof=ddof,
+            scalar_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
+            },
         )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
-            "rolling_sum", window_size=window_size, min_samples=min_samples, center=center
+            "rolling_sum",
+            scalar_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+            },
         )
 
     def rolling_var(
@@ -794,10 +803,12 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "rolling_var",
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            ddof=ddof,
+            scalar_kwargs={
+                "window_size": window_size,
+                "min_samples": min_samples,
+                "center": center,
+                "ddof": ddof,
+            },
         )
 
     def map_batches(
@@ -829,6 +840,38 @@ class EagerExpr(
             alias_output_names=self._alias_output_names,
             context=self,
         )
+
+    def shift(self, n: int) -> Self:
+        return self._reuse_series("shift", scalar_kwargs={"n": n})
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        return self._reuse_series("cum_sum", scalar_kwargs={"reverse": reverse})
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._reuse_series("cum_count", scalar_kwargs={"reverse": reverse})
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._reuse_series("cum_min", scalar_kwargs={"reverse": reverse})
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._reuse_series("cum_max", scalar_kwargs={"reverse": reverse})
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        return self._reuse_series("cum_prod", scalar_kwargs={"reverse": reverse})
+
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
+        return self._reuse_series(
+            "rank", scalar_kwargs={"method": method, "descending": descending}
+        )
+
+    def log(self, base: float) -> Self:
+        return self._reuse_series("log", base=base)
+
+    def exp(self) -> Self:
+        return self._reuse_series("exp")
+
+    def sqrt(self) -> Self:
+        return self._reuse_series("sqrt")
 
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:

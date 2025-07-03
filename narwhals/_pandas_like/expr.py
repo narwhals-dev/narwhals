@@ -18,12 +18,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Implementation, Version, _FullContext
-    from narwhals.typing import (
-        FillNullStrategy,
-        NonNestedLiteral,
-        PythonLiteral,
-        RankMethod,
-    )
+    from narwhals.typing import PythonLiteral
 
 WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "cum_sum": "cumsum",
@@ -196,12 +191,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             ignore_nulls=ignore_nulls,
         )
 
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_sum", scalar_kwargs={"reverse": reverse})
-
-    def shift(self, n: int) -> Self:
-        return self._reuse_series("shift", scalar_kwargs={"n": n})
-
     def over(  # noqa: C901, PLR0915
         self, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> Self:
@@ -323,85 +312,3 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             backend_version=self._backend_version,
             version=self._version,
         )
-
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_count", scalar_kwargs={"reverse": reverse})
-
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_min", scalar_kwargs={"reverse": reverse})
-
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_max", scalar_kwargs={"reverse": reverse})
-
-    def cum_prod(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_prod", scalar_kwargs={"reverse": reverse})
-
-    def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
-    ) -> Self:
-        return self._reuse_series(
-            "fill_null", scalar_kwargs={"strategy": strategy, "limit": limit}, value=value
-        )
-
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._reuse_series(
-            "rolling_sum",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-            },
-        )
-
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._reuse_series(
-            "rolling_mean",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-            },
-        )
-
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._reuse_series(
-            "rolling_std",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-                "ddof": ddof,
-            },
-        )
-
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._reuse_series(
-            "rolling_var",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-                "ddof": ddof,
-            },
-        )
-
-    def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        return self._reuse_series(
-            "rank", scalar_kwargs={"method": method, "descending": descending}
-        )
-
-    def log(self, base: float) -> Self:
-        return self._reuse_series("log", base=base)
-
-    def exp(self) -> Self:
-        return self._reuse_series("exp")
-
-    def sqrt(self) -> Self:
-        return self._reuse_series("sqrt")
