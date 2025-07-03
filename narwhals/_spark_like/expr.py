@@ -454,13 +454,19 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(f)._with_window_function(window_f)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _cast(expr: Column) -> Column:
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_dtypes
+                dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
-            return expr.cast(spark_dtype)
+            return [expr.cast(spark_dtype) for expr in self(df)]
 
-        return self._with_elementwise(_cast)
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     def count(self) -> Self:
         return self._with_callable(self._F.count)
