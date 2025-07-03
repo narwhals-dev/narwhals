@@ -37,6 +37,8 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "rank": "rank",
     "diff": "diff",
     "fill_null": "fillna",
+    "quantile": "quantile",
+    "ewm_mean": "mean",
 }
 
 
@@ -74,6 +76,31 @@ def window_kwargs_to_pandas_equivalent(
         assert "strategy" in kwargs  # noqa: S101
         assert "limit" in kwargs  # noqa: S101
         pandas_kwargs = {"strategy": kwargs["strategy"], "limit": kwargs["limit"]}
+    elif function_name == "quantile":
+        assert "quantile" in kwargs  # noqa: S101
+        assert "interpolation" in kwargs  # noqa: S101
+        pandas_kwargs = {
+            "q": kwargs["quantile"],
+            "interpolation": kwargs["interpolation"],
+        }
+    elif function_name.startswith("ewm_"):
+        assert "com" in kwargs  # noqa: S101
+        assert "span" in kwargs  # noqa: S101
+        assert "half_life" in kwargs  # noqa: S101
+        assert "alpha" in kwargs  # noqa: S101
+        assert "adjust" in kwargs  # noqa: S101
+        assert "min_samples" in kwargs  # noqa: S101
+        assert "ignore_nulls" in kwargs  # noqa: S101
+
+        pandas_kwargs = {
+            "com": kwargs["com"],
+            "span": kwargs["span"],
+            "halflife": kwargs["half_life"],
+            "alpha": kwargs["alpha"],
+            "adjust": kwargs["adjust"],
+            "min_periods": kwargs["min_samples"],
+            "ignore_na": kwargs["ignore_nulls"],
+        }
     else:  # sum, len, ...
         pandas_kwargs = {}
     return pandas_kwargs
@@ -182,13 +209,15 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     ) -> Self:
         return self._reuse_series(
             "ewm_mean",
-            com=com,
-            span=span,
-            half_life=half_life,
-            alpha=alpha,
-            adjust=adjust,
-            min_samples=min_samples,
-            ignore_nulls=ignore_nulls,
+            scalar_kwargs={
+                "com": com,
+                "span": span,
+                "half_life": half_life,
+                "alpha": alpha,
+                "adjust": adjust,
+                "min_samples": min_samples,
+                "ignore_nulls": ignore_nulls,
+            },
         )
 
     def over(  # noqa: C901, PLR0915
@@ -232,7 +261,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 function_name, self._scalar_kwargs
             )
 
-            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912
+            def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
@@ -268,6 +297,18 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         )
                     else:
                         res_native = getattr(rolling, pandas_function_name)()
+                elif function_name.startswith("ewm"):
+                    if self._implementation.is_pandas() and (
+                        backend_version := self._backend_version
+                    ) < (1, 2):  # pragma: no cover
+                        msg = (
+                            "Exponentially weighted calculation is not available in over "
+                            f"context for pandas versions older than 1.2.0, found {backend_version}."
+                        )
+                        raise NotImplementedError(msg)
+                    ewm = grouped[list(output_names)].ewm(**pandas_kwargs)
+                    assert pandas_function_name is not None  # help mypy  # noqa: S101
+                    res_native = getattr(ewm, pandas_function_name)()
                 elif function_name == "fill_null":
                     assert "strategy" in self._scalar_kwargs  # noqa: S101
                     assert "limit" in self._scalar_kwargs  # noqa: S101

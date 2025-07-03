@@ -64,6 +64,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         "len": "size",
         "n_unique": n_unique,
         "count": "count",
+        "quantile": "quantile",
     }
 
     def __init__(
