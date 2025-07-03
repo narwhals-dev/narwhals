@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:

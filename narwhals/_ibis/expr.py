@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import WindowInputs
+from narwhals._compliant import LazyExpr, WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,

@@ -482,6 +482,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 validate_backend_version=True,
                 version=self._version,
             )
+
         raise AssertionError  # pragma: no cover
 
     @overload

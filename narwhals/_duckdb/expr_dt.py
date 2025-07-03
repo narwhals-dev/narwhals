@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,

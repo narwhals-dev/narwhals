@@ -3,8 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.expr import DepthTrackingExpr
+from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (

@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 from duckdb import CoalesceOperator, StarExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import WindowInputs
+from narwhals._compliant import LazyExpr, WindowInputs
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace

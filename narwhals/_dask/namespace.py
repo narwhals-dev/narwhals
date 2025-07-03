@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING, cast
 import dask.dataframe as dd
 import pandas as pd
 
-from narwhals._compliant import CompliantThen, CompliantWhen, LazyNamespace
-from narwhals._compliant.namespace import DepthTrackingNamespace
+from narwhals._compliant import (
+    CompliantThen,
+    CompliantWhen,
+    DepthTrackingNamespace,
+    LazyNamespace,
+)
 from narwhals._dask.dataframe import DaskLazyFrame
 from narwhals._dask.expr import DaskExpr
 from narwhals._dask.selectors import DaskSelectorNamespace
