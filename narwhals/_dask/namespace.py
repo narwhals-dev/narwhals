@@ -55,8 +55,7 @@ class DaskNamespace(
     def _lazyframe(self) -> type[DaskLazyFrame]:
         return DaskLazyFrame
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
@@ -76,7 +75,6 @@ class DaskNamespace(
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -91,7 +89,6 @@ class DaskNamespace(
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -117,7 +114,6 @@ class DaskNamespace(
             function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -143,7 +139,6 @@ class DaskNamespace(
             function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -160,7 +155,6 @@ class DaskNamespace(
             function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -185,15 +179,11 @@ class DaskNamespace(
                     )
                     raise TypeError(msg)
             return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="inner"),
-                backend_version=self._backend_version,
-                version=self._version,
+                dd.concat(dfs, axis=0, join="inner"), version=self._version
             )
         if how == "diagonal":
             return DaskLazyFrame(
-                dd.concat(dfs, axis=0, join="outer"),
-                backend_version=self._backend_version,
-                version=self._version,
+                dd.concat(dfs, axis=0, join="outer"), version=self._version
             )
 
         raise NotImplementedError
@@ -215,7 +205,6 @@ class DaskNamespace(
             function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -233,7 +222,6 @@ class DaskNamespace(
             function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -251,7 +239,6 @@ class DaskNamespace(
             function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -296,7 +283,6 @@ class DaskNamespace(
                 exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(exprs[0], "_alias_output_names", None),
-            backend_version=self._backend_version,
             version=self._version,
         )
 

@@ -284,6 +284,7 @@ exclude_also = [
   "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
+  '.*._backend_version\(\) <',
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         EvalSeries,
         ScalarKwargs,
     )
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
@@ -58,14 +58,12 @@ SelectorOrExpr: TypeAlias = (
 
 class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     @classmethod
-    def from_namespace(cls, context: _FullContext, /) -> Self:
+    def from_namespace(cls, context: _LimitedContext, /) -> Self:
         obj = cls.__new__(cls)
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
         return obj
 
@@ -207,7 +205,6 @@ class CompliantSelector(
     _function_name: str
     _depth: int
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _scalar_kwargs: ScalarKwargs
 
@@ -217,7 +214,7 @@ class CompliantSelector(
         call: EvalSeries[FrameT, SeriesOrExprT],
         evaluate_output_names: EvalNames[FrameT],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
@@ -227,7 +224,6 @@ class CompliantSelector(
         obj._evaluate_output_names = evaluate_output_names
         obj._alias_output_names = None
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
         obj._scalar_kwargs = {}
         return obj

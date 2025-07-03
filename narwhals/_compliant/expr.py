@@ -46,7 +46,7 @@ if TYPE_CHECKING:
         WindowFunction,
     )
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -74,7 +74,6 @@ class NativeExpr(Protocol):
 
 class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
@@ -91,10 +90,12 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self: ...
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self: ...
+    def from_column_indices(
+        cls, *column_indices: int, context: _LimitedContext
+    ) -> Self: ...
     @staticmethod
     def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
         def fn(df: CompliantFrameT) -> Sequence[str]:
@@ -280,7 +281,7 @@ class DepthTrackingExpr(
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         function_name: str = "",
     ) -> Self: ...
 
@@ -321,7 +322,6 @@ class EagerExpr(
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
@@ -343,7 +343,7 @@ class EagerExpr(
         function_name: str,
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
-        context: _FullContext,
+        context: _LimitedContext,
         scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
@@ -353,7 +353,6 @@ class EagerExpr(
             evaluate_output_names=evaluate_output_names,
             alias_output_names=alias_output_names,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
             scalar_kwargs=scalar_kwargs,
         )
@@ -367,7 +366,6 @@ class EagerExpr(
             evaluate_output_names=lambda _df: [series.name],
             alias_output_names=None,
             implementation=series._implementation,
-            backend_version=series._backend_version,
             version=series._version,
         )
 
@@ -502,7 +500,6 @@ class EagerExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
@@ -719,7 +716,6 @@ class EagerExpr(
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
-            backend_version=self._backend_version,
             implementation=self._implementation,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
@@ -914,6 +910,10 @@ class LazyExpr(
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
@@ -1171,7 +1171,6 @@ class EagerExprNameNamespace(
             function_name=expr._function_name,
             evaluate_output_names=expr._evaluate_output_names,
             alias_output_names=self._alias_output_names(func) if alias else None,
-            backend_version=expr._backend_version,
             implementation=expr._implementation,
             version=expr._version,
             scalar_kwargs=expr._scalar_kwargs,

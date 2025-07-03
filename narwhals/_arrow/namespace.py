@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 class ArrowNamespace(
     EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
 ):
+    _implementation = Implementation.PYARROW
+
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -43,10 +45,7 @@ class ArrowNamespace(
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
 
-    # --- not in spec ---
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
-        self._implementation = Implementation.PYARROW
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def len(self) -> ArrowExpr:
@@ -59,7 +58,6 @@ class ArrowNamespace(
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -78,7 +76,6 @@ class ArrowNamespace(
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -168,12 +165,7 @@ class ArrowNamespace(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -194,12 +186,7 @@ class ArrowNamespace(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -262,7 +249,6 @@ class ArrowNamespace(
             compliant = self._series(
                 concat_str(*it, separator_scalar, null_handling=null_handling),
                 name=name,
-                backend_version=self._backend_version,
                 version=self._version,
             )
             return [compliant]
