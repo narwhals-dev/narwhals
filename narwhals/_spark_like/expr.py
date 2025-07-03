@@ -460,8 +460,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             )
             return [expr.cast(spark_dtype) for expr in self(df)]
 
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+        ) -> Sequence[Column]:
+            spark_dtype = narwhals_to_native_dtype(
+                dtype, self._version, self._native_dtypes, df.native.sparkSession
+            )
+            return [expr.cast(spark_dtype) for expr in self.window_function(df, inputs)]
+
         return self.__class__(
             func,
+            window_f,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
