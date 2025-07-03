@@ -72,9 +72,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         hyphen, plus = lit("-"), lit("+")
 
         _slice_length: int | None = (
-            self.len_chars().max()
-            if self._compliant_series._backend_version < (13, 0)
-            else None
+            self.len_chars().max() if self.backend_version < (13, 0) else None
         )
         first_char, remaining_chars = (
             self.slice(0, 1).native,

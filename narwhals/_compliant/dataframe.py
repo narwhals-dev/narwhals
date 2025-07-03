@@ -25,6 +25,7 @@ from narwhals._translate import (
 )
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals._utils import (
+    ValidateBackendVersion,
     Version,
     _StoresNative,
     check_columns_exist,
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Implementation, _FullContext
+    from narwhals._utils import Implementation, _LimitedContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
@@ -94,31 +95,30 @@ class CompliantDataFrame(
 ):
     _native_frame: NativeFrameT
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self: ...
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self: ...
     @classmethod
-    def from_native(cls, data: NativeFrameT, /, *, context: _FullContext) -> Self: ...
+    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self: ...
 
@@ -277,14 +277,13 @@ class CompliantLazyFrame(
 ):
     _native_frame: NativeFrameT
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     def __narwhals_lazyframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
 
     @classmethod
-    def from_native(cls, data: NativeFrameT, /, *, context: _FullContext) -> Self: ...
+    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
 
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
@@ -392,8 +391,13 @@ class CompliantLazyFrame(
 class EagerDataFrame(
     CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
     CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
+    ValidateBackendVersion,
     Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...

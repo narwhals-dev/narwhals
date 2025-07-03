@@ -6,8 +6,8 @@ import ibis
 import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._ibis.utils import lit
 from narwhals._utils import _is_naive_format, not_implemented
 
