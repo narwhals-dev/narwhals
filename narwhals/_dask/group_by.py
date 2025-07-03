@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -62,6 +62,7 @@ __all__ = [
     "EvalNames",
     "EvalSeries",
     "IntoCompliantExpr",
+    "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
 ]
@@ -168,3 +169,26 @@ WindowFunction: TypeAlias = (
     "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
 )
 """A function evaluated with `over(partition_by=..., order_by=...)`."""
+
+NarwhalsAggregation: TypeAlias = Literal[
+    "sum",
+    "mean",
+    "median",
+    "max",
+    "min",
+    "std",
+    "var",
+    "len",
+    "n_unique",
+    "count",
+    "quantile",
+]
+"""`Expr` methods we aim to support in `DepthTrackingGroupBy`.
+
+Be sure to update me if you're working on one of these:
+- https://github.com/narwhals-dev/narwhals/issues/981
+- https://github.com/narwhals-dev/narwhals/issues/2385
+- https://github.com/narwhals-dev/narwhals/issues/2484
+- https://github.com/narwhals-dev/narwhals/issues/2526
+- https://github.com/narwhals-dev/narwhals/issues/2660
+"""

@@ -58,7 +58,7 @@ if TYPE_CHECKING:
         TimeUnit,
     )
 
-__all__ = ["CompliantExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
+__all__ = ["CompliantExpr", "DepthTrackingExpr", "EagerExpr", "LazyExpr", "NativeExpr"]
 
 
 class NativeExpr(Protocol):
