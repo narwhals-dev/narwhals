@@ -62,10 +62,10 @@ def test_series_floordiv_by_zero(
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     denominator = get_denominator(df)
-    result = {"int": df["int"] // denominator}
-    expected = {"int": expected_floordiv}
+    result = {"result": df["int"] // denominator}
+    expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
-    assert result["int"].is_null().all()
+    assert result["result"].is_null().all()
 
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
@@ -79,10 +79,10 @@ def test_expr_floordiv_by_zero(
 
     df = nw.from_native(constructor(data))
 
-    result = df.select(nw.col("int") // denominator)
-    expected = {"int": expected_floordiv}
+    result = df.select(result=nw.col("int") // denominator)
+    expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
-    assert_equal_data(result.select(nw.col("int").is_null().all()), {"int": [True]})
+    assert_equal_data(result.select(nw.col("result").is_null().all()), {"result": [True]})
 
 
 @pytest.mark.parametrize(
@@ -95,9 +95,9 @@ def test_series_rtruediv_by_zero(
     constructor_eager: ConstructorEager, numerator: float, expected: float
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = {"literal": numerator / df["denominator"]}
-    assert_equal_data(result, {"literal": [expected] * len(df)})
-    assert (~result["literal"].is_finite()).all()
+    result = {"result": numerator / df["denominator"]}
+    assert_equal_data(result, {"result": [expected] * len(df)})
+    assert (~result["result"].is_finite()).all()
 
 
 @pytest.mark.parametrize(
@@ -110,9 +110,9 @@ def test_expr_rtruediv_by_zero(
     constructor: Constructor, numerator: float, expected: float
 ) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(numerator / nw.col("denominator"))
-    assert_equal_data(result, {"literal": [expected] * len(data["denominator"])})
-    assert_equal_data(result.select((~nw.all().is_finite()).all()), {"literal": [True]})
+    result = df.select(result=numerator / nw.col("denominator"))
+    assert_equal_data(result, {"result": [expected] * len(data["denominator"])})
+    assert_equal_data(result.select((~nw.all().is_finite()).all()), {"result": [True]})
 
 
 @pytest.mark.parametrize("numerator", data["int"])
@@ -134,9 +134,9 @@ def test_series_rfloordiv_by_zero(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = {"literal": numerator // df["denominator"]}
-    assert_equal_data(result, {"literal": expected_floordiv})
-    assert (~result["literal"].is_finite()).all()
+    result = {"result": numerator // df["denominator"]}
+    assert_equal_data(result, {"result": expected_floordiv})
+    assert (~result["result"].is_finite()).all()
 
 
 @pytest.mark.parametrize("numerator", data["int"])
@@ -160,9 +160,7 @@ def test_expr_rfloordiv_by_zero(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
-    result = df.select(numerator // nw.col("denominator"))
-    expected = {"literal": expected_floordiv}
+    result = df.select(result=numerator // nw.col("denominator"))
+    expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
-    assert_equal_data(
-        result.select(nw.col("literal").is_null().all()), {"literal": [True]}
-    )
+    assert_equal_data(result.select(nw.col("result").is_null().all()), {"result": [True]})
