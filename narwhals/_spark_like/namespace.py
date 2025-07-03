@@ -240,7 +240,7 @@ class SparkLikeNamespace(
         def func(cols: Iterable[Column]) -> Column:
             return self._F.coalesce(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):

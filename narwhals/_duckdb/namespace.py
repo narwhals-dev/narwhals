@@ -173,7 +173,7 @@ class DuckDBNamespace(
         def func(cols: Iterable[Expression]) -> Expression:
             return CoalesceOperator(*cols)
 
-        return self._with_elementwise(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class DuckDBWhen(LazyWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):

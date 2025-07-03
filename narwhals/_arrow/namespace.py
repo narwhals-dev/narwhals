@@ -264,14 +264,12 @@ class ArrowNamespace(
 
     def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = align_series_full_broadcast(
-                *chain.from_iterable(expr(df) for expr in exprs)
-            )
+            align = self._series._align_full_broadcast
+            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 ArrowSeries(
                     pc.coalesce(init_series.native, *(s.native for s in series)),
                     name=init_series.name,
-                    backend_version=self._backend_version,
                     version=self._version,
                 )
             ]
