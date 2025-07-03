@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import US_PER_SECOND
 from narwhals._duration import parse_interval_string
 from narwhals._spark_like.utils import (
@@ -142,7 +142,6 @@ class SparkLikeExprDateTimeNamespace(
             func,
             evaluate_output_names=self.compliant._evaluate_output_names,
             alias_output_names=self.compliant._alias_output_names,
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
             implementation=self.compliant._implementation,
         )

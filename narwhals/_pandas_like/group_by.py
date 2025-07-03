@@ -25,8 +25,7 @@ if TYPE_CHECKING:
     )
     from typing_extensions import TypeAlias, Unpack
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._utils import Implementation
@@ -224,6 +223,7 @@ class PandasLikeGroupBy(
         "len": "size",
         "n_unique": "nunique",
         "count": "count",
+        "quantile": "quantile",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
@@ -342,10 +342,9 @@ class PandasLikeGroupBy(
     def _agg_complex(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
         warn_complex_group_by()
         impl = self.compliant._implementation
-        backend_version = self.compliant._backend_version
         func = self._apply_exprs(exprs)
         apply = self._grouped.apply
-        if impl.is_pandas() and backend_version >= (2, 2):
+        if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)
         else:  # pragma: no cover
             return apply(func)
@@ -396,7 +395,7 @@ def _has_non_int_nullable_dtype(
             dtype = native_to_narwhals_dtype(native, version, impl)
             yield not (dtype.is_integer()) and (
                 is_nullable_dtype_backend(native, impl)
-                or _is_old_pandas_float(dtype, impl, frame._backend_version)
+                or _is_old_pandas_float(dtype, impl)
             )
 
 
@@ -404,10 +403,12 @@ PANDAS_FLOAT_FIXED = (1, 3, 5)
 """Keep increasing until random versions doesn't produce `FAILED tests/frame/group_by_test.py::test_group_by_no_preserve_dtype[pandas-float]`"""
 
 
-def _is_old_pandas_float(
-    dtype: DType, impl: Implementation, backend_version: tuple[int, ...]
-) -> bool:
-    return dtype.is_float() and impl.is_pandas() and backend_version < PANDAS_FLOAT_FIXED
+def _is_old_pandas_float(dtype: DType, impl: Implementation) -> bool:
+    return (
+        dtype.is_float()
+        and impl.is_pandas()
+        and impl._backend_version() < PANDAS_FLOAT_FIXED
+    )
 
 
 def empty_results_error() -> ValueError:
