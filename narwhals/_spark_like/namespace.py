@@ -72,7 +72,7 @@ class SparkLikeNamespace(
             column = df._F.lit(value)
             if dtype:
                 native_dtype = narwhals_to_native_dtype(
-                    dtype, version=self._version, spark_types=df._native_dtypes
+                    dtype, self._version, df._native_dtypes, df.native.sparkSession
                 )
                 column = column.cast(native_dtype)
 
