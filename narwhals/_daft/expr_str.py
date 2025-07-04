@@ -4,61 +4,58 @@ from typing import TYPE_CHECKING
 
 import daft
 
+from narwhals._compliant import LazyExprNamespace
+from narwhals._compliant.any_namespace import StringNamespace
+
 if TYPE_CHECKING:
     from daft import Expression
 
     from narwhals._daft.expr import DaftExpr
 
 
-class DaftExprStringNamespace:
+class DaftExprStringNamespace(LazyExprNamespace["DaftExpr"], StringNamespace["DaftExpr"]):
     def __init__(self, expr: DaftExpr) -> None:
         self._compliant_expr = expr
 
     def starts_with(self, prefix: str) -> DaftExpr:
-        return self._compliant_expr._with_callable(
-            lambda expr: expr.str.startswith(prefix)
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.startswith(prefix))
 
     def ends_with(self, prefix: str) -> DaftExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.str.endswith(prefix))
+        return self.compliant._with_callable(lambda expr: expr.str.endswith(prefix))
 
     def contains(self, pattern: str, *, literal: bool) -> DaftExpr:
         if not literal:
-            return self._compliant_expr._with_callable(
-                lambda expr: expr.str.match(pattern)
-            )
-        return self._compliant_expr._with_callable(
-            lambda expr: expr.str.contains(pattern)
-        )
+            return self.compliant._with_callable(lambda expr: expr.str.match(pattern))
+        return self.compliant._with_callable(lambda expr: expr.str.contains(pattern))
 
     def split(self, by: str) -> DaftExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.str.split(by))
+        return self.compliant._with_callable(lambda expr: expr.str.split(by))
 
     def len_chars(self) -> DaftExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.str.length())
+        return self.compliant._with_callable(lambda expr: expr.str.length())
 
     def to_date(self, format: str | None) -> DaftExpr:
         if format is None:
-            return self._compliant_expr._with_elementwise(lambda expr: expr.cast("date"))
-        return self._compliant_expr._with_callable(lambda expr: expr.str.to_date(format))
+            return self.compliant._with_elementwise(lambda expr: expr.cast("date"))
+        return self.compliant._with_callable(lambda expr: expr.str.to_date(format))
 
     def to_datetime(self, format: str | None) -> DaftExpr:
         if format is None:
             msg = "`format` must be specified for Daft in `to_date`."
             raise ValueError(msg)
-        return self._compliant_expr._with_callable(
+        return self.compliant._with_callable(
             lambda expr: expr.str.to_datetime(format).date()
         )
 
     def to_lowercase(self) -> DaftExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.str.lower())
+        return self.compliant._with_callable(lambda expr: expr.str.lower())
 
     def to_uppercase(self) -> DaftExpr:
-        return self._compliant_expr._with_callable(lambda expr: expr.str.upper())
+        return self.compliant._with_callable(lambda expr: expr.str.upper())
 
     def strip_chars(self, characters: str | None) -> DaftExpr:
         if characters is None:
-            return self._compliant_expr._with_callable(
+            return self.compliant._with_callable(
                 lambda expr: expr.str.lstrip().str.rstrip()
             )
         msg = "`strip_chars` with `characters` is currently not supported for Daft"
@@ -69,7 +66,7 @@ class DaftExprStringNamespace:
         raise NotImplementedError(msg)
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> DaftExpr:
-        return self._compliant_expr._with_callable(
+        return self.compliant._with_callable(
             lambda expr: expr.str.replace(pattern, value, regex=not literal)
         )
 
@@ -85,4 +82,4 @@ class DaftExprStringNamespace:
             )
             return expr.str.substr(offset_expr, length_expr)
 
-        return self._compliant_expr._with_callable(func)
+        return self.compliant._with_callable(func)
