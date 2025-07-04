@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
+import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import chunked_array, narwhals_to_native_dtype
 from narwhals._plan.arrow.series import ArrowSeries

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 from itertools import chain
 
-import pyarrow as pa
+import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowLiteral

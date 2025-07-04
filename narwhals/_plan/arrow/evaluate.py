@@ -31,7 +31,7 @@ UnaryFn: TypeAlias = "t.Callable[[ChunkedArrayAny], ScalarAny]"
 
 
 def is_scalar(obj: t.Any) -> TypeIs[ScalarAny]:
-    import pyarrow as pa
+    import pyarrow as pa  # ignore-banned-import
 
     return isinstance(obj, pa.Scalar)
 
@@ -65,7 +65,7 @@ def _lit_native(
     value: PythonLiteral | ScalarAny, frame: ArrowDataFrame
 ) -> ChunkedArrayAny:
     """Will need to support returning a native scalar as well."""
-    import pyarrow as pa
+    import pyarrow as pa  # ignore-banned-import
 
     from narwhals._arrow.utils import chunked_array
 
