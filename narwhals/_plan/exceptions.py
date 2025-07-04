@@ -12,7 +12,7 @@ from narwhals.exceptions import (
     DuplicateError,
     InvalidIntoExprError,
     InvalidOperationError,
-    LengthChangingExprError,
+    InvalidOperationError as LengthChangingExprError,
     MultiOutputExpressionError,
     ShapeError,
 )

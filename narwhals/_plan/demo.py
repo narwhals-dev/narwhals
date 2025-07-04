@@ -22,7 +22,7 @@ from narwhals._plan.ranges import IntRange
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
-from narwhals.exceptions import OrderDependentExprError
+from narwhals.exceptions import InvalidOperationError as OrderDependentExprError
 
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs

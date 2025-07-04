@@ -20,7 +20,7 @@ from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
 from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
-    LengthChangingExprError,
+    InvalidOperationError as LengthChangingExprError,
     MultiOutputExpressionError,
     ShapeError,
 )
