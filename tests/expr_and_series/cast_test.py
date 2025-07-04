@@ -243,9 +243,8 @@ def test_cast_datetime_utc(
 ) -> None:
     if (
         "dask" in str(constructor)
-        or "duckdb" in str(constructor)
-        or "sqlframe"
-        in str(constructor)  # https://github.com/eakmanrq/sqlframe/issues/406
+        # https://github.com/eakmanrq/sqlframe/issues/406
+        or "sqlframe" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
     ):
