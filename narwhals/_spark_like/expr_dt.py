@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
@@ -22,25 +22,30 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
+def _weekday(F: Any, expr: Column) -> Column:  # noqa: N803
+    # PySpark's dayofweek returns 1-7 for Sunday-Saturday
+    return (F.dayofweek(expr) + 6) % 7
+
+
 class SparkLikeExprDateTimeNamespace(
     LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
 ):
     def to_string(self, format: str) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
 
-        def _to_string(_input: Column) -> Column:
+        def _to_string(expr: Column) -> Column:
             # Handle special formats
             if format == "%G-W%V":
-                return self._format_iso_week(_input)
+                return self._format_iso_week(expr)
             if format == "%G-W%V-%u":
-                return self._format_iso_week_with_day(_input)
+                return self._format_iso_week_with_day(expr)
 
-            format_, suffix = self._format_microseconds(_input, format)
+            format_, suffix = self._format_microseconds(expr, format)
 
             # Convert Python format to PySpark format
             pyspark_fmt = strptime_to_pyspark_format(format_)
 
-            result = F.date_format(_input, pyspark_fmt)
+            result = F.date_format(expr, pyspark_fmt)
             if "T" in format_:
                 # `strptime_to_pyspark_format` replaces "T" with " " since pyspark
                 # does not support the literal "T" in `date_format`.
@@ -104,10 +109,6 @@ class SparkLikeExprDateTimeNamespace(
         return self.compliant._with_elementwise(self.compliant._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
-        def _weekday(expr: Column) -> Column:
-            # PySpark's dayofweek returns 1-7 for Sunday-Saturday
-            return (self.compliant._F.dayofweek(expr) + 6) % 7
-
         return self.compliant._with_elementwise(_weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
@@ -154,32 +155,30 @@ class SparkLikeExprDateTimeNamespace(
     ) -> SparkLikeExpr:  # pragma: no cover
         if time_zone is None:
             return self.compliant._with_elementwise(
-                lambda _input: _input.cast("timestamp_ntz")
+                lambda expr: expr.cast("timestamp_ntz")
             )
         else:
             return self._no_op_time_zone(time_zone)
 
-    def _format_iso_week_with_day(self, _input: Column) -> Column:
+    def _format_iso_week_with_day(self, expr: Column) -> Column:
         """Format datetime as ISO week string with day."""
         F = self.compliant._F  # noqa: N806
 
-        year = F.date_format(_input, "yyyy")
-        week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
-        day = F.dayofweek(_input)
-        # Adjust Sunday from 1 to 7
-        day = day % 7 + 1
+        year = F.date_format(expr, "yyyy")
+        week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
+        day = _weekday(self.compliant._F, expr)
         return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
 
-    def _format_iso_week(self, _input: Column) -> Column:
+    def _format_iso_week(self, expr: Column) -> Column:
         """Format datetime as ISO week string."""
         F = self.compliant._F  # noqa: N806
 
-        year = F.date_format(_input, "yyyy")
-        week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
+        year = F.date_format(expr, "yyyy")
+        week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
         return F.concat(year, F.lit("-W"), week)
 
     def _format_microseconds(
-        self, _input: Column, format: str
+        self, expr: Column, format: str
     ) -> tuple[str, tuple[Column, ...]]:
         """Format microseconds if present in format, else it's a no-op."""
         F = self.compliant._F  # noqa: N806
@@ -188,7 +187,7 @@ class SparkLikeExprDateTimeNamespace(
         if format.endswith((".%f", "%.f")):
             import re
 
-            micros = F.unix_micros(_input) % US_PER_SECOND
+            micros = F.unix_micros(expr) % US_PER_SECOND
             micros_str = F.lpad(micros.cast("string"), 6, "0")
             suffix = (F.lit("."), micros_str)
             format_ = re.sub(r"(.%|%.)f$", "", format)
