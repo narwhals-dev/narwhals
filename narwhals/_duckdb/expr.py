@@ -12,6 +12,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
+    DeferredTimeZone,
     F,
     col,
     lit,
@@ -678,11 +679,26 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(expr: Expression) -> Expression:
-            native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return expr.cast(DuckDBPyType(native_dtype))
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            tz = DeferredTimeZone(df.native)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            return [expr.cast(DuckDBPyType(native_dtype)) for expr in self(df)]
 
-        return self._with_elementwise(func)
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            tz = DeferredTimeZone(df.native)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            return [
+                expr.cast(DuckDBPyType(native_dtype))
+                for expr in self.window_function(df, inputs)
+            ]
+
+        return self.__class__(
+            func,
+            window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @requires.backend_version((1, 3))
     def is_unique(self) -> Self:
