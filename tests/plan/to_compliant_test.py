@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan.common import is_expr
-from narwhals._plan.impl_arrow import ArrowDataFrame
 from narwhals.utils import Version
 from tests.namespace_test import backends
 
@@ -62,6 +61,8 @@ def test_select(
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
+
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
     frame = pa.table(data_small)
     df = ArrowDataFrame.from_native(frame, Version.MAIN)
