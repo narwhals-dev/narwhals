@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -56,7 +56,16 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
 
-__all__ = ["CompliantSeries", "EagerSeries"]
+__all__ = [
+    "CompliantSeries",
+    "EagerSeries",
+    "EagerSeriesCatNamespace",
+    "EagerSeriesDateTimeNamespace",
+    "EagerSeriesListNamespace",
+    "EagerSeriesNamespace",
+    "EagerSeriesStringNamespace",
+    "EagerSeriesStructNamespace",
+]
 
 
 class CompliantSeries(
@@ -67,7 +76,6 @@ class CompliantSeries(
     Protocol[NativeSeriesT],
 ):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     @property
@@ -92,16 +100,16 @@ class CompliantSeries(
     def _with_version(self, version: Version) -> Self: ...
     def _to_expr(self) -> CompliantExpr[Any, Self]: ...
     @classmethod
-    def from_native(cls, data: NativeSeriesT, /, *, context: _FullContext) -> Self: ...
+    def from_native(cls, data: NativeSeriesT, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self: ...
+    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
     def from_iterable(
         cls,
         data: Iterable[Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self: ...
@@ -277,9 +285,12 @@ class CompliantSeries(
 class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     _native_series: Any
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _broadcast: bool
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
@@ -356,6 +367,18 @@ class _SeriesNamespace(  # type: ignore[misc]
     @property
     def compliant(self) -> CompliantSeriesT_co:
         return self._compliant_series
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.compliant._implementation
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return self.implementation._backend_version()
+
+    @property
+    def version(self) -> Version:
+        return self.compliant._version
 
     @property
     def native(self) -> NativeSeriesT_co:

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import EvalSeries, ScalarKwargs
     from narwhals._compliant.window import WindowInputs
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import NonNestedLiteral
 
 
@@ -48,7 +48,6 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT] | None
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     @property
@@ -64,13 +63,12 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
         return self._then.from_when(self, value)
 
     @classmethod
-    def from_expr(cls, condition: ExprT, /, *, context: _FullContext) -> Self:
+    def from_expr(cls, condition: ExprT, /, *, context: _LimitedContext) -> Self:
         obj = cls.__new__(cls)
         obj._condition = condition
         obj._then_value = None
         obj._otherwise_value = None
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
         return obj
 
@@ -81,7 +79,6 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
     _function_name: str
     _depth: int
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
     _scalar_kwargs: ScalarKwargs
 
@@ -103,7 +100,6 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         )
         obj._alias_output_names = getattr(then, "_alias_output_names", None)
         obj._implementation = when._implementation
-        obj._backend_version = when._backend_version
         obj._version = when._version
         obj._scalar_kwargs = {}
         return obj
@@ -130,9 +126,7 @@ class LazyThen(
         when._then_value = then
         obj = cls.__new__(cls)
         obj._call = when
-
         obj._window_function = when._window_function
-
         obj._when_value = when
         obj._depth = 0
         obj._function_name = "whenthen"
@@ -141,7 +135,6 @@ class LazyThen(
         )
         obj._alias_output_names = getattr(then, "_alias_output_names", None)
         obj._implementation = when._implementation
-        obj._backend_version = when._backend_version
         obj._version = when._version
         obj._scalar_kwargs = {}
         return obj
@@ -204,14 +197,12 @@ class LazyWhen(
         return [result]
 
     @classmethod
-    def from_expr(cls, condition: LazyExprT, /, *, context: _FullContext) -> Self:
+    def from_expr(cls, condition: LazyExprT, /, *, context: _LimitedContext) -> Self:
         obj = cls.__new__(cls)
         obj._condition = condition
-
         obj._then_value = None
         obj._otherwise_value = None
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
         return obj
 
