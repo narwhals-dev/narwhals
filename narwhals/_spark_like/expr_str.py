@@ -104,8 +104,8 @@ class SparkLikeExprStringNamespace(
         )
 
     def to_date(self, format: str | None) -> SparkLikeExpr:
-        F = self._compliant_expr._F  # noqa: N806
-        return self._compliant_expr._with_elementwise(
+        F = self.compliant._F  # noqa: N806
+        return self.compliant._with_elementwise(
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
