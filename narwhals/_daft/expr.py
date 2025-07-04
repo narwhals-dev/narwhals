@@ -355,11 +355,15 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(f)._with_window_function(window_f)
 
     def cast(self, dtype: DType | type[DType]) -> Self:
-        def func(_input: Expression) -> Expression:
+        def func(expr: Expression) -> Expression:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return _input.cast(native_dtype)
+            return expr.cast(native_dtype)
 
-        return self._with_callable(func)
+        def window_f(df: DaftLazyFrame, inputs: DaftWindowInputs) -> list[Expression]:
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
+
+        return self._with_callable(func)._with_window_function(window_f)
 
     def count(self) -> Self:
         return self._with_callable(lambda _input: _input.count("valid"))
