@@ -544,3 +544,199 @@ jobs:
           pytest darts/tests/test_timeseries.py
           pytest darts/tests/test_timeseries_multivariate.py
           pytest darts/tests/test_timeseries_static_covariates.py
+
+  # executing the build and test process takes around 10 minutes
+  # build bokeh process emulating the build process used in the main bokeh repo
+  # in order to tolerate possible updates in the .yaml files
+  build-bokeh:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+    
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Clone Bokeh repository
+        run: |
+          git clone --single-branch -b branch-3.8 https://github.com/bokeh/bokeh.git
+          cd bokeh
+          git log --oneline -n 5
+          
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: 'latest'
+          activate-environment: bk-test
+          conda-remove-defaults: true
+          
+      - name: Install libmamba solver
+        run: |
+          conda install -q -n base conda-libmamba-solver
+          conda config --set solver libmamba
+          
+      - name: Update bk-test environment
+        working-directory: bokeh
+        run: |
+          conda env update -q -n bk-test -f conda/environment-build.yml
+          
+      - name: Install node modules
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/install_node_modules.sh
+          
+      - name: Build BokehJS
+        working-directory: bokeh/bokehjs
+        run: |
+          node make build
+          
+      - name: Build pip packages
+        working-directory: bokeh
+        env:
+          BOKEHJS_ACTION: 'install'
+        run: |
+          python -m build .
+          
+      - name: Verify pip install from sdist
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/verify_pip_install_from_sdist.sh
+          
+      - name: Verify pip install using sdist
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/verify_pip_install_using_sdist.sh
+          
+      - name: Verify pip install using wheel
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/verify_pip_install_using_wheel.sh
+          
+      - name: Build conda package
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/build_conda_package.sh
+          
+      - name: Verify conda install
+        working-directory: bokeh
+        run: |
+          bash scripts/ci/verify_conda_install.sh
+          
+      - name: Upload wheel package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bokeh-wheel-package
+          path: bokeh/dist/bokeh-*-py3-none-any.whl
+          
+      - name: Upload bokehjs package
+        uses: actions/upload-artifact@v4
+        with:
+          name: bokehjs-package
+          path: bokeh/bokehjs/build/dist/bokeh-bokehjs-*.tgz
+
+  bokeh:
+    needs: build-bokeh
+    
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+
+    runs-on: ${{ matrix.os }}
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Clone Bokeh repository
+        run: |
+          git clone --single-branch -b branch-3.8 https://github.com/bokeh/bokeh.git
+          cd bokeh
+          git log --oneline -n 5
+          
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: 'latest'
+          activate-environment: bk-test
+          conda-remove-defaults: true
+          
+      - name: Install libmamba solver
+        run: |
+          conda install -q -n base conda-libmamba-solver
+          conda config --set solver libmamba
+          
+      - name: Update conda environment
+        working-directory: bokeh
+        run: |
+          # Install conda dependencies using Bokeh's test environment
+          conda env update -q -n bk-test -f conda/environment-test-${{ matrix.python-version }}.yml
+          
+      - name: Download wheel package
+        uses: actions/download-artifact@v4
+        with:
+          name: bokeh-wheel-package
+          path: bokeh/dist/
+          
+      - name: Install wheel package
+        run: |
+          pip install bokeh/dist/bokeh-*-py3-none-any.whl
+          
+      - name: Download bokehjs package
+        uses: actions/download-artifact@v4
+        with:
+          name: bokehjs-package
+          path: bokeh/bokehjs/build/dist/
+          
+      - name: Symlink bokehjs package
+        working-directory: bokeh/bokehjs/build/dist/
+        run: |
+          ln -s $(ls -t bokeh-bokehjs-*.tgz | head -n 1) bokeh-bokehjs.tgz
+          
+      - name: List installed software
+        run: |
+          conda info
+          conda list
+          echo "node $(node --version)"
+          echo "npm $(npm --version)"
+          python --version
+          
+      - name: Install narwhals in development mode
+        run: |
+          pip uninstall -y narwhals
+          pip install -e .
+          
+      - name: Ensure Python version
+        run: |
+          if [[ ! "$(python --version | cut -d' ' -f2)" == "${{ matrix.python-version }}"* ]]; then 
+            echo "Python version mismatch!"
+            python --version
+            exit 1
+          fi
+          
+      - name: Test Bokeh defaults
+        working-directory: bokeh
+        run: |
+          pytest tests/test_defaults.py
+          
+      - name: Test Bokeh cross
+        working-directory: bokeh
+        run: |
+          pytest tests/test_cross.py
+          
+      - name: Run Bokeh unit tests
+        working-directory: bokeh
+        if: success() || failure()
+        run: |
+          COLOR="--color=yes"
+          COVERAGE="--cov=bokeh --cov-report=xml"
+          POLICY="--last-failed --last-failed-no-failures none"
+          pytest $COLOR $COVERAGE tests/unit || pytest $COLOR $POLICY tests/unit
+          
