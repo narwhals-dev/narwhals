@@ -308,8 +308,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "kurtosis_",
                     "sqrt_",
                     "exp_",
-                    # blocked
-                    "replace_time_zone",
                 )
             )
             and constructor == "daft"

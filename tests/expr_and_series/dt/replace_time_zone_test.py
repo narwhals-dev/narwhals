@@ -48,7 +48,9 @@ def test_replace_time_zone(
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_none(constructor: Constructor) -> None:
+def test_replace_time_zone_none(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
@@ -56,6 +58,9 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
+    if "daft" in str(constructor):
+        # https://github.com/Eventual-Inc/Daft/issues/4096
+        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),

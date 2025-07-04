@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
+from narwhals._compliant.any_namespace import DateTimeNamespace
+from narwhals._utils import not_implemented
+
 if TYPE_CHECKING:
     from narwhals._daft.expr import DaftExpr
 
 
-class DaftExprDateTimeNamespace:
-    def __init__(self, expr: DaftExpr) -> None:
-        self.compliant = expr
-
+class DaftExprDateTimeNamespace(
+    LazyExprNamespace["DaftExpr"], DateTimeNamespace["DaftExpr"]
+):
     def date(self) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.dt.date())
 
@@ -53,3 +56,5 @@ class DaftExprDateTimeNamespace:
 
     def ordinal_day(self) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.dt.day_of_year())
+
+    replace_time_zone = not_implemented()
