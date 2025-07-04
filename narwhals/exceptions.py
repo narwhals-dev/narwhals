@@ -48,6 +48,10 @@ class ComputeError(NarwhalsError):
     """Exception raised when the underlying computation could not be evaluated."""
 
 
+class ShapeError(NarwhalsError):
+    """Exception raised when trying to perform operations on data structures with incompatible shapes."""
+
+
 class MultiOutputExpressionError(NarwhalsError):
     """Exception raised when using multi-output expression in unsupported context."""
 
