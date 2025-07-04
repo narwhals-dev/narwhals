@@ -49,13 +49,7 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
     def lit(self, value: Any, dtype: DType | type[DType] | None) -> DaftExpr:
         def func(_df: DaftLazyFrame) -> list[Expression]:
             if dtype is not None:
-                return [
-                    lit(value).cast(
-                        narwhals_to_native_dtype(
-                            dtype, self._version, self._backend_version
-                        )
-                    )
-                ]
+                return [lit(value).cast(narwhals_to_native_dtype(dtype, self._version))]
             return [lit(value)]
 
         return DaftExpr(

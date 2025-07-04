@@ -353,9 +353,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def cast(self, dtype: DType | type[DType]) -> Self:
         def func(_input: Expression) -> Expression:
-            native_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._backend_version
-            )
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return _input.cast(native_dtype)
 
         return self._with_callable(func)

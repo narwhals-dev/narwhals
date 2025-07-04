@@ -37,12 +37,17 @@ class DaftExprStringNamespace:
     def len_chars(self) -> DaftExpr:
         return self._compliant_expr._with_callable(lambda expr: expr.str.length())
 
+    def to_date(self, format: str | None) -> DaftExpr:
+        if format is None:
+            return self._compliant_expr._with_elementwise(lambda expr: expr.cast("date"))
+        return self._compliant_expr._with_callable(lambda expr: expr.str.to_date(format))
+
     def to_datetime(self, format: str | None) -> DaftExpr:
         if format is None:
-            msg = "`format` must be specified for Daft in `to_datetime`."
+            msg = "`format` must be specified for Daft in `to_date`."
             raise ValueError(msg)
         return self._compliant_expr._with_callable(
-            lambda expr: expr.str.to_datetime(format)
+            lambda expr: expr.str.to_datetime(format).date()
         )
 
     def to_lowercase(self) -> DaftExpr:
