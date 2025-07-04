@@ -153,7 +153,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             )
             if func_name in {"sum", "mean"}:
                 func_: str = func_name
-            elif func_name == "std" and ddof == 0:
+            elif func_name == "std" and ddof == 0:  # pragma: no cover. todo(marco)
                 func_ = "stddev"
             elif func_name in {"var", "std"}:  # pragma: no cover
                 msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
