@@ -67,6 +67,9 @@ def test_concat_vertical(constructor: Constructor) -> None:
 @pytest.mark.filterwarnings(
     "ignore:The behavior of DataFrame concatation with empty:FutureWarning"
 )
+@pytest.mark.filterwarnings(
+    "ignore:When grouping with a length-1 list-like:FutureWarning"
+)
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
