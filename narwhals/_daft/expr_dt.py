@@ -11,45 +11,45 @@ class DaftExprDateTimeNamespace:
         self.compliant = expr
 
     def date(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.date())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.date())
 
     def year(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.year())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.year())
 
     def month(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.month())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.month())
 
     def day(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.day())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.day())
 
     def hour(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.hour())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.hour())
 
     def minute(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.minute())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.minute())
 
     def second(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.second())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.second())
 
     def millisecond(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.millisecond())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.millisecond())
 
     def microsecond(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.microsecond())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.microsecond())
 
     def nanosecond(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.nanosecond())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.nanosecond())
 
     def weekday(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.day_of_week() + 1)
+        return self.compliant._with_elementwise(lambda expr: expr.dt.day_of_week() + 1)
 
     def convert_time_zone(self, time_zone: str | None) -> DaftExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: expr.dt.convert_time_zone(time_zone)
         )
 
     def to_string(self, format: str | None) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.strftime(format))
+        return self.compliant._with_elementwise(lambda expr: expr.dt.strftime(format))
 
     def ordinal_day(self) -> DaftExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.day_of_year())
+        return self.compliant._with_elementwise(lambda expr: expr.dt.day_of_year())

@@ -11,6 +11,6 @@ class DaftExprStructNamespace:
         self.compliant = expr
 
     def field(self, name: str) -> DaftExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda _input: _input.struct.get(name)
         ).alias(name)
