@@ -57,28 +57,28 @@ class SparkLikeExprDateTimeNamespace(
 
             return F.concat(result, *suffix)
 
-        return self.compliant._with_callable(_to_string)
+        return self.compliant._with_elementwise(_to_string)
 
     def date(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.to_date)
+        return self.compliant._with_elementwise(self.compliant._F.to_date)
 
     def year(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.year)
+        return self.compliant._with_elementwise(self.compliant._F.year)
 
     def month(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.month)
+        return self.compliant._with_elementwise(self.compliant._F.month)
 
     def day(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.day)
+        return self.compliant._with_elementwise(self.compliant._F.day)
 
     def hour(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.hour)
+        return self.compliant._with_elementwise(self.compliant._F.hour)
 
     def minute(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.minute)
+        return self.compliant._with_elementwise(self.compliant._F.minute)
 
     def second(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.second)
+        return self.compliant._with_elementwise(self.compliant._F.second)
 
     def millisecond(self) -> SparkLikeExpr:
         def _millisecond(expr: Column) -> Column:
@@ -86,29 +86,29 @@ class SparkLikeExprDateTimeNamespace(
                 (self.compliant._F.unix_micros(expr) % US_PER_SECOND) / 1000
             )
 
-        return self.compliant._with_callable(_millisecond)
+        return self.compliant._with_elementwise(_millisecond)
 
     def microsecond(self) -> SparkLikeExpr:
         def _microsecond(expr: Column) -> Column:
             return self.compliant._F.unix_micros(expr) % US_PER_SECOND
 
-        return self.compliant._with_callable(_microsecond)
+        return self.compliant._with_elementwise(_microsecond)
 
     def nanosecond(self) -> SparkLikeExpr:
         def _nanosecond(expr: Column) -> Column:
             return (self.compliant._F.unix_micros(expr) % US_PER_SECOND) * 1000
 
-        return self.compliant._with_callable(_nanosecond)
+        return self.compliant._with_elementwise(_nanosecond)
 
     def ordinal_day(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.dayofyear)
+        return self.compliant._with_elementwise(self.compliant._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
         def _weekday(expr: Column) -> Column:
             # PySpark's dayofweek returns 1-7 for Sunday-Saturday
             return (self.compliant._F.dayofweek(expr) + 6) % 7
 
-        return self.compliant._with_callable(_weekday)
+        return self.compliant._with_elementwise(_weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
         multiple, unit = parse_interval_string(every)
@@ -123,7 +123,7 @@ class SparkLikeExprDateTimeNamespace(
         def _truncate(expr: Column) -> Column:
             return self.compliant._F.date_trunc(format, expr)
 
-        return self.compliant._with_callable(_truncate)
+        return self.compliant._with_elementwise(_truncate)
 
     def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
@@ -153,7 +153,7 @@ class SparkLikeExprDateTimeNamespace(
         self, time_zone: str | None
     ) -> SparkLikeExpr:  # pragma: no cover
         if time_zone is None:
-            return self.compliant._with_callable(
+            return self.compliant._with_elementwise(
                 lambda _input: _input.cast("timestamp_ntz")
             )
         else:
@@ -167,7 +167,7 @@ class SparkLikeExprDateTimeNamespace(
         week = F.lpad(F.weekofyear(_input).cast("string"), 2, "0")
         day = F.dayofweek(_input)
         # Adjust Sunday from 1 to 7
-        day = F.when(day == 1, 7).otherwise(day - 1)
+        day = day % 7 + 1
         return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
 
     def _format_iso_week(self, _input: Column) -> Column:
