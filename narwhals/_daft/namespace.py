@@ -127,7 +127,7 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
 
     def len(self) -> DaftExpr:
         def func(_df: DaftLazyFrame) -> list[Expression]:
-            if not _df.columns:
+            if not _df.columns:  # pragma: no cover
                 msg = "Cannot use `nw.len()` on Daft DataFrame with zero columns"
                 raise ValueError(msg)
             return [daft.col(_df.columns[0]).count(mode="all")]

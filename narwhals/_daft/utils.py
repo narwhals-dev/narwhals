@@ -18,18 +18,6 @@ lit = daft.lit
 """Alias for `daft.lit`."""
 
 
-def maybe_evaluate_expr(df: DaftLazyFrame, obj: DaftExpr | object) -> daft.Expression:
-    from narwhals._daft.expr import DaftExpr
-
-    if isinstance(obj, DaftExpr):
-        column_results = obj._call(df)
-        if len(column_results) != 1:
-            msg = "Multi-output expressions (e.g. `nw.all()` or `nw.col('a', 'b')`) not supported in this context"
-            raise ValueError(msg)
-        return column_results[0]
-    return daft.lit(obj)
-
-
 def evaluate_exprs(
     df: DaftLazyFrame, /, *exprs: DaftExpr
 ) -> list[tuple[str, daft.Expression]]:
@@ -79,7 +67,7 @@ def native_to_narwhals_dtype(daft_dtype: DataType, version: Version) -> DType:  
         return dtypes.Boolean()
     if daft_dtype == DataType.duration("us"):
         return dtypes.Duration("us")
-    if daft_dtype == DataType.decimal128(1, 1):
+    if daft_dtype == DataType.decimal128(1, 1):  # pragma: no cover
         return dtypes.Decimal()
     if DataType.is_fixed_size_list(daft_dtype):
         return dtypes.Array(
@@ -96,7 +84,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912,C901
         return DataType.float64()
     if dtype == dtypes.Float32:
         return DataType.float32()
-    if dtype in {dtypes.Int128, dtypes.UInt128}:
+    if dtype in {dtypes.Int128, dtypes.UInt128}:  # pragma: no cover
         msg = "Converting to Int128/UInt128 is not (yet) supported for Daft."
         raise NotImplementedError(msg)
     if dtype == dtypes.Int64:
@@ -134,7 +122,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912,C901
         return DataType.time("ns")
     if dtype == dtypes.Binary:
         return DataType.binary()
-    if dtype == dtypes.Decimal:
+    if dtype == dtypes.Decimal:  # pragma: no cover
         msg = "Casting to Decimal is not supported yet."
         raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):

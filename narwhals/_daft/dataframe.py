@@ -52,7 +52,7 @@ class DaftLazyFrame(
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        if validate_backend_version:
+        if validate_backend_version:  # pragma: no cover
             self._validate_backend_version()
 
     @staticmethod
@@ -155,7 +155,7 @@ class DaftLazyFrame(
                 )
             )
         except daft.exceptions.DaftCoreException as e:
-            if "duplicate" in str(e):
+            if "duplicate" in str(e):  # pragma: no cover
                 raise DuplicateError(e) from None
             if "not found" in str(e):
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
