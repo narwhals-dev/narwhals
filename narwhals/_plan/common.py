@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
@@ -20,13 +21,18 @@ from narwhals.dtypes import DType
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
     from typing import Any, Callable, Literal
 
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
-    from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
+    from narwhals._plan.dummy import (
+        DummyCompliantSeries,
+        DummyExpr,
+        DummySelector,
+        DummySeries,
+    )
     from narwhals._plan.expr import Agg, BinaryExpr, FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
@@ -425,10 +431,12 @@ def is_series(obj: Any) -> TypeIs[DummySeries]:
     return isinstance(obj, DummySeries)
 
 
-def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | DummySeries]:
-    from narwhals._plan.dummy import DummySeries
+def is_iterable_reject(
+    obj: Any,
+) -> TypeIs[str | bytes | DummySeries | DummyCompliantSeries]:
+    from narwhals._plan.dummy import DummyCompliantSeries, DummySeries
 
-    return isinstance(obj, (str, bytes, DummySeries))
+    return isinstance(obj, (str, bytes, DummySeries, DummyCompliantSeries))
 
 
 def is_regex_projection(name: str) -> bool:
@@ -519,3 +527,15 @@ def map_ir(
             result = result.map_ir(fn)
         return result
     return origin.map_ir(function)
+
+
+def flatten_hash_safe(iterable: Iterable[T | Iterable[T]], /) -> Iterator[T]:
+    """Fully unwrap all levels of nesting.
+
+    Aiming to reduce the chances of passing an unhashable argument.
+    """
+    for element in iterable:
+        if isinstance(element, Iterable) and not is_iterable_reject(element):
+            yield from flatten_hash_safe(element)
+        else:
+            yield element  # type: ignore[misc]

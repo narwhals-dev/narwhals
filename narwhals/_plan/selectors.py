@@ -7,14 +7,13 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable, is_iterable_reject
+from narwhals._plan.common import Immutable, flatten_hash_safe
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from datetime import timezone
     from typing import TypeVar
 
@@ -55,7 +54,7 @@ class ByDType(Selector):
     def from_dtypes(
         *dtypes: DType | type[DType] | Iterable[DType | type[DType]],
     ) -> ByDType:
-        return ByDType(dtypes=frozenset(_flatten_hash_safe(dtypes)))
+        return ByDType(dtypes=frozenset(flatten_hash_safe(dtypes)))
 
     def __repr__(self) -> str:
         els = ", ".join(
@@ -131,7 +130,7 @@ class Matches(Selector):
     @staticmethod
     def from_names(*names: str | Iterable[str]) -> Matches:
         """Implements `cs.by_name` to support `__r<op>__` with column selections."""
-        it: Iterator[str] = _flatten_hash_safe(names)
+        it: Iterator[str] = flatten_hash_safe(names)
         pattern = f"^({'|'.join(re.escape(name) for name in it)})$"
         return Matches.from_string(pattern)
 
@@ -201,15 +200,3 @@ def numeric() -> DummySelector:
 
 def string() -> DummySelector:
     return String().to_selector().to_narwhals()
-
-
-def _flatten_hash_safe(iterable: Iterable[T | Iterable[T]], /) -> Iterator[T]:
-    """Fully unwrap all levels of nesting.
-
-    Aiming to reduce the chances of passing an unhashable argument.
-    """
-    for element in iterable:
-        if isinstance(element, Iterable) and not is_iterable_reject(element):
-            yield from _flatten_hash_safe(element)
-        else:
-            yield element  # type: ignore[misc]
