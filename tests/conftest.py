@@ -305,8 +305,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "is_unique",
                     "rank",
                     "truncate",
-                    # "sumh_broadcasting",
-                    "over_pushdown",
                     "kurtosis_",
                     "sqrt_",
                     "exp_",

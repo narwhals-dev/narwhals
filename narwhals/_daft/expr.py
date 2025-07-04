@@ -310,7 +310,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Expression]", operator.invert)
-        return self._with_callable(invert)
+        return self._with_elementwise(invert)
 
     def __floordiv__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: (expr / other).floor(), other)
@@ -363,13 +363,13 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
-        return self._with_callable(func)._with_window_function(window_f)
+        return self._with_elementwise(func)._with_window_function(window_f)
 
     def count(self) -> Self:
-        return self._with_callable(lambda _input: _input.count("valid"))
+        return self._with_elementwise(lambda _input: _input.count("valid"))
 
     def abs(self) -> Self:
-        return self._with_callable(lambda _input: _input.abs())
+        return self._with_elementwise(lambda _input: _input.abs())
 
     def mean(self) -> Self:
         return self._with_callable(lambda _input: _input.mean())
@@ -399,10 +399,10 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             return _input.clip(lower_bound, upper_bound)
 
         if lower_bound is None:
-            return self._with_callable(_clip_upper, upper_bound=upper_bound)
+            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
         if upper_bound is None:
-            return self._with_callable(_clip_lower, lower_bound=lower_bound)
-        return self._with_callable(
+            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
+        return self._with_elementwise(
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
@@ -475,10 +475,10 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         return self._with_callable(lambda _input: _input.is_null().cast("uint32").sum())
 
     def is_null(self) -> Self:
-        return self._with_callable(lambda _input: _input.is_null())
+        return self._with_elementwise(lambda _input: _input.is_null())
 
     def is_nan(self) -> Self:
-        return self._with_callable(lambda _input: _input.float.is_nan())
+        return self._with_elementwise(lambda _input: _input.float.is_nan())
 
     def shift(self, n: int) -> Self:
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
@@ -557,27 +557,27 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         )
 
     def is_finite(self) -> Self:
-        return self._with_callable(
+        return self._with_elementwise(
             lambda _input: (_input > float("-inf")) & (_input < float("inf"))
         )
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_callable(lambda _input: _input.is_in(other))
+        return self._with_elementwise(lambda _input: _input.is_in(other))
 
     def round(self, decimals: int) -> Self:
-        return self._with_callable(lambda _input: _input.round(decimals))
+        return self._with_elementwise(lambda _input: _input.round(decimals))
 
     def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
         if strategy is not None:
             msg = "todo"
             raise NotImplementedError(msg)
 
-        return self._with_callable(
+        return self._with_elementwise(
             lambda _input, value: _input.fill_null(value), value=value
         )
 
     def log(self, base: float) -> Self:
-        return self._with_callable(lambda expr: expr.log(base=base))
+        return self._with_elementwise(lambda expr: expr.log(base=base))
 
     def skew(self) -> Self:
         return self._with_callable(lambda expr: expr.skew())
