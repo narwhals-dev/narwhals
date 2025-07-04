@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
 
@@ -64,6 +64,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         "len": "size",
         "n_unique": n_unique,
         "count": "count",
+        "quantile": "quantile",
     }
 
     def __init__(
@@ -119,6 +120,5 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             )
         return DaskLazyFrame(
             self._grouped.agg(**simple_aggregations).reset_index(),
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
         ).rename(dict(zip(self._keys, self._output_key_names)))

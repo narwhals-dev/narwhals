@@ -64,15 +64,8 @@ class PandasLikeNamespace(
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
-    # --- not in spec ---
-    def __init__(
-        self,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
+    def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
@@ -94,7 +87,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -110,7 +102,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -229,7 +220,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]
@@ -255,7 +245,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     ).native.max(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]

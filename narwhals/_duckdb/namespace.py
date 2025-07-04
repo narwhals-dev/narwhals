@@ -13,7 +13,14 @@ from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
-from narwhals._duckdb.utils import F, concat_str, lit, narwhals_to_native_dtype, when
+from narwhals._duckdb.utils import (
+    DeferredTimeZone,
+    F,
+    concat_str,
+    lit,
+    narwhals_to_native_dtype,
+    when,
+)
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -33,8 +40,7 @@ class DuckDBNamespace(
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     @property
@@ -87,7 +93,6 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -144,20 +149,17 @@ class DuckDBNamespace(
         return DuckDBWhen.from_expr(predicate, context=self)
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
-        def func(_df: DuckDBLazyFrame) -> list[Expression]:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            tz = DeferredTimeZone(df.native)
             if dtype is not None:
-                return [
-                    lit(value).cast(
-                        narwhals_to_native_dtype(dtype, version=self._version)  # type: ignore[arg-type]
-                    )
-                ]
+                target = narwhals_to_native_dtype(dtype, self._version, tz)
+                return [lit(value).cast(target)]  # type: ignore[arg-type]
             return [lit(value)]
 
         return self._expr(
             func,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -169,7 +171,6 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

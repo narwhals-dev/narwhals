@@ -12,7 +12,7 @@ from narwhals._utils import find_stacklevel
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
@@ -29,6 +29,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         "len": "size",
         "n_unique": "nunique",
         "count": "count",
+        "quantile": "quantile",
     }
 
     def __init__(
@@ -215,7 +216,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
             result.reset_index(inplace=True)  # noqa: PD002
             return self.compliant._with_native(
-                select_columns_by_name(result, new_names, backend_version, implementation)
+                select_columns_by_name(result, new_names, implementation)
             ).rename(dict(zip(self._keys, self._output_key_names)))
 
         if self.compliant.native.empty:
@@ -262,9 +263,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
         result_complex.reset_index(inplace=True)  # noqa: PD002
         return self.compliant._with_native(
-            select_columns_by_name(
-                result_complex, new_names, backend_version, implementation
-            )
+            select_columns_by_name(result_complex, new_names, implementation)
         ).rename(dict(zip(self._keys, self._output_key_names)))
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:

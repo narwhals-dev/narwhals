@@ -57,7 +57,7 @@ SCHEMA = {
 }
 
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
-DUCKDB_INCOMPATIBLE_COLUMNS = {"l", "o", "p"}
+DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 DAFT_INCOMPATIBLE_COLUMNS = {"o"}
 
@@ -246,7 +246,8 @@ def test_cast_datetime_utc(
 ) -> None:
     if (
         "dask" in str(constructor)
-        or "duckdb" in str(constructor)
+        # https://github.com/eakmanrq/sqlframe/issues/406
+        or "sqlframe" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
     ):
@@ -265,7 +266,7 @@ def test_cast_datetime_utc(
     df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("date")
-        .cast(nw.Datetime("ms", time_zone="UTC"))
+        .cast(nw.Datetime("us", time_zone="UTC"))
         .cast(nw.String())
         .str.slice(offset=0, length=19)
     )

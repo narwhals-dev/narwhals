@@ -25,6 +25,5 @@ class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )

@@ -57,6 +57,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         timestamp_array = pc.strptime(self.native, format=format, unit="us")
         return self.with_native(timestamp_array)
 
+    def to_date(self, format: str | None) -> ArrowSeries:
+        return self.to_datetime(format=format).dt.date()
+
     def to_uppercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_upper(self.native))
 
@@ -69,9 +72,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         hyphen, plus = lit("-"), lit("+")
 
         _slice_length: int | None = (
-            self.len_chars().max()
-            if self._compliant_series._backend_version < (13, 0)
-            else None
+            self.len_chars().max() if self.backend_version < (13, 0) else None
         )
         first_char, remaining_chars = (
             self.slice(0, 1).native,

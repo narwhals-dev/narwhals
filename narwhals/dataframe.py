@@ -32,7 +32,6 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     issue_deprecation_warning,
-    parse_version,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
@@ -228,75 +227,66 @@ class BaseFrame(Generic[_FrameT]):
     def join(
         self,
         other: Self,
-        on: str | list[str] | None = None,
-        how: JoinStrategy = "inner",
+        on: str | list[str] | None,
+        how: JoinStrategy,
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
-        suffix: str = "_right",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
+        _supported_joins = ("inner", "left", "full", "cross", "anti", "semi")
         on = [on] if isinstance(on, str) else on
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
+        compliant = self._compliant_frame
+        other = self._extract_compliant(other)
 
-        if how not in (
-            _supported_joins := ("inner", "left", "full", "cross", "anti", "semi")
-        ):
+        if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
-
-        if how == "cross" and (
-            left_on is not None or right_on is not None or on is not None
-        ):
-            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
-            raise ValueError(msg)
-
-        if how != "cross" and (on is None and (left_on is None or right_on is None)):
-            msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
-            raise ValueError(msg)
-
-        if how != "cross" and (
-            on is not None and (left_on is not None or right_on is not None)
-        ):
-            msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
-            raise ValueError(msg)
-
-        if on is not None:
-            left_on = right_on = on
-
-        if (isinstance(left_on, list) and isinstance(right_on, list)) and (
-            len(left_on) != len(right_on)
-        ):
-            msg = "`left_on` and `right_on` must have the same length."
-            raise ValueError(msg)
-
-        return self._with_compliant(
-            self._compliant_frame.join(
-                self._extract_compliant(other),
-                how=how,
-                left_on=left_on,
-                right_on=right_on,
-                suffix=suffix,
+        if how == "cross":
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=None, right_on=None, suffix=suffix
             )
-        )
+        elif on is None:
+            if left_on is None or right_on is None:
+                msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
+                raise ValueError(msg)
+            if len(left_on) != len(right_on):
+                msg = "`left_on` and `right_on` must have the same length."
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        else:
+            if left_on is not None or right_on is not None:
+                msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=on, right_on=on, suffix=suffix
+            )
+        return self._with_compliant(result)
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def join_asof(  # noqa: C901
+    def join_asof(
         self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: AsofJoinStrategy = "backward",
-        suffix: str = "_right",
+        left_on: str | None,
+        right_on: str | None,
+        on: str | None,
+        by_left: str | list[str] | None,
+        by_right: str | list[str] | None,
+        by: str | list[str] | None,
+        strategy: AsofJoinStrategy,
+        suffix: str,
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
 
@@ -325,10 +315,9 @@ class BaseFrame(Generic[_FrameT]):
             left_on = right_on = on
         if by is not None:
             by_left = by_right = by
-        if isinstance(by_left, str):
-            by_left = [by_left]
-        if isinstance(by_right, str):
-            by_right = [by_right]
+
+        by_left = [by_left] if isinstance(by_left, str) else by_left
+        by_right = [by_right] if isinstance(by_right, str) else by_right
 
         if (isinstance(by_left, list) and isinstance(by_right, list)) and (
             len(by_left) != len(by_right)
@@ -513,11 +502,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if supports_arrow_c_stream(native_frame):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
-            import pyarrow as pa  # ignore-banned-import
+            pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa) < (14, 0):  # pragma: no cover
+        if pa_version < (14, 0):  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
@@ -544,10 +533,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                 `backend` can be specified in various ways
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`,
+                    `IBIS` or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
 
         Returns:
             A new LazyFrame.
@@ -590,6 +579,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             Implementation.DASK,
             Implementation.DUCKDB,
             Implementation.POLARS,
+            Implementation.IBIS,
         )
         if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
             msg = (
@@ -1206,7 +1196,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def iter_rows(
-        self, *, named: Literal[False], buffer_size: int = ...
+        self, *, named: Literal[False] = ..., buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload

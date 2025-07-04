@@ -25,7 +25,6 @@ from narwhals._utils import (
     is_eager_allowed,
     is_sequence_but_not_str,
     issue_deprecation_warning,
-    parse_version,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -563,7 +562,7 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError
 
     from narwhals import __version__
 
@@ -781,7 +780,7 @@ def scan_csv(
             csv_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else csv_reader.options(**kwargs).load(source)
         )
@@ -981,7 +980,7 @@ def scan_parquet(
             pq_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else pq_reader.options(**kwargs).load(source)
         )

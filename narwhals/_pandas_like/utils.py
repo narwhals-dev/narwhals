@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import functools
 import re
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
-from narwhals._compliant.series import EagerSeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._constants import (
     MS_PER_SECOND,
     NS_PER_MICROSECOND,
@@ -23,10 +22,14 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import DuplicateError, ShapeError
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from pandas._typing import Dtype as PandasDtype
+    from pandas.core.dtypes.dtypes import BaseMaskedDtype
+    from typing_extensions import TypeIs
 
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -116,12 +119,7 @@ def align_and_extract_native(
         if rhs.native.index is not lhs_index:
             return (
                 lhs.native,
-                set_index(
-                    rhs.native,
-                    lhs_index,
-                    implementation=rhs._implementation,
-                    backend_version=rhs._backend_version,
-                ),
+                set_index(rhs.native, lhs_index, implementation=rhs._implementation),
             )
         return (lhs.native, rhs.native)
 
@@ -133,11 +131,7 @@ def align_and_extract_native(
 
 
 def set_index(
-    obj: NativeNDFrameT,
-    index: Any,
-    *,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
+    obj: NativeNDFrameT, index: Any, *, implementation: Implementation
 ) -> NativeNDFrameT:
     """Wrapper around pandas' set_axis to set object index.
 
@@ -148,12 +142,12 @@ def set_index(
     ) != (actual_len := len(obj)):
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
         raise ShapeError(msg)
-    if implementation is Implementation.CUDF:  # pragma: no cover
+    if implementation is Implementation.CUDF:
         obj = obj.copy(deep=False)
         obj.index = index
         return obj
     if implementation is Implementation.PANDAS and (
-        (1, 5) <= backend_version < (3,)
+        (1, 5) <= implementation._backend_version() < (3,)
     ):  # pragma: no cover
         return obj.set_axis(index, axis=0, copy=False)
     else:  # pragma: no cover
@@ -161,15 +155,11 @@ def set_index(
 
 
 def rename(
-    obj: NativeNDFrameT,
-    *args: Any,
-    implementation: Implementation,
-    backend_version: tuple[int, ...],
-    **kwargs: Any,
+    obj: NativeNDFrameT, *args: Any, implementation: Implementation, **kwargs: Any
 ) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
-        backend_version >= (3,)
+        implementation._backend_version() >= (3,)
     ):  # pragma: no cover
         return obj.rename(*args, **kwargs, inplace=False)
     return obj.rename(*args, **kwargs, copy=False, inplace=False)
@@ -246,7 +236,7 @@ def object_native_to_narwhals_dtype(
     series: PandasLikeSeries, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
-    if implementation is Implementation.CUDF:  # pragma: no cover
+    if implementation is Implementation.CUDF:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return dtypes.String()
@@ -324,6 +314,34 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
+if Implementation.PANDAS._backend_version() >= (1, 2):
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        """Return `True` if `dtype` is `"numpy_nullable"`."""
+        # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+        # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
+        sentinel = object()
+        return (
+            isinstance(dtype, pd.api.extensions.ExtensionDtype)
+            and getattr(dtype, "base", sentinel) is None
+        )
+else:  # pragma: no cover
+
+    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+        # NOTE: `base` attribute was added between 1.1-1.2
+        # Checking by isinstance requires using an import path that is no longer valid
+        # `1.1`: https://github.com/pandas-dev/pandas/blob/b5958ee1999e9aead1938c0bba2b674378807b3d/pandas/core/arrays/masked.py#L37
+        # `1.2`: https://github.com/pandas-dev/pandas/blob/7c48ff4409c622c582c56a5702373f726de08e96/pandas/core/arrays/masked.py#L41
+        # `1.5`: https://github.com/pandas-dev/pandas/blob/35b0d1dcadf9d60722c055ee37442dc76a29e64c/pandas/core/dtypes/dtypes.py#L1609
+        if isinstance(dtype, pd.api.extensions.ExtensionDtype):
+            from pandas.core.arrays.masked import (  # type: ignore[attr-defined]
+                BaseMaskedDtype as OldBaseMaskedDtype,  # pyright: ignore[reportAttributeAccessIssue]
+            )
+
+            return isinstance(dtype, OldBaseMaskedDtype)
+        return False
+
+
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:
     """Get dtype backend for pandas type.
 
@@ -331,28 +349,20 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     """
     if implementation is Implementation.CUDF:
         return None
-    if hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype):
+    if is_dtype_pyarrow(dtype):
         return "pyarrow"
-    with suppress(AttributeError):
-        sentinel = object()
-        if (
-            isinstance(dtype, pd.api.extensions.ExtensionDtype)
-            and getattr(dtype, "base", sentinel) is None
-        ):
-            return "numpy_nullable"
-    return None
+    return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
 
 
 @functools.lru_cache(maxsize=16)
-def is_pyarrow_dtype_backend(dtype: Any, implementation: Implementation) -> bool:
-    return get_dtype_backend(dtype, implementation) == "pyarrow"
+def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
+    return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     dtype: IntoDType,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
-    backend_version: tuple[int, ...],
     version: Version,
 ) -> str | PandasDtype:
     if dtype_backend is not None and dtype_backend not in {"pyarrow", "numpy_nullable"}:
@@ -439,6 +449,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
         return "category"
+    backend_version = implementation._backend_version()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # Pandas does not support "ms" or "us" time units before version 2.0
         if implementation is Implementation.PANDAS and backend_version < (
@@ -566,7 +577,6 @@ def calculate_timestamp_date(s: NativeSeriesT, time_unit: str) -> NativeSeriesT:
 def select_columns_by_name(
     df: NativeDataFrameT,
     column_names: list[str] | _1DArray,  # NOTE: Cannot be a tuple!
-    backend_version: tuple[int, ...],
     implementation: Implementation,
 ) -> NativeDataFrameT | Any:
     """Select columns by name.
@@ -577,7 +587,8 @@ def select_columns_by_name(
     if len(column_names) == df.shape[1] and (df.columns == column_names).all():
         return df
     if (df.columns.dtype.kind == "b") or (
-        implementation is Implementation.PANDAS and backend_version < (1, 5)
+        implementation is Implementation.PANDAS
+        and implementation._backend_version() < (1, 5)
     ):
         # See https://github.com/narwhals-dev/narwhals/issues/1349#issuecomment-2470118122
         # for why we need this
@@ -592,25 +603,6 @@ def select_columns_by_name(
         raise
 
 
-def check_column_names_are_unique(columns: pd.Index[str]) -> None:
-    try:
-        len_unique_columns = len(columns.drop_duplicates())
-    except Exception:  # noqa: BLE001  # pragma: no cover
-        msg = f"Expected hashable (e.g. str or int) column names, got: {columns}"
-        raise ValueError(msg) from None
-
-    if len(columns) != len_unique_columns:
-        from collections import Counter
-
-        counter = Counter(columns)
-        msg = ""
-        for key, value in counter.items():
-            if value > 1:
-                msg += f"\n- '{key}' {value} times"
-        msg = f"Expected unique column names, got:{msg}"
-        raise DuplicateError(msg)
-
-
 def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
     # cuDF booleans are nullable but the native dtype is still 'bool'.
     return (
@@ -620,15 +612,19 @@ def is_non_nullable_boolean(s: PandasLikeSeries) -> bool:
     )
 
 
-class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]):
-    @property
-    def implementation(self) -> Implementation:
-        return self.compliant._implementation
+def import_array_module(implementation: Implementation, /) -> ModuleType:
+    """Returns numpy or cupy module depending on the given implementation."""
+    if implementation in {Implementation.PANDAS, Implementation.MODIN}:
+        import numpy as np
 
-    @property
-    def backend_version(self) -> tuple[int, ...]:
-        return self.compliant._backend_version
+        return np
+    elif implementation is Implementation.CUDF:
+        import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
-    @property
-    def version(self) -> Version:
-        return self.compliant._version
+        return cp
+    else:  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf, got: {implementation}"
+        raise AssertionError(msg)
+
+
+class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
