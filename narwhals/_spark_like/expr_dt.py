@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
@@ -22,14 +22,13 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
-def _weekday(F: Any, expr: Column) -> Column:  # noqa: N803
-    # PySpark's dayofweek returns 1-7 for Sunday-Saturday
-    return (F.dayofweek(expr) + 6) % 7
-
-
 class SparkLikeExprDateTimeNamespace(
     LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
 ):
+    def _weekday(self, expr: Column) -> Column:
+        # PySpark's dayofweek returns 1-7 for Sunday-Saturday
+        return (self.compliant._F.dayofweek(expr) + 6) % 7
+
     def to_string(self, format: str) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
 
@@ -109,7 +108,7 @@ class SparkLikeExprDateTimeNamespace(
         return self.compliant._with_elementwise(self.compliant._F.dayofyear)
 
     def weekday(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(_weekday)
+        return self.compliant._with_elementwise(self._weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
         multiple, unit = parse_interval_string(every)
@@ -166,7 +165,7 @@ class SparkLikeExprDateTimeNamespace(
 
         year = F.date_format(expr, "yyyy")
         week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
-        day = _weekday(self.compliant._F, expr)
+        day = self._weekday(expr)
         return F.concat(year, F.lit("-W"), week, F.lit("-"), day.cast("string"))
 
     def _format_iso_week(self, expr: Column) -> Column:
