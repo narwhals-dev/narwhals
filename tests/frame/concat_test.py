@@ -64,7 +64,9 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
 
 # Warning raised internally by Modin.
-@pytest.mark.filterwarnings("ignore:When grouping with a length-1:FutureWarning")
+@pytest.mark.filterwarnings(
+    "ignore:The behavior of DataFrame concatation with empty:FutureWarning"
+)
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

@@ -210,7 +210,11 @@ def test_rolling_var_expr_lazy_ungrouped(
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "daft")):
+    if "dask" in str(constructor) and ddof != 1:
+        # Only `ddof=1` is supported
+        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("daft",)):
+        # https://github.com/Eventual-Inc/Daft/issues/4705
         request.applymarker(pytest.mark.xfail)
 
     data = {

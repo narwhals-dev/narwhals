@@ -54,3 +54,11 @@ class DaftExprDateTimeNamespace(
 
     convert_time_zone = not_implemented()
     replace_time_zone = not_implemented()
+    timestamp = not_implemented()
+    truncate = not_implemented()
+    total_hours = not_implemented()
+    total_minutes = not_implemented()
+    total_seconds = not_implemented()
+    total_milliseconds = not_implemented()
+    total_microseconds = not_implemented()
+    total_nanoseconds = not_implemented()

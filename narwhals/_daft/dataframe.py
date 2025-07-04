@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals._daft.expr import DaftExpr
     from narwhals._daft.group_by import DaftGroupBy
     from narwhals._daft.namespace import DaftNamespace
-    from narwhals._utils import _FullContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy
@@ -60,7 +60,7 @@ class DaftLazyFrame(
         return isinstance(obj, daft.DataFrame)
 
     @classmethod
-    def from_native(cls, data: daft.DataFrame, /, *, context: _FullContext) -> Self:
+    def from_native(cls, data: daft.DataFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[daft.DataFrame]:

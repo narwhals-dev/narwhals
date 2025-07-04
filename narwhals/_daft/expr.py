@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._daft.dataframe import DaftLazyFrame
     from narwhals._daft.namespace import DaftNamespace
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
 
     DaftWindowFunction = WindowFunction[DaftLazyFrame, Expression]
@@ -176,7 +176,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         evaluate_column_names: EvalNames[DaftLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: DaftLazyFrame) -> list[Expression]:
             return [col(col_name) for col_name in evaluate_column_names(df)]
@@ -190,7 +190,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     @classmethod
     def from_column_indices(
-        cls: type[Self], *column_indices: int, context: _FullContext
+        cls: type[Self], *column_indices: int, context: _LimitedContext
     ) -> Self:
         def func(df: DaftLazyFrame) -> list[Expression]:
             columns = df.columns
