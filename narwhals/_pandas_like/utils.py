@@ -22,7 +22,7 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -141,7 +141,7 @@ def set_index(
         expected_len := len(index)
     ) != (actual_len := len(obj)):
         msg = f"Expected object of length {expected_len}, got length: {actual_len}"
-        raise InvalidOperationError(msg)
+        raise ShapeError(msg)
     if implementation is Implementation.CUDF:
         obj = obj.copy(deep=False)
         obj.index = index

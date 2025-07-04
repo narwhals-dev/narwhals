@@ -30,7 +30,7 @@ from narwhals._utils import (
     scale_bytes,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -253,7 +253,7 @@ class PandasLikeDataFrame(
             return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
         if (len_other := len(other)) != (len_idx := len(index)):
             msg = f"Expected object of length {len_idx}, got: {len_other}."
-            raise InvalidOperationError(msg)
+            raise ShapeError(msg)
         if other.native.index is not index:
             return set_index(other.native, index, implementation=other._implementation)
         return other.native
@@ -1122,7 +1122,7 @@ class PandasLikeDataFrame(
                 for col_name in columns[1:]
             ):
                 msg = "exploded columns must have matching element counts"
-                raise InvalidOperationError(msg)
+                raise ShapeError(msg)
 
             original_columns = self.columns
             other_columns = [c for c in original_columns if c not in columns]

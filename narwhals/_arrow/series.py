@@ -32,7 +32,7 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -189,7 +189,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 compliant = s._with_native(pa.repeat(s.native[0], max_length))
             elif (actual_len := len(s)) != max_length:
                 msg = f"Expected object of length {max_length}, got {actual_len}."
-                raise InvalidOperationError(msg)
+                raise ShapeError(msg)
             else:
                 compliant = s
             reshaped.append(compliant)

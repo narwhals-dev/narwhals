@@ -23,7 +23,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -326,7 +326,7 @@ class ArrowDataFrame(
         if not other._broadcast:
             if (len_other := len(other)) != length:
                 msg = f"Expected object of length {length}, got: {len_other}."
-                raise InvalidOperationError(msg)
+                raise ShapeError(msg)
             return other.native
 
         value = other.native[0]
