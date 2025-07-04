@@ -51,13 +51,11 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         *,
         evaluate_output_names: EvalNames[DaftLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._metadata: ExprMetadata | None = None
         self._window_function: DaftWindowFunction | None = window_function
@@ -96,7 +94,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         # Unused, just for compatibility with PandasLikeExpr
         from narwhals._daft.namespace import DaftNamespace
 
-        return DaftNamespace(backend_version=self._backend_version, version=self._version)
+        return DaftNamespace(version=self._version)
 
     def _with_window_function(self, window_function: DaftWindowFunction) -> Self:
         return self.__class__(
@@ -104,7 +102,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -193,7 +190,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -209,7 +205,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             func,
             evaluate_output_names=lambda df: [df.columns[i] for i in column_indices],
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -235,7 +230,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             window_function=window_function,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=context._backend_version,
             version=context._version,
         )
 
@@ -287,7 +281,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -299,7 +292,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             self._push_down_window_function(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -309,7 +301,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -319,7 +310,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -443,7 +433,6 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
         )
 

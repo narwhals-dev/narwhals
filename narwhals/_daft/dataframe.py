@@ -9,12 +9,11 @@ import daft.functions
 from narwhals._daft.utils import evaluate_exprs, lit, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     Version,
     check_column_names_are_unique,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
-    validate_backend_version,
 )
 from narwhals.dependencies import get_daft
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
@@ -37,7 +36,8 @@ if TYPE_CHECKING:
 
 
 class DaftLazyFrame(
-    CompliantLazyFrame["DaftExpr", "daft.DataFrame", "LazyFrame[daft.DataFrame]"]
+    CompliantLazyFrame["DaftExpr", "daft.DataFrame", "LazyFrame[daft.DataFrame]"],
+    ValidateBackendVersion,
 ):
     _implementation = Implementation.DAFT
 
@@ -45,15 +45,15 @@ class DaftLazyFrame(
         self,
         native_dataframe: daft.DataFrame,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: daft.DataFrame = native_dataframe
         self._version = version
-        self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
+        if validate_backend_version:
+            self._validate_backend_version()
 
     @staticmethod
     def _is_native(obj: daft.DataFrame | Any) -> TypeIs[daft.DataFrame]:
@@ -61,9 +61,7 @@ class DaftLazyFrame(
 
     @classmethod
     def from_native(cls, data: daft.DataFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[daft.DataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -74,20 +72,16 @@ class DaftLazyFrame(
     def __narwhals_namespace__(self) -> DaftNamespace:
         from narwhals._daft.namespace import DaftNamespace
 
-        return DaftNamespace(backend_version=self._backend_version, version=self._version)
+        return DaftNamespace(version=self._version)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self._native_frame, version=version, backend_version=self._backend_version
-        )
+        return self.__class__(self._native_frame, version=version)
 
     def _with_native(self, df: daft.DataFrame) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def _iter_columns(self) -> Iterator[daft.Expression]:
         return iter(self._native_frame.columns)
@@ -106,26 +100,22 @@ class DaftLazyFrame(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 native_dataframe=self._native_frame.to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 native_dataframe=self._native_frame.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
@@ -137,7 +127,7 @@ class DaftLazyFrame(
 
             return PolarsDataFrame(
                 df=cast("pl.DataFrame", pl.from_arrow(self._native_frame.to_arrow())),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 
