@@ -108,7 +108,7 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
         def fn(expr: ir.StringColumn) -> ir.DateValue:
             return expr.as_date(format)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def zfill(self, width: int) -> IbisExpr:
         def func(expr: ir.StringColumn) -> ir.Value:

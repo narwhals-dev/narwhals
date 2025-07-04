@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import MultiOutputExpressionError, ShapeError
+from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -117,10 +117,10 @@ def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
 
 def test_when_then_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    with pytest.raises(ShapeError):
+    with pytest.raises(InvalidOperationError):
         df.select(nw.when(nw.col("a").sum() > 1).then("c"))
 
-    with pytest.raises(ShapeError):
+    with pytest.raises(InvalidOperationError):
         df.select(nw.when(nw.col("a").sum() > 1).then(1).otherwise("c"))
 
 

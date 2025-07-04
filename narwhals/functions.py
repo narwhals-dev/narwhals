@@ -34,7 +34,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.translate import from_native, to_native
 
@@ -1475,7 +1475,7 @@ class When:
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `then` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         return Then(
             lambda plx: apply_n_ary_operation(
@@ -1503,7 +1503,7 @@ class Then(Expr):
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `otherwise` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)

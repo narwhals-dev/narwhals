@@ -14,4 +14,4 @@ class DuckDBExprListNamespace(
     LazyExprNamespace["DuckDBExpr"], ListNamespace["DuckDBExpr"]
 ):
     def len(self) -> DuckDBExpr:
-        return self.compliant._with_callable(lambda expr: F("len", expr))
+        return self.compliant._with_elementwise(lambda expr: F("len", expr))
