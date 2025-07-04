@@ -6,6 +6,7 @@ import daft
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from daft import Expression
@@ -14,9 +15,6 @@ if TYPE_CHECKING:
 
 
 class DaftExprStringNamespace(LazyExprNamespace["DaftExpr"], StringNamespace["DaftExpr"]):
-    def __init__(self, expr: DaftExpr) -> None:
-        self.compliant = expr
-
     def starts_with(self, prefix: str) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.str.startswith(prefix))
 
@@ -41,11 +39,9 @@ class DaftExprStringNamespace(LazyExprNamespace["DaftExpr"], StringNamespace["Da
 
     def to_datetime(self, format: str | None) -> DaftExpr:
         if format is None:
-            msg = "`format` must be specified for Daft in `to_date`."
+            msg = "`format` must be specified for Daft in `to_datetime`."
             raise ValueError(msg)
-        return self.compliant._with_elementwise(
-            lambda expr: expr.str.to_datetime(format).date()
-        )
+        return self.compliant._with_elementwise(lambda expr: expr.str.to_datetime(format))
 
     def to_lowercase(self) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.str.lower())
@@ -83,3 +79,5 @@ class DaftExprStringNamespace(LazyExprNamespace["DaftExpr"], StringNamespace["Da
             return expr.str.substr(offset_expr, length_expr)
 
         return self.compliant._with_elementwise(func)
+
+    zfill = not_implemented()

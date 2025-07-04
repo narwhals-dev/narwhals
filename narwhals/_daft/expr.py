@@ -317,6 +317,14 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_callable(invert)
 
+    def __floordiv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: (expr / other).floor(), other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        return self._with_binary(lambda expr, other: (other / expr).floor(), other).alias(
+            "literal"
+        )
+
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
             return coalesce(expr.bool_and(), lit(True))  # noqa: FBT003

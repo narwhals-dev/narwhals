@@ -438,7 +438,7 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table" in str(constructor) or "pyspark" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "daft")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
