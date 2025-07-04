@@ -5,6 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 import daft
+import daft.functions
 from daft import Expression
 
 from narwhals._compliant import LazyThen, LazyWhen
@@ -13,10 +14,6 @@ from narwhals._daft.dataframe import DaftLazyFrame
 from narwhals._daft.expr import DaftExpr
 from narwhals._daft.selectors import DaftSelectorNamespace
 from narwhals._daft.utils import lit, narwhals_to_native_dtype
-from narwhals._expression_parsing import (
-    combine_alias_output_names,
-    combine_evaluate_output_names,
-)
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
@@ -101,37 +98,29 @@ class DaftNamespace(LazyNamespace[DaftLazyFrame, DaftExpr, daft.DataFrame]):
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    max_horizontal = not_implemented()
-    min_horizontal = not_implemented()
-
     def sum_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[Expression]:
-            cols = (col.fill_null(lit(0)) for _expr in exprs for col in _expr(df))
-            return [reduce(operator.add, cols)]
+        def func(cols: Iterable[Expression]) -> Expression:
+            return daft.functions.columns_sum(*cols)
 
-        return DaftExpr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
+    def max_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
+        def func(cols: Iterable[Expression]) -> Expression:
+            return daft.functions.columns_max(*cols)
+
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
+    def min_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
+        def func(cols: Iterable[Expression]) -> Expression:
+            return daft.functions.columns_min(*cols)
+
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: DaftExpr) -> DaftExpr:
-        def func(df: DaftLazyFrame) -> list[Expression]:
-            cols = [c for _expr in exprs for c in _expr(df)]
-            return [
-                (
-                    reduce(operator.add, (col.fill_null(lit(0)) for col in cols))
-                    / reduce(operator.add, ((~col.is_null()).cast("int") for col in cols))
-                )
-            ]
+        def func(cols: Iterable[Expression]) -> Expression:
+            return daft.functions.columns_mean(*cols)
 
-        return DaftExpr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def when(self, predicate: DaftExpr) -> DaftWhen:
         return DaftWhen.from_expr(predicate, context=self)

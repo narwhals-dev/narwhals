@@ -305,21 +305,17 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "is_unique",
                     "rank",
                     "truncate",
-                    "sumh_broadcasting",
+                    # "sumh_broadcasting",
                     "over_pushdown",
                     "kurtosis_",
                     "sqrt_",
                     "exp_",
                     # blocked
-                    "fill_null_strategies",
-                    "fill_null_limits",
                     "replace_time_zone",
                 )
             )
             and constructor == "daft"
         ):
-            # Blockers:
-            # - fill_null: https://github.com/Eventual-Inc/Daft/issues/4465
             continue
 
         if constructor in EAGER_CONSTRUCTORS:

@@ -85,7 +85,7 @@ def test_fill_null_strategies_with_limit_as_none(
     ):
         pytest.skip()
 
-    if "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("daft", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
     data_limits = {
@@ -172,7 +172,7 @@ def test_fill_null_limits(
     ):
         pytest.skip()
 
-    if "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("daft", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
     context: Any = (
