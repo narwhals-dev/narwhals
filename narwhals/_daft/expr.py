@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from daft import Window, coalesce, col, lit
@@ -118,7 +119,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
             window = (
                 self.partition_by(*inputs.partition_by)
-                .order_by(*inputs.order_by, desc=reverse)
+                .order_by(*inputs.order_by, desc=reverse, nulls_first=not reverse)
                 .rows_between(Window.unbounded_preceding, 0)
             )
             return [getattr(expr, func_name)().over(window) for expr in self._call(df)]
@@ -127,12 +128,12 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def _rolling_window_func(
         self,
-        *,
         func_name: Literal["sum", "mean", "std", "var"],
-        center: bool,
         window_size: int,
         min_samples: int,
         ddof: int | None = None,
+        *,
+        center: bool,
     ) -> DaftWindowFunction:
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
@@ -147,19 +148,13 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
             window = (
                 self.partition_by(*inputs.partition_by)
-                .order_by(*inputs.order_by)
+                .order_by(*inputs.order_by, nulls_first=True)
                 .rows_between(start, end)
             )
             if func_name in {"sum", "mean"}:
                 func_: str = func_name
-            elif func_name == "var" and ddof == 0:
-                func_ = "var_pop"
-            elif func_name in "var" and ddof == 1:
-                func_ = "var_samp"
             elif func_name == "std" and ddof == 0:
-                func_ = "stddev_pop"
-            elif func_name == "std" and ddof == 1:
-                func_ = "stddev_samp"
+                func_ = "stddev"
             elif func_name in {"var", "std"}:  # pragma: no cover
                 msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
                 raise ValueError(msg)
@@ -483,7 +478,9 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def shift(self, n: int) -> Self:
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
-            window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
+            window = self.partition_by(*inputs.partition_by).order_by(
+                *inputs.order_by, nulls_first=True
+            )
             return [expr.lag(n).over(window) for expr in self(df)]
 
         return self._with_window_function(func)
@@ -493,7 +490,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             return [
                 row_number().over(
                     self.partition_by(*inputs.partition_by, expr).order_by(
-                        *inputs.order_by
+                        *inputs.order_by, nulls_first=True
                     )
                 )
                 == lit(1)
@@ -507,7 +504,7 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
             return [
                 row_number().over(
                     self.partition_by(*inputs.partition_by, expr).order_by(
-                        *inputs.order_by, desc=True
+                        *inputs.order_by, desc=True, nulls_first=False
                     )
                 )
                 == lit(1)
@@ -518,7 +515,9 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
 
     def diff(self) -> Self:
         def func(df: DaftLazyFrame, inputs: DaftWindowInputs) -> Sequence[Expression]:
-            window = self.partition_by(*inputs.partition_by).order_by(*inputs.order_by)
+            window = self.partition_by(*inputs.partition_by).order_by(
+                *inputs.order_by, nulls_first=True
+            )
             return [expr - expr.lag(1).over(window) for expr in self(df)]
 
         return self._with_window_function(func)
@@ -526,6 +525,31 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     def cum_sum(self, *, reverse: bool) -> Self:
         return self._with_window_function(
             self._cum_window_func(reverse=reverse, func_name="sum")
+        )
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="min")
+        )
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="max")
+        )
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func(reverse=reverse, func_name="count")
+        )
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func("sum", window_size, min_samples, center=center)
+        )
+
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_window_function(
+            self._rolling_window_func("mean", window_size, min_samples, center=center)
         )
 
     def is_finite(self) -> Self:
@@ -576,14 +600,9 @@ class DaftExpr(LazyExpr["DaftLazyFrame", "Expression"]):
     median = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/3491
     unique = not_implemented()
     is_unique = not_implemented()
-    cum_count = not_implemented()
-    cum_min = not_implemented()
-    cum_max = not_implemented()
-    cum_prod = not_implemented()
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_var = not_implemented()
-    rolling_std = not_implemented()
     kurtosis = not_implemented()
     exp = not_implemented()
     sqrt = not_implemented()
+    cum_prod = not_implemented()
+    rolling_std = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/4464
+    rolling_var = not_implemented()  # https://github.com/Eventual-Inc/Daft/issues/4705

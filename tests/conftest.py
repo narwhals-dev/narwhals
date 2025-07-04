@@ -311,11 +311,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                     "sqrt_",
                     "exp_",
                     # blocked
-                    "shift_",
-                    "diff_",
-                    "_distinct_",
-                    "cum_",
-                    "rolling_",
                     "fill_null_strategies",
                     "fill_null_limits",
                     "replace_time_zone",
@@ -325,10 +320,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         ):
             # Blockers:
             # - fill_null: https://github.com/Eventual-Inc/Daft/issues/4465
-            # - replace_time_zone: https://github.com/Eventual-Inc/Daft/issues/4096
-            # - cum_*, rolling_*, shift, diff: https://github.com/Eventual-Inc/Daft/issues/4526
-            #
-            # The rest should be doable
             continue
 
         if constructor in EAGER_CONSTRUCTORS:

@@ -201,6 +201,7 @@ def test_rolling_var_expr_lazy_ungrouped(
     *,
     center: bool,
     ddof: int,
+    request: pytest.FixtureRequest,
 ) -> None:
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
@@ -209,9 +210,9 @@ def test_rolling_var_expr_lazy_ungrouped(
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
-    if "dask" in str(constructor) and ddof != 1:
-        # Only `ddof=1` is supported
-        pytest.skip()
+    if any(x in str(constructor) for x in ("dask", "daft")):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "a": [1, None, 2, None, 4, 6, 11],
         "b": [1, None, 2, 3, 4, 5, 6],
@@ -273,7 +274,7 @@ def test_rolling_var_expr_lazy_grouped(
         or ("pandas" in str(constructor) and PANDAS_VERSION < (1, 2))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "daft")):
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         # unreliable

@@ -65,8 +65,9 @@ def test_lazy_cum_prod_grouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "daft")):
         # grouped window functions not yet supported
+        # https://github.com/Eventual-Inc/Daft/issues/4703
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
