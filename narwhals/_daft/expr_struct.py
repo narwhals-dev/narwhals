@@ -8,9 +8,9 @@ if TYPE_CHECKING:
 
 class DaftExprStructNamespace:
     def __init__(self, expr: DaftExpr) -> None:
-        self._compliant_expr = expr
+        self.compliant = expr
 
     def field(self, name: str) -> DaftExpr:
-        return self._compliant_expr._with_callable(
+        return self.compliant._with_callable(
             lambda _input: _input.struct.get(name)
         ).alias(name)

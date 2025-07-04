@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class DaftExprStringNamespace(LazyExprNamespace["DaftExpr"], StringNamespace["DaftExpr"]):
     def __init__(self, expr: DaftExpr) -> None:
-        self._compliant_expr = expr
+        self.compliant = expr
 
     def starts_with(self, prefix: str) -> DaftExpr:
         return self.compliant._with_callable(lambda expr: expr.str.startswith(prefix))
