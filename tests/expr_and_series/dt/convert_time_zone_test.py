@@ -59,7 +59,7 @@ def test_convert_time_zone_series(
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf", "daft")):
+    if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [

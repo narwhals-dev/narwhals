@@ -46,15 +46,11 @@ class DaftExprDateTimeNamespace(
     def weekday(self) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.dt.day_of_week() + 1)
 
-    def convert_time_zone(self, time_zone: str | None) -> DaftExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: expr.dt.convert_time_zone(time_zone)
-        )
-
     def to_string(self, format: str | None) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.dt.strftime(format))
 
     def ordinal_day(self) -> DaftExpr:
         return self.compliant._with_elementwise(lambda expr: expr.dt.day_of_year())
 
+    convert_time_zone = not_implemented()
     replace_time_zone = not_implemented()
