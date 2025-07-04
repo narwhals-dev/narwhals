@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ShapeError
 from tests.utils import PYARROW_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
@@ -76,5 +76,5 @@ def test_with_columns_series_shape_mismatch(constructor_eager: ConstructorEager)
     second = nw.from_native(constructor_eager({"second": [1, 2, 3, 4]}), eager_only=True)[
         "second"
     ]
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises(ShapeError):
         df1.with_columns(second=second)

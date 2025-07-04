@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
@@ -124,7 +124,7 @@ def test_explode_shape_error(
         pytest.skip()
 
     with pytest.raises(
-        (InvalidOperationError, NotImplementedError),
+        (ShapeError, NotImplementedError),
         match=r".*exploded columns (must )?have matching element counts",
     ):
         _ = (
