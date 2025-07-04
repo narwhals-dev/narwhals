@@ -14,6 +14,7 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    import daft
     import duckdb
     import ibis
     import pandas as pd
@@ -220,6 +221,12 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
+def daft_lazy_constructor(obj: dict[str, Any]) -> daft.DataFrame:  # pragma: no cover
+    import daft
+
+    return daft.from_pydict(obj)
+
+
 @lru_cache(maxsize=1)
 def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
     """Cached (singleton) in-memory backend to ensure all tables exist within the same in-memory database."""
@@ -252,6 +259,7 @@ LAZY_CONSTRUCTORS: dict[str, Constructor] = {
     "duckdb": duckdb_lazy_constructor,
     "pyspark": pyspark_lazy_constructor,  # type: ignore[dict-item]
     "sqlframe": sqlframe_pyspark_lazy_constructor,
+    "daft": daft_lazy_constructor,
     "ibis": ibis_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
@@ -288,6 +296,23 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
         ):
             continue  # pragma: no cover
+
+        if (
+            any(
+                x in str(metafunc.function)
+                for x in (
+                    "concat_str",
+                    "is_unique",
+                    "rank",
+                    "truncate",
+                    "kurtosis_",
+                    "sqrt_",
+                    "exp_",
+                )
+            )
+            and constructor == "daft"
+        ):
+            continue
 
         if constructor in EAGER_CONSTRUCTORS:
             eager_constructors.append(EAGER_CONSTRUCTORS[constructor])

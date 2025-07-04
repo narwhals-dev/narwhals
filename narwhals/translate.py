@@ -18,6 +18,7 @@ from narwhals.dependencies import (
     get_numpy,
     get_pandas,
     is_cupy_scalar,
+    is_daft_dataframe,
     is_dask_dataframe,
     is_duckdb_relation,
     is_ibis_table,
@@ -538,6 +539,22 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
+
+    # Daft
+    elif is_daft_dataframe(native_object):  # pragma: no cover
+        if series_only or eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = (
+                    "Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` "
+                    "with Daft DataFrame"
+                )
+                raise TypeError(msg)
+            return native_object
+        return (
+            version.namespace.from_native_object(native_object)
+            .compliant.from_native(native_object)
+            .to_narwhals()
+        )
 
     # Interchange protocol
     elif _supports_dataframe_interchange(native_object):

@@ -69,7 +69,6 @@ class NativeExpr(Protocol):
     """
 
     def between(self, *args: Any, **kwds: Any) -> Any: ...
-    def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
 
 class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):

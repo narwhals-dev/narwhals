@@ -763,6 +763,7 @@ def scan_csv(
         Implementation.DASK,
         Implementation.DUCKDB,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -854,6 +855,7 @@ def read_parquet(
         Implementation.CUDF,
         Implementation.DUCKDB,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
@@ -961,6 +963,7 @@ def scan_parquet(
         Implementation.DASK,
         Implementation.DUCKDB,
         Implementation.IBIS,
+        Implementation.DAFT,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
