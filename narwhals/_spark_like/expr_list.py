@@ -13,4 +13,4 @@ class SparkLikeExprListNamespace(
     LazyExprNamespace["SparkLikeExpr"], ListNamespace["SparkLikeExpr"]
 ):
     def len(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.array_size)
+        return self.compliant._with_elementwise(self.compliant._F.array_size)
