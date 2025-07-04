@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -21,19 +21,33 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
-    from narwhals.typing import FillNullStrategy, NativeFrame, NativeSeries, RankMethod
+    from narwhals.typing import (
+        FillNullStrategy,
+        NativeFrame,
+        NativeSeries,
+        RankMethod,
+        RollingInterpolationMethod,
+    )
 
     class ScalarKwargs(TypedDict, total=False):
         """Non-expressifiable args which we may need to reuse in `agg` or `over`."""
 
+        adjust: bool
+        alpha: float | None
         center: int
+        com: float | None
         ddof: int
         descending: bool
+        half_life: float | None
+        ignore_nulls: bool
+        interpolation: RollingInterpolationMethod
         limit: int | None
         method: RankMethod
         min_samples: int
         n: int
+        quantile: float
         reverse: bool
+        span: float | None
         strategy: FillNullStrategy | None
         window_size: int
 
@@ -48,6 +62,7 @@ __all__ = [
     "EvalNames",
     "EvalSeries",
     "IntoCompliantExpr",
+    "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
 ]
@@ -154,3 +169,26 @@ WindowFunction: TypeAlias = (
     "Callable[[CompliantFrameT, WindowInputs[NativeExprT]], Sequence[NativeExprT]]"
 )
 """A function evaluated with `over(partition_by=..., order_by=...)`."""
+
+NarwhalsAggregation: TypeAlias = Literal[
+    "sum",
+    "mean",
+    "median",
+    "max",
+    "min",
+    "std",
+    "var",
+    "len",
+    "n_unique",
+    "count",
+    "quantile",
+]
+"""`Expr` methods we aim to support in `DepthTrackingGroupBy`.
+
+Be sure to update me if you're working on one of these:
+- https://github.com/narwhals-dev/narwhals/issues/981
+- https://github.com/narwhals-dev/narwhals/issues/2385
+- https://github.com/narwhals-dev/narwhals/issues/2484
+- https://github.com/narwhals-dev/narwhals/issues/2526
+- https://github.com/narwhals-dev/narwhals/issues/2660
+"""

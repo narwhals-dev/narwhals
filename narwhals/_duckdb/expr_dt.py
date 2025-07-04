@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,
@@ -131,7 +131,6 @@ class DuckDBExprDateTimeNamespace(
             func,
             evaluate_output_names=self.compliant._evaluate_output_names,
             alias_output_names=self.compliant._alias_output_names,
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
         )
 

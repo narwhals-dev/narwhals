@@ -25,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: altair-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-altair
         run: |
@@ -72,7 +72,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: marimo-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
@@ -86,8 +86,6 @@ jobs:
         run: |
           cd marimo
           . .venv/bin/activate
-          # temporary to get CI green
-          uv pip install "panel<1.6.1"
           uv pip install -e ".[dev]"
           which python
       - name: install-narwhals-dev
@@ -135,7 +133,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: sklego-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-scikit-lego
         run: git clone https://github.com/koaning/scikit-lego.git --depth 1
@@ -172,30 +170,41 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: shiny-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-shiny
         run: |
           git clone https://github.com/posit-dev/py-shiny.git
           cd py-shiny
+          uv venv -p ${{ matrix.python-version }}
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools --system
-      - name: install-shiny-dev
-        env:
-          UV_SYSTEM_PYTHON: 1
         run: |
           cd py-shiny
+          . .venv/bin/activate
+          uv pip install --upgrade tox virtualenv setuptools
+      - name: install-shiny-dev
+        run: |
+          cd py-shiny
+          . .venv/bin/activate
+          # temporary to get CI green
+          uv pip install "chatlas<0.9.0"
           make narwhals-install-shiny
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd py-shiny
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd py-shiny
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run `make narwhals-test-integration`
         run: |
           cd py-shiny
+          . .venv/bin/activate
           # Isort seems to behave slightly differently in CI
           # so we ignore its output
           make format -s
@@ -221,7 +230,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: tea-tasting-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
           python-version: ${{ matrix.python-version }}
       - name: install-tea-tasting-test
@@ -260,7 +269,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: tubular-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-tubular
         run: |
@@ -302,7 +311,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: plotly-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-plotly
         run: |
@@ -347,7 +356,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-hierarchicalforecast
         run: |
@@ -389,7 +398,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: formulaic-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-formulaic
         run: |
@@ -433,7 +442,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pointblank-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-pointblank
         run: |
@@ -445,17 +454,28 @@ jobs:
       - name: install-deps
         run: |
           cd pointblank
-          uv pip install . --group dev --system
-          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny --system
+          uv venv -p ${{ matrix.python-version }}
+          . .venv/bin/activate
+          uv pip install . --group dev
+          uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
-          uv pip uninstall narwhals --system
-          uv pip install -e . --system
+          cd pointblank
+          . .venv/bin/activate
+          uv pip uninstall narwhals
+          uv pip install -e .
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd pointblank
+          . .venv/bin/activate
+          uv pip freeze
       - name: Run tests
         run: |
           cd pointblank
+          . .venv/bin/activate
+          # make sure that we use the .venv when running tests, so that
+          # the local narwhals install is picked up
+          sed -i 's/uv run pytest/uv run --no-sync pytest/g' Makefile
           make test
 
   validoopsie:
@@ -473,7 +493,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: validoopsie-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-validoopsie
         run: |
@@ -520,7 +540,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: darts-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-darts
         run: |

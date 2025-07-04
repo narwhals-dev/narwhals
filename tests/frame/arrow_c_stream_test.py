@@ -50,3 +50,5 @@ def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     result = pa.table(df)
     expected = pa.table({"a": [1, 2, 3]})
     assert pc.all(pc.equal(result["a"], expected["a"])).as_py()
+    result_2 = nw.from_arrow(result, backend="pandas").to_arrow()
+    assert pc.all(pc.equal(result_2["a"], expected["a"])).as_py()
