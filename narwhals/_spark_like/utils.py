@@ -165,7 +165,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         if dt_time_zone != (tz := fetch_session_time_zone(session)):  # pragma: no cover
             msg = f"Only {tz} time zone is supported, as that's the connection time zone, got: {dt_time_zone}"
             raise ValueError(msg)
-        return native.TimestampType()
+        # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
+        return native.TimestampType()  # pragma: no cover
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
         return native.ArrayType(
             elementType=narwhals_to_native_dtype(dtype.inner, version, native, session)
