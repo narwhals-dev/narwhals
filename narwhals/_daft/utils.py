@@ -89,7 +89,7 @@ def native_to_narwhals_dtype(daft_dtype: DataType, version: Version) -> DType:  
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0912,C901
-    dtype: DType | type[DType], version: Version, backend_version: tuple[int, ...]
+    dtype: DType | type[DType], version: Version
 ) -> daft.DataType:
     dtypes = version.dtypes
     if dtype == dtypes.Float64:
@@ -142,21 +142,17 @@ def narwhals_to_native_dtype(  # noqa: PLR0912,C901
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return DataType.duration(dtype.time_unit)
     if isinstance_or_issubclass(dtype, dtypes.List):
-        return DataType.list(
-            narwhals_to_native_dtype(dtype.inner, version, backend_version)
-        )
+        return DataType.list(narwhals_to_native_dtype(dtype.inner, version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         return DataType.struct(
             {
-                field.name: narwhals_to_native_dtype(
-                    field.dtype, version, backend_version
-                )
+                field.name: narwhals_to_native_dtype(field.dtype, version)
                 for field in dtype.fields
             }
         )
     if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
         return DataType.fixed_size_list(
-            narwhals_to_native_dtype(dtype.inner, version, backend_version), dtype.size
+            narwhals_to_native_dtype(dtype.inner, version), dtype.size
         )
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
