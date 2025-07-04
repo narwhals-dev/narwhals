@@ -19,7 +19,7 @@ def query(line_item_ds: FrameT, part_ds: FrameT) -> FrameT:
         .select(
             (
                 100.00
-                * nw.when(nw.col("p_type").str.contains("PROMO*"))
+                * nw.when(nw.col("p_type").str.starts_with("PROMO*"))
                 .then(nw.col("l_extendedprice") * (1 - nw.col("l_discount")))
                 .otherwise(0)
                 .sum()
