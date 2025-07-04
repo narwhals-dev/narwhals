@@ -8,10 +8,7 @@ import pyarrow as pa  # ignore-banned-import
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowLiteral
 from narwhals._plan.arrow.series import ArrowSeries
-from narwhals._plan.contexts import ExprContext
-from narwhals._plan.dummy import DummyCompliantFrame
-from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
-from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
+from narwhals._plan.dummy import DummyCompliantFrame, DummyFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
@@ -21,7 +18,6 @@ if t.TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
     from narwhals._plan.common import ExprIR, NamedIR
-    from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
 
@@ -33,7 +29,7 @@ def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
     return isinstance(obj, ArrowSeries)
 
 
-class ArrowDataFrame(DummyCompliantFrame["pa.Table", "ChunkedArrayAny"]):
+class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
     @property
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
@@ -60,6 +56,9 @@ class ArrowDataFrame(DummyCompliantFrame["pa.Table", "ChunkedArrayAny"]):
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def to_narwhals(self) -> DummyFrame[pa.Table, ChunkedArrayAny]:
+        return DummyFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
 
     @classmethod
     def from_series(
@@ -89,10 +88,12 @@ class ArrowDataFrame(DummyCompliantFrame["pa.Table", "ChunkedArrayAny"]):
 
     @t.overload
     def to_dict(self, *, as_series: t.Literal[True]) -> dict[str, ArrowSeries]: ...
-
     @t.overload
     def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
-
+    @t.overload
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, ArrowSeries] | dict[str, list[t.Any]]: ...
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, ArrowSeries] | dict[str, list[t.Any]]:
@@ -105,13 +106,3 @@ class ArrowDataFrame(DummyCompliantFrame["pa.Table", "ChunkedArrayAny"]):
         from narwhals._plan.arrow.evaluate import evaluate
 
         yield from self._expr.align(evaluate(e, self) for e in nodes)
-
-    def select(
-        self, *exprs: IntoExpr | t.Iterable[IntoExpr], **named_exprs: t.Any
-    ) -> Self:
-        irs, schema_frozen, output_names = prepare_projection(
-            parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
-        )
-        named_irs = into_named_irs(irs, output_names)
-        named_irs, schema_projected = schema_frozen.project(named_irs, ExprContext.SELECT)
-        return self.from_series(self._evaluate_irs(named_irs))

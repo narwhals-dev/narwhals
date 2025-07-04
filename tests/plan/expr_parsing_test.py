@@ -274,10 +274,10 @@ def test_is_in_seq(into_iter: IntoIterable) -> None:
 
 
 def test_is_in_series() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
-    native = pl.Series([1, 2, 3])
+    native = pa.chunked_array([pa.array([1, 2, 3])])
     other = DummySeries.from_native(native)
     expr = nwd.col("a").is_in(other)
     ir = expr._ir

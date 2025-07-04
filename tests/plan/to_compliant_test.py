@@ -62,9 +62,9 @@ def test_select(
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame
+    from narwhals._plan.dummy import DummyFrame
 
     frame = pa.table(data_small)
-    df = ArrowDataFrame.from_native(frame, Version.MAIN)
+    df = DummyFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert result == expected
