@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         DummySelector,
         DummySeries,
     )
-    from narwhals._plan.expr import Agg, BinaryExpr, FunctionExpr, WindowExpr
+    from narwhals._plan.expr import Agg, BinaryExpr, Column, FunctionExpr, WindowExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -304,6 +304,16 @@ class NamedIR(Immutable, Generic[ExprIRT]):
     __slots__ = ("expr", "name")
     expr: ExprIRT
     name: str
+
+    @staticmethod
+    def from_name(name: str, /) -> NamedIR[Column]:
+        """Construct as a simple, unaliased `col(name)` expression.
+
+        Intended to be used in `with_columns` from a `FrozenSchema`'s keys.
+        """
+        from narwhals._plan.expr import col
+
+        return NamedIR(expr=col(name), name=name)
 
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
