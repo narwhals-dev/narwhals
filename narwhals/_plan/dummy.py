@@ -978,6 +978,9 @@ class DummySeries(Generic[NativeSeriesT]):
     def to_native(self) -> NativeSeriesT:
         return self._compliant.native
 
+    def to_list(self) -> list[t.Any]:
+        return self._compliant.to_list()
+
     def __iter__(self) -> t.Iterator[t.Any]:
         yield from self.to_native()
 
@@ -1001,7 +1004,7 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
 
     @property
     def dtype(self) -> DType:
-        return self.version.dtypes.Float64()
+        raise NotImplementedError
 
     @property
     def name(self) -> str:
@@ -1031,3 +1034,6 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def to_list(self) -> list[t.Any]:
+        raise NotADirectoryError

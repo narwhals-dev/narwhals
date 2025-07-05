@@ -12,11 +12,13 @@ import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan import (
     boolean,
+    expr,
     functions as F,  # noqa: N812
 )
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
+from narwhals._plan.literal import SeriesLiteral
 from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
@@ -363,3 +365,22 @@ def test_filter_partial_spellings(
 ) -> None:
     with context:
         assert nwd.col("a").filter(*predicates, **constraints)
+
+
+def test_lit_series_roundtrip() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    data = ["a", "b", "c"]
+    native = pa.chunked_array([pa.array(data)])
+    series = DummySeries.from_native(native)
+    lit_series = nwd.lit(series)  # type: ignore[arg-type]
+    assert lit_series.meta.is_literal()
+    ir = lit_series._ir
+    assert isinstance(ir, expr.Literal)
+    assert isinstance(ir.dtype, nw.String)
+    assert isinstance(ir.value, SeriesLiteral)
+    unwrapped = ir.unwrap()
+    assert isinstance(unwrapped, DummySeries)
+    assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
+    assert unwrapped.to_list() == data
