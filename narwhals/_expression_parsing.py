@@ -225,7 +225,7 @@ class ExprMetadata:
         is_elementwise: Whether it can operate row-by-row without context
             of the other rows around it.
         is_literal: Whether it is just a literal wrapped in an expression.
-        is_scalar_like: Whether it is a liter or an aggregation.
+        is_scalar_like: Whether it is a literal or an aggregation.
         last_node: The ExprKind of the last node.
         n_orderable_ops: The number of order-dependent operations. In the
             lazy case, this number must be `0` by the time the expression
