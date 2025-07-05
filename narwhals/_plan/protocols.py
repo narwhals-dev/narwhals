@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+from collections.abc import Iterable, Iterator, Sized
+from typing import TYPE_CHECKING, Any, Protocol
+
+from narwhals._plan.common import flatten_hash_safe
+from narwhals._typing_compat import TypeVar
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+SeriesT = TypeVar("SeriesT")
+
+
+class SupportsBroadcast(Sized, Protocol[SeriesT]):
+    """Minimal broadcasting for `Expr` results."""
+
+    @classmethod
+    def from_series(cls, series: SeriesT, /) -> Self: ...
+    def to_series(self) -> SeriesT: ...
+    def broadcast(self, length: int, /) -> SeriesT: ...
+    @classmethod
+    def align(
+        cls, *exprs: SupportsBroadcast[SeriesT] | Iterable[SupportsBroadcast[SeriesT]]
+    ) -> Iterator[SeriesT]:
+        exprs = tuple[SupportsBroadcast[SeriesT], ...](flatten_hash_safe(exprs))
+        lengths = [len(e) for e in exprs]
+        max_length = max(lengths)
+        fast_path = all(len_ == max_length for len_ in lengths)
+        if fast_path:
+            for e in exprs:
+                yield e.to_series()
+        else:
+            for e in exprs:
+                yield e.broadcast(max_length)
+
+
+class CompliantExpr(Protocol):
+    """Getting a bit tricky, just storing notes.
+
+    - Separating series/scalar makes a lot of sense
+    - Handling the recursive case *without* intermediate (non-pyarrow) objects seems unachievable
+      - Everywhere would need to first check if it a scalar, which isn't ergonomic
+    - Broadcasting being separated is working
+    - A lot of `pyarrow.compute` (section 2) can work on either scalar or series (`FunctionExpr`)
+      - Aggregation can't, but that is already handled in `ExprIR`
+      - `polars` noops on aggregating a scalar, which we might be able to support this way
+    """
+
+    # scalar allowed
+    def cast(self, *args: Any, **kwds: Any) -> Any: ...
+    # array only (section 3)
+    def sort(self, *args: Any, **kwds: Any) -> Any: ...
+    def sort_by(self, *args: Any, **kwds: Any) -> Any: ...
+    def filter(self, *args: Any, **kwds: Any) -> Any: ...
+    def first(self, *args: Any, **kwds: Any) -> Any: ...
+    def last(self, *args: Any, **kwds: Any) -> Any: ...
+    def arg_min(self, *args: Any, **kwds: Any) -> Any: ...
+    def arg_max(self, *args: Any, **kwds: Any) -> Any: ...
+    def sum(self, *args: Any, **kwds: Any) -> Any: ...
+    def n_unique(self, *args: Any, **kwds: Any) -> Any: ...
+    def std(self, *args: Any, **kwds: Any) -> Any: ...
+    def var(self, *args: Any, **kwds: Any) -> Any: ...
+    def quantile(self, *args: Any, **kwds: Any) -> Any: ...
+    def count(self, *args: Any, **kwds: Any) -> Any: ...
+    def max(self, *args: Any, **kwds: Any) -> Any: ...
+    def mean(self, *args: Any, **kwds: Any) -> Any: ...
+    def median(self, *args: Any, **kwds: Any) -> Any: ...
+    def min(self, *args: Any, **kwds: Any) -> Any: ...
