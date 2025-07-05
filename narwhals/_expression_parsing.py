@@ -9,12 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from narwhals._utils import is_compliant_expr
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
-from narwhals.exceptions import (
-    InvalidOperationError,
-    LengthChangingExprError,
-    MultiOutputExpressionError,
-    ShapeError,
-)
+from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -594,10 +589,10 @@ def combine_metadata(  # noqa: C901, PLR0912
 
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
-        raise LengthChangingExprError(msg)
+        raise InvalidOperationError(msg)
     if result_preserves_length and n_filtrations:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
-        raise ShapeError(msg)
+        raise InvalidOperationError(msg)
 
     return ExprMetadata(
         result_expansion_kind,
@@ -622,7 +617,7 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
-        raise ShapeError(msg)
+        raise InvalidOperationError(msg)
 
 
 def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:

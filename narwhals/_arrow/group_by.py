@@ -21,7 +21,7 @@ if TYPE_CHECKING:
         Aggregation,
         Incomplete,
     )
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals.typing import UniqueKeepStrategy
 
 

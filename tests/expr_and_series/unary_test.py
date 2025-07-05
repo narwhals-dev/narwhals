@@ -156,7 +156,7 @@ def test_unary_one_element(
 
 def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1], "b": [2], "c": [None]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {
         "a_nunique": [df["a"].n_unique()],
         "a_skew": [df["a"].skew()],

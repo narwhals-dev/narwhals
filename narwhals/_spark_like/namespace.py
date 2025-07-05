@@ -16,6 +16,7 @@ from narwhals._spark_like.utils import (
     import_functions,
     import_native_dtypes,
     narwhals_to_native_dtype,
+    true_divide,
 )
 
 if TYPE_CHECKING:
@@ -32,14 +33,7 @@ if TYPE_CHECKING:
 class SparkLikeNamespace(
     LazyNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame"]
 ):
-    def __init__(
-        self,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation
 
@@ -78,7 +72,7 @@ class SparkLikeNamespace(
             column = df._F.lit(value)
             if dtype:
                 native_dtype = narwhals_to_native_dtype(
-                    dtype, version=self._version, spark_types=df._native_dtypes
+                    dtype, self._version, df._native_dtypes, df.native.sparkSession
                 )
                 column = column.cast(native_dtype)
 
@@ -88,7 +82,6 @@ class SparkLikeNamespace(
             call=_lit,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -101,7 +94,6 @@ class SparkLikeNamespace(
             func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -152,20 +144,14 @@ class SparkLikeNamespace(
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
             F = exprs[0]._F  # noqa: N806
-            # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
-            divide = getattr(F, "try_divide", operator.truediv)
-            return divide(
-                reduce(
-                    operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
-                ),
-                reduce(
-                    operator.add,
-                    (
-                        col.isNotNull().cast(self._native_dtypes.IntegerType())
-                        for col in cols
-                    ),
-                ),
+            numerator = reduce(
+                operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
+            denominator = reduce(
+                operator.add,
+                (col.isNotNull().cast(self._native_dtypes.IntegerType()) for col in cols),
+            )
+            return true_divide(F, numerator, denominator)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
@@ -187,7 +173,6 @@ class SparkLikeNamespace(
 
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(lambda x, y: x.union(y), dfs),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -197,7 +182,6 @@ class SparkLikeNamespace(
                 native_dataframe=reduce(
                     lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
                 ),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -245,7 +229,6 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )

@@ -399,6 +399,38 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_datetime(format=format)
         )
 
+    def to_date(self, format: str | None = None) -> SeriesT:
+        """Convert to date dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array([["2020-01-01", "2020-01-02"]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.to_date(format="%Y-%m-%d").to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                2020-01-01,
+                2020-01-02
+              ]
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.to_date(format=format)
+        )
+
     def zfill(self, width: int) -> SeriesT:
         r"""Pad strings with zeros on the left.
 

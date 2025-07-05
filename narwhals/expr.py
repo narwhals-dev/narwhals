@@ -63,7 +63,7 @@ class Expr:
         self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
-    def _with_elementwise_op(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+    def _with_elementwise(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_elementwise_op())
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
@@ -127,7 +127,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        # Don't use `_with_elementwise_op` so that `_metadata.last_node` is preserved.
+        # Don't use `_with_elementwise` so that `_metadata.last_node` is preserved.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
         )
@@ -191,7 +191,7 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).cast(dtype)
         )
 
@@ -370,7 +370,7 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).__invert__()
         )
 
@@ -906,7 +906,7 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).abs())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -1092,7 +1092,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             )
@@ -1216,7 +1216,7 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self._with_elementwise_op(
+            return self._with_elementwise(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
                 )
@@ -1306,9 +1306,7 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
-            lambda plx: self._to_compliant_expr(plx).is_null()
-        )
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1343,9 +1341,7 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
-            lambda plx: self._to_compliant_expr(plx).is_nan()
-        )
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).is_nan())
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
@@ -1874,7 +1870,7 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
@@ -2042,7 +2038,7 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).is_finite()
         )
 
@@ -2516,7 +2512,7 @@ class Expr:
             |log_2: [[0,1,2]]                                |
             └────────────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
 
@@ -2544,7 +2540,7 @@ class Expr:
             |exp: [[0.36787944117144233,1,2.718281828459045]]|
             └────────────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).exp())
 
     def sqrt(self) -> Self:
         r"""Compute the square root.
@@ -2570,7 +2566,7 @@ class Expr:
             |sqrt: [[1,2,3]]   |
             └──────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).sqrt())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).sqrt())
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

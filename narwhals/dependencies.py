@@ -78,7 +78,7 @@ def get_numpy() -> Any:
     return sys.modules.get("numpy", None)
 
 
-def get_dask() -> Any:
+def get_dask() -> Any:  # pragma: no cover
     """Get dask (if already imported - else return None)."""
     return sys.modules.get("dask", None)
 

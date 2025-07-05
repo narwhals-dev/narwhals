@@ -29,6 +29,5 @@ class PandasSelector(  # type: ignore[misc]
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )

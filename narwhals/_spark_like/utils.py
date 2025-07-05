@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import lru_cache
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
@@ -128,7 +129,7 @@ def fetch_session_time_zone(session: SparkSession) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: IntoDType, version: Version, spark_types: ModuleType
+    dtype: IntoDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> _NativeDType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
@@ -155,18 +156,20 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return native.DateType()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        if (tu := dtype.time_unit) != "us":  # pragma: no cover
+            msg = f"Only microsecond precision is supported for PySpark, got: {tu}."
+            raise ValueError(msg)
         dt_time_zone = dtype.time_zone
         if dt_time_zone is None:
             return native.TimestampNTZType()
-        if dt_time_zone != "UTC":  # pragma: no cover
-            msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
+        if dt_time_zone != (tz := fetch_session_time_zone(session)):  # pragma: no cover
+            msg = f"Only {tz} time zone is supported, as that's the connection time zone, got: {dt_time_zone}"
             raise ValueError(msg)
-        return native.TimestampType()
+        # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
+        return native.TimestampType()  # pragma: no cover
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
         return native.ArrayType(
-            elementType=narwhals_to_native_dtype(
-                dtype.inner, version=version, spark_types=native
-            )
+            elementType=narwhals_to_native_dtype(dtype.inner, version, native, session)
         )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         return native.StructType(
@@ -174,7 +177,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
                 native.StructField(
                     name=field.name,
                     dataType=narwhals_to_native_dtype(
-                        field.dtype, version=version, spark_types=native
+                        field.dtype, version, native, session
                     ),
                 )
                 for field in dtype.fields
@@ -283,3 +286,9 @@ def strptime_to_pyspark_format(format: str | None) -> str | None:
     for py_format, spark_format in DATETIME_PATTERNS_MAPPING.items():
         pyspark_format = pyspark_format.replace(py_format, spark_format)
     return pyspark_format.replace("T", " ")
+
+
+def true_divide(F: Any, left: Column, right: Column) -> Column:  # noqa: N803
+    # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
+    divide = getattr(F, "try_divide", operator.truediv)
+    return divide(left, right)
