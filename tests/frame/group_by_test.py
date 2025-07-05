@@ -11,13 +11,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import (
-    ComputeError,
-    DuplicateError,
-    InvalidOperationError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
+from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -300,12 +294,8 @@ def test_no_agg(constructor: Constructor) -> None:
 
 
 def test_group_by_categorical(constructor: Constructor) -> None:
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        pytest.skip(reason="DuckDB, PySpark, and Ibis do not support categorical types")
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+        pytest.skip(reason="no categorical support")
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
@@ -482,13 +472,10 @@ def test_group_by_expr(
 @pytest.mark.parametrize(
     ("keys", "lazy_context"),
     [
-        (
-            [nw.col("a").drop_nulls()],
-            pytest.raises(LengthChangingExprError),
-        ),  # Filtration
+        ([nw.col("a").drop_nulls()], pytest.raises(InvalidOperationError)),  # Filtration
         (
             [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
-            pytest.raises(LengthChangingExprError),
+            pytest.raises(InvalidOperationError),
         ),  # Transform and Filtration
         (
             [nw.col("a").alias("foo"), nw.col("a").max()],
@@ -496,7 +483,7 @@ def test_group_by_expr(
         ),  # Transform and Aggregation
         (
             [nw.col("a").alias("foo"), nw.col("a").cum_max()],
-            pytest.raises(OrderDependentExprError),
+            pytest.raises(InvalidOperationError),
         ),  # Transform and Window
         ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
         ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal

@@ -14,6 +14,6 @@ class DuckDBExprStructNamespace(
     LazyExprNamespace["DuckDBExpr"], StructNamespace["DuckDBExpr"]
 ):
     def field(self, name: str) -> DuckDBExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F("struct_extract", expr, lit(name))
         ).alias(name)
