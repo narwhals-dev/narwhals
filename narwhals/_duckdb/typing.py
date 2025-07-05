@@ -13,6 +13,6 @@ class WindowExpressionKwargs(TypedDict, total=False):
     order_by: Sequence[str | Expression]
     rows_start: str
     rows_end: str
-    descending: bool
-    nulls_last: bool
+    descending: Sequence[bool]
+    nulls_last: Sequence[bool]
     ignore_nulls: bool

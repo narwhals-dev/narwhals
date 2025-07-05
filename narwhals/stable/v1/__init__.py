@@ -405,7 +405,7 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self._with_unorderable_window(
+        return self._with_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             )
