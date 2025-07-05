@@ -36,6 +36,8 @@ UNIT_TO_TIMESTAMPS = {
     "us": "TIMESTAMP",
     "ns": "TIMESTAMP_NS",
 }
+DESCENDING_TO_ORDER = {True: "desc", False: "asc"}
+NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
@@ -303,21 +305,13 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     return f"partition by {by_sql}"
 
 
-def generate_order(descending: bool) -> str:  # noqa: FBT001
-    return "desc" if descending else "asc"
-
-
-def generate_nulls_position(nulls_last: bool) -> str:  # noqa: FBT001
-    return "nulls last" if nulls_last else "nulls first"
-
-
 def generate_order_by_sql(
     *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
     if not order_by:
         return ""
     by_sql = ",".join(
-        f"{parse_into_expression(x)} {generate_order(_descending)} {generate_nulls_position(_nulls_last)}"
+        f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
         for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
     )
     return f"order by {by_sql}"
