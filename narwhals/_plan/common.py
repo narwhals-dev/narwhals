@@ -34,7 +34,14 @@ if TYPE_CHECKING:
         DummySelector,
         DummySeries,
     )
-    from narwhals._plan.expr import Agg, BinaryExpr, Column, FunctionExpr, WindowExpr
+    from narwhals._plan.expr import (
+        Agg,
+        BinaryExpr,
+        Cast,
+        Column,
+        FunctionExpr,
+        WindowExpr,
+    )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -267,6 +274,11 @@ class ExprIR(Immutable):
         from narwhals._plan.meta import IRMetaNamespace
 
         return IRMetaNamespace(_ir=self)
+
+    def cast(self, dtype: DType) -> Cast:
+        from narwhals._plan.expr import Cast
+
+        return Cast(expr=self, dtype=dtype)
 
     def _repr_html_(self) -> str:
         return self.__repr__()

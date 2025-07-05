@@ -23,7 +23,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummySeries
-    from narwhals._plan.protocols import SupportsBroadcast
+    from narwhals._plan.protocols import EagerBroadcast
     from narwhals.typing import NonNestedLiteral, PythonLiteral
 
 
@@ -36,9 +36,7 @@ def is_scalar(obj: t.Any) -> TypeIs[ScalarAny]:
     return isinstance(obj, pa.Scalar)
 
 
-def evaluate(
-    node: NamedIR[ExprIR], frame: ArrowDataFrame
-) -> SupportsBroadcast[ArrowSeries]:
+def evaluate(node: NamedIR[ExprIR], frame: ArrowDataFrame) -> EagerBroadcast[ArrowSeries]:
     result = _evaluate_inner(node.expr, frame)
     if is_scalar(result):
         return frame._lit.from_scalar(result, node.name)

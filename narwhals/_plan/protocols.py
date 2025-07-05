@@ -1,41 +1,90 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Iterable, Iterator, Sequence, Sized
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.common import ExprIR, flatten_hash_safe
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan import aggregation as agg, expr
+    from narwhals.typing import IntoDType, PythonLiteral
+
+T = TypeVar("T")
 SeriesT = TypeVar("SeriesT")
+SeriesT_co = TypeVar("SeriesT_co", covariant=True)
+FrameT_contra = TypeVar("FrameT_contra", contravariant=True)
+OneOrIterable: TypeAlias = "T | Iterable[T]"
+LengthT = TypeVar("LengthT")
+NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 
 
-class SupportsBroadcast(Sized, Protocol[SeriesT]):
+class SupportsBroadcast(Protocol[SeriesT, LengthT]):
     """Minimal broadcasting for `Expr` results."""
 
     @classmethod
     def from_series(cls, series: SeriesT, /) -> Self: ...
     def to_series(self) -> SeriesT: ...
-    def broadcast(self, length: int, /) -> SeriesT: ...
+    def broadcast(self, length: LengthT, /) -> SeriesT: ...
+    def _length(self) -> LengthT:
+        """Return the length of the current expression."""
+        ...
+
+    @classmethod
+    def _length_max(cls, lengths: Sequence[LengthT], /) -> LengthT:
+        """Return the maximum length among `exprs`."""
+        ...
+
+    @classmethod
+    def _length_required(
+        cls, exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]], /
+    ) -> LengthT | None:
+        """Return the broadcast length, if all lengths do not equal the maximum."""
+
+    @classmethod
+    def _length_all(
+        cls, exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]], /
+    ) -> Sequence[LengthT]:
+        return [e._length() for e in exprs]
+
     @classmethod
     def align(
-        cls, *exprs: SupportsBroadcast[SeriesT] | Iterable[SupportsBroadcast[SeriesT]]
+        cls, *exprs: OneOrIterable[SupportsBroadcast[SeriesT, LengthT]]
     ) -> Iterator[SeriesT]:
-        exprs = tuple[SupportsBroadcast[SeriesT], ...](flatten_hash_safe(exprs))
-        lengths = [len(e) for e in exprs]
-        max_length = max(lengths)
-        fast_path = all(len_ == max_length for len_ in lengths)
-        if fast_path:
+        exprs = tuple[SupportsBroadcast[SeriesT, LengthT], ...](flatten_hash_safe(exprs))
+        length = cls._length_required(exprs)
+        if length is None:
             for e in exprs:
                 yield e.to_series()
         else:
             for e in exprs:
-                yield e.broadcast(max_length)
+                yield e.broadcast(length)
 
 
-class CompliantExpr(Protocol):
+class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
+    """Determines expression length via the size of the container."""
+
+    def _length(self) -> int:
+        return len(self)
+
+    @classmethod
+    def _length_max(cls, lengths: Sequence[int], /) -> int:
+        return max(lengths)
+
+    @classmethod
+    def _length_required(
+        cls, exprs: Sequence[SupportsBroadcast[SeriesT, int]], /
+    ) -> int | None:
+        lengths = cls._length_all(exprs)
+        max_length = cls._length_max(lengths)
+        required = any(len_ != max_length for len_ in lengths)
+        return max_length if required else None
+
+
+class CompliantExpr(Protocol[FrameT_contra, SeriesT_co, NativeT_co]):
     """Getting a bit tricky, just storing notes.
 
     - Separating series/scalar makes a lot of sense
@@ -47,23 +96,203 @@ class CompliantExpr(Protocol):
       - `polars` noops on aggregating a scalar, which we might be able to support this way
     """
 
-    # scalar allowed
-    def cast(self, *args: Any, **kwds: Any) -> Any: ...
-    # array only (section 3)
-    def sort(self, *args: Any, **kwds: Any) -> Any: ...
-    def sort_by(self, *args: Any, **kwds: Any) -> Any: ...
-    def filter(self, *args: Any, **kwds: Any) -> Any: ...
-    def first(self, *args: Any, **kwds: Any) -> Any: ...
-    def last(self, *args: Any, **kwds: Any) -> Any: ...
-    def arg_min(self, *args: Any, **kwds: Any) -> Any: ...
-    def arg_max(self, *args: Any, **kwds: Any) -> Any: ...
-    def sum(self, *args: Any, **kwds: Any) -> Any: ...
-    def n_unique(self, *args: Any, **kwds: Any) -> Any: ...
-    def std(self, *args: Any, **kwds: Any) -> Any: ...
-    def var(self, *args: Any, **kwds: Any) -> Any: ...
-    def quantile(self, *args: Any, **kwds: Any) -> Any: ...
-    def count(self, *args: Any, **kwds: Any) -> Any: ...
-    def max(self, *args: Any, **kwds: Any) -> Any: ...
-    def mean(self, *args: Any, **kwds: Any) -> Any: ...
-    def median(self, *args: Any, **kwds: Any) -> Any: ...
-    def min(self, *args: Any, **kwds: Any) -> Any: ...
+    _evaluated: Any
+    """Compliant or native value."""
+
+    @property
+    def version(self) -> Version: ...
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def native(self) -> NativeT_co: ...
+
+    @classmethod
+    def from_native(
+        cls, native: Any, name: str = "", /, version: Version = Version.MAIN
+    ) -> Self: ...
+
+    def _with_native(self, native: Any, name: str = "", /) -> Self:
+        return self.from_native(native, name or self.name, self.version)
+
+    # series & scalar
+    def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
+    # series only (section 3)
+    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
+    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
+    def filter(self, node: expr.Filter, frame: FrameT_contra, name: str) -> Self: ...
+    # series -> scalar
+    def first(
+        self, node: agg.First, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def last(
+        self, node: agg.Last, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def arg_min(
+        self, node: agg.ArgMin, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def arg_max(
+        self, node: agg.ArgMax, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def sum(
+        self, node: agg.Sum, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def n_unique(
+        self, node: agg.NUnique, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def std(
+        self, node: agg.Std, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def var(
+        self, node: agg.Var, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def quantile(
+        self, node: agg.Quantile, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def count(
+        self, node: agg.Count, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def max(
+        self, node: agg.Max, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def mean(
+        self, node: agg.Mean, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def median(
+        self, node: agg.Median, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def min(
+        self, node: agg.Min, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+
+
+class CompliantScalar(
+    CompliantExpr[FrameT_contra, SeriesT_co, NativeT_co],
+    Protocol[FrameT_contra, SeriesT_co, NativeT_co],
+):
+    _name: str
+    _version: Version
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @classmethod
+    def from_python(
+        cls,
+        value: PythonLiteral,
+        name: str = "literal",
+        /,
+        *,
+        dtype: IntoDType | None,
+        version: Version,
+    ) -> Self: ...
+
+    def _with_evaluated(self, evaluated: Any, name: str = "") -> Self:
+        """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
+        cls = type(self)
+        obj = cls.__new__(cls)
+        obj._evaluated = evaluated
+        obj._name = name or self.name
+        obj._version = self.version
+        return obj
+
+    def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def min(self, node: agg.Min, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def sum(self, node: agg.Sum, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def last(self, node: agg.Last, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def _cast_float(self, node: ExprIR, frame: FrameT_contra, name: str) -> Self:
+        """`polars` interpolates a single scalar as a float."""
+        dtype = self.version.dtypes.Float64()
+        return self.cast(node.cast(dtype), frame, name)
+
+    def mean(self, node: agg.Mean, frame: FrameT_contra, name: str) -> Self:
+        return self._cast_float(node.expr, frame, name)
+
+    def median(self, node: agg.Median, frame: FrameT_contra, name: str) -> Self:
+        return self._cast_float(node.expr, frame, name)
+
+    def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str) -> Self:
+        return self._cast_float(node.expr, frame, name)
+
+    def n_unique(self, node: agg.NUnique, frame: FrameT_contra, name: str) -> Self:
+        """Returns 1."""
+        ...
+
+    def std(self, node: agg.Std, frame: FrameT_contra, name: str) -> Self:
+        """Returns null."""
+        ...
+
+    def var(self, node: agg.Var, frame: FrameT_contra, name: str) -> Self:
+        """Returns null."""
+        ...
+
+    def arg_min(self, node: agg.ArgMin, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0."""
+        ...
+
+    def arg_max(self, node: agg.ArgMax, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0."""
+        ...
+
+    def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0 if null, else 1."""
+        ...
+
+    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self:
+        return self._with_evaluated(self._evaluated)
+
+    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self:
+        return self._with_evaluated(self._evaluated)
+
+    # NOTE: `Filter` behaves the same, (maybe) no need to override
+
+
+class EagerExpr(
+    EagerBroadcast[SeriesT],
+    CompliantExpr[FrameT_contra, SeriesT, NativeT_co],
+    Protocol[FrameT_contra, SeriesT, NativeT_co],
+): ...
+
+
+class LazyExpr(
+    SupportsBroadcast[SeriesT, LengthT],
+    CompliantExpr[FrameT_contra, SeriesT, NativeT_co],
+    Protocol[FrameT_contra, SeriesT, LengthT, NativeT_co],
+): ...
+
+
+class EagerScalar(
+    CompliantScalar[FrameT_contra, SeriesT, NativeT_co],
+    EagerExpr[FrameT_contra, SeriesT, NativeT_co],
+    Protocol[FrameT_contra, SeriesT, NativeT_co],
+):
+    def __len__(self) -> int:
+        return 1
+
+
+class LazyScalar(
+    CompliantScalar[FrameT_contra, SeriesT, NativeT_co],
+    LazyExpr[FrameT_contra, SeriesT, LengthT, NativeT_co],
+    Protocol[FrameT_contra, SeriesT, LengthT, NativeT_co],
+): ...
