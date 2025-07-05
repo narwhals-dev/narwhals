@@ -1448,6 +1448,20 @@ def concat_str(
     )
 
 
+def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce. Strings are parsed as column names, other non-expression inputs are
+            parsed as literals.
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.coalesce(exprs, *more_exprs))
+
+
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "lazy", "interchange"]:
@@ -1874,6 +1888,7 @@ __all__ = [
     "all",
     "all_horizontal",
     "any_horizontal",
+    "coalesce",
     "col",
     "concat",
     "concat_str",

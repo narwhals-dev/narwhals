@@ -262,6 +262,27 @@ class ArrowNamespace(
             context=self,
         )
 
+    def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            align = self._series._align_full_broadcast
+            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            return [
+                ArrowSeries(
+                    pc.coalesce(init_series.native, *(s.native for s in series)),
+                    name=init_series.name,
+                    version=self._version,
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
 
 class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
