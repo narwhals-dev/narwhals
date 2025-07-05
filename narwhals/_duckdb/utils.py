@@ -323,8 +323,8 @@ def window_expression(
     rows_start: str = "",
     rows_end: str = "",
     *,
-    descending: bool | Sequence[bool] = False,
-    nulls_last: bool | Sequence[bool] = False,
+    descending: Sequence[bool] | None = None,
+    nulls_last: Sequence[bool] | None = None,
     ignore_nulls: bool = False,
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
@@ -334,16 +334,14 @@ def window_expression(
     except ModuleNotFoundError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
+
     ascending = (
-        [not descending] * len(order_by)
-        if isinstance(descending, bool)
-        else [not x for x in descending]
+        [False] * len(order_by) if descending is None else [not x for x in descending]
     )
     nulls_first = (
-        [not nulls_last] * len(order_by)
-        if isinstance(nulls_last, bool)
-        else [not x for x in nulls_last]
+        [False] * len(order_by) if nulls_last is None else [not x for x in nulls_last]
     )
+
     pb = generate_partition_by_sql(*partition_by)
     ob = generate_order_by_sql(*order_by, ascending=ascending, nulls_first=nulls_first)
 

@@ -112,8 +112,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                     F(func_name, expr),
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=reverse,
-                    nulls_last=reverse,
+                    descending=[reverse] * len(inputs.order_by),
+                    nulls_last=[reverse] * len(inputs.order_by),
                     rows_start="unbounded preceding",
                     rows_end="current row",
                 )
@@ -564,8 +564,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                     F("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
-                    descending=True,
-                    nulls_last=True,
+                    descending=[True] * len(inputs.order_by),
+                    nulls_last=[True] * len(inputs.order_by),
                 )
                 == lit(1)
                 for expr in self(df)
@@ -732,22 +732,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         def _rank(
             expr: Expression,
             *,
-            descending: bool,
+            descending: Sequence[bool],
+            nulls_last: Sequence[bool],
             partition_by: Sequence[str | Expression],
             order_by: Sequence[str | Expression],
         ) -> Expression:
             count_expr = F("count", StarExpression())
-            # so, the first one should be with nulls last, and the others `not descending`?
             window_kwargs: WindowExpressionKwargs = {
                 "partition_by": partition_by,
                 "order_by": (expr, *order_by),
                 "descending": descending,
-                "nulls_last": True,
+                "nulls_last": nulls_last,
             }
             count_window_kwargs: WindowExpressionKwargs = {
-                "partition_by": (*partition_by, expr),
+                "partition_by": (*partition_by, expr)
             }
-            breakpoint()
             if method == "max":
                 rank_expr = (
                     window_expression(func, **window_kwargs)
@@ -763,15 +762,24 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return when(expr.isnotnull(), rank_expr)
 
         def _unpartitioned_rank(expr: Expression) -> Expression:
-            return _rank(expr, partition_by=(), order_by=(), descending=descending)
+            return _rank(
+                expr,
+                partition_by=(),
+                order_by=(),
+                descending=[descending],
+                nulls_last=[True],
+            )
 
         def _partitioned_rank(
             df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
         ) -> Sequence[Expression]:
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
                 _rank(
                     expr,
-                    descending=descending,
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
                     partition_by=inputs.partition_by,
                     order_by=inputs.order_by,
                 )
