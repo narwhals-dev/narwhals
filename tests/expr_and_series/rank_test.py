@@ -288,8 +288,6 @@ def test_rank_with_order_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")
 
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
         constructor(
             {"a": [1, 1, 2, 2, 3, 3], "b": [3, 1, 4, 3, 5, 6], "i": list(range(6))}
