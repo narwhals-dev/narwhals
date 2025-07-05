@@ -131,9 +131,6 @@ class ExprKind(Enum):
     ORDERABLE_WINDOW = auto()
     """Depends on the rows around it and on their order, e.g. `diff`."""
 
-    UNORDERABLE_WINDOW = auto()
-    """Depends on the rows around it but not on their order, e.g. `is_unique`."""
-
     WINDOW = auto()
     """Depends on the rows around it and possibly their order, e.g. `rank`."""
 
@@ -336,6 +333,24 @@ class ExprMetadata:
             is_literal=self.is_literal,
         )
 
+    def with_window(self) -> ExprMetadata:
+        # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
+        if self.is_scalar_like:
+            msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
+            raise InvalidOperationError(msg)
+        return ExprMetadata(
+            self.expansion_kind,
+            ExprKind.WINDOW,
+            has_windows=self.has_windows,
+            # The function isn't order-dependent (but, users can still use `order_by` if they wish!),
+            # so we don't increment `n_orderable_ops`.
+            n_orderable_ops=self.n_orderable_ops,
+            preserves_length=self.preserves_length,
+            is_elementwise=False,
+            is_scalar_like=False,
+            is_literal=False,
+        )
+
     def with_orderable_window(self) -> ExprMetadata:
         # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
@@ -346,24 +361,6 @@ class ExprMetadata:
             ExprKind.ORDERABLE_WINDOW,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
-            preserves_length=self.preserves_length,
-            is_elementwise=False,
-            is_scalar_like=False,
-            is_literal=False,
-        )
-
-    def with_window(self) -> ExprMetadata:
-        # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
-        if self.is_scalar_like:
-            msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
-            raise InvalidOperationError(msg)
-        return ExprMetadata(
-            self.expansion_kind,
-            ExprKind.WINDOW,
-            has_windows=self.has_windows,
-            # this function may be ordered, but it doesn't have to be. So, we don't
-            # increment `n_orderable_ops`.
-            n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_elementwise=False,
             is_scalar_like=False,
