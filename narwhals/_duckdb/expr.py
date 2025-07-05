@@ -737,6 +737,7 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             order_by: Sequence[str | Expression],
         ) -> Expression:
             count_expr = F("count", StarExpression())
+            # so, the first one should be with nulls last, and the others `not descending`?
             window_kwargs: WindowExpressionKwargs = {
                 "partition_by": partition_by,
                 "order_by": (expr, *order_by),
@@ -744,8 +745,9 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 "nulls_last": True,
             }
             count_window_kwargs: WindowExpressionKwargs = {
-                "partition_by": (*partition_by, expr)
+                "partition_by": (*partition_by, expr),
             }
+            breakpoint()
             if method == "max":
                 rank_expr = (
                     window_expression(func, **window_kwargs)

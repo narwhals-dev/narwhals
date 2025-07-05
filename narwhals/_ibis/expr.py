@@ -69,7 +69,7 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
                 expr.over(
                     ibis.window(
                         group_by=window_inputs.partition_by,
-                        order_by=window_inputs.order_by,
+                        order_by=self._sort(*window_inputs.order_by),
                     )
                 )
                 for expr in self(df)

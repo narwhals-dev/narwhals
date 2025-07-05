@@ -290,13 +290,13 @@ def test_rank_with_order_by(
 
     df = nw.from_native(
         constructor(
-            {"a": [1, 1, 2, 2, 3, 3], "b": [3, 1, 4, 3, 5, 6], "i": list(range(6))}
+            {"a": [1, 1, 2, 2, 3, 3], "b": [3, None, 4, 3, 5, 6], "i": list(range(6))}
         )
     )
     result = df.with_columns(c=nw.col("a").rank("ordinal").over(order_by="b")).sort("i")
     expected = {
         "a": [1, 1, 2, 2, 3, 3],
-        "b": [3, 1, 4, 3, 5, 6],
+        "b": [3, None, 4, 3, 5, 6],
         "i": [0, 1, 2, 3, 4, 5],
         "c": [2, 1, 4, 3, 5, 6],
     }
