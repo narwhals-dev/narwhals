@@ -304,15 +304,15 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 
 def generate_order_by_sql(
-    *order_by: str | Expression, ascending: bool, nulls_first: bool
+    *order_by: str | Expression, descending: bool, nulls_last: bool
 ) -> str:
     if not order_by:
         return ""
-    nulls = "nulls first" if nulls_first else "nulls last"
-    if ascending:
-        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
-    else:
+    nulls = "nulls last" if nulls_last else "nulls first"
+    if descending:
         by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
+    else:
+        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
     return f"order by {by_sql}"
 
 
@@ -335,9 +335,7 @@ def window_expression(
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
-    ob = generate_order_by_sql(
-        *order_by, ascending=not descending, nulls_first=not nulls_last
-    )
+    ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start and rows_end:
         rows = f"rows between {rows_start} and {rows_end}"
