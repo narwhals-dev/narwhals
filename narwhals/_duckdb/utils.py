@@ -303,17 +303,24 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     return f"partition by {by_sql}"
 
 
+def generate_order(descending: bool) -> str:  # noqa: FBT001
+    return "desc" if descending else "asc"
+
+
+def generate_nulls_position(nulls_last: bool) -> str:  # noqa: FBT001
+    return "nulls last" if nulls_last else "nulls first"
+
+
 def generate_order_by_sql(
-    *order_by: str | Expression, ascending: Sequence[bool], nulls_first: Sequence[bool]
+    *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
     if not order_by:
         return ""
-    by_statements = []
-    for x, _asc, _nulls in zip(order_by, ascending, nulls_first):
-        nulls = "nulls first" if _nulls else "nulls last"
-        asc = "asc" if _asc else "desc"
-        by_statements.append(f"{parse_into_expression(x)} {asc} {nulls}")
-    return f"order by {','.join(by_statements)}"
+    by_sql = ",".join(
+        f"{parse_into_expression(x)} {generate_order(_descending)} {generate_nulls_position(_nulls_last)}"
+        for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
+    )
+    return f"order by {by_sql}"
 
 
 def window_expression(
@@ -334,16 +341,10 @@ def window_expression(
     except ModuleNotFoundError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
-
-    ascending = (
-        [False] * len(order_by) if descending is None else [not x for x in descending]
-    )
-    nulls_first = (
-        [False] * len(order_by) if nulls_last is None else [not x for x in nulls_last]
-    )
-
     pb = generate_partition_by_sql(*partition_by)
-    ob = generate_order_by_sql(*order_by, ascending=ascending, nulls_first=nulls_first)
+    descending = descending or [False] * len(order_by)
+    nulls_last = nulls_last or [False] * len(order_by)
+    ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start and rows_end:
         rows = f"rows between {rows_start} and {rows_end}"
