@@ -336,22 +336,6 @@ class ExprMetadata:
             is_literal=self.is_literal,
         )
 
-    def with_unorderable_window(self) -> ExprMetadata:
-        # Window function which cannot be used with `over(order_by=...)`.
-        if self.is_scalar_like:
-            msg = "Can't apply unorderable window (e.g. `is_unique`) to scalar-like expression."
-            raise InvalidOperationError(msg)
-        return ExprMetadata(
-            self.expansion_kind,
-            ExprKind.UNORDERABLE_WINDOW,
-            has_windows=self.has_windows,
-            n_orderable_ops=self.n_orderable_ops,
-            preserves_length=self.preserves_length,
-            is_elementwise=False,
-            is_scalar_like=False,
-            is_literal=False,
-        )
-
     def with_orderable_window(self) -> ExprMetadata:
         # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
@@ -369,7 +353,7 @@ class ExprMetadata:
         )
 
     def with_window(self) -> ExprMetadata:
-        # Window function which may be used with `over(order_by=...)`.
+        # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -377,7 +361,7 @@ class ExprMetadata:
             self.expansion_kind,
             ExprKind.WINDOW,
             has_windows=self.has_windows,
-            # rank may be ordered, but it doesn't have to be. So, we don't
+            # this function may be ordered, but it doesn't have to be. So, we don't
             # increment `n_orderable_ops`.
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
