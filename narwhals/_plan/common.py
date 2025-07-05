@@ -13,6 +13,7 @@ from narwhals._plan.typing import (
     IRNamespaceT,
     MapIR,
     NamedOrExprIRT,
+    NativeSeriesT,
     NonNestedDTypeT,
     Ns,
     Seq,
@@ -435,7 +436,9 @@ def is_column(obj: Any) -> TypeIs[DummyExpr]:
     return is_expr(obj) and obj.meta.is_column()
 
 
-def is_series(obj: Any) -> TypeIs[DummySeries]:
+def is_series(
+    obj: DummySeries[NativeSeriesT] | Any,
+) -> TypeIs[DummySeries[NativeSeriesT]]:
     from narwhals._plan.dummy import DummySeries
 
     return isinstance(obj, DummySeries)

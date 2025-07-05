@@ -374,7 +374,7 @@ def test_lit_series_roundtrip() -> None:
     data = ["a", "b", "c"]
     native = pa.chunked_array([pa.array(data)])
     series = DummySeries.from_native(native)
-    lit_series = nwd.lit(series)  # type: ignore[arg-type]
+    lit_series = nwd.lit(series)
     assert lit_series.meta.is_literal()
     ir = lit_series._ir
     assert isinstance(ir, expr.Literal)

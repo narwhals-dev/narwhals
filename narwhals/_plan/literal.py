@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan.common import Immutable
-from narwhals._plan.typing import LiteralT, NonNestedLiteralT
+from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
@@ -56,7 +56,7 @@ class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
         return self.value
 
 
-class SeriesLiteral(LiteralValue["DummySeries"]):
+class SeriesLiteral(LiteralValue["DummySeries[NativeSeriesT]"]):
     """We already need this.
 
     https://github.com/narwhals-dev/narwhals/blob/e51eba891719a5eb1f7ce91c02a477af39c0baee/narwhals/_expression_parsing.py#L96-L97
@@ -64,7 +64,7 @@ class SeriesLiteral(LiteralValue["DummySeries"]):
 
     __slots__ = ("value",)
 
-    value: DummySeries
+    value: DummySeries[NativeSeriesT]
 
     @property
     def dtype(self) -> DType:
@@ -77,7 +77,7 @@ class SeriesLiteral(LiteralValue["DummySeries"]):
     def __repr__(self) -> str:
         return "Series"
 
-    def unwrap(self) -> DummySeries:
+    def unwrap(self) -> DummySeries[NativeSeriesT]:
         return self.value
 
 
@@ -87,7 +87,9 @@ def _is_scalar(
     return isinstance(obj, ScalarLiteral)
 
 
-def _is_series(obj: Any) -> TypeIs[SeriesLiteral]:
+def _is_series(
+    obj: SeriesLiteral[NativeSeriesT] | Any,
+) -> TypeIs[SeriesLiteral[NativeSeriesT]]:
     return isinstance(obj, SeriesLiteral)
 
 
@@ -103,5 +105,7 @@ def is_literal_scalar(
     return is_literal(obj) and _is_scalar(obj.value)
 
 
-def is_literal_series(obj: Literal[DummySeries] | Any) -> TypeIs[Literal[DummySeries]]:
+def is_literal_series(
+    obj: Literal[DummySeries[NativeSeriesT]] | Any,
+) -> TypeIs[Literal[DummySeries[NativeSeriesT]]]:
     return is_literal(obj) and _is_series(obj.value)

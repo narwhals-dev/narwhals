@@ -13,9 +13,9 @@ from narwhals._plan.common import (
     ExprIR,
     into_dtype,
     is_non_nested_literal,
+    is_series,
     py_to_narwhals_dtype,
 )
-from narwhals._plan.dummy import DummySeries
 from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange
@@ -27,9 +27,9 @@ from narwhals.exceptions import InvalidOperationError as OrderDependentExprError
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import DummyExpr, DummySeries
     from narwhals._plan.expr import SortBy
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -55,9 +55,9 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
 
 
 def lit(
-    value: NonNestedLiteral | DummySeries, dtype: IntoDType | None = None
+    value: NonNestedLiteral | DummySeries[NativeSeriesT], dtype: IntoDType | None = None
 ) -> DummyExpr:
-    if isinstance(value, DummySeries):
+    if is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not is_non_nested_literal(value):
         msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."

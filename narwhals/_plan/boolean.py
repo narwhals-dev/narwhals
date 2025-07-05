@@ -12,7 +12,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummySeries
     from narwhals._plan.expr import Literal  # noqa: F401
-    from narwhals._plan.typing import Seq  # noqa: F401
+    from narwhals._plan.typing import NativeSeriesT, Seq  # noqa: F401
     from narwhals.typing import ClosedInterval
 
 OtherT = TypeVar("OtherT")
@@ -128,9 +128,11 @@ class IsInSeq(IsIn["Seq[t.Any]"]):
 
 
 # NOTE: Shouldn't be allowed for lazy backends (maybe besides `polars`)
-class IsInSeries(IsIn["Literal[DummySeries]"]):
+class IsInSeries(IsIn["Literal[DummySeries[NativeSeriesT]]"]):
     @classmethod
-    def from_series(cls, other: DummySeries, /) -> IsInSeries:
+    def from_series(
+        cls, other: DummySeries[NativeSeriesT], /
+    ) -> IsInSeries[NativeSeriesT]:
         from narwhals._plan.literal import SeriesLiteral
 
         return IsInSeries(other=SeriesLiteral(value=other).to_literal())
