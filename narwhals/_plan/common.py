@@ -542,6 +542,9 @@ def map_ir(
     return origin.map_ir(function)
 
 
+# TODO @dangotbanned: Review again and try to work around (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)
+# The issue is `T` possibly being `Iterable`
+# Ignoring here still leaks the issue to the caller, where you need to annotate the base case
 def flatten_hash_safe(iterable: Iterable[T | Iterable[T]], /) -> Iterator[T]:
     """Fully unwrap all levels of nesting.
 
