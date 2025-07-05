@@ -868,13 +868,15 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         def _partitioned_rank(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
                 _rank(
                     expr,
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=[descending] + [False] * len(input.order_by),
-                    nulls_last=[True] + [False] * len(input.order_by),
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
                 )
                 for expr in self(df)
             ]

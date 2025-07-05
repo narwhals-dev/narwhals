@@ -772,10 +772,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return [
                 _rank(
                     expr,
+                    inputs.partition_by,
+                    inputs.order_by,
                     descending=[descending] + [False] * len(inputs.order_by),
                     nulls_last=[True] + [False] * len(inputs.order_by),
-                    partition_by=inputs.partition_by,
-                    order_by=inputs.order_by,
                 )
                 for expr in self(df)
             ]
