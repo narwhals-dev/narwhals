@@ -83,6 +83,18 @@ class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
 
         return IbisNamespace(version=self._version)
 
+    def __floordiv__(self, other: Any) -> Self:
+        def func(expr: ir.IntegerColumn, other: ir.IntegerColumn) -> ir.Value:
+            return ibis.cases((other != lit(0), expr // other), else_=lit(None))
+
+        return self._with_binary(func, other=other)
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        def func(expr: ir.IntegerColumn, other: ir.IntegerColumn) -> ir.Value:
+            return ibis.cases((expr != lit(0), other // expr), else_=lit(None))
+
+        return self._with_binary(func, other=other).alias("literal")
+
     def _cum_window_func(
         self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
     ) -> IbisWindowFunction:
