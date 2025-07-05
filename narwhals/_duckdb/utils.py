@@ -304,16 +304,16 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 
 def generate_order_by_sql(
-    *order_by: str | Expression, ascending: bool, nulls_first: bool
+    *order_by: str | Expression, ascending: Sequence[bool], nulls_first: Sequence[bool]
 ) -> str:
     if not order_by:
         return ""
-    nulls = "nulls first" if nulls_first else "nulls last"
-    if ascending:
-        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
-    else:
-        by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
-    return f"order by {by_sql}"
+    by_statements = []
+    for x, _asc, _nulls in zip(order_by, ascending, nulls_first):
+        nulls = "nulls first" if _nulls else "nulls last"
+        asc = "asc" if _asc else "desc"
+        by_statements.append(f"{parse_into_expression(x)} {asc} {nulls}")
+    return f"order by {','.join(by_statements)}"
 
 
 def window_expression(
@@ -323,8 +323,8 @@ def window_expression(
     rows_start: str = "",
     rows_end: str = "",
     *,
-    descending: bool = False,
-    nulls_last: bool = False,
+    descending: bool | Sequence[bool] = False,
+    nulls_last: bool | Sequence[bool] = False,
     ignore_nulls: bool = False,
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
@@ -334,10 +334,18 @@ def window_expression(
     except ModuleNotFoundError as exc:  # pragma: no cover
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
-    pb = generate_partition_by_sql(*partition_by)
-    ob = generate_order_by_sql(
-        *order_by, ascending=not descending, nulls_first=not nulls_last
+    ascending = (
+        [not descending] * len(order_by)
+        if isinstance(descending, bool)
+        else [not x for x in descending]
     )
+    nulls_first = (
+        [not nulls_last] * len(order_by)
+        if isinstance(nulls_last, bool)
+        else [not x for x in nulls_last]
+    )
+    pb = generate_partition_by_sql(*partition_by)
+    ob = generate_order_by_sql(*order_by, ascending=ascending, nulls_first=nulls_first)
 
     if rows_start and rows_end:
         rows = f"rows between {rows_start} and {rows_end}"
