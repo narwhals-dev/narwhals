@@ -16,11 +16,17 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 SeriesT = TypeVar("SeriesT")
 SeriesT_co = TypeVar("SeriesT_co", covariant=True)
+FrameT = TypeVar("FrameT")
+FrameT_co = TypeVar("FrameT_co", covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", contravariant=True)
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
+ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
+ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
+ScalarT = TypeVar("ScalarT", bound="CompliantScalar[Any, Any]")
+ScalarT_co = TypeVar("ScalarT_co", bound="CompliantScalar[Any, Any]", covariant=True)
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -321,3 +327,30 @@ class LazyScalar(
     LazyExpr[FrameT_contra, SeriesT, LengthT],
     Protocol[FrameT_contra, SeriesT, LengthT],
 ): ...
+
+
+class CompliantNamespace(Protocol[FrameT_co, SeriesT_co, ExprT_co, ScalarT_co]):
+    """Need to hold `Expr` and `Scalar` types outside of their defs.
+
+    Likely, re-wrapping the output types will work like:
+
+
+        ns = DataFrame().__narwhals_namespace__()
+        if ns._expr.is_native(out):
+            ns._expr.from_native(out, ...)
+        elif ns._scalar.is_native(out):
+            ns._scalar.from_native(out, ...)
+        else:
+            assert_never(out)
+
+    Currently that is causing issues in `ArrowExpr2._with_native`
+    """
+
+    @property
+    def _expr(self) -> type[ExprT_co]: ...
+    @property
+    def _scalar(self) -> type[ScalarT_co]: ...
+    @property
+    def _series(self) -> type[SeriesT_co]: ...
+    @property
+    def _dataframe(self) -> type[FrameT_co]: ...
