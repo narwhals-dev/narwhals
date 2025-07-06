@@ -851,18 +851,32 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
     def __len__(self) -> int:
         return len(self._compliant)
 
-    def select(self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any) -> Self:
+    def _project(
+        self,
+        exprs: tuple[IntoExpr | Iterable[IntoExpr], ...],
+        named_exprs: dict[str, t.Any],
+        context: ExprContext,
+        /,
+    ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
+        """Temp, while these parts aren't connected, this is easier for testing."""
         irs, schema_frozen, output_names = expr_expansion.prepare_projection(
             parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
         )
         named_irs = expr_expansion.into_named_irs(irs, output_names)
-        named_irs, schema_projected = schema_frozen.project(named_irs, ExprContext.SELECT)
+        return schema_frozen.project(named_irs, context)
+
+    def select(self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any) -> Self:
+        named_irs, schema_projected = self._project(
+            exprs, named_exprs, ExprContext.SELECT
+        )
         return self._from_compliant(self._compliant.select(named_irs, schema_projected))
 
 
 class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]):
     _native: NativeFrameT
     _version: Version
+
+    def __narwhals_namespace__(self) -> t.Any: ...
 
     @property
     def native(self) -> NativeFrameT:

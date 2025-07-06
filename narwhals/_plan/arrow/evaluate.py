@@ -1,4 +1,4 @@
-"""Translating `ExprIR` nodes for pyarrow."""
+"""TODO: Move all the impls `ArrowExpr`/`ArrowScalar`, then delete."""
 
 from __future__ import annotations
 
@@ -39,8 +39,8 @@ def is_scalar(obj: t.Any) -> TypeIs[ScalarAny]:
 def evaluate(node: NamedIR[ExprIR], frame: ArrowDataFrame) -> EagerBroadcast[ArrowSeries]:
     result = _evaluate_inner(node.expr, frame)
     if is_scalar(result):
-        return frame._lit.from_scalar(result, node.name)
-    return frame._expr.from_native(result, node.name)
+        return frame.__narwhals_namespace__()._scalar.from_native(result, node.name)
+    return frame.__narwhals_namespace__()._expr.from_native(result, node.name)
 
 
 # NOTE: Should mean we produce 1x CompliantSeries for the entire expression

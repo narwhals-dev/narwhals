@@ -45,25 +45,16 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
     assert isinstance(compliant_expr, namespace._expr)
 
 
-XFAIL_BROADCAST = pytest.mark.xfail(
-    reason="Shouldn't broadcast when all Series are length 1."
-)
-
-
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
         (nwd.col("a"), {"a": ["A", "B", "A"]}),
         (nwd.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
-        pytest.param(nwd.lit(1), {"literal": [1]}, marks=XFAIL_BROADCAST),
-        pytest.param(nwd.lit(2.0), {"literal": [2.0]}, marks=XFAIL_BROADCAST),
-        pytest.param(
-            nwd.lit(None, nw.String()), {"literal": [None]}, marks=XFAIL_BROADCAST
-        ),
-        pytest.param(
-            nwd.col("a", "b").first(), {"a": ["A"], "b": [1]}, marks=XFAIL_BROADCAST
-        ),
-        pytest.param(nwd.col("d").max(), {"d": [8]}, marks=XFAIL_BROADCAST),
+        (nwd.lit(1), {"literal": [1]}),
+        (nwd.lit(2.0), {"literal": [2.0]}),
+        (nwd.lit(None, nw.String()), {"literal": [None]}),
+        (nwd.col("a", "b").first(), {"a": ["A"], "b": [1]}),
+        (nwd.col("d").max(), {"d": [8]}),
     ],
     ids=_ids_ir,
 )

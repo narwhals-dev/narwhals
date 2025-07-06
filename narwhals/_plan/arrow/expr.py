@@ -1,24 +1,23 @@
 from __future__ import annotations
 
-from functools import singledispatchmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import chunked_array, narwhals_to_native_dtype
-from narwhals._plan import expr
 from narwhals._plan.arrow.series import ArrowSeries
-from narwhals._plan.common import ExprIR, NamedIR, into_dtype
+from narwhals._plan.common import into_dtype
 from narwhals._plan.literal import is_literal_scalar
-from narwhals._plan.protocols import EagerBroadcast, EagerExpr, EagerScalar
+from narwhals._plan.protocols import Dispatch, EagerExpr, EagerScalar
 from narwhals._utils import Version, _StoresNative
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
+    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
+    from narwhals._plan import expr
     from narwhals._plan.aggregation import (
         ArgMax,
         ArgMin,
@@ -42,18 +41,16 @@ if TYPE_CHECKING:
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
 
 
-class ArrowExpr2(
-    _StoresNative["ChunkedArrayAny"], EagerExpr["ArrowDataFrame", ArrowSeries]
+class ArrowExpr(
+    Dispatch["ArrowDataFrame", "ArrowExpr | ArrowScalar"],
+    _StoresNative["ChunkedArrayAny"],
+    EagerExpr["ArrowDataFrame", ArrowSeries],
 ):
     _evaluated: ArrowSeries
 
     @property
     def name(self) -> str:
         return self._evaluated.name
-
-    @property
-    def version(self) -> Version:
-        return self._evaluated.version
 
     @classmethod
     def from_series(cls, series: ArrowSeries, /) -> Self:
@@ -68,32 +65,37 @@ class ArrowExpr2(
         return cls.from_series(ArrowSeries.from_native(native, name, version=version))
 
     @classmethod
-    def from_ir(cls, value: expr.Literal[DummySeries[ChunkedArrayAny]], /) -> Self:
+    def from_ir(
+        cls, value: expr.Literal[DummySeries[ChunkedArrayAny]], name: str = "", /
+    ) -> Self:
         nw_ser = value.unwrap()
-        return cls.from_native(nw_ser.to_native(), value.name, nw_ser.version)
+        return cls.from_native(nw_ser.to_native(), name or value.name, nw_ser.version)
 
-    @classmethod
-    def col(cls, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
-        return cls.from_native(frame.native.column(node.name), name)
+    def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
+        return self.from_native(frame.native.column(node.name), name)
 
-    @classmethod
     def lit(
-        cls,
+        self,
         node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
-        frame: ArrowDataFrame,  # noqa: ARG003
-        name: str,  # noqa: ARG003
+        name: str,
     ) -> ArrowScalar | Self:
         if is_literal_scalar(node):
-            return ArrowScalar.from_ir(node)
-        return cls.from_ir(node)
+            return ArrowScalar.from_ir(node, name)
+        return self.from_ir(node, name)
 
+    @overload
+    def _with_native(self, result: ChunkedArrayAny, name: str = ..., /) -> Self: ...
+    @overload
+    def _with_native(self, result: NativeScalar, name: str = ..., /) -> ArrowScalar: ...
+    @overload
+    def _with_native(
+        self, result: ChunkedArrayAny | NativeScalar, name: str = ..., /
+    ) -> ArrowScalar | Self: ...
     def _with_native(
         self, result: ChunkedArrayAny | NativeScalar, name: str = "", /
-    ) -> Self:
+    ) -> ArrowScalar | Self:
         if isinstance(result, pa.Scalar):
-            # NOTE: Will need to resolve this eventually
-            # Currently the *least bad* option is the single ignore here
-            return ArrowScalar.from_native(result, name, version=self.version)  # type: ignore[return-value]
+            return ArrowScalar.from_native(result, name, version=self.version)
         return super()._with_native(result, name)
 
     @property
@@ -112,36 +114,28 @@ class ArrowExpr2(
     def __len__(self) -> int:
         return len(self._evaluated)
 
-    # NOTE: Dispatch is on `ExprIR`, which is recursive
-    # There is only a top-level `NamedIR` per column
-    def evaluate(self, named_ir: NamedIR[ExprIR], frame: ArrowDataFrame) -> ArrowExpr2:
-        return self._evaluate_inner(named_ir.expr, frame, named_ir.name)
-
-    # NOTE: Don't use `Self`, it breaks the descriptor typing
-    # The implementations *can* use `Self`, just not here
-    @singledispatchmethod
-    def _evaluate_inner(
-        self, node: ExprIR, frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr2:
-        raise NotImplementedError(type(node))
-
-    @_evaluate_inner.register(expr.Cast)
-    def cast(self, node: expr.Cast, frame: ArrowDataFrame, name: str) -> Self:
+    def cast(  # type: ignore[override]
+        self, node: expr.Cast, frame: ArrowDataFrame, name: str
+    ) -> ArrowScalar | Self:
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
-        native = self._evaluate_inner(node.expr, frame, name).native
+        native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pc.cast(native, data_type), name)
 
-    def sort(self, node: expr.Sort, frame: ArrowDataFrame, name: str) -> ArrowExpr2:
+    def sort(self, node: expr.Sort, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         raise NotImplementedError
 
-    def sort_by(self, node: expr.SortBy, frame: ArrowDataFrame, name: str) -> ArrowExpr2:
+    def sort_by(self, node: expr.SortBy, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         raise NotImplementedError
 
-    def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> ArrowExpr2:
+    def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         raise NotImplementedError
 
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        native = self._dispatch(node.expr, frame, name).to_series().native
+        result: NativeScalar = (
+            native[0] if (len(native)) else pa.scalar(None, native.type)
+        )
+        return self._with_native(result, name)
 
     def last(self, node: Last, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         raise NotImplementedError
@@ -171,7 +165,10 @@ class ArrowExpr2(
         raise NotImplementedError
 
     def max(self, node: Max, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result: NativeScalar = pc.max(
+            self._dispatch(node.expr, frame, name).to_series().native
+        )
+        return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         raise NotImplementedError
@@ -184,10 +181,11 @@ class ArrowExpr2(
 
 
 class ArrowScalar(
-    _StoresNative[NativeScalar], EagerScalar["ArrowDataFrame", ArrowSeries]
+    Dispatch["ArrowDataFrame", "ArrowScalar"],
+    _StoresNative[NativeScalar],
+    EagerScalar["ArrowDataFrame", ArrowSeries],
 ):
     _name: str
-    _version: Version
     _evaluated: NativeScalar
 
     @property
@@ -241,8 +239,8 @@ class ArrowScalar(
             raise InvalidOperationError(msg)
 
     @classmethod
-    def from_ir(cls, value: expr.Literal[NonNestedLiteral], /) -> Self:
-        return cls.from_python(value.unwrap(), value.name, dtype=value.dtype)
+    def from_ir(cls, value: expr.Literal[NonNestedLiteral], name: str, /) -> Self:
+        return cls.from_python(value.unwrap(), name, dtype=value.dtype)
 
     @property
     def native(self) -> NativeScalar:
@@ -262,21 +260,9 @@ class ArrowScalar(
             chunked = chunked_array(pa_repeat(scalar, length))
         return ArrowSeries.from_native(chunked, self.name, version=self.version)
 
-    # NOTE: Dispatch is on `ExprIR`, which is recursive
-    # There is only a top-level `NamedIR` per column
-    def evaluate(self, named_ir: NamedIR[ExprIR], frame: ArrowDataFrame) -> ArrowScalar:
-        return self._evaluate_inner(named_ir.expr, frame, named_ir.name)
-
-    @singledispatchmethod
-    def _evaluate_inner(
-        self, node: ExprIR, frame: ArrowDataFrame, name: str
-    ) -> ArrowScalar:
-        raise NotImplementedError(type(node))
-
-    @_evaluate_inner.register(expr.Cast)
     def cast(self, node: expr.Cast, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
-        native = self._evaluate_inner(node.expr, frame, name).native
+        native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pc.cast(native, data_type), name)
 
     def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> Any:
@@ -298,113 +284,5 @@ class ArrowScalar(
         return self._with_native(pa.scalar(None, pa.null()), name)
 
     def count(self, node: Count, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        native = self._evaluate_inner(node.expr, frame, name).native
+        native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
-
-
-# NOTE: General expression result
-# Mostly elementwise
-class ArrowExpr(EagerBroadcast[ArrowSeries]):
-    _compliant: ArrowSeries
-
-    @classmethod
-    def from_series(cls, series: ArrowSeries) -> Self:
-        obj = cls.__new__(cls)
-        obj._compliant = series
-        return obj
-
-    @classmethod
-    def from_native(
-        cls,
-        native: ChunkedArrayAny,
-        name: str = "",
-        /,
-        *,
-        version: Version = Version.MAIN,
-    ) -> Self:
-        return cls.from_series(ArrowSeries.from_native(native, name, version=version))
-
-    @classmethod
-    def from_ir(cls, value: expr.Literal[DummySeries[ChunkedArrayAny]], /) -> Self:
-        return cls.from_native(value.unwrap().to_native(), value.name)
-
-    def to_series(self) -> ArrowSeries:
-        return self._compliant
-
-    def __len__(self) -> int:
-        return len(self._compliant)
-
-    def broadcast(self, length: int, /) -> ArrowSeries:
-        if (actual_len := len(self)) != length:
-            msg = f"Expected object of length {length}, got {actual_len}."
-            raise ShapeError(msg)
-        return self._compliant
-
-
-# NOTE: Aggregation result or scalar
-# Should handle broadcasting, without exposing it
-class ArrowLiteral(EagerBroadcast[ArrowSeries]):
-    _native_scalar: ScalarAny
-    _name: str
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def __len__(self) -> int:
-        return 1
-
-    def broadcast(self, length: int, /) -> ArrowSeries:
-        if length == 1:
-            chunked = chunked_array([[self._native_scalar]])
-        else:
-            # NOTE: Same issue as `pa.scalar` overlapping overloads
-            # https://github.com/zen-xu/pyarrow-stubs/pull/209
-            pa_repeat: Incomplete = pa.repeat
-            arr = pa_repeat(self._native_scalar, length)
-            chunked = chunked_array(arr)
-        return ArrowSeries.from_native(chunked, self.name)
-
-    @classmethod
-    def from_series(cls, series: ArrowSeries) -> Self:
-        if len(series) == 1:
-            return cls.from_scalar(series.native[0], series.name)
-        elif len(series) == 0:
-            return cls.from_python(None, series.name, dtype=series.dtype)
-        else:
-            msg = f"Too long {len(series)!r}"
-            raise InvalidOperationError(msg)
-
-    def to_series(self) -> ArrowSeries:
-        return self.broadcast(1)
-
-    @classmethod
-    def from_python(
-        cls,
-        value: PythonLiteral,
-        name: str = "literal",
-        /,
-        *,
-        dtype: IntoDType | None = None,
-    ) -> Self:
-        version = Version.MAIN
-        dtype_pa: pa.DataType | None = None
-        if dtype:
-            dtype = into_dtype(dtype)
-            if not isinstance(dtype, version.dtypes.Unknown):
-                dtype_pa = narwhals_to_native_dtype(dtype, version)
-        # NOTE: PR that fixed this was closed
-        # https://github.com/zen-xu/pyarrow-stubs/pull/208
-        lit: Incomplete = pa.scalar
-        return cls.from_scalar(lit(value, dtype_pa), name)
-
-    @classmethod
-    def from_scalar(cls, scalar: ScalarAny, name: str = "literal", /) -> Self:
-        obj = cls.__new__(cls)
-        obj._native_scalar = scalar
-        obj._name = name
-        return obj
-
-    @classmethod
-    def from_ir(cls, value: expr.Literal[NonNestedLiteral], /) -> Self:
-        return cls.from_python(value.unwrap(), value.name)

@@ -6,7 +6,6 @@ from itertools import chain
 import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow.expr import ArrowExpr, ArrowLiteral
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.dummy import DummyCompliantFrame, DummyFrame
 from narwhals._utils import Version
@@ -17,6 +16,7 @@ if t.TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
+    from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -30,17 +30,14 @@ def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
 
 
 class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        from narwhals._plan.arrow.namespace import ArrowNamespace
+
+        return ArrowNamespace(self._version)
+
     @property
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
-
-    @property
-    def _expr(self) -> type[ArrowExpr]:
-        return ArrowExpr
-
-    @property
-    def _lit(self) -> type[ArrowLiteral]:
-        return ArrowLiteral
 
     @property
     def columns(self) -> list[str]:
@@ -103,6 +100,6 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         return {ser.name: ser.to_list() for ser in it}
 
     def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[ArrowSeries]:
-        from narwhals._plan.arrow.evaluate import evaluate
-
-        yield from self._expr.align(evaluate(e, self) for e in nodes)
+        ns = self.__narwhals_namespace__()
+        from_named_ir = ns._expr.from_named_ir
+        yield from ns._expr.align(from_named_ir(e, self) for e in nodes)

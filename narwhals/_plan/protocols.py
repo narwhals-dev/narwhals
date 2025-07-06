@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 from narwhals._plan import aggregation as agg, expr
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version
+from narwhals._utils import Version, _StoresVersion
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
@@ -15,11 +15,12 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
+R_co = TypeVar("R_co", covariant=True)
 SeriesT = TypeVar("SeriesT")
 SeriesT_co = TypeVar("SeriesT_co", covariant=True)
 FrameT = TypeVar("FrameT")
 FrameT_co = TypeVar("FrameT_co", covariant=True)
-FrameT_contra = TypeVar("FrameT_contra", contravariant=True)
+FrameT_contra = TypeVar("FrameT_contra", bound="_StoresVersion", contravariant=True)
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
@@ -28,6 +29,12 @@ ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT = TypeVar("ScalarT", bound="CompliantScalar[Any, Any]")
 ScalarT_co = TypeVar("ScalarT_co", bound="CompliantScalar[Any, Any]", covariant=True)
+IntoSeriesT_co = TypeVar("IntoSeriesT_co", bound="ExprAny | ScalarAny", covariant=True)
+
+EagerExprT_co = TypeVar("EagerExprT_co", bound="EagerExpr[Any, Any]", covariant=True)
+EagerScalarT_co = TypeVar(
+    "EagerScalarT_co", bound="EagerScalar[Any, Any]", covariant=True
+)
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -107,8 +114,12 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     _evaluated: Any
     """Compliant or native value."""
 
+    _version: Version
+
     @property
-    def version(self) -> Version: ...
+    def version(self) -> Version:
+        return self._version
+
     @property
     def name(self) -> str: ...
 
@@ -120,15 +131,10 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     def _with_native(self, native: Any, name: str = "", /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
-    # entry points
-    @classmethod
-    def col(cls, node: expr.Column, frame: FrameT_contra, name: str) -> Self: ...
-
-    @classmethod
+    def col(self, node: expr.Column, frame: FrameT_contra, name: str) -> Self: ...
     def lit(
-        cls,
+        self,
         node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
-        frame: FrameT_contra,
         name: str,
     ) -> CompliantScalar[FrameT_contra, SeriesT_co] | Self: ...
 
@@ -182,35 +188,44 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
         self, node: agg.Min, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
-    _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[..., ExprAny]]] = {
-        expr.Column: col,
-        expr.Literal: lit,
-        expr.Cast: cast,
-        expr.Sort: sort,
-        expr.SortBy: sort_by,
-        expr.Filter: filter,
-        agg.First: first,
-        agg.Last: last,
-        agg.ArgMin: arg_min,
-        agg.ArgMax: arg_max,
-        agg.Sum: sum,
-        agg.NUnique: n_unique,
-        agg.Std: std,
-        agg.Var: var,
-        agg.Quantile: quantile,
-        agg.Count: count,
-        agg.Max: max,
-        agg.Mean: mean,
-        agg.Median: median,
-        agg.Min: min,
+
+class Dispatch(Protocol[FrameT_contra, R_co]):
+    _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
+        expr.Column: lambda self, node, frame, name: self.col(node, frame, name),
+        expr.Literal: lambda self, node, _, name: self.lit(node, name),
+        expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
+        expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
+        expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
+        expr.Filter: lambda self, node, frame, name: self.filter(node, frame, name),
+        agg.First: lambda self, node, frame, name: self.first(node, frame, name),
+        agg.Last: lambda self, node, frame, name: self.last(node, frame, name),
+        agg.ArgMin: lambda self, node, frame, name: self.arg_min(node, frame, name),
+        agg.ArgMax: lambda self, node, frame, name: self.arg_max(node, frame, name),
+        agg.Sum: lambda self, node, frame, name: self.sum(node, frame, name),
+        agg.NUnique: lambda self, node, frame, name: self.n_unique(node, frame, name),
+        agg.Std: lambda self, node, frame, name: self.std(node, frame, name),
+        agg.Var: lambda self, node, frame, name: self.var(node, frame, name),
+        agg.Quantile: lambda self, node, frame, name: self.quantile(node, frame, name),
+        agg.Count: lambda self, node, frame, name: self.count(node, frame, name),
+        agg.Max: lambda self, node, frame, name: self.max(node, frame, name),
+        agg.Mean: lambda self, node, frame, name: self.mean(node, frame, name),
+        agg.Median: lambda self, node, frame, name: self.median(node, frame, name),
+        agg.Min: lambda self, node, frame, name: self.min(node, frame, name),
     }
+    _version: Version
 
-    def _dispatch(self, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> ExprAny:
-        return self._dispatch_inner(named_ir.expr, frame, named_ir.name)
-
-    def _dispatch_inner(self, node: ExprIR, frame: FrameT_contra, name: str) -> ExprAny:
+    def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         method = self._DISPATCH[node.__class__]
-        return method(self, node, frame, name)
+        return method(self, node, frame, name)  # type: ignore[no-any-return]
+
+    @classmethod
+    def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
+        node = named_ir.expr
+        name = named_ir.name
+        method = cls._DISPATCH[node.__class__]
+        obj = cls.__new__(cls)
+        obj._version = frame._version
+        return method(obj, node, frame, name)  # type: ignore[no-any-return]
 
 
 class CompliantScalar(
@@ -238,7 +253,7 @@ class CompliantScalar(
         version: Version,
     ) -> Self: ...
 
-    def _with_evaluated(self, evaluated: Any, name: str = "") -> Self:
+    def _with_evaluated(self, evaluated: Any, name: str) -> Self:
         """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
         cls = type(self)
         obj = cls.__new__(cls)
@@ -306,10 +321,10 @@ class CompliantScalar(
         ...
 
     def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated)
+        return self._with_evaluated(self._evaluated, name)
 
     def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self:
-        return self._with_evaluated(self._evaluated)
+        return self._with_evaluated(self._evaluated, name)
 
     # NOTE: `Filter` behaves the same, (maybe) no need to override
 
@@ -357,15 +372,25 @@ class CompliantNamespace(Protocol[FrameT_co, SeriesT_co, ExprT_co, ScalarT_co]):
             ns._scalar.from_native(out, ...)
         else:
             assert_never(out)
-
-    Currently that is causing issues in `ArrowExpr2._with_native`
     """
 
+    _version: Version
+
+    @property
+    def _dataframe(self) -> type[FrameT_co]: ...
+    @property
+    def _series(self) -> type[SeriesT_co]: ...
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
+
     @property
-    def _series(self) -> type[SeriesT_co]: ...
-    @property
-    def _dataframe(self) -> type[FrameT_co]: ...
+    def version(self) -> Version:
+        return self._version
+
+
+class EagerNamespace(
+    CompliantNamespace[FrameT_co, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+    Protocol[FrameT_co, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+): ...
