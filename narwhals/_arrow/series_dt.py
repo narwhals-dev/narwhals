@@ -213,7 +213,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         interval = Interval.parse_no_constraints(by)
         native = self.native
         if interval.unit in {"y", "q", "mo"}:
-            msg = f"Offsetting by {interval.unit} is not yet supported."
+            msg = f"Offsetting by {interval.unit} is not yet supported for pyarrow."
             raise NotImplementedError(msg)
         if interval.unit == "d":
             offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())

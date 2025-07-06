@@ -157,7 +157,7 @@ class DaskExprDateTimeNamespace(
         interval = Interval.parse(every)
         unit = interval.unit
         if unit in {"mo", "q", "y"}:
-            msg = f"Truncating to {unit} is not supported yet for dask."
+            msg = f"Truncating to {unit} is not yet supported for dask."
             raise NotImplementedError(msg)
         freq = f"{interval.multiple}{ALIAS_DICT.get(unit, unit)}"
         return self.compliant._with_callable(lambda expr: expr.dt.floor(freq), "truncate")
@@ -167,7 +167,7 @@ class DaskExprDateTimeNamespace(
             interval = Interval.parse_no_constraints(by)
             unit = interval.unit
             if unit in {"y", "q", "mo", "d", "ns"}:
-                msg = f"Offsetting by {unit} is not supported yet for dask."
+                msg = f"Offsetting by {unit} is not yet supported for dask."
                 raise NotImplementedError(msg)
             offset = interval.to_timedelta()
             return s.add(offset)
