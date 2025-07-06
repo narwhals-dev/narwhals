@@ -99,7 +99,7 @@ def test_offset_by(
     expected: list[datetime],
 ) -> None:
     if any(x in str(constructor) for x in ("sqlframe",)) or (
-        "pyspark" in str(constructor) and os.environ.get("SPARK_CONNECT", False)
+        "pyspark" in str(constructor) and bool(os.environ.get("SPARK_CONNECT", None))
     ):
         # sqlframe and pyspark[connect] are not implemented.
         request.applymarker(pytest.mark.xfail())
