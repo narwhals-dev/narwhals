@@ -1050,4 +1050,4 @@ class DummyCompliantSeries(Generic[NativeSeriesT]):
         return len(self.native)
 
     def to_list(self) -> list[t.Any]:
-        raise NotADirectoryError
+        raise NotImplementedError
