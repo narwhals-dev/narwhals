@@ -257,7 +257,7 @@ class ArrowScalar(
     def broadcast(self, length: int) -> ArrowSeries:
         scalar = self.native
         if length == 1:
-            chunked = chunked_array([[scalar]])
+            chunked = chunked_array(pa.array([scalar]))
         else:
             # NOTE: Same issue as `pa.scalar` overlapping overloads
             # https://github.com/zen-xu/pyarrow-stubs/pull/209
