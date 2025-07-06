@@ -79,8 +79,8 @@ class Expr:
     def _with_orderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_orderable_window())
 
-    def _with_unorderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        return self.__class__(to_compliant_expr, self._metadata.with_unorderable_window())
+    def _with_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_window())
 
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_filtration())
@@ -1646,9 +1646,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_unorderable_window(
-            lambda plx: self._to_compliant_expr(plx).is_unique()
-        )
+        return self._with_window(lambda plx: self._to_compliant_expr(plx).is_unique())
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -2472,7 +2470,7 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_unorderable_window(
+        return self._with_window(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )

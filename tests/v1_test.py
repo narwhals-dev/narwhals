@@ -396,7 +396,7 @@ def test_with_row_index(constructor: Constructor) -> None:
 
     frame = nw_v1.from_native(constructor(data))
 
-    msg = r"argument after \* must be an iterable, not NoneType|has no len"
+    msg = "Cannot pass `order_by`"
     context = (
         pytest.raises(TypeError, match=msg)
         if any(x in str(constructor) for x in ("duckdb", "pyspark"))

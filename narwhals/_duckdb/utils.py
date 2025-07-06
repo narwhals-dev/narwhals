@@ -36,6 +36,8 @@ UNIT_TO_TIMESTAMPS = {
     "us": "TIMESTAMP",
     "ns": "TIMESTAMP_NS",
 }
+DESCENDING_TO_ORDER = {True: "desc", False: "asc"}
+NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
@@ -304,15 +306,14 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 
 def generate_order_by_sql(
-    *order_by: str | Expression, descending: bool, nulls_last: bool
+    *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
     if not order_by:
         return ""
-    nulls = "nulls last" if nulls_last else "nulls first"
-    if descending:
-        by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
-    else:
-        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
+    by_sql = ",".join(
+        f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
+        for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
+    )
     return f"order by {by_sql}"
 
 
@@ -323,8 +324,8 @@ def window_expression(
     rows_start: str = "",
     rows_end: str = "",
     *,
-    descending: bool = False,
-    nulls_last: bool = False,
+    descending: Sequence[bool] | None = None,
+    nulls_last: Sequence[bool] | None = None,
     ignore_nulls: bool = False,
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
@@ -335,6 +336,8 @@ def window_expression(
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
+    descending = descending or [False] * len(order_by)
+    nulls_last = nulls_last or [False] * len(order_by)
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start and rows_end:
