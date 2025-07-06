@@ -84,7 +84,7 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         return max_length if required else None
 
 
-class CompliantExpr(Protocol[FrameT_contra, SeriesT_co, NativeT_co]):
+class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     """Getting a bit tricky, just storing notes.
 
     - Separating series/scalar makes a lot of sense
@@ -103,9 +103,6 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co, NativeT_co]):
     def version(self) -> Version: ...
     @property
     def name(self) -> str: ...
-
-    @property
-    def native(self) -> NativeT_co: ...
 
     @classmethod
     def from_native(
@@ -167,8 +164,7 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co, NativeT_co]):
 
 
 class CompliantScalar(
-    CompliantExpr[FrameT_contra, SeriesT_co, NativeT_co],
-    Protocol[FrameT_contra, SeriesT_co, NativeT_co],
+    CompliantExpr[FrameT_contra, SeriesT_co], Protocol[FrameT_contra, SeriesT_co]
 ):
     _name: str
     _version: Version
@@ -270,29 +266,29 @@ class CompliantScalar(
 
 class EagerExpr(
     EagerBroadcast[SeriesT],
-    CompliantExpr[FrameT_contra, SeriesT, NativeT_co],
-    Protocol[FrameT_contra, SeriesT, NativeT_co],
+    CompliantExpr[FrameT_contra, SeriesT],
+    Protocol[FrameT_contra, SeriesT],
 ): ...
 
 
 class LazyExpr(
     SupportsBroadcast[SeriesT, LengthT],
-    CompliantExpr[FrameT_contra, SeriesT, NativeT_co],
-    Protocol[FrameT_contra, SeriesT, LengthT, NativeT_co],
+    CompliantExpr[FrameT_contra, SeriesT],
+    Protocol[FrameT_contra, SeriesT, LengthT],
 ): ...
 
 
 class EagerScalar(
-    CompliantScalar[FrameT_contra, SeriesT, NativeT_co],
-    EagerExpr[FrameT_contra, SeriesT, NativeT_co],
-    Protocol[FrameT_contra, SeriesT, NativeT_co],
+    CompliantScalar[FrameT_contra, SeriesT],
+    EagerExpr[FrameT_contra, SeriesT],
+    Protocol[FrameT_contra, SeriesT],
 ):
     def __len__(self) -> int:
         return 1
 
 
 class LazyScalar(
-    CompliantScalar[FrameT_contra, SeriesT, NativeT_co],
-    LazyExpr[FrameT_contra, SeriesT, LengthT, NativeT_co],
-    Protocol[FrameT_contra, SeriesT, LengthT, NativeT_co],
+    CompliantScalar[FrameT_contra, SeriesT],
+    LazyExpr[FrameT_contra, SeriesT, LengthT],
+    Protocol[FrameT_contra, SeriesT, LengthT],
 ): ...

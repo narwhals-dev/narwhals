@@ -11,7 +11,7 @@ from narwhals._plan import expr
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, NamedIR, into_dtype
 from narwhals._plan.protocols import EagerBroadcast, EagerExpr, EagerScalar
-from narwhals._utils import Version
+from narwhals._utils import Version, _StoresNative
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -41,7 +41,9 @@ if TYPE_CHECKING:
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
 
 
-class ArrowExpr2(EagerExpr["ArrowDataFrame", ArrowSeries, "ChunkedArrayAny"]):
+class ArrowExpr2(
+    _StoresNative["ChunkedArrayAny"], EagerExpr["ArrowDataFrame", ArrowSeries]
+):
     _evaluated: ArrowSeries
 
     @property
@@ -160,7 +162,9 @@ class ArrowExpr2(EagerExpr["ArrowDataFrame", ArrowSeries, "ChunkedArrayAny"]):
         raise NotImplementedError
 
 
-class ArrowScalar(EagerScalar["ArrowDataFrame", ArrowSeries, NativeScalar]):
+class ArrowScalar(
+    _StoresNative[NativeScalar], EagerScalar["ArrowDataFrame", ArrowSeries]
+):
     _name: str
     _version: Version
     _evaluated: NativeScalar
