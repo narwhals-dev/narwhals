@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence, Sized
-from typing import TYPE_CHECKING, Any, Protocol
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
-from narwhals._plan.common import ExprIR, flatten_hash_safe
+from narwhals._plan import aggregation as agg, expr
+from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan import aggregation as agg, expr
     from narwhals.typing import IntoDType, PythonLiteral
 
 T = TypeVar("T")
@@ -20,6 +20,7 @@ FrameT_contra = TypeVar("FrameT_contra", contravariant=True)
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
+ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -161,6 +162,34 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     def min(
         self, node: agg.Min, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+
+    _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[..., ExprAny]]] = {
+        expr.Cast: cast,
+        expr.Sort: sort,
+        expr.SortBy: sort_by,
+        expr.Filter: filter,
+        agg.First: first,
+        agg.Last: last,
+        agg.ArgMin: arg_min,
+        agg.ArgMax: arg_max,
+        agg.Sum: sum,
+        agg.NUnique: n_unique,
+        agg.Std: std,
+        agg.Var: var,
+        agg.Quantile: quantile,
+        agg.Count: count,
+        agg.Max: max,
+        agg.Mean: mean,
+        agg.Median: median,
+        agg.Min: min,
+    }
+
+    def _dispatch(self, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> ExprAny:
+        return self._dispatch_inner(named_ir.expr, frame, named_ir.name)
+
+    def _dispatch_inner(self, node: ExprIR, frame: FrameT_contra, name: str) -> ExprAny:
+        method = self._DISPATCH[node.__class__]
+        return method(self, node, frame, name)
 
 
 class CompliantScalar(
