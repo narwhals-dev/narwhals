@@ -245,7 +245,6 @@ def test_cast_datetime_utc(
         "dask" in str(constructor)
         # https://github.com/eakmanrq/sqlframe/issues/406
         or "sqlframe" in str(constructor)
-        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or ("pyarrow_table" in str(constructor) and is_windows())
     ):
         request.applymarker(pytest.mark.xfail)

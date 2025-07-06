@@ -435,7 +435,8 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table" in str(constructor) or "pyspark" in str(constructor):
+    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
+        # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
@@ -465,7 +466,8 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
 def test_over_ewm_mean(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) or "modin" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+        # not implemented
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 2):
         request.applymarker(pytest.mark.xfail(reason="too old, not implemented"))

@@ -306,9 +306,10 @@ def test_rank_with_order_by(
 def test_rank_with_order_by_and_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "cudf")):
         # `rank` is not implemented in Dask
         # pyarrow only supports aggregations in `over(partition_by=...)`
+        # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
