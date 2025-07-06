@@ -11,7 +11,8 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals._plan.dummy import DummySeries
+    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
 SeriesT = TypeVar("SeriesT")
@@ -119,6 +120,18 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     def _with_native(self, native: Any, name: str = "", /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
+    # entry points
+    @classmethod
+    def col(cls, node: expr.Column, frame: FrameT_contra, name: str) -> Self: ...
+
+    @classmethod
+    def lit(
+        cls,
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
+        frame: FrameT_contra,
+        name: str,
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co] | Self: ...
+
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     # series only (section 3)
@@ -170,6 +183,8 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[..., ExprAny]]] = {
+        expr.Column: col,
+        expr.Literal: lit,
         expr.Cast: cast,
         expr.Sort: sort,
         expr.SortBy: sort_by,

@@ -10,6 +10,7 @@ from narwhals._arrow.utils import chunked_array, narwhals_to_native_dtype
 from narwhals._plan import expr
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, NamedIR, into_dtype
+from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerBroadcast, EagerExpr, EagerScalar
 from narwhals._utils import Version, _StoresNative
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -65,6 +66,26 @@ class ArrowExpr2(
         cls, native: ChunkedArrayAny, name: str = "", /, version: Version = Version.MAIN
     ) -> Self:
         return cls.from_series(ArrowSeries.from_native(native, name, version=version))
+
+    @classmethod
+    def from_ir(cls, value: expr.Literal[DummySeries[ChunkedArrayAny]], /) -> Self:
+        nw_ser = value.unwrap()
+        return cls.from_native(nw_ser.to_native(), value.name, nw_ser.version)
+
+    @classmethod
+    def col(cls, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
+        return cls.from_native(frame.native.column(node.name), name)
+
+    @classmethod
+    def lit(
+        cls,
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
+        frame: ArrowDataFrame,  # noqa: ARG003
+        name: str,  # noqa: ARG003
+    ) -> ArrowScalar | Self:
+        if is_literal_scalar(node):
+            return ArrowScalar.from_ir(node)
+        return cls.from_ir(node)
 
     def _with_native(
         self, result: ChunkedArrayAny | NativeScalar, name: str = "", /
@@ -218,6 +239,10 @@ class ArrowScalar(
         else:
             msg = f"Too long {len(series)!r}"
             raise InvalidOperationError(msg)
+
+    @classmethod
+    def from_ir(cls, value: expr.Literal[NonNestedLiteral], /) -> Self:
+        return cls.from_python(value.unwrap(), value.name, dtype=value.dtype)
 
     @property
     def native(self) -> NativeScalar:
