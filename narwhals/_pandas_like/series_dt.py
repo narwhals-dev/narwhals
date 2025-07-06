@@ -268,8 +268,8 @@ class PandasLikeSeriesDateTimeNamespace(
             interval = Interval.parse_no_constraints(by)
             multiple, unit = interval.multiple, interval.unit
             if unit == "q":
-                msg = f"Offsetting by {unit} is not yet supported for pandas-like."
-                raise NotImplementedError(msg)
+                multiple *= 3
+                unit = "mo"
             offset: pd.DateOffset | pd.Timedelta
             if unit == "y":
                 offset = pd.DateOffset(years=multiple)

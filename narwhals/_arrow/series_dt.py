@@ -204,9 +204,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     def truncate(self, every: str) -> ArrowSeries:
         interval = Interval.parse(every)
         return self.with_native(
-            pc.floor_temporal(
-                self.native, multiple=interval.multiple, unit=UNITS_DICT[interval.unit]
-            )
+            pc.floor_temporal(self.native, interval.multiple, UNITS_DICT[interval.unit])
         )
 
     def offset_by(self, by: str) -> ArrowSeries:

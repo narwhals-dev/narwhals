@@ -109,8 +109,6 @@ def test_offset_by(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
-        request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
@@ -149,8 +147,6 @@ def test_offset_by_tz(
     ):
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
-        request.applymarker(pytest.mark.xfail())
-    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
@@ -192,8 +188,6 @@ def test_offset_by_dst(
     ):
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
-        request.applymarker(pytest.mark.xfail())
-    if by.endswith("q") and any(x in str(constructor) for x in ("pandas",)):
         request.applymarker(pytest.mark.xfail())
     df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
