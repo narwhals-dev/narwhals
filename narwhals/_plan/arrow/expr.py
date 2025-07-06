@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
 
 
-class ArrowExpr2(EagerExpr["ArrowDataFrame", ArrowSeries]):
+class ArrowExpr2(EagerExpr["ArrowDataFrame", ArrowSeries, "ChunkedArrayAny"]):
     _evaluated: ArrowSeries
 
     @property
@@ -160,7 +160,7 @@ class ArrowExpr2(EagerExpr["ArrowDataFrame", ArrowSeries]):
         raise NotImplementedError
 
 
-class ArrowScalar(EagerScalar["ArrowDataFrame", ArrowSeries]):
+class ArrowScalar(EagerScalar["ArrowDataFrame", ArrowSeries, NativeScalar]):
     _name: str
     _version: Version
     _evaluated: NativeScalar
