@@ -136,7 +136,8 @@ class SparkLikeExprDateTimeNamespace(
         F = self.compliant._F  # noqa: N806
 
         def _offset_by(expr: Column) -> Column:
-            return F.timestamp_add(  # type: ignore[attr-defined] https://github.com/eakmanrq/sqlframe/issues/441
+            # https://github.com/eakmanrq/sqlframe/issues/441
+            return F.timestamp_add(  # pyright: ignore[reportAttributeAccessIssue]
                 UNITS_DICT[unit], F.lit(multiple), expr
             )
 
