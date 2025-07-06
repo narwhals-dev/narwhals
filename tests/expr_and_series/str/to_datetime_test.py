@@ -151,7 +151,7 @@ def test_to_datetime_series_infer_fmt(
 def test_to_datetime_infer_fmt_from_date(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     if "pyspark" in str(constructor):

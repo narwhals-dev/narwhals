@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 import dask.dataframe as dd
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:

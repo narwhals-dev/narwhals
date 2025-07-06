@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StructNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir

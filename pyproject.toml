@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.44.0"
+version = "1.45.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -138,12 +138,14 @@ extend-safe-fixes = [
   "PLR6201", # literal-membership
   "TC",      # flake8-type-checking
   "UP",      # pyupgrade
+  "PLW1514", # unspecified-encoding
 ]
 extend-select = [
   "PLR0914", # too-many-locals
   "PLR0916", # too-many-boolean-expressions
   "PLR1702", # too-many-nested-blocks
   "PLR6201", # literal-membership
+  "PLW1514", # unspecified-encoding
 ]
 select = ["ALL"]
 ignore = [
@@ -282,6 +284,7 @@ exclude_also = [
   "if .*implementation.is_pyspark_connect",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
+  '.*._backend_version\(\) <',
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',

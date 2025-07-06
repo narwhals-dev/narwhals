@@ -19,10 +19,8 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
     scale_bytes,
     supports_arrow_c_stream,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
@@ -46,7 +44,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -77,25 +75,26 @@ if TYPE_CHECKING:
 class ArrowDataFrame(
     EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
 ):
+    _implementation = Implementation.PYARROW
+
     def __init__(
         self,
         native_dataframe: pa.Table,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
         validate_column_names: bool,
+        validate_backend_version: bool = False,
     ) -> None:
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.column_names)
+        if validate_backend_version:
+            self._validate_backend_version()
         self._native_frame = native_dataframe
-        self._implementation = Implementation.PYARROW
-        self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
-        backend_version = context._backend_version
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
+        backend_version = context._implementation._backend_version()
         if cls._is_native(data):
             native = data
         elif backend_version >= (14,) or isinstance(data, Collection):
@@ -114,7 +113,7 @@ class ArrowDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -128,13 +127,8 @@ class ArrowDataFrame(
         return isinstance(obj, pa.Table)
 
     @classmethod
-    def from_native(cls, data: pa.Table, /, *, context: _FullContext) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            validate_column_names=True,
-        )
+    def from_native(cls, data: pa.Table, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version, validate_column_names=True)
 
     @classmethod
     def from_numpy(
@@ -142,7 +136,7 @@ class ArrowDataFrame(
         data: _2DArray,
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -157,9 +151,7 @@ class ArrowDataFrame(
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.PYARROW:
@@ -175,19 +167,11 @@ class ArrowDataFrame(
         return self
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native,
-            backend_version=self._backend_version,
-            version=version,
-            validate_column_names=False,
-        )
+        return self.__class__(self.native, version=version, validate_column_names=False)
 
     def _with_native(self, df: pa.Table, *, validate_column_names: bool = True) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=validate_column_names,
+            df, version=self._version, validate_column_names=validate_column_names
         )
 
     @property
@@ -536,9 +520,7 @@ class ArrowDataFrame(
 
             df = self.native  # noqa: F841
             return DuckDBLazyFrame(
-                duckdb.table("df"),
-                backend_version=parse_version(duckdb),
-                version=self._version,
+                duckdb.table("df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
@@ -547,20 +529,30 @@ class ArrowDataFrame(
 
             return PolarsLazyFrame(
                 cast("pl.DataFrame", pl.from_arrow(self.native)).lazy(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 dd.from_pandas(self.native.to_pandas()),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
                 version=self._version,
             )
+        elif backend.is_ibis():
+            import ibis  # ignore-banned-import
+
+            from narwhals._ibis.dataframe import IbisLazyFrame
+
+            return IbisLazyFrame(
+                ibis.memtable(self.native, columns=self.columns),
+                validate_backend_version=True,
+                version=self._version,
+            )
+
         raise AssertionError  # pragma: no cover
 
     def collect(
@@ -570,21 +562,16 @@ class ArrowDataFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native,
-                backend_version=self._backend_version,
-                version=self._version,
-                validate_column_names=False,
+                self.native, version=self._version, validate_column_names=False
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )
@@ -596,7 +583,7 @@ class ArrowDataFrame(
 
             return PolarsDataFrame(
                 cast("pl.DataFrame", pl.from_arrow(self.native)),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 

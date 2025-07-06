@@ -256,42 +256,38 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
-        backend_version = impl._backend_version()
+        backend_version = impl._backend_version()  # noqa: F841
         version = cls._version
         ns: CompliantNamespaceAny
         if impl.is_pandas_like():
             from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-            ns = PandasLikeNamespace(
-                implementation=impl, backend_version=backend_version, version=version
-            )
+            ns = PandasLikeNamespace(implementation=impl, version=version)
 
         elif impl.is_polars():
             from narwhals._polars.namespace import PolarsNamespace
 
-            ns = PolarsNamespace(backend_version=backend_version, version=version)
+            ns = PolarsNamespace(version=version)
         elif impl.is_pyarrow():
             from narwhals._arrow.namespace import ArrowNamespace
 
-            ns = ArrowNamespace(backend_version=backend_version, version=version)
+            ns = ArrowNamespace(version=version)
         elif impl.is_spark_like():
             from narwhals._spark_like.namespace import SparkLikeNamespace
 
-            ns = SparkLikeNamespace(
-                implementation=impl, backend_version=backend_version, version=version
-            )
+            ns = SparkLikeNamespace(implementation=impl, version=version)
         elif impl.is_duckdb():
             from narwhals._duckdb.namespace import DuckDBNamespace
 
-            ns = DuckDBNamespace(backend_version=backend_version, version=version)
+            ns = DuckDBNamespace(version=version)
         elif impl.is_dask():
             from narwhals._dask.namespace import DaskNamespace
 
-            ns = DaskNamespace(backend_version=backend_version, version=version)
+            ns = DaskNamespace(version=version)
         elif impl.is_ibis():
             from narwhals._ibis.namespace import IbisNamespace
 
-            ns = IbisNamespace(backend_version=backend_version, version=version)
+            ns = IbisNamespace(version=version)
         else:
             msg = "Not supported Implementation"  # pragma: no cover
             raise AssertionError(msg)

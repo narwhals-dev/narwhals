@@ -33,14 +33,7 @@ if TYPE_CHECKING:
 class SparkLikeNamespace(
     LazyNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame"]
 ):
-    def __init__(
-        self,
-        *,
-        backend_version: tuple[int, ...],
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation
 
@@ -79,7 +72,7 @@ class SparkLikeNamespace(
             column = df._F.lit(value)
             if dtype:
                 native_dtype = narwhals_to_native_dtype(
-                    dtype, version=self._version, spark_types=df._native_dtypes
+                    dtype, self._version, df._native_dtypes, df.native.sparkSession
                 )
                 column = column.cast(native_dtype)
 
@@ -89,7 +82,6 @@ class SparkLikeNamespace(
             call=_lit,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -102,7 +94,6 @@ class SparkLikeNamespace(
             func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -182,7 +173,6 @@ class SparkLikeNamespace(
 
             return SparkLikeLazyFrame(
                 native_dataframe=reduce(lambda x, y: x.union(y), dfs),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -192,7 +182,6 @@ class SparkLikeNamespace(
                 native_dataframe=reduce(
                     lambda x, y: x.unionByName(y, allowMissingColumns=True), dfs
                 ),
-                backend_version=self._backend_version,
                 version=self._version,
                 implementation=self._implementation,
             )
@@ -240,7 +229,6 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )

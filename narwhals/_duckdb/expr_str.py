@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._duckdb.utils import F, lit, when
 from narwhals._utils import not_implemented
 
@@ -17,12 +17,12 @@ class DuckDBExprStringNamespace(
     LazyExprNamespace["DuckDBExpr"], StringNamespace["DuckDBExpr"]
 ):
     def starts_with(self, prefix: str) -> DuckDBExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F("starts_with", expr, lit(prefix))
         )
 
     def ends_with(self, suffix: str) -> DuckDBExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F("ends_with", expr, lit(suffix))
         )
 
@@ -32,7 +32,7 @@ class DuckDBExprStringNamespace(
                 return F("contains", expr, lit(pattern))
             return F("regexp_matches", expr, lit(pattern))
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def slice(self, offset: int, length: int | None) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
@@ -46,24 +46,26 @@ class DuckDBExprStringNamespace(
                 F("length", expr) if length is None else lit(length) + offset_lit,
             )
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def split(self, by: str) -> DuckDBExpr:
-        return self.compliant._with_callable(lambda expr: F("str_split", expr, lit(by)))
+        return self.compliant._with_elementwise(
+            lambda expr: F("str_split", expr, lit(by))
+        )
 
     def len_chars(self) -> DuckDBExpr:
-        return self.compliant._with_callable(lambda expr: F("length", expr))
+        return self.compliant._with_elementwise(lambda expr: F("length", expr))
 
     def to_lowercase(self) -> DuckDBExpr:
-        return self.compliant._with_callable(lambda expr: F("lower", expr))
+        return self.compliant._with_elementwise(lambda expr: F("lower", expr))
 
     def to_uppercase(self) -> DuckDBExpr:
-        return self.compliant._with_callable(lambda expr: F("upper", expr))
+        return self.compliant._with_elementwise(lambda expr: F("upper", expr))
 
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
         import string
 
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F(
                 "trim", expr, lit(string.whitespace if characters is None else characters)
             )
@@ -71,10 +73,10 @@ class DuckDBExprStringNamespace(
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
         if not literal:
-            return self.compliant._with_callable(
+            return self.compliant._with_elementwise(
                 lambda expr: F("regexp_replace", expr, lit(pattern), lit(value), lit("g"))
             )
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F("replace", expr, lit(pattern), lit(value))
         )
 
@@ -83,7 +85,7 @@ class DuckDBExprStringNamespace(
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."
             raise NotImplementedError(msg)
 
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: F("strptime", expr, lit(format))
         )
 
@@ -119,6 +121,8 @@ class DuckDBExprStringNamespace(
                 .otherwise(expr)
             )
 
+        # can't use `_with_elementwise` due to `when` operator.
+        # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
 
     replace = not_implemented()

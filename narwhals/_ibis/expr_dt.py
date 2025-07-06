@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._duration import Interval
 from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._utils import not_implemented
@@ -92,7 +92,7 @@ class IbisExprDateTimeNamespace(
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
-            return self.compliant._with_callable(lambda _input: _input.cast("timestamp"))
+            return self.compliant._with_callable(lambda expr: expr.cast("timestamp"))
         else:  # pragma: no cover
             msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"
             raise NotImplementedError(msg)

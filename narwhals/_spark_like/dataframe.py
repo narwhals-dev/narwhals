@@ -15,12 +15,11 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     find_stacklevel,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
-    validate_backend_version,
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
@@ -39,7 +38,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
@@ -53,23 +52,28 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 class SparkLikeLazyFrame(
     CompliantLazyFrame[
         "SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"
-    ]
+    ],
+    ValidateBackendVersion,
 ):
     def __init__(
         self,
         native_dataframe: SQLFrameDataFrame,
         *,
-        backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: SQLFrameDataFrame = native_dataframe
-        self._backend_version = backend_version
         self._implementation = implementation
         self._version = version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
+        if validate_backend_version:  # pragma: no cover
+            self._validate_backend_version()
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:  # pragma: no cover
+        return self._implementation._backend_version()
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
@@ -103,13 +107,8 @@ class SparkLikeLazyFrame(
         return is_native_spark_like(obj)
 
     @classmethod
-    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            implementation=context._implementation,
-        )
+    def from_native(cls, data: SQLFrameDataFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version, implementation=context._implementation)
 
     def to_narwhals(self) -> LazyFrame[SQLFrameDataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -121,9 +120,7 @@ class SparkLikeLazyFrame(
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
+            version=self._version, implementation=self._implementation
         )
 
     def __narwhals_lazyframe__(self) -> Self:
@@ -131,18 +128,12 @@ class SparkLikeLazyFrame(
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(
-            self.native,
-            backend_version=self._backend_version,
-            version=version,
-            implementation=self._implementation,
+            self.native, version=version, implementation=self._implementation
         )
 
     def _with_native(self, df: SQLFrameDataFrame) -> Self:
         return self.__class__(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
+            df, version=self._version, implementation=self._implementation
         )
 
     def _to_arrow_schema(self) -> pa.Schema:  # pragma: no cover
@@ -213,39 +204,34 @@ class SparkLikeLazyFrame(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.toPandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         elif backend is None or backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self._collect_to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
-            import pyarrow as pa  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
                 pl.from_arrow(self._collect_to_arrow()),  # type: ignore[arg-type]
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 
@@ -523,6 +509,9 @@ class SparkLikeLazyFrame(
         return self._with_native(unpivoted_native_frame)
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        if order_by is None:
+            msg = "Cannot pass `order_by` to `with_row_index` for PySpark-like"
+            raise TypeError(msg)
         row_index_expr = (
             self._F.row_number().over(
                 self._Window.partitionBy(self._F.lit(1)).orderBy(*order_by)

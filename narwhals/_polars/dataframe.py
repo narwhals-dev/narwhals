@@ -24,9 +24,7 @@ from narwhals._utils import (
     is_slice_index,
     is_slice_none,
     parse_columns_to_drop,
-    parse_version,
     requires,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
@@ -43,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -112,14 +110,31 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     unique: Method[Self]
     with_columns: Method[Self]
 
+    _implementation = Implementation.POLARS
+
     def __init__(
-        self, df: NativePolarsFrame, *, backend_version: tuple[int, ...], version: Version
+        self,
+        df: NativePolarsFrame,
+        *,
+        version: Version,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame: NativePolarsFrame = df
-        self._backend_version = backend_version
-        self._implementation = Implementation.POLARS
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
+        if validate_backend_version:
+            self._validate_backend_version()
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def native(self) -> NativePolarsFrame:
@@ -130,9 +145,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self.native.columns
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.POLARS:
@@ -142,20 +155,14 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         raise AssertionError(msg)
 
     def _with_native(self, df: NativePolarsFrame) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, backend_version=self._backend_version, version=version
-        )
+        return self.__class__(self.native, version=version)
 
     @classmethod
-    def from_native(cls, data: NativePolarsFrame, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(  # pragma: no cover
@@ -171,7 +178,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     @property
     def schema(self) -> dict[str, DType]:
         return {
-            name: native_to_narwhals_dtype(dtype, self._version, self._backend_version)
+            name: native_to_narwhals_dtype(dtype, self._version)
             for name, dtype in self.native.schema.items()
         }
 
@@ -220,21 +227,12 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         )
 
     def collect_schema(self) -> dict[str, DType]:
-        if self._backend_version < (1,):
-            return {
-                name: native_to_narwhals_dtype(
-                    dtype, self._version, self._backend_version
-                )
-                for name, dtype in self.native.schema.items()
-            }
-        else:
-            collected_schema = self.native.collect_schema()
-            return {
-                name: native_to_narwhals_dtype(
-                    dtype, self._version, self._backend_version
-                )
-                for name, dtype in collected_schema.items()
-            }
+        df = self.native
+        schema = df.schema if self._backend_version < (1,) else df.collect_schema()
+        return {
+            name: native_to_narwhals_dtype(dtype, self._version)
+            for name, dtype in schema.items()
+        }
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native
@@ -271,10 +269,10 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     _evaluate_aliases: Any
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
-        if context._backend_version >= (1, 3):
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
+        if context._implementation._backend_version() >= (1, 3):
             native = pl.DataFrame(data)
-        else:
+        else:  # pragma: no cover
             native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
         return cls.from_native(native, context=context)
 
@@ -284,7 +282,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -302,7 +300,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         data: _2DArray,
         /,
         *,
-        context: _FullContext,  # NOTE: Maybe only `Implementation`?
+        context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -358,7 +356,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 msg = f"{e!s}\n\nHint: Did you mean one of these columns: {self.columns}?"
                 raise ColumnNotFoundError(msg) from e
             except Exception as e:  # noqa: BLE001
-                raise catch_polars_exception(e, self._backend_version) from None
+                raise catch_polars_exception(e) from None
 
         return func
 
@@ -462,21 +460,29 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             # NOTE: (F841) is a false positive
             df = self.native  # noqa: F841
             return DuckDBLazyFrame(
-                duckdb.table("df"),
-                backend_version=parse_version(duckdb),
-                version=self._version,
+                duckdb.table("df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 dd.from_pandas(self.native.to_pandas()),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
                 version=self._version,
             )
+        elif backend.is_ibis():
+            import ibis  # ignore-banned-import
+
+            from narwhals._ibis.dataframe import IbisLazyFrame
+
+            return IbisLazyFrame(
+                ibis.memtable(self.native, columns=self.columns),
+                validate_backend_version=True,
+                version=self._version,
+            )
+
         raise AssertionError  # pragma: no cover
 
     @overload
@@ -528,7 +534,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 separator=separator,
             )
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
         return self._from_native_object(result)
 
     def to_polars(self) -> pl.DataFrame:
@@ -548,7 +554,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 other=other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
             )
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
@@ -591,7 +597,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         try:
             return super().collect_schema()
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
     def collect(
         self, backend: Implementation | None, **kwargs: Any
@@ -599,32 +605,28 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         try:
             result = self.native.collect(**kwargs)
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
         if backend is None or backend is Implementation.POLARS:
             return PolarsDataFrame.from_native(result, context=self)
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 result.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )
 
         if backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 result.to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._compliant.series import _SeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -437,6 +437,4 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ChunkedArrayAny"]):
-    def __init__(self, series: ArrowSeries, /) -> None:
-        self._compliant_series = series
+class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
