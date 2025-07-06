@@ -132,9 +132,7 @@ class ArrowExpr(
 
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         native = self._dispatch(node.expr, frame, name).to_series().native
-        result: NativeScalar = (
-            native[0] if (len(native)) else pa.scalar(None, native.type)
-        )
+        result = lit(native[0]) if len(native) else lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: ArrowDataFrame, name: str) -> ArrowScalar:
@@ -180,6 +178,15 @@ class ArrowExpr(
         raise NotImplementedError
 
 
+def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
+    # NOTE: Needed for `pyarrow<13`
+    if isinstance(value, pa.Scalar):
+        return value
+    # NOTE: PR that fixed this the overloads was closed
+    # https://github.com/zen-xu/pyarrow-stubs/pull/208
+    return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
+
+
 class ArrowScalar(
     Dispatch["ArrowDataFrame", "ArrowScalar"],
     _StoresNative[NativeScalar],
@@ -221,9 +228,6 @@ class ArrowScalar(
             dtype = into_dtype(dtype)
             if not isinstance(dtype, version.dtypes.Unknown):
                 dtype_pa = narwhals_to_native_dtype(dtype, version)
-        # NOTE: PR that fixed this was closed
-        # https://github.com/zen-xu/pyarrow-stubs/pull/208
-        lit: Incomplete = pa.scalar
         return cls.from_native(lit(value, dtype_pa), name, version)
 
     @classmethod
