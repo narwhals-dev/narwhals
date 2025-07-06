@@ -14,6 +14,9 @@ class ArrowSeries(DummyCompliantSeries["ChunkedArrayAny"]):
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
 
+    def __len__(self) -> int:
+        return self.native.length()
+
     @property
     def dtype(self) -> DType:
         return native_to_narwhals_dtype(self.native.type, self._version)

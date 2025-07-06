@@ -131,8 +131,9 @@ class ArrowExpr(
         raise NotImplementedError
 
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        native = self._dispatch(node.expr, frame, name).to_series().native
-        result = lit(native[0]) if len(native) else lit(None, native.type)
+        prev = self._dispatch(node.expr, frame, name)
+        native = prev.to_series().native
+        result = lit(native[0]) if len(prev) else lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: ArrowDataFrame, name: str) -> ArrowScalar:
