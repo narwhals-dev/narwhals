@@ -127,19 +127,17 @@ class SparkLikeExprDateTimeNamespace(
         return self.compliant._with_elementwise(_truncate)
 
     def offset_by(self, by: str) -> SparkLikeExpr:
-        from narwhals._spark_like.utils import import_functions
-
         interval = Interval.parse_no_constraints(by)
         multiple, unit = interval.multiple, interval.unit
         if unit == "ns":  # pragma: no cover
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)
 
-        sf = import_functions(self.compliant._implementation)
+        F = self.compliant._F  # noqa: N806
 
         def _offset_by(expr: Column) -> Column:
-            return sf.timestamp_add(
-                UNITS_DICT[unit], self.compliant._F.lit(multiple), expr
+            return F.timestamp_add(  # type: ignore[attr-defined] https://github.com/eakmanrq/sqlframe/issues/441
+                UNITS_DICT[unit], F.lit(multiple), expr
             )
 
         return self.compliant._with_callable(_offset_by)

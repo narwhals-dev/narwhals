@@ -14,7 +14,7 @@ from narwhals._constants import (
 )
 from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
-    UNIT_DICT,
+    ALIAS_DICT,
     UNITS_DICT,
     PandasLikeSeriesNamespace,
     calculate_timestamp_date,
@@ -213,7 +213,7 @@ class PandasLikeSeriesDateTimeNamespace(
             if multiple != 1:
                 msg = f"Only multiple `1` is supported for cuDF, got: {multiple}."
                 raise NotImplementedError(msg)
-            return self.with_native(self.native.dt.floor(UNIT_DICT.get(unit, unit)))
+            return self.with_native(self.native.dt.floor(ALIAS_DICT.get(unit, unit)))
         dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
         if unit in {"mo", "q", "y"}:
             if self.implementation.is_cudf():
@@ -242,7 +242,7 @@ class PandasLikeSeriesDateTimeNamespace(
             )
             return self.with_native(result_native)
         return self.with_native(
-            self.native.dt.floor(f"{multiple}{UNIT_DICT.get(unit, unit)}")
+            self.native.dt.floor(f"{multiple}{ALIAS_DICT.get(unit, unit)}")
         )
 
     def offset_by(self, by: str) -> PandasLikeSeries:

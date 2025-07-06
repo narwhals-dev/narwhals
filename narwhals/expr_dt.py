@@ -826,6 +826,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴───────────────────────┘|
             └───────────────────────────────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).dt.offset_by(by)
         )

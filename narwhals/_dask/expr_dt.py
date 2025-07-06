@@ -7,7 +7,7 @@ from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
-    UNIT_DICT,
+    ALIAS_DICT,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
     native_to_narwhals_dtype,
@@ -159,7 +159,7 @@ class DaskExprDateTimeNamespace(
         if unit in {"mo", "q", "y"}:
             msg = f"Truncating to {unit} is not supported yet for dask."
             raise NotImplementedError(msg)
-        freq = f"{interval.multiple}{UNIT_DICT.get(unit, unit)}"
+        freq = f"{interval.multiple}{ALIAS_DICT.get(unit, unit)}"
         return self.compliant._with_callable(lambda expr: expr.dt.floor(freq), "truncate")
 
     def offset_by(self, by: str) -> DaskExpr:
@@ -167,7 +167,7 @@ class DaskExprDateTimeNamespace(
             interval = Interval.parse_no_constraints(by)
             unit = interval.unit
             if unit in {"y", "q", "mo", "d", "ns"}:
-                msg = f"Offsetting by {unit} is not yet supported."
+                msg = f"Offsetting by {unit} is not supported yet for dask."
                 raise NotImplementedError(msg)
             offset = interval.to_timedelta()
             return s.add(offset)

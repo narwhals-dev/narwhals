@@ -97,9 +97,8 @@ def test_offset_by(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe", "pyspark")):
+    if any(x in str(constructor) for x in ("sqlframe",)):
         # sqlframe not implemented.
-        # pyspark localizes to UTC here.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
@@ -181,7 +180,8 @@ def test_offset_by_dst(
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")):
         # sqlframe not implemented.
-        # duckdb and pyspark localizes to UTC here.
+        # duckdb localizes to UTC here.
+        # pyspark doesn't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
