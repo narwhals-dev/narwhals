@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 import pytest
@@ -97,8 +98,10 @@ def test_offset_by(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)):
-        # sqlframe not implemented.
+    if any(x in str(constructor) for x in ("sqlframe",)) or (
+        "pyspark" in str(constructor) and os.environ.get("SPARK_CONNECT", None)
+    ):
+        # sqlframe and pyspark[connect] are not implemented.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
