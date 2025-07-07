@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING
+from itertools import repeat
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._plan.common import Immutable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     import pyarrow.compute as pc
 
     from narwhals._plan.typing import Seq
@@ -169,6 +172,33 @@ class SortMultipleOptions(Immutable):
             f"descending={list(self.descending)!r}, nulls_last={list(self.nulls_last)!r}"
         )
         return f"{type(self).__name__}({args})"
+
+    @staticmethod
+    def parse(
+        *, descending: bool | Iterable[bool], nulls_last: bool | Iterable[bool]
+    ) -> SortMultipleOptions:
+        desc = (descending,) if isinstance(descending, bool) else tuple(descending)
+        nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
+        return SortMultipleOptions(descending=desc, nulls_last=nulls)
+
+    def to_arrow(self, by: Sequence[str]) -> pc.SortOptions:
+        import pyarrow.compute as pc
+
+        if len(self.nulls_last) != 1:
+            msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"
+            raise NotImplementedError(msg)
+        placement: Literal["at_start", "at_end"] = (
+            "at_end" if self.nulls_last[0] else "at_start"
+        )
+        if len(self.descending) == 1:
+            descending: Iterable[bool] = repeat(self.descending[0], len(by))
+        else:
+            descending = self.descending
+        sorting: list[tuple[str, Literal["ascending", "descending"]]] = [
+            (key, "descending" if desc else "ascending")
+            for key, desc in zip(by, descending)
+        ]
+        return pc.SortOptions(sort_keys=sorting, null_placement=placement)
 
 
 class RankOptions(Immutable):

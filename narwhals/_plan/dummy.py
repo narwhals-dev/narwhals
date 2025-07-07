@@ -36,7 +36,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     import pyarrow as pa
     from typing_extensions import Never, Self, TypeAlias
@@ -66,6 +66,21 @@ if TYPE_CHECKING:
 
 CompliantSeriesT = TypeVar("CompliantSeriesT", bound="DummyCompliantSeries[t.Any]")
 CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT, NativeSeriesT]"
+
+
+# NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
+def _parse_sort_by(
+    by: IntoExpr | Iterable[IntoExpr] = (),
+    *more_by: IntoExpr,
+    descending: bool | t.Iterable[bool] = False,
+    nulls_last: bool | t.Iterable[bool] = False,
+) -> tuple[Seq[ExprIR], SortMultipleOptions]:
+    sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
+    if length_changing := next((e for e in sort_by if e.is_scalar), None):
+        msg = f"All expressions sort keys must preserve length, but got:\n{length_changing!r}"
+        raise InvalidOperationError(msg)
+    options = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
+    return sort_by, options
 
 
 # NOTE: Overly simplified placeholders for mocking typing
@@ -186,14 +201,10 @@ class DummyExpr:
         descending: bool | t.Iterable[bool] = False,
         nulls_last: bool | t.Iterable[bool] = False,
     ) -> Self:
-        sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
-        if length_changing := next((e for e in sort_by if e.is_scalar), None):
-            msg = f"All expressions passed to `sort_by` must preserve length, but got:\n{length_changing!r}"
-            raise InvalidOperationError(msg)
-        desc = (descending,) if isinstance(descending, bool) else tuple(descending)
-        nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
-        options = SortMultipleOptions(descending=desc, nulls_last=nulls)
-        return self._from_ir(expr.SortBy(expr=self._ir, by=sort_by, options=options))
+        keys, opts = _parse_sort_by(
+            by, *more_by, descending=descending, nulls_last=nulls_last
+        )
+        return self._from_ir(expr.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
         self,
@@ -871,6 +882,22 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
         )
         return self._from_compliant(self._compliant.select(named_irs, schema_projected))
 
+    def sort(
+        self,
+        by: str | Iterable[str],
+        *more_by: str,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool | Sequence[bool] = False,
+    ) -> Self:
+        sort, opts = _parse_sort_by(
+            by, *more_by, descending=descending, nulls_last=nulls_last
+        )
+        irs, schema_frozen, output_names = expr_expansion.prepare_projection(
+            sort, self.schema
+        )
+        named_irs = expr_expansion.into_named_irs(irs, output_names)
+        return self._from_compliant(self._compliant.sort(named_irs, opts, schema_frozen))
+
 
 class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]):
     _native: NativeFrameT
@@ -903,6 +930,9 @@ class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]
         obj._native = native
         obj._version = version
         return obj
+
+    def _with_native(self, native: NativeFrameT) -> Self:
+        return self.from_native(native, self.version)
 
     @classmethod
     def from_series(
@@ -951,6 +981,11 @@ class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]
 
     def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
         return self.from_series(self._evaluate_irs(irs))
+
+    def sort(
+        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
+    ) -> Self:
+        raise NotImplementedError
 
 
 class DummySeries(Generic[NativeSeriesT]):

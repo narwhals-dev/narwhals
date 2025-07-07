@@ -4,9 +4,11 @@ import typing as t
 from itertools import chain
 
 import pyarrow as pa  # ignore-banned-import
+import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow.series import ArrowSeries
+from narwhals._plan.common import ExprIR
 from narwhals._plan.dummy import DummyCompliantFrame, DummyFrame
 from narwhals._utils import Version
 
@@ -18,6 +20,9 @@ if t.TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
+    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
 
@@ -103,3 +108,12 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         ns = self.__narwhals_namespace__()
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
+
+    # NOTE: Not handling actual expressions yet
+    # `DummyFrame` is typed for just `str` names
+    def sort(
+        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
+    ) -> Self:
+        df_by = self.select(by, projected)
+        indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
+        return self._with_native(self.native.take(indices))
