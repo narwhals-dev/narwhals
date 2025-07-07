@@ -8,7 +8,7 @@ from narwhals._plan.options import FunctionOptions
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._duration import IntervalUnit
+    from narwhals._duration import Interval, IntervalUnit
     from narwhals._plan.dummy import DummyExpr
     from narwhals.typing import TimeUnit
 
@@ -152,10 +152,13 @@ class Truncate(TemporalFunction):
 
     @staticmethod
     def from_string(every: str, /) -> Truncate:
-        from narwhals._duration import parse_interval_string
+        from narwhals._duration import Interval
 
-        multiple, unit = parse_interval_string(every)
-        return Truncate(multiple=multiple, unit=unit)
+        return Truncate.from_interval(Interval.parse(every))
+
+    @staticmethod
+    def from_interval(every: Interval, /) -> Truncate:
+        return Truncate(multiple=every.multiple, unit=every.unit)
 
 
 class IRDateTimeNamespace(IRNamespace):
