@@ -1452,9 +1452,14 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
     """Folds the columns from left to right, keeping the first non-null value.
 
     Arguments:
-        exprs: Columns to coalesce. Strings are parsed as column names, other non-expression inputs are
-            parsed as literals.
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
         *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
 
     Returns:
         A new expression.

@@ -62,5 +62,5 @@ def test_coalesce_raises_non_expr(constructor: Constructor) -> None:
     }
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(TypeError, match="All arguments must be of type"):
+    with pytest.raises(TypeError, match="All arguments to `coalesce` must be of type"):
         df.select(implicit_lit=nw.coalesce("a", "b", "c", 10))
