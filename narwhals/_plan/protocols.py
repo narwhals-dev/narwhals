@@ -11,7 +11,6 @@ from narwhals._utils import Version, _StoresVersion
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.dummy import DummySeries
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
@@ -133,10 +132,11 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
 
     def col(self, node: expr.Column, frame: FrameT_contra, name: str) -> Self: ...
     def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
-        name: str,
+        self, node: expr.Literal[Any], frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co] | Self: ...
+    def len(
+        self, node: expr.Len, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
@@ -192,7 +192,8 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
 class Dispatch(Protocol[FrameT_contra, R_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
         expr.Column: lambda self, node, frame, name: self.col(node, frame, name),
-        expr.Literal: lambda self, node, _, name: self.lit(node, name),
+        expr.Literal: lambda self, node, frame, name: self.lit(node, frame, name),
+        expr.Len: lambda self, node, frame, name: self.len(node, frame, name),
         expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
         expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
         expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
@@ -219,13 +220,14 @@ class Dispatch(Protocol[FrameT_contra, R_co]):
         return method(self, node, frame, name)  # type: ignore[no-any-return]
 
     @classmethod
-    def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
-        node = named_ir.expr
-        name = named_ir.name
-        method = cls._DISPATCH[node.__class__]
+    def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
         obj._version = frame._version
-        return method(obj, node, frame, name)  # type: ignore[no-any-return]
+        return obj._dispatch(node, frame, name)
+
+    @classmethod
+    def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
+        return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
 
 class CompliantScalar(
@@ -261,6 +263,10 @@ class CompliantScalar(
         obj._name = name or self.name
         obj._version = self.version
         return obj
+
+    def lit(
+        self, node: expr.Literal[NonNestedLiteral], frame: FrameT_contra, name: str
+    ) -> Self: ...
 
     def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
         """Returns self."""

@@ -13,7 +13,7 @@ from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import into_dtype
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import Dispatch, EagerExpr, EagerScalar
-from narwhals._utils import Implementation, Version, _StoresNative
+from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.expr import Len
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
@@ -59,6 +60,7 @@ class ArrowExpr(
     EagerExpr["ArrowDataFrame", ArrowSeries],
 ):
     _evaluated: ArrowSeries
+    _version: Version
 
     @property
     def name(self) -> str:
@@ -68,6 +70,7 @@ class ArrowExpr(
     def from_series(cls, series: ArrowSeries, /) -> Self:
         obj = cls.__new__(cls)
         obj._evaluated = series
+        obj._version = series.version
         return obj
 
     @classmethod
@@ -75,25 +78,6 @@ class ArrowExpr(
         cls, native: ChunkedArrayAny, name: str = "", /, version: Version = Version.MAIN
     ) -> Self:
         return cls.from_series(ArrowSeries.from_native(native, name, version=version))
-
-    @classmethod
-    def from_ir(
-        cls, value: expr.Literal[DummySeries[ChunkedArrayAny]], name: str = "", /
-    ) -> Self:
-        nw_ser = value.unwrap()
-        return cls.from_native(nw_ser.to_native(), name or value.name, nw_ser.version)
-
-    def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
-        return self.from_native(frame.native.column(node.name), name)
-
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
-        name: str,
-    ) -> ArrowScalar | Self:
-        if is_literal_scalar(node):
-            return ArrowScalar.from_ir(node, name)
-        return self.from_ir(node, name)
 
     @overload
     def _with_native(self, result: ChunkedArrayAny, name: str = ..., /) -> Self: ...
@@ -125,6 +109,23 @@ class ArrowExpr(
 
     def __len__(self) -> int:
         return len(self._evaluated)
+
+    def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
+        return self.from_native(frame.native.column(node.name), name)
+
+    def lit(
+        self,
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
+        frame: ArrowDataFrame,
+        name: str,
+    ) -> ArrowScalar | Self:
+        if is_literal_scalar(node):
+            return ArrowScalar.from_ir(node, frame, name)
+        nw_ser = node.unwrap()
+        return self.from_native(nw_ser.to_native(), name or node.name, nw_ser.version)
+
+    def len(self, node: Len, frame: ArrowDataFrame, name: str) -> ArrowScalar:
+        return ArrowScalar.from_ir(node, frame, name)
 
     def cast(  # type: ignore[override]
         self, node: expr.Cast, frame: ArrowDataFrame, name: str
@@ -224,6 +225,7 @@ class ArrowScalar(
 ):
     _name: str
     _evaluated: NativeScalar
+    _version: Version
 
     @property
     def name(self) -> str:
@@ -272,10 +274,6 @@ class ArrowScalar(
             msg = f"Too long {len(series)!r}"
             raise InvalidOperationError(msg)
 
-    @classmethod
-    def from_ir(cls, value: expr.Literal[NonNestedLiteral], name: str, /) -> Self:
-        return cls.from_python(value.unwrap(), name, dtype=value.dtype)
-
     @property
     def native(self) -> NativeScalar:
         return self._evaluated
@@ -294,13 +292,25 @@ class ArrowScalar(
             chunked = chunked_array(pa_repeat(scalar, length))
         return ArrowSeries.from_native(chunked, self.name, version=self.version)
 
+    # NOTE: These need to move into a single def in `Namespace`
+    # - col
+    # - len
+    # - lit
+    def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> Self:
+        return ArrowExpr.from_ir(node, frame, name)  # type: ignore[return-value]
+
+    def lit(
+        self, node: expr.Literal[NonNestedLiteral], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        return self.from_python(node.unwrap(), name, dtype=node.dtype)
+
+    def len(self, node: Len, frame: ArrowDataFrame, name: str) -> Self:
+        return self.from_python(len(frame), name or node.name, version=frame.version)
+
     def cast(self, node: expr.Cast, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
         native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pc.cast(native, data_type), name)
-
-    def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> Any:
-        raise NotImplementedError
 
     def arg_min(self, node: ArgMin, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         return self._with_native(pa.scalar(0), name)
@@ -320,3 +330,5 @@ class ArrowScalar(
     def count(self, node: Count, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
+
+    filter = not_implemented()
