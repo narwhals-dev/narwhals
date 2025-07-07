@@ -216,8 +216,10 @@ class Dispatch(Protocol[FrameT_contra, R_co]):
     _version: Version
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        method = self._DISPATCH[node.__class__]
-        return method(self, node, frame, name)  # type: ignore[no-any-return]
+        if method := self._DISPATCH.get(node.__class__):
+            return method(self, node, frame, name)  # type: ignore[no-any-return]
+        msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
+        raise NotImplementedError(msg)
 
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:

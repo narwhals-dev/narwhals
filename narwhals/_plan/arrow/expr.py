@@ -10,7 +10,7 @@ from narwhals._arrow.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._plan.arrow.series import ArrowSeries
-from narwhals._plan.common import into_dtype
+from narwhals._plan.common import ExprIR, into_dtype
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import Dispatch, EagerExpr, EagerScalar
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
@@ -94,6 +94,18 @@ class ArrowExpr(
             return ArrowScalar.from_native(result, name, version=self.version)
         return super()._with_native(result, name)
 
+    def _dispatch_expr(
+        self, node: ExprIR, frame: ArrowDataFrame, name: str
+    ) -> ArrowSeries:
+        """Use instead of `_dispatch` *iff* an operation isn't natively supported on `ChunkedArray`.
+
+        There is no need to broadcast, as they may have a cheaper impl elsewhere (`CompliantScalar` or `ArrowScalar`).
+
+        Mainly for the benefit of a type checker, but the equivalent `ArrowScalar._dispatch_expr` will raise if
+        the assumption fails.
+        """
+        return self._dispatch(node, frame, name).to_series()
+
     @property
     def native(self) -> ChunkedArrayAny:
         return self._evaluated.native
@@ -135,22 +147,33 @@ class ArrowExpr(
         return self._with_native(pc.cast(native, data_type), name)
 
     def sort(self, node: expr.Sort, frame: ArrowDataFrame, name: str) -> ArrowExpr:
-        raise NotImplementedError
+        native = self._dispatch_expr(node.expr, frame, name).native
+        sorted_indices = pc.array_sort_indices(native, options=node.options.to_arrow())
+        return self._with_native(native.take(sorted_indices), name)
 
     def sort_by(self, node: expr.SortBy, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         raise NotImplementedError
 
     def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> ArrowExpr:
-        raise NotImplementedError
+        return self._with_native(
+            self._dispatch_expr(node.expr, frame, name).native.filter(
+                self._dispatch_expr(node.by, frame, name).native
+            )
+        )
 
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        prev = self._dispatch(node.expr, frame, name)
-        native = prev.to_series().native
+        prev = self._dispatch_expr(node.expr, frame, name)
+        native = prev.native
         result = lit(native[0]) if len(prev) else lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        prev = self._dispatch_expr(node.expr, frame, name)
+        native = prev.native
+        result = (
+            lit(native[height - 1]) if (height := len(prev)) else lit(None, native.type)
+        )
+        return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         raise NotImplementedError
@@ -177,9 +200,7 @@ class ArrowExpr(
         raise NotImplementedError
 
     def max(self, node: Max, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        result: NativeScalar = pc.max(
-            self._dispatch(node.expr, frame, name).to_series().native
-        )
+        result: NativeScalar = pc.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: ArrowDataFrame, name: str) -> ArrowScalar:
@@ -273,6 +294,12 @@ class ArrowScalar(
         else:
             msg = f"Too long {len(series)!r}"
             raise InvalidOperationError(msg)
+
+    def _dispatch_expr(
+        self, node: ExprIR, frame: ArrowDataFrame, name: str
+    ) -> ArrowSeries:
+        msg = f"Expected unreachable, but hit at: {node!r}"
+        raise InvalidOperationError(msg)
 
     @property
     def native(self) -> NativeScalar:
