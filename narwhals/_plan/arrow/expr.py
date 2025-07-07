@@ -152,7 +152,16 @@ class ArrowExpr(
         return self._with_native(native.take(sorted_indices), name)
 
     def sort_by(self, node: expr.SortBy, frame: ArrowDataFrame, name: str) -> ArrowExpr:
-        raise NotImplementedError
+        series = self._dispatch_expr(node.expr, frame, name)
+        by = (
+            self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
+            for idx, e in enumerate(node.by)
+        )
+        df = frame.from_series(series, *by)
+        names = df.columns[1:]
+        indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
+        result: ChunkedArrayAny = df.native.column(0).take(indices)
+        return self._with_native(result, name)
 
     def filter(self, node: expr.Filter, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         return self._with_native(

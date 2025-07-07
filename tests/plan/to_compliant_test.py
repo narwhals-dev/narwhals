@@ -83,6 +83,13 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             marks=XFAIL_REWRITE_SPECIAL_ALIASES,
         ),
         ([ndcs.string().first(), nwd.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
+        (
+            nwd.col("c", "d")
+            .sort_by("a", "b", descending=[True, False])
+            .cast(nw.Float32())
+            .name.to_uppercase(),
+            {"C": [2.0, 9.0, 4.0], "D": [7.0, 8.0, 8.0]},
+        ),
     ],
     ids=_ids_ir,
 )
