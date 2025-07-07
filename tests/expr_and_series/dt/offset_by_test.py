@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 
 import pytest
@@ -98,10 +97,12 @@ def test_offset_by(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(constructor) for x in ("sqlframe",)) or (
-        "pyspark" in str(constructor) and bool(os.environ.get("SPARK_CONNECT", None))
-    ):
-        # sqlframe and pyspark[connect] are not implemented.
+    df = nw.from_native(constructor(data))
+    if df.implementation.is_pyspark_connect():
+        # missing feature upstream
+        request.applymarker(pytest.mark.xfail())
+    if by == "2q" and "sqlframe" in str(constructor):
+        # https://github.com/eakmanrq/sqlframe/issues/443
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
@@ -109,7 +110,6 @@ def test_offset_by(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
-    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
 
