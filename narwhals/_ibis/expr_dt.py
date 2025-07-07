@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._utils import not_implemented
 
@@ -68,7 +68,8 @@ class IbisExprDateTimeNamespace(
         return fn
 
     def truncate(self, every: str) -> IbisExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         if unit == "q":
             multiple, unit = 3 * multiple, "mo"
         if multiple != 1:
@@ -79,6 +80,15 @@ class IbisExprDateTimeNamespace(
         else:
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
         return self.compliant._with_callable(fn)
+
+    def offset_by(self, every: str) -> IbisExpr:
+        interval = Interval.parse_no_constraints(every)
+        unit = interval.unit
+        if unit in {"y", "q", "mo", "d", "ns"}:
+            msg = f"Offsetting by {unit} is not yet supported for ibis."
+            raise NotImplementedError(msg)
+        offset = interval.to_timedelta()
+        return self.compliant._with_callable(lambda expr: expr.add(offset))
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
