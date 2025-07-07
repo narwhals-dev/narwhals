@@ -19,10 +19,7 @@ from narwhals._plan import expr
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        ChunkedArrayAny,
-        ScalarAny,
-    )
+    from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.common import ExprIR, NamedIR
