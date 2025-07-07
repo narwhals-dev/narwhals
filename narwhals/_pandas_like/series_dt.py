@@ -279,12 +279,12 @@ class PandasLikeSeriesDateTimeNamespace(
                 offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
             else:
                 offset = interval.to_timedelta()
-            if unit == "d":
-                original_timezone = native.dt.tz
+            if unit == "d" and (
+                original_tz := getattr(self.compliant.dtype, "time_zone", None)
+            ):
                 native_without_timezone = native.dt.tz_localize(None)
                 result_pd = native_without_timezone + offset
-                if original_timezone is not None:
-                    result_pd = result_pd.dt.tz_localize(original_timezone)
+                result_pd = result_pd.dt.tz_localize(original_tz)
             else:
                 result_pd = native + offset
 
