@@ -176,41 +176,64 @@ class ArrowExpr(
         return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        native = self._dispatch_expr(node.expr, frame, name).native
+        result = pc.index(native, pc.min(native))
+        return self._with_native(result, name)
 
     def arg_max(self, node: ArgMax, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        native = self._dispatch_expr(node.expr, frame, name).native
+        result: NativeScalar = pc.index(native, pc.max(native))
+        return self._with_native(result, name)
 
     def sum(self, node: Sum, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result: NativeScalar = pc.sum(
+            self._dispatch_expr(node.expr, frame, name).native, min_count=0
+        )
+        return self._with_native(result, name)
 
     def n_unique(self, node: NUnique, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.count(self._dispatch_expr(node.expr, frame, name).native, mode="all")
+        return self._with_native(result, name)
 
     def std(self, node: Std, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.stddev(
+            self._dispatch_expr(node.expr, frame, name).native, ddof=node.ddof
+        )
+        return self._with_native(result, name)
 
     def var(self, node: Var, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.variance(
+            self._dispatch_expr(node.expr, frame, name).native, ddof=node.ddof
+        )
+        return self._with_native(result, name)
 
     def quantile(self, node: Quantile, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.quantile(
+            self._dispatch_expr(node.expr, frame, name).native,
+            q=node.quantile,
+            interpolation=node.interpolation,
+        )[0]
+        return self._with_native(result, name)
 
     def count(self, node: Count, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.count(self._dispatch_expr(node.expr, frame, name).native)
+        return self._with_native(result, name)
 
     def max(self, node: Max, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         result: NativeScalar = pc.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.mean(self._dispatch_expr(node.expr, frame, name).native)
+        return self._with_native(result, name)
 
     def median(self, node: Median, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result = pc.approximate_median(self._dispatch_expr(node.expr, frame, name).native)
+        return self._with_native(result, name)
 
     def min(self, node: Min, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        raise NotImplementedError
+        result: NativeScalar = pc.min(self._dispatch_expr(node.expr, frame, name).native)
+        return self._with_native(result, name)
 
 
 def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
