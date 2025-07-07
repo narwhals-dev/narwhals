@@ -110,6 +110,9 @@ def test_offset_by(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/19292
+        request.applymarker(pytest.mark.xfail)
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
 
@@ -147,6 +150,9 @@ def test_offset_by_tz(
         request.applymarker(pytest.mark.xfail())
     if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/19292
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
@@ -176,9 +182,12 @@ def test_offset_by_dst(
         or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")):
+    if any(
+        x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis", "cudf")
+    ):
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
+        # cudf https://github.com/rapidsai/cudf/issues/19292
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow")
@@ -193,7 +202,12 @@ def test_offset_by_dst(
     assert_equal_data(result_str, {"a": expected})
 
 
-def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
+def test_offset_by_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # https://github.com/rapidsai/cudf/issues/19292
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.offset_by("1h"))
     expected = {
@@ -205,7 +219,12 @@ def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_offset_by_invalid_interval(constructor: Constructor) -> None:
+def test_offset_by_invalid_interval(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/19292
+        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
