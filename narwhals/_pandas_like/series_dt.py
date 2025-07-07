@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
     EPOCH_YEAR,
@@ -25,6 +23,10 @@ from narwhals._pandas_like.utils import (
 )
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
+    import pandas as pd
+
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.typing import TimeUnit
 
@@ -246,10 +248,8 @@ class PandasLikeSeriesDateTimeNamespace(
         )
 
     def offset_by(self, by: str) -> PandasLikeSeries:
-        if self.implementation.is_cudf():
-            msg = "Not implemented for cuDF."
-            raise NotImplementedError(msg)
         native = self.native
+        pdx = self.compliant.__native_namespace__()
         if self._is_pyarrow():
             import pyarrow as pa  # ignore-banned-import
 
@@ -270,13 +270,15 @@ class PandasLikeSeriesDateTimeNamespace(
             if unit == "q":
                 multiple *= 3
                 unit = "mo"
-            offset: pd.DateOffset | pd.Timedelta
+            offset: pd.DateOffset | pd.Timedelta | timedelta
             if unit == "y":
-                offset = pd.DateOffset(years=multiple)
+                offset = pdx.DateOffset(years=multiple)
             elif unit == "mo":
-                offset = pd.DateOffset(months=multiple)
+                offset = pdx.DateOffset(months=multiple)
+            elif unit == "ns":
+                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
             else:
-                offset = pd.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
+                offset = interval.to_timedelta()
             if unit == "d":
                 original_timezone = native.dt.tz
                 native_without_timezone = native.dt.tz_localize(None)
