@@ -1,22 +1,32 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import chunked_array, narwhals_to_native_dtype
+from narwhals._arrow.utils import (
+    chunked_array as _chunked_array,
+    narwhals_to_native_dtype,
+)
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import into_dtype
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import Dispatch, EagerExpr, EagerScalar
-from narwhals._utils import Version, _StoresNative
+from narwhals._utils import Implementation, Version, _StoresNative
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import (
+        ArrayAny,
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+    )
     from narwhals._plan import expr
     from narwhals._plan.aggregation import (
         ArgMax,
@@ -39,6 +49,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
+
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 
 class ArrowExpr(
@@ -188,6 +200,23 @@ def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
+# NOTE: https://github.com/apache/arrow/issues/21761
+# fmt: off
+if BACKEND_VERSION >= (13,):
+    def array(value: NativeScalar) -> ArrayAny:
+        return pa.array([value], value.type)
+else:
+    def array(value: NativeScalar) -> ArrayAny:
+        return cast("ArrayAny", pa.array([value.as_py()], value.type))
+# fmt: on
+
+
+def chunked_array(
+    arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+) -> ChunkedArrayAny:
+    return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+
+
 class ArrowScalar(
     Dispatch["ArrowDataFrame", "ArrowScalar"],
     _StoresNative[NativeScalar],
@@ -257,7 +286,7 @@ class ArrowScalar(
     def broadcast(self, length: int) -> ArrowSeries:
         scalar = self.native
         if length == 1:
-            chunked = chunked_array(pa.array([scalar]))
+            chunked = chunked_array(scalar)
         else:
             # NOTE: Same issue as `pa.scalar` overlapping overloads
             # https://github.com/zen-xu/pyarrow-stubs/pull/209
