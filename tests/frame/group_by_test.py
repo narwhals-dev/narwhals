@@ -284,12 +284,8 @@ def test_no_agg(constructor: Constructor) -> None:
 
 
 def test_group_by_categorical(constructor: Constructor) -> None:
-    if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
-    ):
-        pytest.skip(reason="DuckDB, PySpark, and Ibis do not support categorical types")
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+        pytest.skip(reason="no categorical support")
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover

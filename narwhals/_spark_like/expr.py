@@ -129,17 +129,24 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return import_window(self._implementation)
 
     def _sort(
-        self, *cols: Column | str, descending: bool = False, nulls_last: bool = False
+        self,
+        *cols: Column | str,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
         F = self._F  # noqa: N806
+        descending = descending or [False] * len(cols)
+        nulls_last = nulls_last or [False] * len(cols)
         mapping = {
             (False, False): F.asc_nulls_first,
             (False, True): F.asc_nulls_last,
             (True, False): F.desc_nulls_first,
             (True, True): F.desc_nulls_last,
         }
-        sort = mapping[(descending, nulls_last)]
-        yield from (sort(col) for col in cols)
+        yield from (
+            mapping[(_desc, _nulls_last)](col)
+            for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
+        )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:
         """Wraps `Window().paritionBy`, with default and `WindowInputs` handling."""
@@ -178,7 +185,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(
-                    *self._sort(*inputs.order_by, descending=reverse, nulls_last=reverse)
+                    *self._sort(
+                        *inputs.order_by, descending=[reverse], nulls_last=[reverse]
+                    )
                 )
                 .rowsBetween(self._Window.unboundedPreceding, 0)
             )
@@ -695,7 +704,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(*inputs.order_by, descending=True, nulls_last=True)
+                        *self._sort(
+                            *inputs.order_by, descending=[True], nulls_last=[True]
+                        )
                     )
                 )
                 == 1
@@ -823,17 +834,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def _rank(
             expr: Column,
+            partition_by: Sequence[str | Column] = (),
+            order_by: Sequence[str | Column] = (),
             *,
-            descending: bool,
-            partition_by: Sequence[str | Column] | None = None,
+            descending: Sequence[bool],
+            nulls_last: Sequence[bool],
         ) -> Column:
-            order_by = self._sort(expr, descending=descending, nulls_last=True)
-            if partition_by is not None:
-                window = self.partition_by(*partition_by).orderBy(*order_by)
-                count_window = self.partition_by(*partition_by, expr)
-            else:
-                window = self.partition_by().orderBy(*order_by)
-                count_window = self.partition_by(expr)
+            _order_by = self._sort(
+                expr, *order_by, descending=descending, nulls_last=nulls_last
+            )
+            window = self.partition_by(*partition_by).orderBy(*_order_by)
+            count_window = self.partition_by(*partition_by, expr)
             if method == "max":
                 rank_expr = (
                     getattr(self._F, func_name)().over(window)
@@ -852,14 +863,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.when(expr.isNotNull(), rank_expr)
 
         def _unpartitioned_rank(expr: Column) -> Column:
-            return _rank(expr, descending=descending)
+            return _rank(expr, descending=[descending], nulls_last=[True])
 
         def _partitioned_rank(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            assert not inputs.order_by  # noqa: S101
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
-                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                _rank(
+                    expr,
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
+                )
                 for expr in self(df)
             ]
 

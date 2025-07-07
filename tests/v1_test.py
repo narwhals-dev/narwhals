@@ -260,12 +260,9 @@ def test_cast_to_enum_v1(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     # Backends that do not (yet) support Enum dtype
-    if (
-        any(
-            backend in str(constructor)
-            for backend in ["pyarrow_table", "sqlframe", "pyspark", "ibis"]
-        )
-        or str(constructor) == "modin"
+    if any(
+        backend in str(constructor)
+        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -399,7 +396,7 @@ def test_with_row_index(constructor: Constructor) -> None:
 
     frame = nw_v1.from_native(constructor(data))
 
-    msg = r".*argument after \* must be an iterable, not NoneType$"
+    msg = "Cannot pass `order_by`"
     context = (
         pytest.raises(TypeError, match=msg)
         if any(x in str(constructor) for x in ("duckdb", "pyspark"))

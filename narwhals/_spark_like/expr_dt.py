@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import US_PER_SECOND
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
@@ -111,7 +111,8 @@ class SparkLikeExprDateTimeNamespace(
         return self.compliant._with_elementwise(self._weekday)
 
     def truncate(self, every: str) -> SparkLikeExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         if multiple != 1:
             msg = f"Only multiple 1 is currently supported for Spark-like.\nGot {multiple!s}."
             raise ValueError(msg)
@@ -124,6 +125,23 @@ class SparkLikeExprDateTimeNamespace(
             return self.compliant._F.date_trunc(format, expr)
 
         return self.compliant._with_elementwise(_truncate)
+
+    def offset_by(self, by: str) -> SparkLikeExpr:
+        interval = Interval.parse_no_constraints(by)
+        multiple, unit = interval.multiple, interval.unit
+        if unit == "ns":  # pragma: no cover
+            msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
+            raise NotImplementedError(msg)
+
+        F = self.compliant._F  # noqa: N806
+
+        def _offset_by(expr: Column) -> Column:
+            # https://github.com/eakmanrq/sqlframe/issues/441
+            return F.timestamp_add(  # pyright: ignore[reportAttributeAccessIssue]
+                UNITS_DICT[unit], F.lit(multiple), expr
+            )
+
+        return self.compliant._with_callable(_offset_by)
 
     def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
