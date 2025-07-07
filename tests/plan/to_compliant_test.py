@@ -5,12 +5,15 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-import narwhals._plan.demo as nwd
+from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
+from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 from tests.namespace_test import backends
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from narwhals._namespace import BackendName
     from narwhals._plan.dummy import DummyExpr
 
@@ -45,6 +48,14 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
     assert isinstance(compliant_expr, namespace._expr)
 
 
+XFAIL_REQUIRES_BINARY_EXPR = pytest.mark.xfail(
+    reason="Requires `BinaryExpr` implementation.", raises=NotImplementedError
+)
+XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
+    reason="Bug in `meta` namespace impl", raises=ComputeError
+)
+
+
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -55,11 +66,30 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
         (nwd.lit(None, nw.String()), {"literal": [None]}),
         (nwd.col("a", "b").first(), {"a": ["A"], "b": [1]}),
         (nwd.col("d").max(), {"d": [8]}),
+        ([nwd.len(), nwd.nth(3).last()], {"len": [3], "d": [8]}),
+        (
+            [nwd.len().alias("e"), nwd.nth(3).last(), nwd.nth(2)],
+            {"e": [3, 3, 3], "d": [8, 8, 8], "c": [9, 2, 4]},
+        ),
+        (nwd.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
+        pytest.param(
+            nwd.col("c").filter(a="B"), {"c": [2]}, marks=XFAIL_REQUIRES_BINARY_EXPR
+        ),
+        (nwd.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
+        (nwd.lit(1).cast(nw.Float64()).alias("literal_cast"), {"literal_cast": [1.0]}),
+        pytest.param(
+            nwd.lit(1).cast(nw.Float64()).name.suffix("_cast"),
+            {"literal_cast": [1.0]},
+            marks=XFAIL_REWRITE_SPECIAL_ALIASES,
+        ),
+        ([ndcs.string().first(), nwd.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
     ],
     ids=_ids_ir,
 )
 def test_select(
-    expr: DummyExpr, expected: dict[str, Any], data_small: dict[str, Any]
+    expr: DummyExpr | Sequence[DummyExpr],
+    expected: dict[str, Any],
+    data_small: dict[str, Any],
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
