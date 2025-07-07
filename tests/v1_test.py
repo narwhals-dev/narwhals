@@ -46,7 +46,9 @@ if TYPE_CHECKING:
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         pytest.skip()
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw_v1.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
+    )
     result = df.select(
         min=nw_v1.min("a"),
         max=nw_v1.max("a"),
@@ -62,7 +64,8 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
         all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
         first=nw_v1.nth(0),
-        no_first=nw_v1.exclude("a"),
+        no_first=nw_v1.exclude("a", "c"),
+        coalesce=nw_v1.coalesce("c", "a"),
     )
     expected = {
         "min": [1, 1, 1],
@@ -80,6 +83,7 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         "all_h": [True, True, True],
         "first": [1, 2, 3],
         "no_first": [4, 5, 6],
+        "coalesce": [7, 2, 9],
     }
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
