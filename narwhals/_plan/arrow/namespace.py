@@ -44,6 +44,3 @@ class ArrowNamespace(
 
     def dispatch_expr(self, named_ir: NamedIR[ExprIR], frame: ArrowDataFrame) -> Any:
         return self._expr.from_named_ir(named_ir, frame)
-
-
-ArrowNamespace()
