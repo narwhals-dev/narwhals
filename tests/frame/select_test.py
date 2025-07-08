@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pyarrow as pa
@@ -13,9 +13,11 @@ from tests.utils import (
     DUCKDB_VERSION,
     Constructor,
     ConstructorEager,
-    ConstructorLazy,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from narwhals.typing import Frame
 
 
 class Foo: ...
@@ -83,37 +85,22 @@ def test_comparison_with_list_error_message() -> None:
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
 
-def test_missing_columns_eager(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor_eager(data))
-    selected_columns = ["a", "e", "f"]
-    msg = (
-        r"The following columns were not found: \[.*\]"
-        r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
-    )
-    with pytest.raises(ColumnNotFoundError, match=msg):
-        df.select(selected_columns)
-    if "polars" in str(constructor_eager):
-        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
-    with pytest.raises(ColumnNotFoundError, match=msg):
-        df.select(nw.col("fdfa"))
-    with pytest.raises(ColumnNotFoundError, match=msg):
-        df.select(nw.col("fdfa").sum())
-
-
-def test_missing_columns_lazy(
-    constructor_lazy: ConstructorLazy, request: pytest.FixtureRequest
+def test_missing_columns(
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
     if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
         # These backend raise errors at collect
         request.applymarker(pytest.mark.xfail)
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor_lazy(data))
+    df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
 
-    def maybe_collect(df: nw.LazyFrame[Any]) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
-        if constructor_id in {"polars[lazy]", "pyspark[connect]"}:
+    def maybe_collect(df: Frame) -> Frame:
+        if isinstance(df, nw.LazyFrame) and (
+            constructor_id in {"polars[lazy]", "pyspark[connect]"}
+        ):
             # In the lazy case, Polars only errors when we call `collect`,
             # and we have no way to recover exactly which columns the user
             # tried selecting. So, we just emit their message (which varies
@@ -132,10 +119,15 @@ def test_missing_columns_lazy(
             r"The following columns were not found: \[.*\]"
             r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
         )
+
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.select(selected_columns))
-    if "polars" in str(constructor_lazy):
+
+    # for the next two cases the error message is different in Polars
+    if constructor_id == "polars[lazy]":
         msg = r"^fdfa"
+    elif constructor_id == "polars[eager]":
+        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.select(nw.col("fdfa")))
     with pytest.raises(ColumnNotFoundError, match=msg):

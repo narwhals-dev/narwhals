@@ -279,8 +279,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     eager_constructors: list[ConstructorEager] = []
     eager_constructors_ids: list[str] = []
-    lazy_constructors: list[ConstructorLazy] = []
-    lazy_constructors_ids: list[str] = []
     constructors: list[Constructor] = []
     constructors_ids: list[str] = []
 
@@ -296,12 +294,8 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             eager_constructors_ids.append(constructor)
             constructors.append(EAGER_CONSTRUCTORS[constructor])
         elif constructor in {"pyspark", "pyspark[connect]"}:  # pragma: no cover
-            lazy_constructors.append(pyspark_lazy_constructor())
-            lazy_constructors_ids.append(constructor)
             constructors.append(pyspark_lazy_constructor())
         elif constructor in LAZY_CONSTRUCTORS:
-            lazy_constructors.append(LAZY_CONSTRUCTORS[constructor])
-            lazy_constructors_ids.append(constructor)
             constructors.append(LAZY_CONSTRUCTORS[constructor])
         else:  # pragma: no cover
             msg = f"Expected one of {EAGER_CONSTRUCTORS.keys()} or {LAZY_CONSTRUCTORS.keys()}, got {constructor}"
@@ -311,10 +305,6 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "constructor_eager" in metafunc.fixturenames:
         metafunc.parametrize(
             "constructor_eager", eager_constructors, ids=eager_constructors_ids
-        )
-    elif "constructor_lazy" in metafunc.fixturenames:
-        metafunc.parametrize(
-            "constructor_lazy", lazy_constructors, ids=lazy_constructors_ids
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
