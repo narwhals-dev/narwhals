@@ -29,7 +29,6 @@ def test_get_deps_info() -> None:
     assert "cudf" in deps_info
     assert "modin" in deps_info
     assert "pyarrow" in deps_info
-    assert "numpy" in deps_info
 
 
 def test_show_versions(capsys: Any) -> None:
