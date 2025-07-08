@@ -782,3 +782,50 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).dt.truncate(every)
         )
+
+    def offset_by(self, by: str) -> ExprT:
+        """Offset this date by a relative time offset.
+
+        Arguments:
+            by: The offset. Must be of form `<multiple><unit>`,
+                where `multiple` is a positive integer and `unit` is one of
+
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
+                - 's': second.
+                - 'm': minute.
+                - 'h': hour.
+                - 'd': day.
+                - 'mo': month.
+                - 'q': quarter.
+                - 'y': year.
+
+        Returns:
+            Expression of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"datetime": [datetime(2021, 3, 1, 12, 34)]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     nw.col("datetime").dt.offset_by("1h").alias("datetime_offset_by_1h")
+            ... )
+            ┌───────────────────────────────────────────────┐
+            |              Narwhals DataFrame               |
+            |-----------------------------------------------|
+            |shape: (1, 2)                                  |
+            |┌─────────────────────┬───────────────────────┐|
+            |│ datetime            ┆ datetime_offset_by_1h │|
+            |│ ---                 ┆ ---                   │|
+            |│ datetime[μs]        ┆ datetime[μs]          │|
+            |╞═════════════════════╪═══════════════════════╡|
+            |│ 2021-03-01 12:34:00 ┆ 2021-03-01 13:34:00   │|
+            |└─────────────────────┴───────────────────────┘|
+            └───────────────────────────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).dt.offset_by(by)
+        )

@@ -36,6 +36,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -48,7 +49,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
@@ -1846,4 +1846,70 @@ def concat_str(
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
         ),
+    )
+
+
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
+) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+
+    Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> data = [
+    ...     (1, 5, None),
+    ...     (None, 6, None),
+    ...     (None, None, 9),
+    ...     (4, 8, 10),
+    ...     (None, None, None),
+    ... ]
+    >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
+    >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |  shape: (5, 1)   |
+    |  ┌─────┐         |
+    |  │ a   │         |
+    |  │ --- │         |
+    |  │ i64 │         |
+    |  ╞═════╡         |
+    |  │ 1   │         |
+    |  │ 6   │         |
+    |  │ 9   │         |
+    |  │ 4   │         |
+    |  │ -1  │         |
+    |  └─────┘         |
+    └──────────────────┘
+    """
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+
+    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    if non_exprs:
+        msg = (
+            f"All arguments to `coalesce` must be of type {str!r}, {Expr!r}, or {Series!r}."
+            "\nGot the following invalid arguments (type, value):"
+            f"\n    {', '.join(repr((type(e), e)) for e in non_exprs)}"
+        )
+        raise TypeError(msg)
+
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
+        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
