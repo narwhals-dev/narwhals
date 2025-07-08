@@ -90,8 +90,3 @@ class ArrowNamespace(
         return self._expr.from_native(
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
-
-    def len(self, node: expr.Len, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        return self._scalar.from_python(
-            len(frame), name or node.name, version=frame.version
-        )

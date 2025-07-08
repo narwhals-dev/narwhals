@@ -6,21 +6,22 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
 from narwhals._plan import aggregation as agg, expr
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version, _StoresVersion
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.dummy import DummyCompliantFrame, DummySeries
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
 SeriesT = TypeVar("SeriesT")
 SeriesT_co = TypeVar("SeriesT_co", covariant=True)
-FrameT = TypeVar("FrameT")
-FrameT_co = TypeVar("FrameT_co", covariant=True)
-FrameT_contra = TypeVar("FrameT_contra", bound="_StoresVersion", contravariant=True)
+FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any, Any]"
+FrameT = TypeVar("FrameT", bound=FrameAny)
+FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
+FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
@@ -226,7 +227,7 @@ class ExprDispatch(Protocol[FrameT_contra, R_co, NamespaceT_co]):
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
-        obj._version = frame._version
+        obj._version = frame.version
         return obj._dispatch(node, frame, name)
 
     @classmethod
@@ -427,3 +428,8 @@ class EagerNamespace(
     def lit(
         self, node: expr.Literal[Any], frame: FrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
+
+    def len(self, node: expr.Len, frame: FrameT, name: str) -> EagerScalarT_co:
+        return self._scalar.from_python(
+            len(frame), name or node.name, dtype=None, version=frame.version
+        )
