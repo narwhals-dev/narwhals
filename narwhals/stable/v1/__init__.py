@@ -885,7 +885,7 @@ def from_native(
     eager_only: bool,
     eager_or_interchange_only: bool = False,
     series_only: bool,
-    allow_series: bool | None,
+    allow_series: bool | None = ...,
 ) -> Any: ...
 
 
