@@ -264,7 +264,7 @@ class PandasLikeGroupBy(
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
         self._grouped: NativeGroupBy = native.groupby(
-            list(self._keys),
+            self._keys.copy(),
             sort=False,
             as_index=True,
             dropna=drop_null_keys,
