@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, overload
 
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.series import ArrowSeries
-    from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummySeries
     from narwhals.typing import NonNestedLiteral
 
@@ -46,9 +45,6 @@ class ArrowNamespace(
         from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
         return ArrowDataFrame
-
-    def dispatch_expr(self, named_ir: NamedIR[ExprIR], frame: ArrowDataFrame) -> Any:
-        return self._expr.from_named_ir(named_ir, frame)
 
     def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         return self._expr.from_native(

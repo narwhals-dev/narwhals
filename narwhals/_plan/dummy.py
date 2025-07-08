@@ -917,10 +917,6 @@ class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]
     def columns(self) -> list[str]:
         raise NotImplementedError
 
-    @property
-    def _series(self) -> type[CompliantSeriesT]:
-        raise NotImplementedError
-
     def to_narwhals(self) -> DummyFrame[NativeFrameT, NativeSeriesT]:
         raise NotImplementedError
 

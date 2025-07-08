@@ -10,7 +10,6 @@ from narwhals._plan import (
     functions as F,  # noqa: N812
 )
 from narwhals._plan.common import (
-    ExprIR,
     into_dtype,
     is_non_nested_literal,
     is_series,
@@ -228,9 +227,3 @@ def ensure_orderable_rules(*exprs: DummyExpr) -> tuple[DummyExpr, ...]:
             if not _is_order_enforcing_previous(previous):
                 raise _order_dependent_error(node)
     return exprs
-
-
-def select_context(
-    *exprs: IntoExpr | t.Iterable[IntoExpr], **named_exprs: IntoExpr
-) -> tuple[ExprIR, ...]:
-    return parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs)

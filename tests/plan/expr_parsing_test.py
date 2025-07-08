@@ -18,6 +18,7 @@ from narwhals._plan import (
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
+from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals._plan.literal import SeriesLiteral
 from narwhals.exceptions import (
     InvalidIntoExprError,
@@ -58,7 +59,8 @@ def test_parsing(
     exprs: Seq[IntoExpr | Iterable[IntoExpr]], named_exprs: dict[str, IntoExpr]
 ) -> None:
     assert all(
-        isinstance(node, ExprIR) for node in nwd.select_context(*exprs, **named_exprs)
+        isinstance(node, ExprIR)
+        for node in parse_into_seq_of_expr_ir(*exprs, **named_exprs)
     )
 
 

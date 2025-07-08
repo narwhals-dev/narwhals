@@ -41,10 +41,6 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         return ArrowNamespace(self._version)
 
     @property
-    def _series(self) -> type[ArrowSeries]:
-        return ArrowSeries
-
-    @property
     def columns(self) -> list[str]:
         return self.native.column_names
 
