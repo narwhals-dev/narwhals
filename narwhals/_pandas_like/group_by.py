@@ -381,7 +381,7 @@ def has_non_int_nullable_dtype(
     frame: PandasLikeDataFrame, subset: Sequence[str], /
 ) -> bool:
     """Return True if any column in `subset` may get incorrectly coerced after aggregation."""
-    return any(_has_non_int_nullable_dtype(frame, subset))
+    return bool(subset and any(_has_non_int_nullable_dtype(frame, subset)))
 
 
 def _has_non_int_nullable_dtype(
@@ -389,8 +389,9 @@ def _has_non_int_nullable_dtype(
 ) -> Iterator[bool]:
     version = frame._version
     impl = frame._implementation
+    native_dtypes = frame.native.dtypes
     for col in subset:
-        native = frame.native.dtypes[col]
+        native = native_dtypes[col]
         if str(native) != "object":
             dtype = native_to_narwhals_dtype(native, version, impl)
             yield not (dtype.is_integer()) and (
