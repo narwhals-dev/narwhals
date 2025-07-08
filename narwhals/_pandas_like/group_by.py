@@ -290,7 +290,7 @@ class PandasLikeGroupBy(
         elif self.compliant.native.empty:
             raise empty_results_error()
         else:
-            result = self._agg_complex(exprs)
+            result = self._apply_aggs(exprs)
         return self._select_results(result, agg_exprs)
 
     def _named_aggs(self, exprs: Iterable[AggExpr], /) -> dict[str, _NamedAgg]:
@@ -339,17 +339,17 @@ class PandasLikeGroupBy(
             .with_columns(*chain.from_iterable(e._cast_coerced(self) for e in agg_exprs))
         )
 
-    def _agg_complex(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
+    def _apply_aggs(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
         warn_complex_group_by()
         impl = self.compliant._implementation
-        func = self._apply_exprs(exprs)
+        func = self._apply_exprs_function(exprs)
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)
         else:  # pragma: no cover
             return apply(func)
 
-    def _apply_exprs(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
+    def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
         into_series = ns._series.from_iterable
 
