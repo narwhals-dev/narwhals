@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
 
 from narwhals._plan import aggregation as agg, expr
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
@@ -11,6 +11,7 @@ from narwhals._utils import Version, _StoresVersion
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan.dummy import DummySeries
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
@@ -25,6 +26,7 @@ LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
+NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any, Any]"
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT = TypeVar("ScalarT", bound="CompliantScalar[Any, Any]")
 ScalarT_co = TypeVar("ScalarT_co", bound="CompliantScalar[Any, Any]", covariant=True)
@@ -34,6 +36,8 @@ EagerExprT_co = TypeVar("EagerExprT_co", bound="EagerExpr[Any, Any]", covariant=
 EagerScalarT_co = TypeVar(
     "EagerScalarT_co", bound="EagerScalar[Any, Any]", covariant=True
 )
+
+NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -130,14 +134,6 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     def _with_native(self, native: Any, name: str = "", /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
-    def col(self, node: expr.Column, frame: FrameT_contra, name: str) -> Self: ...
-    def lit(
-        self, node: expr.Literal[Any], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co] | Self: ...
-    def len(
-        self, node: expr.Len, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     # series only (section 3)
@@ -189,11 +185,17 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
 
-class Dispatch(Protocol[FrameT_contra, R_co]):
+class ExprDispatch(Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
-        expr.Column: lambda self, node, frame, name: self.col(node, frame, name),
-        expr.Literal: lambda self, node, frame, name: self.lit(node, frame, name),
-        expr.Len: lambda self, node, frame, name: self.len(node, frame, name),
+        expr.Column: lambda self, node, frame, name: self.__narwhals_namespace__().col(
+            node, frame, name
+        ),
+        expr.Literal: lambda self, node, frame, name: self.__narwhals_namespace__().lit(
+            node, frame, name
+        ),
+        expr.Len: lambda self, node, frame, name: self.__narwhals_namespace__().len(
+            node, frame, name
+        ),
         expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
         expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
         expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
@@ -231,6 +233,9 @@ class Dispatch(Protocol[FrameT_contra, R_co]):
     def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
+    # NOTE: Needs to stay `covariant` and never be used as a parameter
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
 
 class CompliantScalar(
     CompliantExpr[FrameT_contra, SeriesT_co], Protocol[FrameT_contra, SeriesT_co]
@@ -265,10 +270,6 @@ class CompliantScalar(
         obj._name = name or self.name
         obj._version = self.version
         return obj
-
-    def lit(
-        self, node: expr.Literal[NonNestedLiteral], frame: FrameT_contra, name: str
-    ) -> Self: ...
 
     def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
         """Returns self."""
@@ -367,7 +368,7 @@ class LazyScalar(
 ): ...
 
 
-class CompliantNamespace(Protocol[FrameT_co, SeriesT_co, ExprT_co, ScalarT_co]):
+class CompliantNamespace(Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]):
     """Need to hold `Expr` and `Scalar` types outside of their defs.
 
     Likely, re-wrapping the output types will work like:
@@ -385,7 +386,7 @@ class CompliantNamespace(Protocol[FrameT_co, SeriesT_co, ExprT_co, ScalarT_co]):
     _version: Version
 
     @property
-    def _dataframe(self) -> type[FrameT_co]: ...
+    def _dataframe(self) -> type[FrameT]: ...
     @property
     def _series(self) -> type[SeriesT_co]: ...
     @property
@@ -397,8 +398,32 @@ class CompliantNamespace(Protocol[FrameT_co, SeriesT_co, ExprT_co, ScalarT_co]):
     def version(self) -> Version:
         return self._version
 
+    def col(self, node: expr.Column, frame: FrameT, name: str) -> ExprT_co: ...
+    def lit(
+        self, node: expr.Literal[Any], frame: FrameT, name: str
+    ) -> ExprT_co | ScalarT_co: ...
+    def len(self, node: expr.Len, frame: FrameT, name: str) -> ScalarT_co: ...
+
 
 class EagerNamespace(
-    CompliantNamespace[FrameT_co, SeriesT_co, EagerExprT_co, EagerScalarT_co],
-    Protocol[FrameT_co, SeriesT_co, EagerExprT_co, EagerScalarT_co],
-): ...
+    CompliantNamespace[FrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+    Protocol[FrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+):
+    @overload
+    def lit(
+        self, node: expr.Literal[NonNestedLiteral], frame: FrameT, name: str
+    ) -> EagerScalarT_co: ...
+    @overload
+    def lit(
+        self, node: expr.Literal[DummySeries[Any]], frame: FrameT, name: str
+    ) -> EagerExprT_co: ...
+    @overload
+    def lit(
+        self,
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
+        frame: FrameT,
+        name: str,
+    ) -> EagerExprT_co | EagerScalarT_co: ...
+    def lit(
+        self, node: expr.Literal[Any], frame: FrameT, name: str
+    ) -> EagerExprT_co | EagerScalarT_co: ...
