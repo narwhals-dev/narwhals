@@ -107,3 +107,20 @@ def test_select(
     df = DummyFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert result == expected
+
+
+if TYPE_CHECKING:
+
+    def test_protocol_expr() -> None:
+        """Static test for all members implemented.
+
+        There's a lot left to implement, but only gets detected if we invoke `__init__`, which
+        doesn't happen elsewhere at the moment.
+        """
+        pytest.importorskip("pyarrow")
+        from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
+
+        expr = ArrowExpr()  # type: ignore[abstract]
+        scalar = ArrowScalar()  # type: ignore[abstract]
+        assert expr
+        assert scalar

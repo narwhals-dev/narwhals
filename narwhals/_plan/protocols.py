@@ -137,6 +137,25 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
 
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
+    def binary_expr(
+        self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def ternary_expr(
+        self, node: expr.Ternary, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def over(self, node: expr.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
+    def over_ordered(
+        self, node: expr.OrderedWindowExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def map_batches(
+        self, node: expr.AnonymousExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def rolling_expr(
+        self, node: expr.RollingExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def function_expr(
+        self, node: expr.FunctionExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
     # series only (section 3)
     def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
     def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
@@ -215,12 +234,33 @@ class ExprDispatch(Protocol[FrameT_contra, R_co, NamespaceT_co]):
         agg.Mean: lambda self, node, frame, name: self.mean(node, frame, name),
         agg.Median: lambda self, node, frame, name: self.median(node, frame, name),
         agg.Min: lambda self, node, frame, name: self.min(node, frame, name),
+        expr.BinaryExpr: lambda self, node, frame, name: self.binary_expr(
+            node, frame, name
+        ),
+        expr.RollingExpr: lambda self, node, frame, name: self.rolling_expr(
+            node, frame, name
+        ),
+        expr.AnonymousExpr: lambda self, node, frame, name: self.map_batches(
+            node, frame, name
+        ),
+        expr.FunctionExpr: lambda self, node, frame, name: self.function_expr(
+            node, frame, name
+        ),
+        expr.OrderedWindowExpr: lambda self, node, frame, name: self.over_ordered(
+            node, frame, name
+        ),
+        expr.WindowExpr: lambda self, node, frame, name: self.over(node, frame, name),
+        expr.Ternary: lambda self, node, frame, name: self.ternary_expr(
+            node, frame, name
+        ),
     }
     _version: Version
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        if method := self._DISPATCH.get(node.__class__):
-            return method(self, node, frame, name)  # type: ignore[no-any-return]
+        if (method := self._DISPATCH.get(node.__class__)) and (
+            result := method(self, node, frame, name)
+        ):
+            return result  # type: ignore[no-any-return]
         msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
