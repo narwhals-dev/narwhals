@@ -5,6 +5,7 @@ from types import ModuleType
 
 import pytest
 
+from narwhals._utils import backend_version
 from narwhals.utils import Implementation
 
 implementations = [
@@ -38,9 +39,8 @@ def test_to_native_namespace_min_version(
         reason = f"{impl.value} not installed"
         pytest.skip(reason=reason)
 
-    monkeypatch.setattr(
-        "narwhals._utils.Implementation._backend_version", lambda _: (0, 0, 1)
-    )
+    monkeypatch.setattr("narwhals._utils.parse_version", lambda _: (0, 0, 1))
+    backend_version.cache_clear()
 
     with pytest.raises(ValueError, match="Minimum version"):
         impl.to_native_namespace()

@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
-from narwhals.exceptions import LengthChangingExprError, ShapeError
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2]}
@@ -16,7 +16,7 @@ data_str = {"a": ["x", "x", "y"]}
 def test_unique_expr(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     context = (
-        pytest.raises(LengthChangingExprError)
+        pytest.raises(InvalidOperationError)
         if isinstance(df, nw.LazyFrame)
         else does_not_raise()
     )
@@ -39,9 +39,9 @@ def test_unique_expr_agg(
 
 def test_unique_illegal_combination(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    with pytest.raises(LengthChangingExprError):
+    with pytest.raises(InvalidOperationError):
         df.select((nw.col("a").unique() + nw.col("b").unique()).sum())
-    with pytest.raises(ShapeError):
+    with pytest.raises(InvalidOperationError):
         df.select(nw.col("a").unique() + nw.col("b"))
 
 
@@ -54,6 +54,9 @@ def test_unique_series(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     # this shouldn't warn
     series.to_frame().select(nw_v1.col("a").unique().sum())
-    with pytest.warns(UserWarning):
+    with pytest.warns(
+        UserWarning,
+        match="`maintain_order` has no effect and is only kept around for backwards-compatibility.",
+    ):
         # this warns that maintain_order has no effect
         series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())

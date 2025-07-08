@@ -11,7 +11,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, requires, validate_backend_version
+from narwhals._utils import Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
@@ -115,14 +115,15 @@ INHERITED_METHODS = frozenset(
 
 
 class PolarsSeries:
-    def __init__(
-        self, series: pl.Series, *, backend_version: tuple[int, ...], version: Version
-    ) -> None:
+    _implementation = Implementation.POLARS
+
+    def __init__(self, series: pl.Series, *, version: Version) -> None:
         self._native_series: pl.Series = series
-        self._backend_version = backend_version
-        self._implementation = Implementation.POLARS
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     def __repr__(self) -> str:  # pragma: no cover
         return "PolarsSeries"
@@ -130,9 +131,7 @@ class PolarsSeries:
     def __narwhals_namespace__(self) -> PolarsNamespace:
         from narwhals._polars.namespace import PolarsNamespace
 
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -145,24 +144,19 @@ class PolarsSeries:
         raise AssertionError(msg)
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, backend_version=self._backend_version, version=version
-        )
+        return self.__class__(self.native, version=version)
 
     @classmethod
     def from_iterable(
         cls,
         data: Iterable[Any],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        backend_version = context._backend_version
-        dtype_pl = (
-            narwhals_to_native_dtype(dtype, version, backend_version) if dtype else None
-        )
+        dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
         # NOTE: `Iterable` is fine, annotation is overly narrow
         # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
         native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
@@ -173,13 +167,11 @@ class PolarsSeries:
         return isinstance(obj, pl.Series)
 
     @classmethod
-    def from_native(cls, data: pl.Series, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: pl.Series, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
         return cls.from_native(native, context=context)
 
@@ -187,9 +179,7 @@ class PolarsSeries:
         return self._version.series(self, level="full")
 
     def _with_native(self, series: pl.Series) -> Self:
-        return self.__class__(
-            series, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(series, version=self._version)
 
     @overload
     def _from_native_object(self, series: pl.Series) -> Self: ...
@@ -235,9 +225,7 @@ class PolarsSeries:
 
     @property
     def dtype(self) -> DType:
-        return native_to_narwhals_dtype(
-            self.native.dtype, self._version, self._backend_version
-        )
+        return native_to_narwhals_dtype(self.native.dtype, self._version)
 
     @property
     def native(self) -> pl.Series:
@@ -252,7 +240,7 @@ class PolarsSeries:
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
     @requires.backend_version((1,))
@@ -265,7 +253,7 @@ class PolarsSeries:
     ) -> Self:
         ser = self.native
         dtype = (
-            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
         )
@@ -309,7 +297,7 @@ class PolarsSeries:
         try:
             native_is_nan = self.native.is_nan()
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
         if self._backend_version < (1, 18):  # pragma: no cover
             select = pl.when(self.native.is_not_null()).then(native_is_nan)
             return self._with_native(pl.select(select)[self.name])
@@ -468,19 +456,13 @@ class PolarsSeries:
         return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self, *, reverse: bool) -> Self:
-        if self._backend_version < (0, 20, 4):
-            not_null_series = ~self.native.is_null()
-            result = not_null_series.cum_sum(reverse=reverse)
-        else:
-            result = self.native.cum_count(reverse=reverse)
-
-        return self._with_native(result)
+        return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __contains__(self, other: Any) -> bool:
         try:
             return self.native.__contains__(other)
         except Exception as e:  # noqa: BLE001
-            raise catch_polars_exception(e, self._backend_version) from None
+            raise catch_polars_exception(e) from None
 
     def hist(  # noqa: C901, PLR0912
         self,
@@ -685,6 +667,12 @@ class PolarsSeriesDateTimeNamespace:
 class PolarsSeriesStringNamespace:
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
+
+    def zfill(self, width: int) -> PolarsSeries:
+        series = self._compliant_series
+        name = series.name
+        ns = series.__narwhals_namespace__()
+        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:

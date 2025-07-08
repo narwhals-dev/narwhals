@@ -3,6 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
+from functools import partial
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -14,6 +15,7 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
+from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
@@ -22,7 +24,7 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
-    parse_version,
+    issue_deprecation_warning,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -32,8 +34,9 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -46,7 +49,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
@@ -560,7 +562,7 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError
 
     from narwhals import __version__
 
@@ -594,10 +596,20 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+@deprecated(
+    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
+)
 def get_level(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
 ) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
+
+    Warning:
+        `get_level` is deprecated and will be removed in a future version.
+        "DuckDB and Ibis now have full lazy support in Narwhals, and passing
+        them to `nw.from_native` returns `nw.LazyFrame`.
+        Note: this will remain available in `narwhals.stable.v1`.
+        See [stable api](../backcompat.md/) for more information.
 
     Arguments:
         obj: Dataframe or Series.
@@ -608,8 +620,13 @@ def get_level(
             - 'full': full Narwhals API support
             - 'lazy': only lazy operations are supported. This excludes anything
               which involves iterating over rows in Python.
-            - 'interchange': only metadata operations are supported (`df.schema`)
     """
+    issue_deprecation_warning(
+        "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
+        "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
+        "returns `nw.LazyFrame`.",
+        "1.43",
+    )
     return obj._level
 
 
@@ -762,7 +779,7 @@ def scan_csv(
             csv_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else csv_reader.options(**kwargs).load(source)
         )
@@ -960,7 +977,7 @@ def scan_parquet(
             pq_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else pq_reader.options(**kwargs).load(source)
         )
@@ -1449,7 +1466,7 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
-        self._predicate = all_horizontal(*flatten(predicates))
+        self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
         kind = ExprKind.from_into_expr(value, str_as_lit=False)
@@ -1458,7 +1475,7 @@ class When:
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `then` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         return Then(
             lambda plx: apply_n_ary_operation(
@@ -1486,7 +1503,7 @@ class Then(Expr):
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `otherwise` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
@@ -1553,12 +1570,20 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When(*predicates)
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `True`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
@@ -1572,7 +1597,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_native = pa.table(data)
-        >>> nw.from_native(df_native).select("a", "b", all=nw.all_horizontal("a", "b"))
+        >>> nw.from_native(df_native).select(
+        ...     "a", "b", all=nw.all_horizontal("a", "b", ignore_nulls=False)
+        ... )
         ┌─────────────────────────────────────────┐
         |           Narwhals DataFrame            |
         |-----------------------------------------|
@@ -1590,10 +1617,19 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
+    if ignore_nulls is None:
+        issue_deprecation_warning(
+            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
+            _version="1.45",
+        )
+        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.all_horizontal, *flat_exprs, str_as_lit=False
+            plx,
+            partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
+            *flat_exprs,
+            str_as_lit=False,
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
@@ -1638,12 +1674,20 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `False`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
@@ -1657,7 +1701,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         ...     "b": [False, True, True, None, None, None],
         ... }
         >>> df_native = pl.DataFrame(data)
-        >>> nw.from_native(df_native).select("a", "b", any=nw.any_horizontal("a", "b"))
+        >>> nw.from_native(df_native).select(
+        ...     "a", "b", any=nw.any_horizontal("a", "b", ignore_nulls=False)
+        ... )
         ┌─────────────────────────┐
         |   Narwhals DataFrame    |
         |-------------------------|
@@ -1679,10 +1725,19 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
+    if ignore_nulls is None:
+        issue_deprecation_warning(
+            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
+            _version="1.45",
+        )
+        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
-            plx, plx.any_horizontal, *flat_exprs, str_as_lit=False
+            plx,
+            partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
+            *flat_exprs,
+            str_as_lit=False,
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
@@ -1791,4 +1846,70 @@ def concat_str(
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
         ),
+    )
+
+
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
+) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+
+    Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> data = [
+    ...     (1, 5, None),
+    ...     (None, 6, None),
+    ...     (None, None, 9),
+    ...     (4, 8, 10),
+    ...     (None, None, None),
+    ... ]
+    >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
+    >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |  shape: (5, 1)   |
+    |  ┌─────┐         |
+    |  │ a   │         |
+    |  │ --- │         |
+    |  │ i64 │         |
+    |  ╞═════╡         |
+    |  │ 1   │         |
+    |  │ 6   │         |
+    |  │ 9   │         |
+    |  │ 4   │         |
+    |  │ -1  │         |
+    |  └─────┘         |
+    └──────────────────┘
+    """
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+
+    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    if non_exprs:
+        msg = (
+            f"All arguments to `coalesce` must be of type {str!r}, {Expr!r}, or {Series!r}."
+            "\nGot the following invalid arguments (type, value):"
+            f"\n    {', '.join(repr((type(e), e)) for e in non_exprs)}"
+        )
+        raise TypeError(msg)
+
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
+        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )

@@ -42,7 +42,7 @@ def read_documented_members(source: str | Path) -> list[str]:
     MEMBERS_START = "members:\n"
     MEMBERS_PREFIX = "        - "
     DUNDER_PREFIX = "__"
-    with open(source) as fd:
+    with open(source, encoding="utf-8") as fd:
         lines = deque(fd.readlines())
     head = lines.popleft()
     while not head.endswith(MEMBERS_START):

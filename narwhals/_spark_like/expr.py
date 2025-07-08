@@ -3,9 +3,12 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._compliant import LazyExpr
-from narwhals._compliant.window import WindowInputs
-from narwhals._expression_parsing import ExprKind
+from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._expression_parsing import (
+    ExprKind,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -15,12 +18,12 @@ from narwhals._spark_like.utils import (
     import_native_dtypes,
     import_window,
     narwhals_to_native_dtype,
+    true_divide,
 )
-from narwhals._utils import Implementation, not_implemented, parse_version
-from narwhals.dependencies import get_pyspark
+from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
@@ -35,7 +38,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -66,14 +69,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         *,
         evaluate_output_names: EvalNames[SparkLikeLazyFrame],
         alias_output_names: AliasNames | None,
-        backend_version: tuple[int, ...],
         version: Version,
         implementation: Implementation,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
-        self._backend_version = backend_version
         self._version = version
         self._implementation = implementation
         self._metadata: ExprMetadata | None = None
@@ -128,17 +129,24 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return import_window(self._implementation)
 
     def _sort(
-        self, *cols: Column | str, descending: bool = False, nulls_last: bool = False
+        self,
+        *cols: Column | str,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
         F = self._F  # noqa: N806
+        descending = descending or [False] * len(cols)
+        nulls_last = nulls_last or [False] * len(cols)
         mapping = {
             (False, False): F.asc_nulls_first,
             (False, True): F.asc_nulls_last,
             (True, False): F.desc_nulls_first,
             (True, True): F.desc_nulls_last,
         }
-        sort = mapping[(descending, nulls_last)]
-        yield from (sort(col) for col in cols)
+        yield from (
+            mapping[(_desc, _nulls_last)](col)
+            for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
+        )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:
         """Wraps `Window().paritionBy`, with default and `WindowInputs` handling."""
@@ -147,13 +155,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> SparkLikeNamespace:  # pragma: no cover
-        # Unused, just for compatibility with PandasLikeExpr
         from narwhals._spark_like.namespace import SparkLikeNamespace
 
         return SparkLikeNamespace(
-            backend_version=self._backend_version,
-            version=self._version,
-            implementation=self._implementation,
+            version=self._version, implementation=self._implementation
         )
 
     def _with_window_function(self, window_function: SparkWindowFunction) -> Self:
@@ -162,7 +167,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -181,7 +185,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             window = (
                 self.partition_by(*inputs.partition_by)
                 .orderBy(
-                    *self._sort(*inputs.order_by, descending=reverse, nulls_last=reverse)
+                    *self._sort(
+                        *inputs.order_by, descending=[reverse], nulls_last=[reverse]
+                    )
                 )
                 .rowsBetween(self._Window.unboundedPreceding, 0)
             )
@@ -248,7 +254,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         evaluate_column_names: EvalNames[SparkLikeLazyFrame],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
@@ -257,13 +263,12 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
-            backend_version=context._backend_version,
             version=context._version,
             implementation=context._implementation,
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _FullContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             columns = df.columns
             return [df._F.col(columns[i]) for i in column_indices]
@@ -272,7 +277,32 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            backend_version=context._backend_version,
+            version=context._version,
+            implementation=context._implementation,
+        )
+
+    @classmethod
+    def _from_elementwise_horizontal_op(
+        cls, func: Callable[[Iterable[Column]], Column], *exprs: Self
+    ) -> Self:
+        def call(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
+        ) -> list[Column]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
             version=context._version,
             implementation=context._implementation,
         )
@@ -327,7 +357,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._callable_to_eval_series(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -340,7 +369,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._push_down_window_function(call, **expressifiable_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -351,7 +379,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._push_down_window_function(op, other=other),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -362,84 +389,33 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=func,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
 
-    def __eq__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__eq__(other), other)
-
-    def __ne__(self, other: SparkLikeExpr) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__ne__(other), other)
-
-    def __add__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__add__(other), other)
-
-    def __sub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__sub__(other), other)
-
-    def __rsub__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__sub__(expr), other).alias(
-            "literal"
-        )
-
-    def __mul__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mul__(other), other)
-
     def __truediv__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__truediv__(other), other)
+        def _truediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, expr, other)
+
+        return self._with_binary(_truediv, other)
 
     def __rtruediv__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(
-            lambda expr, other: other.__truediv__(expr), other
-        ).alias("literal")
+        def _rtruediv(expr: Column, other: Column) -> Column:
+            return true_divide(self._F, other, expr)
+
+        return self._with_binary(_rtruediv, other).alias("literal")
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(expr / other)
+            return self._F.floor(true_divide(self._F, expr, other))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(other / expr)
+            return self._F.floor(true_divide(self._F, other, expr))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
-
-    def __pow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__pow__(other), other)
-
-    def __rpow__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__pow__(expr), other).alias(
-            "literal"
-        )
-
-    def __mod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
-
-    def __rmod__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: other.__mod__(expr), other).alias(
-            "literal"
-        )
-
-    def __ge__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__ge__(other), other)
-
-    def __gt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr > other, other)
-
-    def __le__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__le__(other), other)
-
-    def __lt__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__lt__(other), other)
-
-    def __and__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__and__(other), other)
-
-    def __or__(self, other: SparkLikeExpr) -> Self:
-        return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Column]", operator.invert)
@@ -487,13 +463,28 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(f)._with_window_function(window_f)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _cast(expr: Column) -> Column:
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_dtypes
+                dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
-            return expr.cast(spark_dtype)
+            return [expr.cast(spark_dtype) for expr in self(df)]
 
-        return self._with_elementwise(_cast)
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
+        ) -> Sequence[Column]:
+            spark_dtype = narwhals_to_native_dtype(
+                dtype, self._version, self._native_dtypes, df.native.sparkSession
+            )
+            return [expr.cast(spark_dtype) for expr in self.window_function(df, inputs)]
+
+        return self.__class__(
+            func,
+            window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     def count(self) -> Self:
         return self._with_callable(self._F.count)
@@ -506,12 +497,10 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
     def median(self) -> Self:
         def _median(expr: Column) -> Column:
-            if (
-                self._implementation
-                in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}
-                and (pyspark := get_pyspark()) is not None
-                and parse_version(pyspark) < (3, 4)
-            ):  # pragma: no cover
+            if self._implementation in {
+                Implementation.PYSPARK,
+                Implementation.PYSPARK_CONNECT,
+            } and Implementation.PYSPARK._backend_version() < (3, 4):  # pragma: no cover
                 # Use percentile_approx with default accuracy parameter (10000)
                 return self._F.percentile_approx(expr.cast("double"), 0.5)
 
@@ -674,7 +663,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            backend_version=self._backend_version,
             version=self._version,
             implementation=self._implementation,
         )
@@ -716,7 +704,9 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return [
                 self._F.row_number().over(
                     self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(*inputs.order_by, descending=True, nulls_last=True)
+                        *self._sort(
+                            *inputs.order_by, descending=[True], nulls_last=[True]
+                        )
                     )
                 )
                 == 1
@@ -844,17 +834,17 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         def _rank(
             expr: Column,
+            partition_by: Sequence[str | Column] = (),
+            order_by: Sequence[str | Column] = (),
             *,
-            descending: bool,
-            partition_by: Sequence[str | Column] | None = None,
+            descending: Sequence[bool],
+            nulls_last: Sequence[bool],
         ) -> Column:
-            order_by = self._sort(expr, descending=descending, nulls_last=True)
-            if partition_by is not None:
-                window = self.partition_by(*partition_by).orderBy(*order_by)
-                count_window = self.partition_by(*partition_by, expr)
-            else:
-                window = self.partition_by().orderBy(*order_by)
-                count_window = self.partition_by(expr)
+            _order_by = self._sort(
+                expr, *order_by, descending=descending, nulls_last=nulls_last
+            )
+            window = self.partition_by(*partition_by).orderBy(*_order_by)
+            count_window = self.partition_by(*partition_by, expr)
             if method == "max":
                 rank_expr = (
                     getattr(self._F, func_name)().over(window)
@@ -873,14 +863,21 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.when(expr.isNotNull(), rank_expr)
 
         def _unpartitioned_rank(expr: Column) -> Column:
-            return _rank(expr, descending=descending)
+            return _rank(expr, descending=[descending], nulls_last=[True])
 
         def _partitioned_rank(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            assert not inputs.order_by  # noqa: S101
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
-                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                _rank(
+                    expr,
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
+                )
                 for expr in self(df)
             ]
 

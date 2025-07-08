@@ -39,7 +39,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
         )
 
@@ -71,7 +71,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace(
                 pattern, value, literal=literal, n=n
             )
@@ -102,7 +102,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
                 pattern, value, literal=literal
             )
@@ -130,7 +130,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
         )
 
@@ -158,7 +158,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
         )
 
@@ -186,7 +186,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
         )
 
@@ -219,7 +219,7 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.contains(
                 pattern, literal=literal
             )
@@ -251,7 +251,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=offset, length=length
             )
@@ -286,7 +286,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by)
         )
 
@@ -315,7 +315,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
         )
 
@@ -344,7 +344,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.slice(
                 offset=-n, length=None
             )
@@ -391,8 +391,40 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
+        )
+
+    def to_date(self, format: str | None = None) -> ExprT:
+        """Convert to date dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is inferred from the data.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"a": ["2020-01-01", "2020-01-02"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").str.to_date(format="%Y-%m-%d"))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |pyarrow.Table               |
+            |a: date32[day]              |
+            |----                        |
+            |a: [[2020-01-01,2020-01-02]]|
+            └────────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_date(format=format)
         )
 
     def to_uppercase(self) -> ExprT:
@@ -420,7 +452,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
         )
 
@@ -444,6 +476,37 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_elementwise_op(
+        return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
+        )
+
+    def zfill(self, width: int) -> ExprT:
+        """Transform string to zero-padded variant.
+
+        Arguments:
+            width: The desired length of the string after padding. If the length of the
+                string is greater than `width`, no padding is applied.
+                If `width` is less than 0, no padding is applied.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"digits": ["+1", "-1", "1", None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(zfill_col=nw.col("digits").str.zfill(3))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  digits zfill_col|
+            |0     +1       +01|
+            |1     -1       -01|
+            |2      1       001|
+            |3   None      None|
+            └──────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).str.zfill(width)
         )

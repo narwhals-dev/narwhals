@@ -6,7 +6,19 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
-from narwhals._duration import parse_interval_string
+from narwhals._constants import (
+    MS_PER_MINUTE,
+    MS_PER_SECOND,
+    NS_PER_MICROSECOND,
+    NS_PER_MILLISECOND,
+    NS_PER_MINUTE,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    SECONDS_PER_MINUTE,
+    US_PER_MINUTE,
+    US_PER_SECOND,
+)
+from narwhals._duration import Interval
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -26,9 +38,9 @@ if TYPE_CHECKING:
 
 class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
-        "ns": 1_000_000_000,
-        "us": 1_000_000,
-        "ms": 1_000,
+        "ns": NS_PER_SECOND,
+        "us": US_PER_SECOND,
+        "ms": MS_PER_SECOND,
         "s": 1,
     }
     _TIMESTAMP_DATETIME_OP_FACTOR: ClassVar[
@@ -36,13 +48,13 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
     ] = {
         ("ns", "us"): (floordiv_compat, 1_000),
         ("ns", "ms"): (floordiv_compat, 1_000_000),
-        ("us", "ns"): (pc.multiply, 1_000),
+        ("us", "ns"): (pc.multiply, NS_PER_MICROSECOND),
         ("us", "ms"): (floordiv_compat, 1_000),
-        ("ms", "ns"): (pc.multiply, 1_000_000),
+        ("ms", "ns"): (pc.multiply, NS_PER_MILLISECOND),
         ("ms", "us"): (pc.multiply, 1_000),
-        ("s", "ns"): (pc.multiply, 1_000_000_000),
-        ("s", "us"): (pc.multiply, 1_000_000),
-        ("s", "ms"): (pc.multiply, 1_000),
+        ("s", "ns"): (pc.multiply, NS_PER_SECOND),
+        ("s", "us"): (pc.multiply, US_PER_SECOND),
+        ("s", "ms"): (pc.multiply, MS_PER_SECOND),
     }
 
     @property
@@ -87,7 +99,7 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
                 raise AssertionError(msg)
             return self.with_native(result)
         elif isinstance(ser.dtype, dtypes.Date):
-            time_s = pc.multiply(self.native.cast(pa.int32()), lit(86_400))
+            time_s = pc.multiply(self.native.cast(pa.int32()), lit(SECONDS_PER_DAY))
             factor = self._TIMESTAMP_DATE_FACTOR[time_unit]
             return self.with_native(pc.multiply(time_s, lit(factor)))
         else:
@@ -137,20 +149,20 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def total_minutes(self) -> ArrowSeries:
         unit_to_minutes_factor = {
-            "s": 60,  # seconds
-            "ms": 60 * 1e3,  # milli
-            "us": 60 * 1e6,  # micro
-            "ns": 60 * 1e9,  # nano
+            "s": SECONDS_PER_MINUTE,
+            "ms": MS_PER_MINUTE,
+            "us": US_PER_MINUTE,
+            "ns": NS_PER_MINUTE,
         }
         factor = lit(unit_to_minutes_factor[self.unit], type=pa.int64())
         return self.with_native(pc.divide(self.native, factor).cast(pa.int64()))
 
     def total_seconds(self) -> ArrowSeries:
         unit_to_seconds_factor = {
-            "s": 1,  # seconds
-            "ms": 1e3,  # milli
-            "us": 1e6,  # micro
-            "ns": 1e9,  # nano
+            "s": 1,
+            "ms": MS_PER_SECOND,
+            "us": US_PER_SECOND,
+            "ns": NS_PER_SECOND,
         }
         factor = lit(unit_to_seconds_factor[self.unit], type=pa.int64())
         return self.with_native(pc.divide(self.native, factor).cast(pa.int64()))
@@ -181,16 +193,34 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
 
     def total_nanoseconds(self) -> ArrowSeries:
         unit_to_nano_factor = {
-            "s": 1e9,  # seconds
-            "ms": 1e6,  # milli
-            "us": 1e3,  # micro
-            "ns": 1,  # nano
+            "s": NS_PER_SECOND,
+            "ms": NS_PER_MILLISECOND,
+            "us": NS_PER_MICROSECOND,
+            "ns": 1,
         }
         factor = lit(unit_to_nano_factor[self.unit], type=pa.int64())
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
 
     def truncate(self, every: str) -> ArrowSeries:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
         return self.with_native(
-            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
+            pc.floor_temporal(self.native, interval.multiple, UNITS_DICT[interval.unit])
         )
+
+    def offset_by(self, by: str) -> ArrowSeries:
+        interval = Interval.parse_no_constraints(by)
+        native = self.native
+        if interval.unit in {"y", "q", "mo"}:
+            msg = f"Offsetting by {interval.unit} is not yet supported for pyarrow."
+            raise NotImplementedError(msg)
+        if interval.unit == "d":
+            offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
+            if time_zone := native.type.tz:
+                native_naive = pc.local_timestamp(native)
+                result = pc.assume_timezone(pc.add(native_naive, offset), time_zone)
+                return self.with_native(result)
+        elif interval.unit == "ns":  # pragma: no cover
+            offset = lit(interval.multiple, pa.duration("ns"))  # type: ignore[assignment]
+        else:
+            offset = lit(interval.to_timedelta())
+        return self.with_native(pc.add(native, offset))

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 from warnings import warn
 
 import narwhals as nw
-from narwhals import dependencies, exceptions, functions as nw_f, selectors
-from narwhals._typing_compat import TypeVar
+from narwhals import exceptions, functions as nw_f
+from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
@@ -26,10 +26,10 @@ from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFram
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, get_level, show_versions
+from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
-from narwhals.stable.v1 import dtypes
+from narwhals.stable.v1 import dependencies, dtypes, selectors
 from narwhals.stable.v1.dtypes import (
     Array,
     Binary,
@@ -257,6 +257,26 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
+    ) -> Self:
+        """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
+
+        Returns:
+            The original object with the column added.
+        """
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(
+                name=name,
+                order_by=order_by_,  # type: ignore[arg-type]
+            )
+        )
+
 
 class Series(NwSeries[IntoSeriesT]):
     @inherit_doc(NwSeries)
@@ -385,7 +405,7 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self._with_unorderable_window(
+        return self._with_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             )
@@ -462,8 +482,7 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
-    raise AssertionError(msg)
+    assert_never(obj)
 
 
 @overload
@@ -1315,30 +1334,46 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.sum_horizontal(*exprs))
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `True`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.all_horizontal(*exprs))
+    return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `False`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.any_horizontal(*exprs))
+    return _stableify(nw.any_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1411,6 +1446,44 @@ def concat_str(
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
+
+
+def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.coalesce(exprs, *more_exprs))
+
+
+def get_level(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
+) -> Literal["full", "lazy", "interchange"]:
+    """Level of support Narwhals has for current object.
+
+    Arguments:
+        obj: Dataframe or Series.
+
+    Returns:
+        This can be one of
+
+            - 'full': full Narwhals API support
+            - 'lazy': only lazy operations are supported. This excludes anything
+              which involves iterating over rows in Python.
+            - 'interchange': only metadata operations are supported (`df.schema`)
+    """
+    return obj._level
 
 
 class When(nw_f.When):
@@ -1820,6 +1893,7 @@ __all__ = [
     "all",
     "all_horizontal",
     "any_horizontal",
+    "coalesce",
     "col",
     "concat",
     "concat_str",

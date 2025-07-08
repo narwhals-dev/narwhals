@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -45,7 +46,9 @@ if TYPE_CHECKING:
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         pytest.skip()
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw_v1.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
+    )
     result = df.select(
         min=nw_v1.min("a"),
         max=nw_v1.max("a"),
@@ -61,7 +64,8 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
         all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
         first=nw_v1.nth(0),
-        no_first=nw_v1.exclude("a"),
+        no_first=nw_v1.exclude("a", "c"),
+        coalesce=nw_v1.coalesce("c", "a"),
     )
     expected = {
         "min": [1, 1, 1],
@@ -79,6 +83,7 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         "all_h": [True, True, True],
         "first": [1, 2, 3],
         "no_first": [4, 5, 6],
+        "coalesce": [7, 2, 9],
     }
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
@@ -259,12 +264,9 @@ def test_cast_to_enum_v1(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     # Backends that do not (yet) support Enum dtype
-    if (
-        any(
-            backend in str(constructor)
-            for backend in ["pyarrow_table", "sqlframe", "pyspark", "ibis"]
-        )
-        or str(constructor) == "modin"
+    if any(
+        backend in str(constructor)
+        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -343,3 +345,70 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
     data = {"a": [1, 2]}
     ser = nw.from_native(pd.DataFrame(data))["a"]
     assert not is_native_series(ser)
+
+
+def test_get_level() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame({"a": [1, 2, 3]})
+    with pytest.deprecated_call():
+        assert nw.get_level(nw.from_native(df)) == "full"
+    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    assert (
+        nw_v1.get_level(
+            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+        )
+        == "interchange"
+    )
+
+
+def test_any_horizontal() -> None:
+    # here, it defaults to Kleene logic.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(
+        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
+    )
+    result = df.select(nw_v1.any_horizontal("a", "b"))
+    expected = {"a": [True, True, None]}
+    assert_equal_data(result, expected)
+    with pytest.deprecated_call(match="ignore_nulls"):
+        result = df.select(nw.any_horizontal("a", "b"))
+    assert_equal_data(result, expected)
+
+
+def test_all_horizontal() -> None:
+    # here, it defaults to Kleene logic.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(
+        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
+    )
+    result = df.select(nw_v1.all_horizontal("a", "b"))
+    expected = {"a": [True, None, False]}
+    assert_equal_data(result, expected)
+    with pytest.deprecated_call(match="ignore_nulls"):
+        result = df.select(nw.all_horizontal("a", "b"))
+    assert_equal_data(result, expected)
+
+
+def test_with_row_index(constructor: Constructor) -> None:
+    data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
+
+    frame = nw_v1.from_native(constructor(data))
+
+    msg = "Cannot pass `order_by`"
+    context = (
+        pytest.raises(TypeError, match=msg)
+        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        else does_not_raise()
+    )
+
+    with context:
+        result = frame.with_row_index()
+
+        expected = {"index": [0, 1], **data}
+        assert_equal_data(result, expected)

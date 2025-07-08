@@ -5,15 +5,15 @@ from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
+from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._namespace import (
     is_native_arrow,
     is_native_pandas_like,
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version
 from narwhals.dependencies import (
-    get_dask,
     get_dask_expr,
     get_numpy,
     get_pandas,
@@ -360,7 +360,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         is_compliant_dataframe,
         is_compliant_lazyframe,
         is_compliant_series,
-        parse_version,
     )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
@@ -479,8 +478,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     # Dask
     elif is_dask_dataframe(native_object):
-        from narwhals._dask.namespace import DaskNamespace
-
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dask DataFrame"
@@ -491,13 +488,15 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
-        dask_version = parse_version(get_dask())
-        if dask_version <= (2024, 12, 1) and get_dask_expr() is None:  # pragma: no cover
+        if (
+            Implementation.DASK._backend_version() <= (2024, 12, 1)
+            and get_dask_expr() is None
+        ):  # pragma: no cover
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return (
-            DaskNamespace(backend_version=dask_version, version=version)
-            .from_native(native_object)
+            version.namespace.from_backend(Implementation.DASK)
+            .compliant.from_native(native_object)
             .to_narwhals()
         )
 
@@ -777,8 +776,8 @@ def to_py_scalar(scalar_like: Any) -> Any:
         and isinstance(scalar_like, np.datetime64)
         and scalar_like.dtype == "datetime64[ns]"
     ):
-        ms = scalar_like.item() // 1000
-        scalar = dt.datetime(1970, 1, 1) + dt.timedelta(microseconds=ms)
+        ms = scalar_like.item() // MS_PER_SECOND
+        scalar = EPOCH + dt.timedelta(microseconds=ms)
     elif is_numpy_scalar(scalar_like) or is_cupy_scalar(scalar_like):
         scalar = scalar_like.item()
     elif pd and isinstance(scalar_like, pd.Timestamp):

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Container, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import lru_cache, wraps
+from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from secrets import token_hex
@@ -24,7 +24,7 @@ from typing import (
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cudf,
     get_dask_dataframe,
@@ -105,6 +105,10 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
+    _T4 = TypeVar("_T4")
+    _T5 = TypeVar("_T5")
+    _T6 = TypeVar("_T6")
+    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -116,33 +120,6 @@ if TYPE_CHECKING:
 
     class _SupportsGet(Protocol):  # noqa: PYI046
         def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
-
-    class _StoresImplementation(Protocol):
-        _implementation: Implementation
-        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
-
-    class _StoresBackendVersion(Protocol):
-        _backend_version: tuple[int, ...]
-        """Version tuple for a native package."""
-
-    class _StoresVersion(Protocol):
-        _version: Version
-        """Narwhals API version (V1 or MAIN)."""
-
-    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
-        """Provides 2 attributes.
-
-        - `_backend_version`
-        - `_version`
-        """
-
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
-        """Provides 3 attributes.
-
-        - `_implementation`
-        - `_backend_version`
-        - `_version`
-        """
 
     class _StoresColumns(Protocol):
         @property
@@ -185,6 +162,52 @@ class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     def compliant(self) -> CompliantT_co:
         """Return the compliant object."""
         ...
+
+
+class _StoresBackendVersion(Protocol):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        """Version tuple for a native package."""
+        ...
+
+
+class _StoresVersion(Protocol):
+    _version: Version
+    """Narwhals API version (V1 or MAIN)."""
+
+
+class _StoresImplementation(Protocol):
+    _implementation: Implementation
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+
+class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
+    """Provides 2 attributes.
+
+    - `_implementation`
+    - `_version`
+    """
+
+
+class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
+    """Provides 3 attributes.
+
+    - `_implementation`
+    - `_backend_version`
+    - `_version`
+    """
+
+
+class ValidateBackendVersion(_StoresImplementation, Protocol):
+    """Ensure the target `Implementation` is on a supported version."""
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
 
 
 class Version(Enum):
@@ -347,8 +370,7 @@ class Implementation(NoAutoEnum):
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
 
-        validate_backend_version(self, self._backend_version())
-
+        self._backend_version()
         module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
         return _import_native_namespace(module_name)
 
@@ -565,35 +587,8 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        """Returns backend version.
-
-        As a biproduct of loading the native namespace, we also store it as an attribute
-        under the `_native_namespace` name.
-        """
-        if self is Implementation.UNKNOWN:  # pragma: no cover
-            msg = "Cannot return backend version from UNKNOWN Implementation"
-            raise AssertionError(msg)
-
-        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
-        native_namespace = _import_native_namespace(module_name)
-
-        into_version: ModuleType | str
-        if self.is_sqlframe():
-            import sqlframe._version
-
-            into_version = sqlframe._version
-        elif self.is_pyspark() or self.is_pyspark_connect():  # pragma: no cover
-            import pyspark  # ignore-banned-import
-
-            into_version = pyspark
-        elif self.is_dask():
-            import dask  # ignore-banned-import
-
-            into_version = dask
-        else:
-            into_version = native_namespace
-
-        return parse_version(version=into_version)
+        """Returns backend version."""
+        return backend_version(self)
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
@@ -603,7 +598,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYARROW: (11,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
-    Implementation.POLARS: (0, 20, 3),
+    Implementation.POLARS: (0, 20, 4),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1,),
     Implementation.IBIS: (6,),
@@ -619,19 +614,46 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
 """Stores non default mapping from Implementation to module name"""
 
 
-def validate_backend_version(
-    implementation: Implementation, backend_version: tuple[int, ...]
-) -> None:
-    if backend_version < (min_version := MIN_VERSIONS[implementation]):
-        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
-        raise ValueError(msg)
-
-
 @lru_cache(maxsize=16)
 def _import_native_namespace(module_name: str) -> ModuleType:
     from importlib import import_module
 
     return import_module(module_name)
+
+
+# NOTE: We can safely use an unbounded cache, the size is constrained by `len(Implementation._member_names_)`
+# Faster than `lru_cache`
+# https://docs.python.org/3/library/functools.html#functools.cache
+@cache
+def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
+    if not isinstance(implementation, Implementation):
+        assert_never(implementation)
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
+        msg = "Cannot return backend version from UNKNOWN Implementation"
+        raise AssertionError(msg)
+    into_version: ModuleType | str
+    impl = implementation
+    module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
+    native_namespace = _import_native_namespace(module_name)
+    if impl.is_sqlframe():
+        import sqlframe._version
+
+        into_version = sqlframe._version
+    elif impl.is_pyspark() or impl.is_pyspark_connect():  # pragma: no cover
+        import pyspark  # ignore-banned-import
+
+        into_version = pyspark
+    elif impl.is_dask():
+        import dask  # ignore-banned-import
+
+        into_version = dask
+    else:
+        into_version = native_namespace
+    version = parse_version(into_version)
+    if version < (min_version := MIN_VERSIONS[impl]):
+        msg = f"Minimum version of {impl} supported by Narwhals is {min_version}, found: {version}"
+        raise ValueError(msg)
+    return version
 
 
 def flatten(args: Any) -> list[Any]:
@@ -716,6 +738,76 @@ def isinstance_or_issubclass(
 def isinstance_or_issubclass(
     obj_or_cls: object | type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3]]
 ) -> TypeIs[_T1 | _T2 | _T3 | type[_T1 | _T2 | _T3]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
+) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
+) -> TypeIs[
+    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
+]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
+
+
+@overload
+def isinstance_or_issubclass(
+    obj_or_cls: object | type,
+    cls_or_tuple: tuple[
+        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
+    ],
+) -> TypeIs[
+    _T1
+    | _T2
+    | _T3
+    | _T4
+    | _T5
+    | _T6
+    | _T7
+    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
+]: ...
 
 
 @overload
@@ -960,7 +1052,6 @@ def maybe_set_index(
             native_obj,
             keys,
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
-            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
@@ -1181,7 +1272,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
 
 def generate_unique_token(
-    n_bytes: int, columns: Sequence[str]
+    n_bytes: int, columns: Container[str]
 ) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
@@ -1191,7 +1282,7 @@ def generate_unique_token(
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
+def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1215,7 +1306,9 @@ def generate_temporary_column_name(n_bytes: int, columns: Sequence[str]) -> str:
     """
     counter = 0
     while True:
-        token = token_hex(n_bytes)
+        # Prepend `'nw'` to ensure it always starts with a character
+        # https://github.com/narwhals-dev/narwhals/issues/2510
+        token = f"nw{token_hex(n_bytes - 1)}"
         if token not in columns:
             return token
 
@@ -1487,7 +1580,7 @@ def generate_repr(header: str, native_repr: str) -> str:
 
 
 def check_columns_exist(
-    subset: Sequence[str], /, *, available: Sequence[str]
+    subset: Collection[str], /, *, available: Collection[str]
 ) -> ColumnNotFoundError | None:
     if missing := set(subset).difference(available):
         return ColumnNotFoundError.from_missing_and_available_column_names(
@@ -1496,9 +1589,8 @@ def check_columns_exist(
     return None
 
 
-def check_column_names_are_unique(columns: Sequence[str]) -> None:
-    len_unique_columns = len(set(columns))
-    if len(columns) != len_unique_columns:
+def check_column_names_are_unique(columns: Collection[str]) -> None:
+    if len(columns) != len(set(columns)):
         from collections import Counter
 
         counter = Counter(columns)
@@ -1620,7 +1712,7 @@ def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
 
 
 def _remap_full_join_keys(
-    left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    left_on: Collection[str], right_on: Collection[str], suffix: str
 ) -> dict[str, str]:
     """Remap join keys to avoid collisions.
 
@@ -1641,7 +1733,7 @@ def _remap_full_join_keys(
     return dict(zip(right_on, right_keys_suffixed))
 
 
-def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
+def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.Table:
     """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
 
     Arguments:
@@ -1652,12 +1744,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         A PyArrow Table.
     """
     if find_spec("pyarrow"):
-        import pyarrow as pa  # ignore-banned-import
-
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        version = context._version
-        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
         msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
@@ -1768,7 +1855,8 @@ class not_implemented:  # noqa: N801
         # NOTE: Prefer not exposing the actual class we're defining in
         # `_implementation` may not be available everywhere
         who = getattr(instance, "_implementation", self._name_owner)
-        raise _not_implemented_error(self._name, who)
+        _raise_not_implemented_error(self._name, who)
+        return None  # pragma: no cover
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         # NOTE: Purely to duck-type as assignable to **any** instance method
@@ -1791,13 +1879,13 @@ class not_implemented:  # noqa: N801
         return deprecated(message)(obj)
 
 
-def _not_implemented_error(what: str, who: str, /) -> NotImplementedError:
+def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
     msg = (
         f"{what!r} is not implemented for: {who!r}.\n\n"
         "If you would like to see this functionality in `narwhals`, "
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
-    return NotImplementedError(msg)
+    raise NotImplementedError(msg)
 
 
 class requires:  # noqa: N801

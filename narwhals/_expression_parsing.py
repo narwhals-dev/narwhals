@@ -9,12 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from narwhals._utils import is_compliant_expr
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
-from narwhals.exceptions import (
-    InvalidOperationError,
-    LengthChangingExprError,
-    MultiOutputExpressionError,
-    ShapeError,
-)
+from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -136,8 +131,8 @@ class ExprKind(Enum):
     ORDERABLE_WINDOW = auto()
     """Depends on the rows around it and on their order, e.g. `diff`."""
 
-    UNORDERABLE_WINDOW = auto()
-    """Depends on the rows around it but not on their order, e.g. `rank`."""
+    WINDOW = auto()
+    """Depends on the rows around it and possibly their order, e.g. `rank`."""
 
     FILTRATION = auto()
     """Changes length, not affected by row order, e.g. `drop_nulls`."""
@@ -222,6 +217,22 @@ class ExpansionKind(Enum):
 
 
 class ExprMetadata:
+    """Expression metadata.
+
+    Parameters:
+        expansion_kind: What kind of expansion the expression performs.
+        has_windows: Whether it already contains window functions.
+        is_elementwise: Whether it can operate row-by-row without context
+            of the other rows around it.
+        is_literal: Whether it is just a literal wrapped in an expression.
+        is_scalar_like: Whether it is a literal or an aggregation.
+        last_node: The ExprKind of the last node.
+        n_orderable_ops: The number of order-dependent operations. In the
+            lazy case, this number must be `0` by the time the expression
+            is evaluated.
+        preserves_length: Whether the expression preserves the input length.
+    """
+
     __slots__ = (
         "expansion_kind",
         "has_windows",
@@ -322,14 +333,17 @@ class ExprMetadata:
             is_literal=self.is_literal,
         )
 
-    def with_unorderable_window(self) -> ExprMetadata:
+    def with_window(self) -> ExprMetadata:
+        # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
         if self.is_scalar_like:
-            msg = "Can't apply unorderable window (`rank`, `is_unique`) to scalar-like expression."
+            msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.UNORDERABLE_WINDOW,
+            ExprKind.WINDOW,
             has_windows=self.has_windows,
+            # The function isn't order-dependent (but, users can still use `order_by` if they wish!),
+            # so we don't increment `n_orderable_ops`.
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_elementwise=False,
@@ -338,6 +352,7 @@ class ExprMetadata:
         )
 
     def with_orderable_window(self) -> ExprMetadata:
+        # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
             raise InvalidOperationError(msg)
@@ -363,8 +378,16 @@ class ExprMetadata:
             )
             raise InvalidOperationError(msg)
         n_orderable_ops = self.n_orderable_ops
-        if not n_orderable_ops:
-            msg = "Cannot use `order_by` in `over` on expression which isn't orderable."
+        if not n_orderable_ops and self.last_node is not ExprKind.WINDOW:
+            msg = (
+                "Cannot use `order_by` in `over` on expression which isn't orderable.\n"
+                "If your expression is orderable, then make sure that `over(order_by=...)`\n"
+                "comes immediately after the order-dependent expression.\n\n"
+                "Hint: instead of\n"
+                "  - `(nw.col('price').diff() + 1).over(order_by='date')`\n"
+                "write:\n"
+                "  + `nw.col('price').diff().over(order_by='date') + 1`\n"
+            )
             raise InvalidOperationError(msg)
         if self.last_node.is_orderable_window:
             n_orderable_ops -= 1
@@ -547,10 +570,10 @@ def combine_metadata(  # noqa: C901, PLR0912
 
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
-        raise LengthChangingExprError(msg)
+        raise InvalidOperationError(msg)
     if result_preserves_length and n_filtrations:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
-        raise ShapeError(msg)
+        raise InvalidOperationError(msg)
 
     return ExprMetadata(
         result_expansion_kind,
@@ -575,7 +598,7 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
         for x in args
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
-        raise ShapeError(msg)
+        raise InvalidOperationError(msg)
 
 
 def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:

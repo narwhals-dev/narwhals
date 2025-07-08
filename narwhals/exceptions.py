@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable
 
 
 class NarwhalsError(ValueError):
@@ -35,7 +35,7 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
 
     @classmethod
     def from_missing_and_available_column_names(
-        cls, missing_columns: Iterable[str], available_columns: Sequence[str], /
+        cls, missing_columns: Iterable[str], available_columns: Collection[str], /
     ) -> ColumnNotFoundError:
         message = (
             f"The following columns were not found: {sorted(missing_columns)}"
@@ -45,7 +45,7 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
 
     @classmethod
     def from_available_column_names(
-        cls, available_columns: Sequence[str]
+        cls, available_columns: Collection[str]
     ) -> ColumnNotFoundError:
         message = (
             "The selected columns were not found."
@@ -95,39 +95,6 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
             "  column with literal value `0`."
         )
         return InvalidIntoExprError(message)
-
-
-class AnonymousExprError(NarwhalsError):  # pragma: no cover
-    """Exception raised when trying to perform operations on anonymous expressions."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-    @classmethod
-    def from_expr_name(cls: type, expr_name: str) -> AnonymousExprError:
-        message = (
-            f"Anonymous expressions are not supported in `{expr_name}`.\n"
-            "Instead of `nw.all()`, try using a named expression, such as "
-            "`nw.col('a', 'b')`"
-        )
-        return AnonymousExprError(message)
-
-
-class OrderDependentExprError(NarwhalsError):
-    """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-
-class LengthChangingExprError(NarwhalsError):
-    """Exception raised when trying to use an expression which changes length with LazyFrames."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
 
 
 class UnsupportedDTypeError(NarwhalsError):

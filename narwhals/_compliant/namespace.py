@@ -14,6 +14,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeFrameT,
     NativeFrameT_co,
+    NativeSeriesT,
 )
 from narwhals._utils import (
     exclude_column_names,
@@ -42,12 +43,16 @@ if TYPE_CHECKING:
 
     Incomplete: TypeAlias = Any
 
-__all__ = ["CompliantNamespace", "EagerNamespace"]
+__all__ = [
+    "CompliantNamespace",
+    "DepthTrackingNamespace",
+    "EagerNamespace",
+    "LazyNamespace",
+]
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     def all(self) -> CompliantExprT:
@@ -68,8 +73,12 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     def len(self) -> CompliantExprT: ...
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> CompliantExprT: ...
-    def all_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
-    def any_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
+    def all_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
+    ) -> CompliantExprT: ...
+    def any_horizontal(
+        self, *exprs: CompliantExprT, ignore_nulls: bool
+    ) -> CompliantExprT: ...
     def sum_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def mean_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def min_horizontal(self, *exprs: CompliantExprT) -> CompliantExprT: ...
@@ -87,6 +96,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
     @property
     def _expr(self) -> type[CompliantExprT]: ...
+    def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
 
 
 class DepthTrackingNamespace(
@@ -116,6 +126,10 @@ class LazyNamespace(
     Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT_co],
 ):
     @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
+    @property
     def _lazyframe(self) -> type[CompliantLazyFrameT]: ...
 
     def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
@@ -128,17 +142,27 @@ class LazyNamespace(
 
 class EagerNamespace(
     DepthTrackingNamespace[EagerDataFrameT, EagerExprT],
-    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
+
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
     def _series(self) -> type[EagerSeriesT]: ...
     def when(
         self, predicate: EagerExprT
-    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT]: ...
+    ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
 
-    def from_native(self, data: Any, /) -> EagerDataFrameT | EagerSeriesT:
+    @overload
+    def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
+    @overload
+    def from_native(self, data: NativeSeriesT, /) -> EagerSeriesT: ...
+    def from_native(
+        self, data: NativeFrameT | NativeSeriesT | Any, /
+    ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
         elif self._series._is_native(data):

@@ -52,9 +52,11 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         Implementation.POLARS,
         Implementation.DUCKDB,
         Implementation.DASK,
+        Implementation.IBIS,
         "polars",
         "duckdb",
         "dask",
+        "ibis",
     ],
 )
 def test_lazy_backend(

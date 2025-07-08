@@ -32,15 +32,10 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     issue_deprecation_warning,
-    parse_version,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
-from narwhals.exceptions import (
-    InvalidIntoExprError,
-    LengthChangingExprError,
-    OrderDependentExprError,
-)
+from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
@@ -138,9 +133,6 @@ class BaseFrame(Generic[_FrameT]):
     ) -> R:
         return function(self, *args, **kwargs)
 
-    def with_row_index(self, name: str = "index") -> Self:
-        return self._with_compliant(self._compliant_frame.with_row_index(name))
-
     def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
@@ -212,7 +204,7 @@ class BaseFrame(Generic[_FrameT]):
                 for name, v in constraints.items()
             )
             predicate = plx.all_horizontal(
-                *chain(compliant_predicates, compliant_constraints)
+                *chain(compliant_predicates, compliant_constraints), ignore_nulls=False
             )
         return self._with_compliant(self._compliant_frame.filter(predicate))
 
@@ -231,75 +223,66 @@ class BaseFrame(Generic[_FrameT]):
     def join(
         self,
         other: Self,
-        on: str | list[str] | None = None,
-        how: JoinStrategy = "inner",
+        on: str | list[str] | None,
+        how: JoinStrategy,
         *,
-        left_on: str | list[str] | None = None,
-        right_on: str | list[str] | None = None,
-        suffix: str = "_right",
+        left_on: str | list[str] | None,
+        right_on: str | list[str] | None,
+        suffix: str,
     ) -> Self:
+        _supported_joins = ("inner", "left", "full", "cross", "anti", "semi")
         on = [on] if isinstance(on, str) else on
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
+        compliant = self._compliant_frame
+        other = self._extract_compliant(other)
 
-        if how not in (
-            _supported_joins := ("inner", "left", "full", "cross", "anti", "semi")
-        ):
+        if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
             raise NotImplementedError(msg)
-
-        if how == "cross" and (
-            left_on is not None or right_on is not None or on is not None
-        ):
-            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
-            raise ValueError(msg)
-
-        if how != "cross" and (on is None and (left_on is None or right_on is None)):
-            msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
-            raise ValueError(msg)
-
-        if how != "cross" and (
-            on is not None and (left_on is not None or right_on is not None)
-        ):
-            msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
-            raise ValueError(msg)
-
-        if on is not None:
-            left_on = right_on = on
-
-        if (isinstance(left_on, list) and isinstance(right_on, list)) and (
-            len(left_on) != len(right_on)
-        ):
-            msg = "`left_on` and `right_on` must have the same length."
-            raise ValueError(msg)
-
-        return self._with_compliant(
-            self._compliant_frame.join(
-                self._extract_compliant(other),
-                how=how,
-                left_on=left_on,
-                right_on=right_on,
-                suffix=suffix,
+        if how == "cross":
+            if left_on is not None or right_on is not None or on is not None:
+                msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=None, right_on=None, suffix=suffix
             )
-        )
+        elif on is None:
+            if left_on is None or right_on is None:
+                msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
+                raise ValueError(msg)
+            if len(left_on) != len(right_on):
+                msg = "`left_on` and `right_on` must have the same length."
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        else:
+            if left_on is not None or right_on is not None:
+                msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
+                raise ValueError(msg)
+            result = compliant.join(
+                other, how=how, left_on=on, right_on=on, suffix=suffix
+            )
+        return self._with_compliant(result)
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_compliant(
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
-    def join_asof(  # noqa: C901
+    def join_asof(
         self,
         other: Self,
         *,
-        left_on: str | None = None,
-        right_on: str | None = None,
-        on: str | None = None,
-        by_left: str | list[str] | None = None,
-        by_right: str | list[str] | None = None,
-        by: str | list[str] | None = None,
-        strategy: AsofJoinStrategy = "backward",
-        suffix: str = "_right",
+        left_on: str | None,
+        right_on: str | None,
+        on: str | None,
+        by_left: str | list[str] | None,
+        by_right: str | list[str] | None,
+        by: str | list[str] | None,
+        strategy: AsofJoinStrategy,
+        suffix: str,
     ) -> Self:
         _supported_strategies = ("backward", "forward", "nearest")
 
@@ -328,10 +311,9 @@ class BaseFrame(Generic[_FrameT]):
             left_on = right_on = on
         if by is not None:
             by_left = by_right = by
-        if isinstance(by_left, str):
-            by_left = [by_left]
-        if isinstance(by_right, str):
-            by_right = [by_right]
+
+        by_left = [by_left] if isinstance(by_left, str) else by_left
+        by_right = [by_right] if isinstance(by_right, str) else by_right
 
         if (isinstance(by_left, list) and isinstance(by_right, list)) and (
             len(by_left) != len(by_right)
@@ -516,11 +498,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if supports_arrow_c_stream(native_frame):
             return native_frame.__arrow_c_stream__(requested_schema=requested_schema)
         try:
-            import pyarrow as pa  # ignore-banned-import
+            pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from exc
-        if parse_version(pa) < (14, 0):  # pragma: no cover
+        if pa_version < (14, 0):  # pragma: no cover
             msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
@@ -547,10 +529,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
                 `backend` can be specified in various ways
 
-                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`
-                    or `POLARS`.
-                - As a string: `"dask"`, `"duckdb"` or `"polars"`
-                - Directly as a module `dask.dataframe`, `duckdb` or `polars`.
+                - As `Implementation.<BACKEND>` with `BACKEND` being `DASK`, `DUCKDB`,
+                    `IBIS` or `POLARS`.
+                - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
+                - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
 
         Returns:
             A new LazyFrame.
@@ -593,6 +575,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             Implementation.DASK,
             Implementation.DUCKDB,
             Implementation.POLARS,
+            Implementation.IBIS,
         )
         if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
             msg = (
@@ -1067,11 +1050,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self, name: str = "index") -> Self:
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
+    ) -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
             name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
@@ -1090,7 +1076,10 @@ class DataFrame(BaseFrame[DataFrameT]):
             a: [[1,2]]
             b: [[4,5]]
         """
-        return super().with_row_index(name)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:
@@ -1203,7 +1192,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def iter_rows(
-        self, *, named: Literal[False], buffer_size: int = ...
+        self, *, named: Literal[False] = ..., buffer_size: int = ...
     ) -> Iterator[tuple[Any, ...]]: ...
 
     @overload
@@ -2206,7 +2195,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
                     "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
                 )
-                raise OrderDependentExprError(msg)
+                raise InvalidOperationError(msg)
             if arg._metadata.is_filtration:
                 msg = (
                     "Length-changing expressions are not supported for use in LazyFrame, unless\n"
@@ -2216,7 +2205,7 @@ class LazyFrame(BaseFrame[FrameT]):
                     "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
                     "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
                 )
-                raise LengthChangingExprError(msg)
+                raise InvalidOperationError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
         if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
             msg = (
@@ -2431,29 +2420,53 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().drop_nulls(subset=subset)
 
-    def with_row_index(self, name: str = "index") -> Self:
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str]
+    ) -> Self:
         """Insert column which enumerates rows.
 
         Arguments:
             name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
 
         Returns:
             The original object with the column added.
 
         Examples:
-            >>> import dask.dataframe as dd
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = dd.from_dict({"a": [1, 2], "b": [4, 5]}, npartitions=1)
-            >>> nw.from_native(lf_native).with_row_index().collect()
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 5), (2, 4) df(a, b)")
+            >>> nw.from_native(lf_native).with_row_index(order_by="a").sort("a").collect()
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |     index  a  b  |
-            |  0      0  1  4  |
-            |  1      1  2  5  |
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[0,1]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
+            └──────────────────┘
+            >>> nw.from_native(lf_native).with_row_index(order_by="b").sort("a").collect()
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  index: int64    |
+            |  a: int32        |
+            |  b: int32        |
+            |  ----            |
+            |  index: [[1,0]]  |
+            |  a: [[1,2]]      |
+            |  b: [[5,4]]      |
             └──────────────────┘
         """
-        return super().with_row_index(name)
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(name, order_by=order_by_)
+        )
 
     @property
     def schema(self) -> Schema:

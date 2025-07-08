@@ -681,3 +681,38 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.truncate(every)
         )
+
+    def offset_by(self, by: str) -> SeriesT:
+        """Offset this date by a relative time offset.
+
+        Arguments:
+            by: The offset. Must be of form `<multiple><unit>`,
+                where `multiple` is a positive integer and `unit` is one of
+
+                - 'ns': nanosecond.
+                - 'us': microsecond.
+                - 'ms': millisecond.
+                - 's': second.
+                - 'm': minute.
+                - 'h': hour.
+                - 'd': day.
+                - 'mo': month.
+                - 'q': quarter.
+                - 'y': year.
+
+        Returns:
+            Series of data type `Date` or `Datetime`.
+
+        Examples:
+            >>> from datetime import datetime
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s_native = pd.Series([datetime(2021, 3, 1, 12, 34)])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.dt.offset_by("1h").to_native()
+            0   2021-03-01 13:34:00
+            dtype: datetime64[ns]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.dt.offset_by(by)
+        )

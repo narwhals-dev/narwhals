@@ -38,6 +38,7 @@ POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
 DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
+CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
@@ -76,6 +77,10 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
     is_ibis = (
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.IBIS
+    )
+    is_spark_like = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation.is_spark_like()
     )
     if is_duckdb:
         result = from_native(result.to_native().arrow())
@@ -122,6 +127,17 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = pd.isna(rhs)
             elif type(lhs) is date and type(rhs) is datetime:
                 are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
+            elif (
+                is_spark_like
+                and isinstance(lhs, datetime)
+                and isinstance(rhs, datetime)
+                and rhs.tzinfo is None
+                and lhs.tzinfo
+            ):
+                # PySpark converts timezone-naive to timezone-aware by default in many cases.
+                # For now, we just assert that the local result matches the expected one.
+                # https://github.com/narwhals-dev/narwhals/issues/2793
+                are_equivalent_values = lhs.replace(tzinfo=None) == rhs
             else:
                 are_equivalent_values = lhs == rhs
 
@@ -155,3 +171,11 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
 def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
+
+
+def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
+    """Checks if the pandas-like constructor uses pyarrow backend."""
+    return constructor.__name__ in {
+        "pandas_pyarrow_constructor",
+        "modin_pyarrow_constructor",
+    }

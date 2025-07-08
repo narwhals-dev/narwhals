@@ -9,11 +9,10 @@ import ibis.expr.types as ir
 from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
+    ValidateBackendVersion,
     Version,
     not_implemented,
     parse_columns_to_drop,
-    parse_version,
-    validate_backend_version,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 from narwhals.typing import CompliantLazyFrame
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
-    from narwhals._utils import _FullContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
@@ -44,29 +43,28 @@ if TYPE_CHECKING:
 class IbisLazyFrame(
     CompliantLazyFrame[
         "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
-    ]
+    ],
+    ValidateBackendVersion,
 ):
     _implementation = Implementation.IBIS
 
     def __init__(
-        self, df: ir.Table, *, backend_version: tuple[int, ...], version: Version
+        self, df: ir.Table, *, version: Version, validate_backend_version: bool = False
     ) -> None:
         self._native_frame: ir.Table = df
         self._version = version
-        self._backend_version = backend_version
         self._cached_schema: dict[str, DType] | None = None
         self._cached_columns: list[str] | None = None
-        validate_backend_version(self._implementation, self._backend_version)
+        if validate_backend_version:
+            self._validate_backend_version()
 
     @staticmethod
     def _is_native(obj: ir.Table | Any) -> TypeIs[ir.Table]:
         return isinstance(obj, ir.Table)
 
     @classmethod
-    def from_native(cls, data: ir.Table, /, *, context: _FullContext) -> Self:
-        return cls(
-            data, backend_version=context._backend_version, version=context._version
-        )
+    def from_native(cls, data: ir.Table, /, *, context: _LimitedContext) -> Self:
+        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
         if self._version is Version.MAIN:
@@ -92,7 +90,7 @@ class IbisLazyFrame(
     def __narwhals_namespace__(self) -> IbisNamespace:
         from narwhals._ibis.namespace import IbisNamespace
 
-        return IbisNamespace(backend_version=self._backend_version, version=self._version)
+        return IbisNamespace(version=self._version)
 
     def get_column(self, name: str) -> IbisInterchangeSeries:
         from narwhals._ibis.series import IbisInterchangeSeries
@@ -107,38 +105,32 @@ class IbisLazyFrame(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self.native.to_pyarrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
                 self.native.to_pandas(),
                 implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
             )
 
         if backend is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
                 self.native.to_polars(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
 
@@ -214,27 +206,17 @@ class IbisLazyFrame(
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
-        import pandas as pd  # ignore-banned-import()
-
-        if parse_version(pd) >= (1, 0, 0):
-            return self.native.to_pandas()
-        else:  # pragma: no cover
-            msg = f"Conversion to pandas requires pandas>=1.0.0, found {pd.__version__}"
-            raise NotImplementedError(msg)
+        return self.native.to_pandas()
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
         return self.native.to_pyarrow()
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native, version=version, backend_version=self._backend_version
-        )
+        return self.__class__(self.native, version=version)
 
     def _with_native(self, df: ir.Table) -> Self:
-        return self.__class__(
-            df, backend_version=self._backend_version, version=self._version
-        )
+        return self.__class__(df, version=self._version)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[IbisExpr], *, drop_null_keys: bool
@@ -413,10 +395,16 @@ class IbisLazyFrame(
         )
         return self._with_native(unpivoted.select(*final_columns))
 
+    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        to_select = [
+            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.selectors.all(),
+        ]
+        return self._with_native(self.native.select(*to_select))
+
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
     )
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
-    with_row_index = not_implemented()
