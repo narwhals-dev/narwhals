@@ -110,25 +110,21 @@ class TotalNanoseconds(TemporalFunction): ...
 
 class ToString(TemporalFunction):
     __slots__ = ("format",)
-
     format: str
 
 
 class ReplaceTimeZone(TemporalFunction):
     __slots__ = ("time_zone",)
-
     time_zone: str | None
 
 
 class ConvertTimeZone(TemporalFunction):
     __slots__ = ("time_zone",)
-
     time_zone: str
 
 
 class Timestamp(TemporalFunction):
     __slots__ = ("time_unit",)
-
     time_unit: PolarsTimeUnit
 
     @staticmethod
@@ -146,7 +142,6 @@ class Timestamp(TemporalFunction):
 
 class Truncate(TemporalFunction):
     __slots__ = ("multiple", "unit")
-
     multiple: int
     unit: IntervalUnit
 

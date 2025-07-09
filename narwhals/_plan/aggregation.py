@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 class Agg(ExprIR):
     __slots__ = ("expr",)
-
     expr: ExprIR
 
     @property
@@ -84,7 +83,6 @@ class Quantile(Agg):
 
 class Std(Agg):
     __slots__ = (*Agg.__slots__, "ddof")
-
     ddof: int
 
 
@@ -93,7 +91,6 @@ class Sum(Agg): ...
 
 class Var(Agg):
     __slots__ = (*Agg.__slots__, "ddof")
-
     ddof: int
 
 

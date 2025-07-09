@@ -39,7 +39,6 @@ class LiteralValue(Immutable, Generic[LiteralT]):
 
 class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
     __slots__ = ("dtype", "value")
-
     value: NonNestedLiteralT
     dtype: DType
 
@@ -63,7 +62,6 @@ class SeriesLiteral(LiteralValue["DummySeries[NativeSeriesT]"]):
     """
 
     __slots__ = ("value",)
-
     value: DummySeries[NativeSeriesT]
 
     @property

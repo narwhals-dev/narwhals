@@ -22,7 +22,6 @@ class ConcatHorizontal(StringFunction):
     """`nw.functions.concat_str`."""
 
     __slots__ = ("ignore_nulls", "separator")
-
     separator: str
     ignore_nulls: bool
 
@@ -36,7 +35,6 @@ class ConcatHorizontal(StringFunction):
 
 class Contains(StringFunction):
     __slots__ = ("literal", "pattern")
-
     pattern: str
     literal: bool
 
@@ -46,7 +44,6 @@ class Contains(StringFunction):
 
 class EndsWith(StringFunction):
     __slots__ = ("suffix",)
-
     suffix: str
 
     def __repr__(self) -> str:
@@ -60,7 +57,6 @@ class LenChars(StringFunction):
 
 class Replace(StringFunction):
     __slots__ = ("literal", "n", "pattern", "value")
-
     pattern: str
     value: str
     literal: bool
@@ -77,7 +73,6 @@ class ReplaceAll(StringFunction):
     """
 
     __slots__ = ("literal", "pattern", "value")
-
     pattern: str
     value: str
     literal: bool
@@ -90,12 +85,9 @@ class Slice(StringFunction):
     """We're using for `Head`, `Tail` as well.
 
     https://github.com/dangotbanned/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/strings.rs#L87-L89
-
-    I don't think it's likely we'll support `Expr` as inputs for this any time soon.
     """
 
     __slots__ = ("length", "offset")
-
     offset: int
     length: int | None
 
@@ -105,7 +97,6 @@ class Slice(StringFunction):
 
 class Split(StringFunction):
     __slots__ = ("by",)
-
     by: str
 
     def __repr__(self) -> str:
@@ -114,7 +105,6 @@ class Split(StringFunction):
 
 class StartsWith(StringFunction):
     __slots__ = ("prefix",)
-
     prefix: str
 
     def __repr__(self) -> str:
@@ -123,7 +113,6 @@ class StartsWith(StringFunction):
 
 class StripChars(StringFunction):
     __slots__ = ("characters",)
-
     characters: str | None
 
     def __repr__(self) -> str:
@@ -139,7 +128,6 @@ class ToDatetime(StringFunction):
     """
 
     __slots__ = ("format",)
-
     format: str | None
 
     def __repr__(self) -> str:

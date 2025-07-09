@@ -18,7 +18,6 @@ class KeepName(ExprIR):
     """Keep the original root name."""
 
     __slots__ = ("expr",)
-
     expr: ExprIR
 
     @property
@@ -45,7 +44,6 @@ class KeepName(ExprIR):
 
 class RenameAlias(ExprIR):
     __slots__ = ("expr", "function")
-
     expr: ExprIR
     function: AliasName
 
@@ -75,7 +73,6 @@ class RenameAlias(ExprIR):
 
 class Prefix(Immutable):
     __slots__ = ("prefix",)
-
     prefix: str
 
     def __call__(self, name: str, /) -> str:
@@ -84,7 +81,6 @@ class Prefix(Immutable):
 
 class Suffix(Immutable):
     __slots__ = ("suffix",)
-
     suffix: str
 
     def __call__(self, name: str, /) -> str:

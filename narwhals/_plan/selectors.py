@@ -47,7 +47,6 @@ class All(Selector):
 
 class ByDType(Selector):
     __slots__ = ("dtypes",)
-
     dtypes: frozenset[DType | type[DType]]
 
     @staticmethod
@@ -91,7 +90,6 @@ class Datetime(Selector):
     """
 
     __slots__ = ("time_units", "time_zones")
-
     time_units: frozenset[TimeUnit]
     time_zones: frozenset[str | None]
 
@@ -120,7 +118,6 @@ class Datetime(Selector):
 
 class Matches(Selector):
     __slots__ = ("pattern",)
-
     pattern: re.Pattern[str]
 
     @staticmethod

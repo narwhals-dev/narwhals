@@ -33,7 +33,6 @@ class Hist(Function):
     """Only supported for `Series` so far."""
 
     __slots__ = ("include_breakpoint",)
-
     include_breakpoint: bool
 
     @property
@@ -45,10 +44,7 @@ class Hist(Function):
 
 
 class HistBins(Hist):
-    """Subclasses for each variant."""
-
     __slots__ = ("bins", *Hist.__slots__)
-
     bins: Seq[float]
 
     def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
@@ -61,7 +57,6 @@ class HistBins(Hist):
 
 class HistBinCount(Hist):
     __slots__ = ("bin_count", *Hist.__slots__)
-
     bin_count: int
     """Polars (v1.20) sets `bin_count=10` if neither `bins` or `bin_count` are provided."""
 
@@ -81,7 +76,6 @@ class NullCount(Function):
 
 class Log(Function):
     __slots__ = ("base",)
-
     base: float
 
     @property
@@ -121,7 +115,6 @@ class Sqrt(Function):
 
 class Kurtosis(Function):
     __slots__ = ("bias", "fisher")
-
     fisher: bool
     bias: bool
 
@@ -149,7 +142,6 @@ class FillNullWithStrategy(Function):
     """
 
     __slots__ = ("limit", "strategy")
-
     strategy: FillNullStrategy
     limit: int | None
 
@@ -169,9 +161,7 @@ class FillNullWithStrategy(Function):
 
 class Shift(Function):
     __slots__ = ("n",)
-
     n: int
-    """https://github.com/narwhals-dev/narwhals/pull/2555"""
 
     @property
     def function_options(self) -> FunctionOptions:
@@ -210,7 +200,6 @@ class Skew(Function):
 
 class Rank(Function):
     __slots__ = ("options",)
-
     options: RankOptions
 
     @property
@@ -232,9 +221,7 @@ class Clip(Function):
 
 class CumAgg(Function):
     __slots__ = ("reverse",)
-
     reverse: bool
-    """https://github.com/narwhals-dev/narwhals/pull/2555"""
 
     @property
     def function_options(self) -> FunctionOptions:
@@ -256,7 +243,6 @@ class CumAgg(Function):
 
 class RollingWindow(Function):
     __slots__ = ("options",)
-
     options: RollingOptionsFixedWindow
 
     @property
@@ -330,7 +316,6 @@ class Unique(Function):
 
 class Round(Function):
     __slots__ = ("decimals",)
-
     decimals: int
 
     @property
@@ -387,7 +372,6 @@ class MeanHorizontal(Function):
 
 class EwmMean(Function):
     __slots__ = ("options",)
-
     options: EWMOptions
 
     @property
@@ -400,7 +384,6 @@ class EwmMean(Function):
 
 class ReplaceStrict(Function):
     __slots__ = ("new", "old", "return_dtype")
-
     old: Seq[Any]
     new: Seq[Any]
     return_dtype: IntoDType | None
@@ -415,7 +398,6 @@ class ReplaceStrict(Function):
 
 class GatherEvery(Function):
     __slots__ = ("n", "offset")
-
     n: int
     offset: int
 
@@ -429,7 +411,6 @@ class GatherEvery(Function):
 
 class MapBatches(Function):
     __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
-
     function: Udf
     return_dtype: IntoDType | None
     is_elementwise: bool

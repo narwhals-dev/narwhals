@@ -77,7 +77,6 @@ class FunctionOptions(Immutable):
     """
 
     __slots__ = ("flags",)
-
     flags: FunctionFlags
 
     def __str__(self) -> str:
@@ -140,7 +139,6 @@ class FunctionOptions(Immutable):
 
 class SortOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
-
     descending: bool
     nulls_last: bool
 
@@ -163,7 +161,6 @@ class SortOptions(Immutable):
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
-
     descending: Seq[bool]
     nulls_last: Seq[bool]
 
@@ -202,10 +199,7 @@ class SortMultipleOptions(Immutable):
 
 
 class RankOptions(Immutable):
-    """https://github.com/narwhals-dev/narwhals/pull/2555."""
-
     __slots__ = ("descending", "method")
-
     method: RankMethod
     descending: bool
 
@@ -225,7 +219,6 @@ class EWMOptions(Immutable):
         "min_samples",
         "span",
     )
-
     com: float | None
     span: float | None
     half_life: float | None
@@ -237,7 +230,6 @@ class EWMOptions(Immutable):
 
 class RollingVarParams(Immutable):
     __slots__ = ("ddof",)
-
     ddof: int
 
 
@@ -245,10 +237,8 @@ class RollingOptionsFixedWindow(Immutable):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-core/src/chunked_array/ops/rolling_window.rs#L10-L23."""
 
     __slots__ = ("center", "fn_params", "min_samples", "window_size")
-
     window_size: int
     min_samples: int
     """Renamed from `min_periods`, reuses `window_size` if null."""
-
     center: bool
     fn_params: RollingVarParams | None

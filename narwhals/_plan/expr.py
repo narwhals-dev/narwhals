@@ -86,7 +86,6 @@ def col(name: str, /) -> Column:
 
 class Alias(ExprIR):
     __slots__ = ("expr", "name")
-
     expr: ExprIR
     name: str
 
@@ -114,7 +113,6 @@ class Alias(ExprIR):
 
 class Column(ExprIR):
     __slots__ = ("name",)
-
     name: str
 
     def __repr__(self) -> str:
@@ -139,7 +137,6 @@ class _ColumnSelection(ExprIR):
 
 class Columns(_ColumnSelection):
     __slots__ = ("names",)
-
     names: Seq[str]
 
     def __repr__(self) -> str:
@@ -151,7 +148,6 @@ class Columns(_ColumnSelection):
 
 class Nth(_ColumnSelection):
     __slots__ = ("index",)
-
     index: int
 
     def __repr__(self) -> str:
@@ -167,7 +163,6 @@ class IndexColumns(_ColumnSelection):
     """
 
     __slots__ = ("indices",)
-
     indices: Seq[int]
 
     def __repr__(self) -> str:
@@ -186,7 +181,6 @@ class All(_ColumnSelection):
 
 class Exclude(_ColumnSelection):
     __slots__ = ("expr", "names")
-
     expr: ExprIR
     """Default is `all()`."""
     names: Seq[str]
@@ -226,7 +220,6 @@ class Literal(ExprIR, t.Generic[LiteralT]):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
-
     value: LiteralValue[LiteralT]
 
     @property
@@ -259,7 +252,6 @@ class Literal(ExprIR, t.Generic[LiteralT]):
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     __slots__ = ("left", "op", "right")
-
     left: LeftT
     op: OperatorT
     right: RightT
@@ -310,7 +302,6 @@ class BinaryExpr(
 
 class Cast(ExprIR):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
-
     expr: ExprIR
     dtype: DType
 
@@ -341,7 +332,6 @@ class Cast(ExprIR):
 
 class Sort(ExprIR):
     __slots__ = ("expr", "options")
-
     expr: ExprIR
     options: SortOptions
 
@@ -375,7 +365,6 @@ class SortBy(ExprIR):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
-
     expr: ExprIR
     by: Seq[ExprIR]
     options: SortMultipleOptions
@@ -426,7 +415,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """
 
     __slots__ = ("function", "input", "options")
-
     input: Seq[ExprIR]
     function: FunctionT
     """Operation applied to each element of `input`.
@@ -545,7 +533,6 @@ class RangeExpr(FunctionExpr[RangeT]):
 
 class Filter(ExprIR):
     __slots__ = ("expr", "by")  # noqa: RUF023
-
     expr: ExprIR
     by: ExprIR
 
@@ -590,15 +577,12 @@ class WindowExpr(ExprIR):
     """
 
     __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
-
     expr: ExprIR
     """Renamed from `function`.
 
     For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`.
     """
-
     partition_by: Seq[ExprIR]
-
     options: Window
     """Currently **always** represents over.
 
@@ -645,7 +629,6 @@ class WindowExpr(ExprIR):
 # TODO @dangotbanned: Reduce repetition from `WindowExpr`
 class OrderedWindowExpr(WindowExpr):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
-
     expr: ExprIR
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]
@@ -750,7 +733,6 @@ class RootSelector(SelectorIR):
     """A single selector expression."""
 
     __slots__ = ("selector",)
-
     selector: Selector
     """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
 
@@ -786,7 +768,6 @@ class BinarySelector(
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
-
     selector: SelectorT
     """`(Root|Binary)Selector`."""
 
@@ -804,7 +785,6 @@ class Ternary(ExprIR):
     """When-Then-Otherwise."""
 
     __slots__ = ("predicate", "truthy", "falsy")  # noqa: RUF023
-
     predicate: ExprIR
     truthy: ExprIR
     falsy: ExprIR

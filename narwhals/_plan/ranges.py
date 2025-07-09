@@ -42,7 +42,6 @@ class IntRange(RangeFunction):
     """
 
     __slots__ = ("step", "dtype")  # noqa: RUF023
-
     step: int
     dtype: IntegerType
 

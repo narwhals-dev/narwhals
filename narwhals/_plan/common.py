@@ -363,7 +363,6 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
 class IRNamespace(Immutable):
     __slots__ = ("_ir",)
-
     _ir: ExprIR
 
     @classmethod
@@ -373,7 +372,6 @@ class IRNamespace(Immutable):
 
 class ExprNamespace(Immutable, Generic[IRNamespaceT]):
     __slots__ = ("_expr",)
-
     _expr: DummyExpr
 
     @property

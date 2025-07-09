@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 class When(Immutable):
     __slots__ = ("condition",)
-
     condition: ExprIR
 
     def then(self, expr: IntoExpr, /) -> Then:
@@ -36,7 +35,6 @@ class When(Immutable):
 
 class Then(Immutable, DummyExpr):
     __slots__ = ("condition", "statement")
-
     condition: ExprIR
     statement: ExprIR
 
@@ -70,7 +68,6 @@ class Then(Immutable, DummyExpr):
 
 class ChainedWhen(Immutable):
     __slots__ = ("conditions", "statements")
-
     conditions: Seq[ExprIR]
     statements: Seq[ExprIR]
 
@@ -85,7 +82,6 @@ class ChainedThen(Immutable, DummyExpr):
     """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/arity.rs#L89-L130."""
 
     __slots__ = ("conditions", "statements")
-
     conditions: Seq[ExprIR]
     statements: Seq[ExprIR]
 

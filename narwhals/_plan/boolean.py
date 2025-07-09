@@ -72,17 +72,13 @@ class AnyHorizontal(BooleanFunction):
         )
 
 
-# NOTE: `lower_bound`, `upper_bound` aren't spec'd in the function enum.
 class IsBetween(BooleanFunction):
     """`lower_bound`, `upper_bound` aren't spec'd in the function enum.
-
-    Assuming the `FunctionExpr.input` becomes `s` in the impl
 
     https://github.com/pola-rs/polars/blob/62257860a43ec44a638e8492ed2cf98a49c05f2e/crates/polars-plan/src/dsl/function_expr/boolean.rs#L225-L237
     """
 
     __slots__ = ("closed",)
-
     closed: ClosedInterval
 
     @property
@@ -110,7 +106,6 @@ class IsFirstDistinct(BooleanFunction):
 
 class IsIn(BooleanFunction, t.Generic[OtherT]):
     __slots__ = ("other",)
-
     other: OtherT
 
     @property
