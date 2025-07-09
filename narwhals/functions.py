@@ -18,6 +18,7 @@ from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
+    _get_version,
     deprecate_native_namespace,
     flatten,
     is_compliant_expr,
@@ -570,9 +571,7 @@ def _get_deps_info() -> dict[str, str]:
             continue
 
         try:
-            deps_info[impl.name.lower()] = ".".join(
-                str(t) for t in impl._backend_version()
-            )
+            deps_info[impl.name.lower()] = _get_version(impl)
         except ModuleNotFoundError:
             deps_info[impl.name.lower()] = ""
 
