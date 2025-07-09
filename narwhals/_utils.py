@@ -1579,9 +1579,10 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
+# NOTE: Unsure on how to test this reliably
 def generate_repr_html(
     header: Literal["Narwhals DataFrame", "Narwhals LazyFrame"], native_html: str
-) -> str | None:
+) -> str | None:  # pragma: no cover
     if header == "Narwhals LazyFrame" and "LazyFrame" in native_html:
         html = native_html.replace("LazyFrame", "LazyFrame.to_native()")
         return f"{html}<p><b>{header}</b></p>"
