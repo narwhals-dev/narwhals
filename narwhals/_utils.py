@@ -218,13 +218,13 @@ class Version(Enum):
     @property
     def namespace(self) -> type[Namespace[Any]]:
         if self is Version.V1:
-            from narwhals.stable.v1._namespace import Namespace
+            from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
-            return Namespace
+            return NamespaceV1
         if self is Version.V2:
-            from narwhals.stable.v2._namespace import Namespace
+            from narwhals.stable.v2._namespace import Namespace as NamespaceV2
 
-            return Namespace
+            return NamespaceV2
         from narwhals._namespace import Namespace
 
         return Namespace
@@ -232,11 +232,13 @@ class Version(Enum):
     @property
     def dtypes(self) -> DTypes:
         if self is Version.V1:
-            from narwhals.stable.v1 import dtypes
-            return dtypes
+            from narwhals.stable.v1 import dtypes as dtypes_v1
+
+            return dtypes_v1
         if self is Version.V2:
-            from narwhals.stable.v1 import dtypes
-            return dtypes
+            from narwhals.stable.v2 import dtypes as dtypes_v2
+
+            return dtypes_v2
         from narwhals import dtypes
 
         return dtypes
@@ -244,13 +246,13 @@ class Version(Enum):
     @property
     def dataframe(self) -> type[DataFrame[Any]]:
         if self is Version.V1:
-            from narwhals.stable.v1 import DataFrame
+            from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrame
+            return DataFrameV1
         if self is Version.V2:
-            from narwhals.stable.v2 import DataFrame
+            from narwhals.stable.v2 import DataFrame as DataFrameV2
 
-            return DataFrame
+            return DataFrameV2
         from narwhals.dataframe import DataFrame
 
         return DataFrame
@@ -258,12 +260,15 @@ class Version(Enum):
     @property
     def lazyframe(self) -> type[LazyFrame[Any]]:
         if self is Version.V1:
-            from narwhals.stable.v1 import LazyFrame
-            return LazyFrame
-        elif self is Version.V2:
-            from narwhals.stable.v2 import LazyFrame
-            return LazyFrame
+            from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+            return LazyFrameV1
+        if self is Version.V2:
+            from narwhals.stable.v2 import LazyFrame as LazyFrameV2
+
+            return LazyFrameV2
         from narwhals.dataframe import LazyFrame
+
         return LazyFrame
 
     @property
@@ -273,7 +278,7 @@ class Version(Enum):
 
             return SeriesV1
         if self is Version.V2:
-            from narwhals.stable.v2 import Series as SeriesV1
+            from narwhals.stable.v2 import Series as SeriesV2
 
             return SeriesV2
         from narwhals.series import Series
