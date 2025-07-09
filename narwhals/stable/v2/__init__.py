@@ -10,7 +10,6 @@ from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
-    deprecate_native_namespace,
     find_stacklevel,
     generate_temporary_column_name,
     inherit_doc,
@@ -1177,9 +1176,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.sum_horizontal(*exprs))
 
 
-def all_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
-) -> Expr:
+def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
@@ -1189,7 +1186,7 @@ def all_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `True`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:
@@ -1198,9 +1195,7 @@ def all_horizontal(
     return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
-def any_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
-) -> Expr:
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
@@ -1210,7 +1205,7 @@ def any_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `False`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:
@@ -1371,7 +1366,6 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
 
 
-@deprecate_native_namespace(required=True)
 def new_series(
     name: str,
     values: Any,
@@ -1402,7 +1396,6 @@ def new_series(
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
-@deprecate_native_namespace(required=True)
 def from_arrow(
     native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
 ) -> DataFrame[Any]:
@@ -1426,7 +1419,6 @@ def from_arrow(
     return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
-@deprecate_native_namespace()
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
@@ -1462,7 +1454,6 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
-@deprecate_native_namespace(required=True)
 def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
@@ -1496,7 +1487,6 @@ def from_numpy(
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
-@deprecate_native_namespace(required=True)
 def read_csv(
     source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
@@ -1522,7 +1512,6 @@ def read_csv(
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
-@deprecate_native_namespace(required=True)
 def scan_csv(
     source: str,
     *,
@@ -1554,7 +1543,6 @@ def scan_csv(
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
-@deprecate_native_namespace(required=True)
 def read_parquet(
     source: str,
     *,
@@ -1583,7 +1571,6 @@ def read_parquet(
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
-@deprecate_native_namespace(required=True)
 def scan_parquet(
     source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
