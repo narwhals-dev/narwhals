@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import (
+    cast_for_truediv,
     chunked_array as _chunked_array,
+    floordiv_compat,
     narwhals_to_native_dtype,
 )
+from narwhals._plan import operators as ops
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, into_dtype
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
@@ -45,11 +49,41 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.expr import BinaryExpr
     from narwhals.typing import IntoDType, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
+BinOp: TypeAlias = Callable[..., "ChunkedArrayAny | NativeScalar"]
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+
+
+def truediv_compat(lhs: Any, rhs: Any) -> Any:
+    return pc.divide(*cast_for_truediv(lhs, rhs))
+
+
+def modulus(lhs: Any, rhs: Any) -> Any:
+    floor_div = floordiv_compat(lhs, rhs)
+    return pc.subtract(lhs, pc.multiply(floor_div, rhs))
+
+
+DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
+    ops.Eq: pc.equal,
+    ops.NotEq: pc.not_equal,
+    ops.Lt: pc.less,
+    ops.LtEq: pc.less_equal,
+    ops.Gt: pc.greater,
+    ops.GtEq: pc.greater_equal,
+    ops.Add: pc.add,
+    ops.Sub: pc.subtract,
+    ops.Multiply: pc.multiply,
+    ops.TrueDivide: truediv_compat,
+    ops.FloorDivide: floordiv_compat,
+    ops.Modulus: modulus,
+    ops.And: pc.and_kleene,
+    ops.Or: pc.or_kleene,
+    ops.ExclusiveOr: pc.xor,
+}
 
 
 class ArrowExpr(
@@ -83,15 +117,15 @@ class ArrowExpr(
         return cls.from_series(ArrowSeries.from_native(native, name, version=version))
 
     @overload
-    def _with_native(self, result: ChunkedArrayAny, name: str = ..., /) -> Self: ...
+    def _with_native(self, result: ChunkedArrayAny, name: str, /) -> Self: ...
     @overload
-    def _with_native(self, result: NativeScalar, name: str = ..., /) -> ArrowScalar: ...
+    def _with_native(self, result: NativeScalar, name: str, /) -> ArrowScalar: ...
     @overload
     def _with_native(
-        self, result: ChunkedArrayAny | NativeScalar, name: str = ..., /
+        self, result: ChunkedArrayAny | NativeScalar, name: str, /
     ) -> ArrowScalar | Self: ...
     def _with_native(
-        self, result: ChunkedArrayAny | NativeScalar, name: str = "", /
+        self, result: ChunkedArrayAny | NativeScalar, name: str, /
     ) -> ArrowScalar | Self:
         if isinstance(result, pa.Scalar):
             return ArrowScalar.from_native(result, name, version=self.version)
@@ -153,7 +187,8 @@ class ArrowExpr(
         return self._with_native(
             self._dispatch_expr(node.expr, frame, name).native.filter(
                 self._dispatch_expr(node.by, frame, name).native
-            )
+            ),
+            name,
         )
 
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
@@ -228,6 +263,17 @@ class ArrowExpr(
 
     def min(self, node: Min, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         result: NativeScalar = pc.min(self._dispatch_expr(node.expr, frame, name).native)
+        return self._with_native(result, name)
+
+    def binary_expr(  # type: ignore[override]
+        self, node: BinaryExpr, frame: ArrowDataFrame, name: str
+    ) -> ArrowScalar | Self:
+        lhs, rhs = (
+            self._dispatch(node.left, frame, name),
+            self._dispatch(node.right, frame, name),
+        )
+        fn = DISPATCH_BINARY[node.op.__class__]
+        result = fn(lhs.native, rhs.native)
         return self._with_native(result, name)
 
 

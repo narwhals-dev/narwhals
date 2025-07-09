@@ -137,7 +137,7 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
         cls, native: Any, name: str = "", /, version: Version = Version.MAIN
     ) -> Self: ...
 
-    def _with_native(self, native: Any, name: str = "", /) -> Self:
+    def _with_native(self, native: Any, name: str, /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
     # series & scalar

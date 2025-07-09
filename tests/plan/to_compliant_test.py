@@ -48,9 +48,6 @@ def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
     assert isinstance(compliant_expr, namespace._expr)
 
 
-XFAIL_REQUIRES_BINARY_EXPR = pytest.mark.xfail(
-    reason="Requires `BinaryExpr` implementation.", raises=NotImplementedError
-)
 XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
     reason="Bug in `meta` namespace impl", raises=ComputeError
 )
@@ -72,8 +69,10 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             {"e": [3, 3, 3], "d": [8, 8, 8], "c": [9, 2, 4]},
         ),
         (nwd.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
-        pytest.param(
-            nwd.col("c").filter(a="B"), {"c": [2]}, marks=XFAIL_REQUIRES_BINARY_EXPR
+        (nwd.col("c").filter(a="B"), {"c": [2]}),
+        (
+            [nwd.nth(0, 1).filter(nwd.col("c") >= 4), nwd.col("d").last() - 4],
+            {"a": ["A", "A"], "b": [1, 3], "d": [4, 4]},
         ),
         (nwd.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
         (nwd.lit(1).cast(nw.Float64()).alias("literal_cast"), {"literal_cast": [1.0]}),
