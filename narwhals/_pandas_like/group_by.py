@@ -340,12 +340,23 @@ class PandasLikeGroupBy(
         )
 
     def _apply_aggs(self, exprs: Iterable[PandasLikeExpr]) -> pd.DataFrame:
+        """Stub issue for `include_groups` [pandas-dev/pandas-stubs#1270].
+
+        - [User guide] mentions `include_groups` 4 times without deprecation.
+        - [`DataFrameGroupBy.apply`] doc says the default value of `True` is deprecated since `2.2.0`.
+        - `False` is explicitly the only *non-deprecated* option, but entirely omitted since [pandas-dev/pandas-stubs#1268].
+
+        [pandas-dev/pandas-stubs#1270]: https://github.com/pandas-dev/pandas-stubs/issues/1270
+        [User guide]: https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+        [`DataFrameGroupBy.apply`]: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.core.groupby.DataFrameGroupBy.apply.html
+        [pandas-dev/pandas-stubs#1268]: https://github.com/pandas-dev/pandas-stubs/pull/1268
+        """
         warn_complex_group_by()
         impl = self.compliant._implementation
         func = self._apply_exprs_function(exprs)
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)
+            return apply(func, include_groups=False)  # type: ignore[call-overload]
         else:  # pragma: no cover
             return apply(func)
 
