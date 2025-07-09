@@ -12,6 +12,7 @@ from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
+    DeferredTimeZone,
     F,
     col,
     lit,
@@ -111,8 +112,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                     F(func_name, expr),
                     inputs.partition_by,
                     inputs.order_by,
-                    descending=reverse,
-                    nulls_last=reverse,
+                    descending=[reverse] * len(inputs.order_by),
+                    nulls_last=[reverse] * len(inputs.order_by),
                     rows_start="unbounded preceding",
                     rows_end="current row",
                 )
@@ -563,8 +564,8 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                     F("row_number"),
                     (*inputs.partition_by, expr),
                     inputs.order_by,
-                    descending=True,
-                    nulls_last=True,
+                    descending=[True] * len(inputs.order_by),
+                    nulls_last=[True] * len(inputs.order_by),
                 )
                 == lit(1)
                 for expr in self(df)
@@ -678,11 +679,26 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(expr: Expression) -> Expression:
-            native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return expr.cast(DuckDBPyType(native_dtype))
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            tz = DeferredTimeZone(df.native)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            return [expr.cast(DuckDBPyType(native_dtype)) for expr in self(df)]
 
-        return self._with_elementwise(func)
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            tz = DeferredTimeZone(df.native)
+            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
+            return [
+                expr.cast(DuckDBPyType(native_dtype))
+                for expr in self.window_function(df, inputs)
+            ]
+
+        return self.__class__(
+            func,
+            window_f,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     @requires.backend_version((1, 3))
     def is_unique(self) -> Self:
@@ -715,16 +731,18 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         def _rank(
             expr: Expression,
+            partition_by: Sequence[str | Expression] = (),
+            order_by: Sequence[str | Expression] = (),
             *,
-            descending: bool,
-            partition_by: Sequence[str | Expression],
+            descending: Sequence[bool],
+            nulls_last: Sequence[bool],
         ) -> Expression:
             count_expr = F("count", StarExpression())
             window_kwargs: WindowExpressionKwargs = {
                 "partition_by": partition_by,
-                "order_by": (expr,),
+                "order_by": (expr, *order_by),
                 "descending": descending,
-                "nulls_last": True,
+                "nulls_last": nulls_last,
             }
             count_window_kwargs: WindowExpressionKwargs = {
                 "partition_by": (*partition_by, expr)
@@ -744,14 +762,21 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             return when(expr.isnotnull(), rank_expr)
 
         def _unpartitioned_rank(expr: Expression) -> Expression:
-            return _rank(expr, partition_by=(), descending=descending)
+            return _rank(expr, descending=[descending], nulls_last=[True])
 
         def _partitioned_rank(
             df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
         ) -> Sequence[Expression]:
-            assert not inputs.order_by  # noqa: S101
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
-                _rank(expr, descending=descending, partition_by=inputs.partition_by)
+                _rank(
+                    expr,
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
+                )
                 for expr in self(df)
             ]
 
