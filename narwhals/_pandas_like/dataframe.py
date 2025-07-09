@@ -460,9 +460,11 @@ class PandasLikeDataFrame(
         return self._with_native(df, validate_column_names=False)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        return self._with_native(
-            rename(self.native, columns=mapping, implementation=self._implementation)
-        )
+        if mapping:
+            return self._with_native(
+                rename(self.native, columns=mapping, implementation=self._implementation)
+            )
+        return self._with_native(self.native, validate_column_names=False)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)

@@ -160,11 +160,12 @@ class AggExpr:
         self, group_by: PandasLikeGroupBy, /
     ) -> Iterator[tuple[str, _NamedAgg]]:
         aliases = collect(group_by._aliases_str(self.aliases))
+        output_names = collect(group_by._aliases_str(self.output_names))
         native_agg = self.native_agg()
         if self.is_len() and self.is_anonymous():
             yield aliases[0], (group_by._anonymous_column_name, native_agg)
             return
-        for output_name, alias in zip(self.output_names, aliases):
+        for output_name, alias in zip(output_names, aliases):
             yield alias, (output_name, native_agg)
 
     def _cast_coerced(self, group_by: PandasLikeGroupBy, /) -> Iterator[PandasLikeExpr]:
@@ -251,13 +252,10 @@ class PandasLikeGroupBy(
     ) -> None:
         self._original_columns = tuple(df.columns)
         self._drop_null_keys = drop_null_keys
-        ns = df.__narwhals_namespace__()
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
         self._remap_non_str_columns = _remap_non_str(self)
-        self._compliant_frame = frame.with_columns(
-            *(ns.col(old).alias(new) for old, new in self._remap_non_str_columns.items())
-        )
+        self._compliant_frame = frame.rename(self._remap_non_str_columns)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
         native = self.compliant.native
