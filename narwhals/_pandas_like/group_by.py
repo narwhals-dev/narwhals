@@ -214,7 +214,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
                 )
             # Keep inplace=True to avoid making a redundant copy.
             # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-            result.reset_index(inplace=True)  # noqa: PD002
+            result.reset_index(inplace=True)
             return self.compliant._with_native(
                 select_columns_by_name(result, new_names, implementation)
             ).rename(dict(zip(self._keys, self._output_key_names)))
@@ -261,7 +261,7 @@ class PandasLikeGroupBy(EagerGroupBy["PandasLikeDataFrame", "PandasLikeExpr", st
 
         # Keep inplace=True to avoid making a redundant copy.
         # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_complex.reset_index(inplace=True)  # noqa: PD002
+        result_complex.reset_index(inplace=True)
         return self.compliant._with_native(
             select_columns_by_name(result_complex, new_names, implementation)
         ).rename(dict(zip(self._keys, self._output_key_names)))
