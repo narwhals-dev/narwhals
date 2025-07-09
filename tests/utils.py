@@ -77,6 +77,10 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         hasattr(result, "_compliant_frame")
         and result._compliant_frame._implementation is Implementation.IBIS
     )
+    is_spark_like = (
+        hasattr(result, "_compliant_frame")
+        and result._compliant_frame._implementation.is_spark_like()
+    )
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if is_ibis:
@@ -122,6 +126,17 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = pd.isna(rhs)
             elif type(lhs) is date and type(rhs) is datetime:
                 are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
+            elif (
+                is_spark_like
+                and isinstance(lhs, datetime)
+                and isinstance(rhs, datetime)
+                and rhs.tzinfo is None
+                and lhs.tzinfo
+            ):
+                # PySpark converts timezone-naive to timezone-aware by default in many cases.
+                # For now, we just assert that the local result matches the expected one.
+                # https://github.com/narwhals-dev/narwhals/issues/2793
+                are_equivalent_values = lhs.replace(tzinfo=None) == rhs
             else:
                 are_equivalent_values = lhs == rhs
 

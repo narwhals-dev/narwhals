@@ -72,7 +72,7 @@ class SparkLikeNamespace(
             column = df._F.lit(value)
             if dtype:
                 native_dtype = narwhals_to_native_dtype(
-                    dtype, version=self._version, spark_types=df._native_dtypes
+                    dtype, self._version, df._native_dtypes, df.native.sparkSession
                 )
                 column = column.cast(native_dtype)
 
@@ -235,6 +235,12 @@ class SparkLikeNamespace(
 
     def when(self, predicate: SparkLikeExpr) -> SparkLikeWhen:
         return SparkLikeWhen.from_expr(predicate, context=self)
+
+    def coalesce(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+        def func(cols: Iterable[Column]) -> Column:
+            return self._F.coalesce(*cols)
+
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
