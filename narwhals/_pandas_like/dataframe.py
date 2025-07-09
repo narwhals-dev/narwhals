@@ -459,10 +459,15 @@ class PandasLikeDataFrame(
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=False)
 
-    def rename(self, mapping: Mapping[str, str]) -> Self:
+    def rename(self, mapping: Mapping[str, str], *, copy: bool = False) -> Self:
         if mapping:
             return self._with_native(
-                rename(self.native, columns=mapping, implementation=self._implementation)
+                rename(
+                    self.native,
+                    columns=mapping,
+                    implementation=self._implementation,
+                    copy=copy,
+                )
             )
         return self._with_native(self.native, validate_column_names=False)
 
