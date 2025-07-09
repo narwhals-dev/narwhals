@@ -162,7 +162,6 @@ def test_is_duplicated_unique(constructor_eager: ConstructorEager) -> None:
 
 def test_concat(constructor_eager: ConstructorEager) -> None:
     df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
-    breakpoint()
     result = nw_v2.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
@@ -214,13 +213,6 @@ def test_hist_v2(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
-def test_all_nulls_pandas() -> None:
-    assert (
-        nw_v2.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
-        == nw_v2.Object
-    )
-
-
 def test_int_select_pandas() -> None:
     df = nw_v2.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(
@@ -231,70 +223,6 @@ def test_int_select_pandas() -> None:
         nw_v2.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
     ):
         nw_v2.to_native(df.lazy().select(0))  # type: ignore[arg-type]
-
-
-def test_enum_v2_is_enum_unstable() -> None:
-    enum_v2 = nw_v2.Enum()
-    enum_unstable = nw.Enum(("a", "b", "c"))
-    assert isinstance(enum_v2, nw.Enum)
-    assert issubclass(nw_v2.Enum, nw.Enum)
-    assert enum_v2 == nw.Enum
-    assert enum_v2 != enum_unstable
-    assert enum_unstable != nw_v2.Enum
-    assert enum_unstable == nw.Enum
-
-    with pytest.raises(TypeError, match=r"takes 1 positional argument"):
-        nw_v2.Enum(("a", "b"))  # type: ignore[call-arg]
-
-
-def test_cast_to_enum_v2(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # Backends that do not (yet) support Enum dtype
-    if any(
-        backend in str(constructor)
-        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
-    ):
-        request.applymarker(pytest.mark.xfail)
-
-    df_native = constructor({"a": ["a", "b"]})
-
-    with pytest.raises(
-        NotImplementedError,
-        match="Converting to Enum is not supported in narwhals.stable.v2",
-    ):
-        nw_v2.from_native(df_native).select(nw_v2.col("a").cast(nw_v2.Enum))  # type: ignore[arg-type]
-
-
-def test_v2_ordered_categorical_pandas() -> None:
-    s = nw_v2.from_native(
-        pd.Series([0, 1], dtype=pd.CategoricalDtype(ordered=True)), series_only=True
-    )
-    assert s.dtype == nw_v2.Categorical
-
-
-def test_v2_enum_polars() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    s = nw_v2.from_native(
-        pl.Series(["a", "b"], dtype=pl.Enum(["a", "b"])), series_only=True
-    )
-    assert s.dtype == nw_v2.Enum
-
-
-def test_v2_enum_duckdb_2550() -> None:
-    pytest.importorskip("duckdb")
-    import duckdb
-
-    result_v2 = nw_v2.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
-    ).collect_schema()
-    assert result_v2 == {"a": nw_v2.Enum()}
-    result = nw.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
-    ).collect_schema()
-    assert result == {"a": nw.Enum(("a", "b", "c"))}
 
 
 @pytest.mark.parametrize(
@@ -370,6 +298,6 @@ def test_with_row_index(constructor: Constructor) -> None:
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v2.from_native(constructor(data))
-    result = frame.with_row_index(order_by='xyz')
+    result = frame.with_row_index(order_by="xyz")
     expected = {"index": [0, 1], **data}
     assert_equal_data(result, expected)

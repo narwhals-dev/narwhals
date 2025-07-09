@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 if TYPE_CHECKING:
     import sys
 
-    from narwhals.stable.v1 import DataFrame, LazyFrame
+    from narwhals.stable.v2 import DataFrame, LazyFrame
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import Expr, Series, dtypes
+    from narwhals.stable.v2 import Expr, Series, dtypes
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend

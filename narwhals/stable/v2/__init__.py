@@ -29,8 +29,8 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
-from narwhals.stable.v1 import dependencies, dtypes, selectors
-from narwhals.stable.v1.dtypes import (
+from narwhals.stable.v2 import dependencies, dtypes, selectors
+from narwhals.stable.v2.dtypes import (
     Array,
     Binary,
     Boolean,
@@ -162,8 +162,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def to_dict(
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
-        # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
-        # However the return type actually is `nw.v1.stable.Series`, check `tests/v1_test.py::test_to_dict_as_series`.
+        # Type checkers complain that `nw.Series` is not assignable to `nw.v2.stable.Series`.
+        # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py::test_to_dict_as_series`.
         return super().to_dict(as_series=as_series)  # type: ignore[return-value]
 
     def is_duplicated(self) -> Series[Any]:
@@ -229,10 +229,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         """
         order_by_ = [order_by] if isinstance(order_by, str) else order_by
         return self._with_compliant(
-            self._compliant_frame.with_row_index(
-                name=name,
-                order_by=order_by_,
-            )
+            self._compliant_frame.with_row_index(name=name, order_by=order_by_)
         )
 
 
@@ -275,7 +272,6 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
 
         msg = (
@@ -761,10 +757,10 @@ def from_native(  # noqa: D417
             - `True` or `None` (default): raise an error
             - `False`: pass object through as-is
 
-            *Deprecated* (v1.13.0)
+            *Deprecated* (v2.13.0)
 
             Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
             see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
@@ -868,10 +864,10 @@ def to_native(
             - `True` (default): raise an error
             - `False`: pass object through as-is
 
-            *Deprecated* (v1.13.0)
+            *Deprecated* (v2.13.0)
 
             Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
             see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
 
@@ -924,10 +920,10 @@ def narwhalify(
         func: Function to wrap in a `from_native`-`to_native` block.
         strict: Determine what happens if the object can't be converted to Narwhals
 
-            *Deprecated* (v1.13.0)
+            *Deprecated* (v2.13.0)
 
             Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
+            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
             see [perfect backwards compatibility policy](../backcompat.md/).
 
             - `True` or `None` (default): raise an error
@@ -1381,7 +1377,7 @@ def new_series(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str
+    backend: ModuleType | Implementation | str,
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -1408,9 +1404,7 @@ def new_series(
 
 @deprecate_native_namespace(required=True)
 def from_arrow(
-    native_frame: IntoArrowTable,
-    *,
-    backend: ModuleType | Implementation | str,
+    native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -1504,10 +1498,7 @@ def from_numpy(
 
 @deprecate_native_namespace(required=True)
 def read_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1594,10 +1585,7 @@ def read_parquet(
 
 @deprecate_native_namespace(required=True)
 def scan_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -1659,6 +1647,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "InvalidIntoExprError",
     "LazyFrame",
     "List",
     "Object",
@@ -1684,6 +1673,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "find_stacklevel",
     "from_arrow",
     "from_dict",
     "from_native",
@@ -1691,6 +1681,7 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "get_polars",
     "is_ordered_categorical",
     "len",
     "lit",
