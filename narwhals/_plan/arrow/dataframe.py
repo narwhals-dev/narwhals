@@ -9,7 +9,8 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
-from narwhals._plan.dummy import DummyCompliantFrame, DummyFrame
+from narwhals._plan.dummy import DummyFrame
+from narwhals._plan.protocols import DummyCompliantFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:

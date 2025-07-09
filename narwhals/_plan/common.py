@@ -18,6 +18,7 @@ from narwhals._plan.typing import (
     Ns,
     Seq,
 )
+from narwhals._utils import _hasattr_static
 from narwhals.dtypes import DType
 from narwhals.utils import Version
 
@@ -28,12 +29,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
-    from narwhals._plan.dummy import (
-        DummyCompliantSeries,
-        DummyExpr,
-        DummySelector,
-        DummySeries,
-    )
+    from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import (
         Agg,
         BinaryExpr,
@@ -44,6 +40,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
+    from narwhals._plan.protocols import DummyCompliantSeries
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
@@ -456,12 +453,18 @@ def is_series(
     return isinstance(obj, DummySeries)
 
 
+def is_compliant_series(
+    obj: DummyCompliantSeries[NativeSeriesT] | Any,
+) -> TypeIs[DummyCompliantSeries[NativeSeriesT]]:
+    return _hasattr_static(obj, "__narwhals_series__")
+
+
 def is_iterable_reject(
     obj: Any,
 ) -> TypeIs[str | bytes | DummySeries | DummyCompliantSeries]:
-    from narwhals._plan.dummy import DummyCompliantSeries, DummySeries
+    from narwhals._plan.dummy import DummySeries
 
-    return isinstance(obj, (str, bytes, DummySeries, DummyCompliantSeries))
+    return isinstance(obj, (str, bytes, DummySeries)) or is_compliant_series(obj)
 
 
 def is_regex_projection(name: str) -> bool:

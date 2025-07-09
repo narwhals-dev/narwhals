@@ -28,15 +28,14 @@ from narwhals._plan.options import (
 from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
-from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version, _hasattr_static
+from narwhals._utils import Version
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
 from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
 
     import pyarrow as pa
     from typing_extensions import Never, Self, TypeAlias
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
+    from narwhals._plan.protocols import DummyCompliantFrame, DummyCompliantSeries
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.strings import ExprStringNamespace
     from narwhals._plan.struct import ExprStructNamespace
@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     )
 
 
-CompliantSeriesT = TypeVar("CompliantSeriesT", bound="DummyCompliantSeries[t.Any]")
 CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT, NativeSeriesT]"
 
 
@@ -899,91 +898,6 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts, schema_frozen))
 
 
-class DummyCompliantFrame(Generic[CompliantSeriesT, NativeFrameT, NativeSeriesT]):
-    _native: NativeFrameT
-    _version: Version
-
-    def __narwhals_namespace__(self) -> t.Any: ...
-
-    @property
-    def native(self) -> NativeFrameT:
-        return self._native
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @property
-    def columns(self) -> list[str]:
-        raise NotImplementedError
-
-    def to_narwhals(self) -> DummyFrame[NativeFrameT, NativeSeriesT]:
-        raise NotImplementedError
-
-    @classmethod
-    def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._version = version
-        return obj
-
-    def _with_native(self, native: NativeFrameT) -> Self:
-        return self.from_native(native, self.version)
-
-    @classmethod
-    def from_series(
-        cls,
-        series: Iterable[CompliantSeriesT] | CompliantSeriesT,
-        *more_series: CompliantSeriesT,
-    ) -> Self:
-        """Return a new DataFrame, horizontally concatenating multiple Series."""
-        raise NotImplementedError
-
-    @classmethod
-    def from_dict(
-        cls,
-        data: Mapping[str, t.Any],
-        /,
-        *,
-        schema: Mapping[str, DType] | Schema | None = None,
-    ) -> Self:
-        raise NotImplementedError
-
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[True]) -> dict[str, CompliantSeriesT]: ...
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
-    @t.overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, CompliantSeriesT] | dict[str, list[t.Any]]: ...
-
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, CompliantSeriesT] | dict[str, list[t.Any]]:
-        raise NotImplementedError
-
-    def __len__(self) -> int:
-        raise NotImplementedError
-
-    @property
-    def schema(self) -> Mapping[str, DType]:
-        raise NotImplementedError
-
-    def _evaluate_irs(
-        self, nodes: Iterable[NamedIR[ExprIR]], /
-    ) -> Iterator[CompliantSeriesT]:
-        raise NotImplementedError
-
-    def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
-        return self.from_series(self._evaluate_irs(irs))
-
-    def sort(
-        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
-    ) -> Self:
-        raise NotImplementedError
-
-
 class DummySeries(Generic[NativeSeriesT]):
     _compliant: DummyCompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
@@ -1032,53 +946,3 @@ class DummySeries(Generic[NativeSeriesT]):
 
 class DummySeriesV1(DummySeries[NativeSeriesT]):
     _version: t.ClassVar[Version] = Version.V1
-
-
-class DummyCompliantSeries(Generic[NativeSeriesT]):
-    _native: NativeSeriesT
-    _name: str
-    _version: Version
-
-    @property
-    def native(self) -> NativeSeriesT:
-        return self._native
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @property
-    def dtype(self) -> DType:
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def to_narwhals(self) -> DummySeries[NativeSeriesT]:
-        return DummySeries[NativeSeriesT]._from_compliant(self)
-
-    @classmethod
-    def from_native(
-        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
-        name = name or (
-            getattr(native, "name", name) if _hasattr_static(native, "name") else name
-        )
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._name = name
-        obj._version = version
-        return obj
-
-    def _with_native(self, native: NativeSeriesT) -> Self:
-        return self.from_native(native, self.name, version=self.version)
-
-    def alias(self, name: str) -> Self:
-        return self.from_native(self.native, name, version=self.version)
-
-    def __len__(self) -> int:
-        return len(self.native)
-
-    def to_list(self) -> list[t.Any]:
-        raise NotImplementedError

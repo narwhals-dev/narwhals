@@ -1,44 +1,49 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan import aggregation as agg, expr
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
+from narwhals._plan.typing import NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version
+from narwhals._utils import Version, _hasattr_static
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.dummy import DummyCompliantFrame, DummySeries
+    from narwhals._plan.dummy import DummyFrame, DummySeries
+    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
+    from narwhals.schema import Schema
     from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
-SeriesT = TypeVar("SeriesT")
-SeriesT_co = TypeVar("SeriesT_co", covariant=True)
-FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any, Any]"
-FrameT = TypeVar("FrameT", bound=FrameAny)
-FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
-FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
+
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
+SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
+FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any, Any]"
+
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
-ScalarT = TypeVar("ScalarT", bound="CompliantScalar[Any, Any]")
-ScalarT_co = TypeVar("ScalarT_co", bound="CompliantScalar[Any, Any]", covariant=True)
-IntoSeriesT_co = TypeVar("IntoSeriesT_co", bound="ExprAny | ScalarAny", covariant=True)
+ScalarT = TypeVar("ScalarT", bound=ScalarAny)
+ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
+SeriesT = TypeVar("SeriesT", bound=SeriesAny)
+SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
+FrameT = TypeVar("FrameT", bound=FrameAny)
+FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
+NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound="EagerExpr[Any, Any]", covariant=True)
 EagerScalarT_co = TypeVar(
     "EagerScalarT_co", bound="EagerScalar[Any, Any]", covariant=True
 )
-
-NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -473,3 +478,129 @@ class EagerNamespace(
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
+
+
+class DummyCompliantFrame(Protocol[SeriesT, NativeFrameT, NativeSeriesT]):
+    _native: NativeFrameT
+    _version: Version
+
+    def __narwhals_namespace__(self) -> Any: ...
+
+    @property
+    def native(self) -> NativeFrameT:
+        return self._native
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @property
+    def columns(self) -> list[str]: ...
+
+    def to_narwhals(self) -> DummyFrame[NativeFrameT, NativeSeriesT]: ...
+
+    @classmethod
+    def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
+    def _with_native(self, native: NativeFrameT) -> Self:
+        return self.from_native(native, self.version)
+
+    @classmethod
+    def from_series(
+        cls, series: Iterable[SeriesT] | SeriesT, *more_series: SeriesT
+    ) -> Self:
+        """Return a new DataFrame, horizontally concatenating multiple Series."""
+        ...
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        schema: Mapping[str, DType] | Schema | None = None,
+    ) -> Self: ...
+
+    @overload
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
+
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
+
+    def __len__(self) -> int: ...
+
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
+
+    def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[SeriesT]: ...
+
+    def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
+        return self.from_series(self._evaluate_irs(irs))
+
+    def sort(
+        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
+    ) -> Self: ...
+
+
+class DummyCompliantSeries(Protocol[NativeSeriesT]):
+    _native: NativeSeriesT
+    _name: str
+    _version: Version
+
+    def __narwhals_series__(self) -> Self:
+        return self
+
+    @property
+    def native(self) -> NativeSeriesT:
+        return self._native
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @property
+    def dtype(self) -> DType: ...
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def to_narwhals(self) -> DummySeries[NativeSeriesT]:
+        from narwhals._plan.dummy import DummySeries
+
+        return DummySeries[NativeSeriesT]._from_compliant(self)
+
+    @classmethod
+    def from_native(
+        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
+    ) -> Self:
+        name = name or (
+            getattr(native, "name", name) if _hasattr_static(native, "name") else name
+        )
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._name = name
+        obj._version = version
+        return obj
+
+    def _with_native(self, native: NativeSeriesT) -> Self:
+        return self.from_native(native, self.name, version=self.version)
+
+    def alias(self, name: str) -> Self:
+        return self.from_native(self.native, name, version=self.version)
+
+    def __len__(self) -> int:
+        return len(self.native)
+
+    def to_list(self) -> list[Any]: ...

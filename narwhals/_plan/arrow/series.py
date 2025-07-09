@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.dummy import DummyCompliantSeries
+from narwhals._plan.protocols import DummyCompliantSeries
 
 if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
