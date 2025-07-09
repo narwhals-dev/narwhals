@@ -4,7 +4,7 @@ import warnings
 from functools import lru_cache
 from itertools import chain
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -255,9 +255,7 @@ class PandasLikeGroupBy(
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
         self._remap_non_str_columns = _remap_non_str(self)
-        self._compliant_frame = cast("PandasLikeDataFrame", frame).rename(
-            self._remap_non_str_columns, copy=True
-        )
+        self._compliant_frame = frame.rename(self._remap_non_str_columns)
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
         native = self.compliant.native

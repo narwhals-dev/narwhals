@@ -182,18 +182,14 @@ def set_index(
 
 
 def rename(
-    obj: NativeNDFrameT,
-    *args: Any,
-    implementation: Implementation,
-    copy: bool = False,
-    **kwargs: Any,
+    obj: NativeNDFrameT, *args: Any, implementation: Implementation, **kwargs: Any
 ) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
         return obj.rename(*args, **kwargs, inplace=False)
-    return obj.rename(*args, **kwargs, copy=copy, inplace=False)
+    return obj.rename(*args, **kwargs, copy=False, inplace=False)
 
 
 @functools.lru_cache(maxsize=16)
