@@ -244,15 +244,7 @@ class DaskExpr(
             return (other.__floordiv__(series)).where(series != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if isinstance(other, type(self)):
-                if len(other_ := other(df)) > 1:  # pragma: no cover
-                    msg = "Expected expression with single output, found multiple"
-                    raise ValueError(msg)
-                other_series = other_[0]
-            else:
-                other_series = other
-
-            return [_rfloordiv(df, series, other_series) for series in self(df)]
+            return [_rfloordiv(df, series, other) for series in self(df)]
 
         return self.__class__(
             func,

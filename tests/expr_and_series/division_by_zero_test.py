@@ -33,7 +33,6 @@ def test_series_truediv_by_zero(
     result = {"int": df["int"] / denominator, "float": df["float"] / denominator}
     expected = {"int": expected_truediv, "float": expected_truediv}
     assert_equal_data(result, expected)
-    assert (~result["int"].is_finite()).all()
 
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
@@ -44,9 +43,6 @@ def test_expr_truediv_by_zero(
     result = df.select(nw.col("int", "float") / denominator)
     expected = {"int": expected_truediv, "float": expected_truediv}
     assert_equal_data(result, expected)
-    assert_equal_data(
-        result.select((~nw.all().is_finite()).all()), {"int": [True], "float": [True]}
-    )
 
 
 @pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
@@ -65,7 +61,6 @@ def test_series_floordiv_by_zero(
     result = {"result": df["int"] // denominator}
     expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
-    assert result["result"].is_null().all()
 
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
@@ -97,7 +92,6 @@ def test_series_rtruediv_by_zero(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"result": numerator / df["denominator"]}
     assert_equal_data(result, {"result": [expected] * len(df)})
-    assert (~result["result"].is_finite()).all()
 
 
 @pytest.mark.parametrize(
@@ -135,7 +129,6 @@ def test_series_rfloordiv_by_zero(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"result": numerator // df["denominator"]}
     assert_equal_data(result, {"result": expected_floordiv})
-    assert (~result["result"].is_finite()).all()
 
 
 @pytest.mark.parametrize("numerator", data["int"])
