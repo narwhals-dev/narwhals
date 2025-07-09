@@ -93,6 +93,7 @@ docs = [
 ]
 dev = [
   "pre-commit",
+  "ruff",
   {include-group = "tests"},
   {include-group = "typing"},
 ]
