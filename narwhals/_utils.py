@@ -1579,7 +1579,12 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
-def generate_repr_html(header: str, native_html: str) -> str | None:
+def generate_repr_html(
+    header: Literal["Narwhals DataFrame", "Narwhals LazyFrame"], native_html: str
+) -> str | None:
+    if header == "Narwhals LazyFrame" and "LazyFrame" in native_html:
+        html = native_html.replace("LazyFrame", "LazyFrame.to_native()")
+        return f"{html}<p><b>{header}</b></p>"
     import io
     import xml.etree.ElementTree as ET
 

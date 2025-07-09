@@ -2241,6 +2241,12 @@ class LazyFrame(BaseFrame[FrameT]):
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
 
+    def _repr_html_(self) -> str | None:  # pragma: no cover
+        native: Any = self.to_native()
+        if _hasattr_static(native, "_repr_html_") and (html := native._repr_html_()):
+            return generate_repr_html("Narwhals LazyFrame", html)
+        return None
+
     @property
     def implementation(self) -> Implementation:
         """Return implementation of native frame.
