@@ -354,7 +354,7 @@ class PandasLikeGroupBy(
         func = self._apply_exprs_function(exprs)
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
+            return apply(func, include_groups=False)
         else:  # pragma: no cover
             return apply(func)
 
@@ -382,8 +382,17 @@ class PandasLikeGroupBy(
                 category=FutureWarning,
             )
             with_native = self.compliant._with_native
-            for key, group in self._grouped:
-                yield (key, with_native(group).simple_select(*self._original_columns))
+            if self._remap_non_str_columns:
+                for key, group in self._grouped:
+                    yield (
+                        key,
+                        with_native(group)
+                        .rename({v: k for k, v in self._remap_non_str_columns.items()})
+                        .simple_select(*self._original_columns),
+                    )
+            else:
+                for key, group in self._grouped:
+                    yield (key, with_native(group).simple_select(*self._original_columns))
 
 
 def has_non_int_nullable_dtype(
