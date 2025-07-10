@@ -12,7 +12,6 @@ import narwhals.stable.v2 as nw_v2
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     ConstructorEager,
     assert_equal_data,
 )
@@ -170,18 +169,3 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result["a"], nw_v2.Series)
-
-
-@pytest.mark.filterwarnings(
-    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
-)
-def test_hist_v2(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        pytest.skip()
-    if "cudf" in str(constructor_eager):
-        pytest.skip()
-    df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
-    result = df["a"].hist(bins=[-1, 1, 2])
-    expected = {"breakpoint": [1, 2], "count": [2, 1]}
-    assert_equal_data(result, expected)
-    assert isinstance(result, nw_v2.DataFrame)
