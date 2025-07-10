@@ -60,7 +60,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
         (nwd.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
         (nwd.lit(1), {"literal": [1]}),
         (nwd.lit(2.0), {"literal": [2.0]}),
-        (nwd.lit(None, nw.String()), {"literal": [None]}),
+        (nwd.lit(None, nw.String), {"literal": [None]}),
         (nwd.col("a", "b").first(), {"a": ["A"], "b": [1]}),
         (nwd.col("d").max(), {"d": [8]}),
         ([nwd.len(), nwd.nth(3).last()], {"len": [3], "d": [8]}),
@@ -75,7 +75,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             {"a": ["A", "A"], "b": [1, 3], "d": [4, 4]},
         ),
         (nwd.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
-        (nwd.lit(1).cast(nw.Float64()).alias("literal_cast"), {"literal_cast": [1.0]}),
+        (nwd.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
         pytest.param(
             nwd.lit(1).cast(nw.Float64()).name.suffix("_cast"),
             {"literal_cast": [1.0]},

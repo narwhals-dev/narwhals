@@ -247,9 +247,12 @@ def test_binary_expr_length_changing_agg() -> None:
     assert _is_expr_ir_binary_expr(a.drop_nulls().min() - b.mode())
     assert _is_expr_ir_binary_expr(a.gather_every(2, 1) / b.drop_nulls().max())
     assert _is_expr_ir_binary_expr(
-        b.gather_every(1, 0) / a.map_batches(lambda x: x, returns_scalar=True)
+        b.gather_every(1, 0)
+        / a.map_batches(lambda x: x, returns_scalar=True, return_dtype=nw.Float64)
     )
-    assert _is_expr_ir_binary_expr(b.unique() * a.map_batches(lambda x: x).first())
+    assert _is_expr_ir_binary_expr(
+        b.unique() * a.map_batches(lambda x: x, return_dtype=nw.Unknown).first()
+    )
 
 
 def test_invalid_binary_expr_shape() -> None:

@@ -298,7 +298,7 @@ def test_replace_selector(
         ),
         (
             (ndcs.numeric() - ndcs.by_dtype(nw.Float32(), nw.Float64()))
-            .cast(nw.Int64())
+            .cast(nw.Int64)
             .mean()
             .name.suffix("_mean"),
             [
@@ -337,18 +337,18 @@ def test_replace_selector(
         ),
         (
             nwd.col("f", "g")
-            .cast(nw.String())
+            .cast(nw.String)
             .str.starts_with("1")
             .all()
             .name.suffix("_all_starts_with_1"),
             [
                 nwd.col("f")
-                .cast(nw.String())
+                .cast(nw.String)
                 .str.starts_with("1")
                 .all()
                 .alias("f_all_starts_with_1"),
                 nwd.col("g")
-                .cast(nw.String())
+                .cast(nw.String)
                 .str.starts_with("1")
                 .all()
                 .alias("g_all_starts_with_1"),

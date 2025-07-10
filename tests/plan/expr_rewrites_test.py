@@ -90,7 +90,7 @@ def named_ir(name: str, expr: DummyExpr | ExprIR, /) -> NamedIR[ExprIR]:
 def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     expected = (
         named_ir("a", nwd.col("a")),
-        named_ir("b", nwd.col("b").cast(nw.String())),
+        named_ir("b", nwd.col("b").cast(nw.String)),
         named_ir("x2", nwd.col("c").max().over("a").fill_null(50)),
         named_ir("d**", ~nwd.col("d").is_duplicated().over("b")),
         named_ir("f_some", nwd.col("f").str.contains("some")),
@@ -102,7 +102,7 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     )
     before = (
         nwd.col("a"),
-        nwd.col("b").cast(nw.String()),
+        nwd.col("b").cast(nw.String),
         (
             _to_window_expr(nwd.col("c").max().alias("x").fill_null(50), "a")
             .to_narwhals()

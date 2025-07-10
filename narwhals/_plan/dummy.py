@@ -15,7 +15,7 @@ from narwhals._plan import (
     functions as F,  # noqa: N812
     operators as ops,
 )
-from narwhals._plan.common import NamedIR, is_column, is_expr, is_series
+from narwhals._plan.common import NamedIR, into_dtype, is_column, is_expr, is_series
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.options import (
     EWMOptions,
@@ -30,7 +30,6 @@ from narwhals._plan.typing import NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
 from narwhals._utils import Version
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
-from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
 
@@ -51,6 +50,7 @@ if TYPE_CHECKING:
     from narwhals._plan.struct import ExprStructNamespace
     from narwhals._plan.temporal import ExprDateTimeNamespace
     from narwhals._plan.typing import ExprT, IntoExpr, IntoExprColumn, Ns, Seq, Udf
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -114,9 +114,8 @@ class DummyExpr:
     def alias(self, name: str) -> Self:
         return self._from_ir(expr.Alias(expr=self._ir, name=name))
 
-    def cast(self, dtype: DType | type[DType]) -> Self:
-        dtype = dtype if isinstance(dtype, DType) else self.version.dtypes.Unknown()
-        return self._from_ir(self._ir.cast(dtype))
+    def cast(self, dtype: IntoDType) -> Self:
+        return self._from_ir(self._ir.cast(into_dtype(dtype)))
 
     def exclude(self, *names: str | t.Iterable[str]) -> Self:
         return self._from_ir(expr.Exclude.from_names(self._ir, *names))
@@ -429,6 +428,8 @@ class DummyExpr:
         else:
             before = tuple(old)
             after = tuple(new)
+        if return_dtype is not None:
+            return_dtype = into_dtype(return_dtype)
         function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
         return self._from_ir(function.to_function_expr(self._ir))
 
@@ -443,6 +444,8 @@ class DummyExpr:
         is_elementwise: bool = False,
         returns_scalar: bool = False,
     ) -> Self:
+        if return_dtype is not None:
+            return_dtype = into_dtype(return_dtype)
         return self._from_ir(
             F.MapBatches(
                 function=function,
