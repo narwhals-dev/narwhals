@@ -46,6 +46,16 @@ EagerScalarT_co = TypeVar(
 )
 
 
+# NOTE: Unlike the version in `nw._utils`, here `.version` it is public
+class StoresVersion(Protocol):
+    _version: Version
+
+    @property
+    def version(self) -> Version:
+        """Narwhals API version (V1 or MAIN)."""
+        return self._version
+
+
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
     """Minimal broadcasting for `Expr` results."""
 
@@ -108,9 +118,10 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         return max_length if required else None
 
 
-class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
-    """Getting a bit tricky, just storing notes.
+class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
+    """Everything common to `Expr`/`Series` and `Scalar` literal values.
 
+    Early notes:
     - Separating series/scalar makes a lot of sense
     - Handling the recursive case *without* intermediate (non-pyarrow) objects seems unachievable
       - Everywhere would need to first check if it a scalar, which isn't ergonomic
@@ -122,12 +133,6 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
 
     _evaluated: Any
     """Compliant or native value."""
-
-    _version: Version
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     @property
     def name(self) -> str: ...
@@ -210,7 +215,7 @@ class CompliantExpr(Protocol[FrameT_contra, SeriesT_co]):
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
 
-class ExprDispatch(Protocol[FrameT_contra, R_co, NamespaceT_co]):
+class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
         expr.Column: lambda self, node, frame, name: self.__narwhals_namespace__().col(
             node, frame, name
@@ -259,7 +264,6 @@ class ExprDispatch(Protocol[FrameT_contra, R_co, NamespaceT_co]):
             node, frame, name
         ),
     }
-    _version: Version
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         if (method := self._DISPATCH.get(node.__class__)) and (
@@ -287,15 +291,10 @@ class CompliantScalar(
     CompliantExpr[FrameT_contra, SeriesT_co], Protocol[FrameT_contra, SeriesT_co]
 ):
     _name: str
-    _version: Version
 
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     @classmethod
     def from_python(
@@ -414,7 +413,9 @@ class LazyScalar(
 ): ...
 
 
-class CompliantNamespace(Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]):
+class CompliantNamespace(
+    StoresVersion, Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]
+):
     """Need to hold `Expr` and `Scalar` types outside of their defs.
 
     Likely, re-wrapping the output types will work like:
@@ -429,8 +430,6 @@ class CompliantNamespace(Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]):
             assert_never(out)
     """
 
-    _version: Version
-
     @property
     def _dataframe(self) -> type[FrameT]: ...
     @property
@@ -439,11 +438,6 @@ class CompliantNamespace(Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]):
     def _expr(self) -> type[ExprT_co]: ...
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
     def col(self, node: expr.Column, frame: FrameT, name: str) -> ExprT_co: ...
     def lit(
         self, node: expr.Literal[Any], frame: FrameT, name: str
@@ -480,19 +474,14 @@ class EagerNamespace(
         )
 
 
-class DummyCompliantFrame(Protocol[SeriesT, NativeFrameT, NativeSeriesT]):
+class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeSeriesT]):
     _native: NativeFrameT
-    _version: Version
 
     def __narwhals_namespace__(self) -> Any: ...
 
     @property
     def native(self) -> NativeFrameT:
         return self._native
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     @property
     def columns(self) -> list[str]: ...
@@ -553,10 +542,9 @@ class DummyCompliantFrame(Protocol[SeriesT, NativeFrameT, NativeSeriesT]):
     ) -> Self: ...
 
 
-class DummyCompliantSeries(Protocol[NativeSeriesT]):
+class DummyCompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     _native: NativeSeriesT
     _name: str
-    _version: Version
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -564,10 +552,6 @@ class DummyCompliantSeries(Protocol[NativeSeriesT]):
     @property
     def native(self) -> NativeSeriesT:
         return self._native
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     @property
     def dtype(self) -> DType: ...

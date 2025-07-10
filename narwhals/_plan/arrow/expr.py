@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Protocol, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -16,6 +16,7 @@ from narwhals._plan import operators as ops
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, into_dtype
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
@@ -56,6 +57,8 @@ NativeScalar: TypeAlias = "pa.Scalar[Any]"
 BinOp: TypeAlias = Callable[..., "ChunkedArrayAny | NativeScalar"]
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+_StoresNativeAny: TypeAlias = _StoresNative[Any]
+_StoresNativeT_co = TypeVar("_StoresNativeT_co", bound=_StoresNativeAny, covariant=True)
 
 
 def truediv_compat(lhs: Any, rhs: Any) -> Any:
@@ -86,18 +89,31 @@ DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
 }
 
 
-class ArrowExpr(
-    ExprDispatch["ArrowDataFrame", "ArrowExpr | ArrowScalar", "ArrowNamespace"],
-    _StoresNative["ChunkedArrayAny"],
-    EagerExpr["ArrowDataFrame", ArrowSeries],
+class _ArrowDispatch(
+    ExprDispatch["ArrowDataFrame", _StoresNativeT_co, "ArrowNamespace"], Protocol
 ):
-    _evaluated: ArrowSeries
-    _version: Version
+    """Common to `Expr`, `Scalar` + their dependencies."""
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(self._version)
+        return ArrowNamespace(self.version)
+
+    def _with_native(self, native: Any, name: str, /) -> _StoresNativeT_co: ...
+    def cast(
+        self, node: expr.Cast, frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        data_type = narwhals_to_native_dtype(node.dtype, frame.version)
+        native = self._dispatch(node.expr, frame, name).native
+        return self._with_native(pc.cast(native, data_type), name)
+
+
+class ArrowExpr(  # type: ignore[misc]
+    _ArrowDispatch["ArrowExpr | ArrowScalar"],
+    _StoresNative["ChunkedArrayAny"],
+    EagerExpr["ArrowDataFrame", ArrowSeries],
+):
+    _evaluated: ArrowSeries
 
     @property
     def name(self) -> str:
@@ -129,7 +145,7 @@ class ArrowExpr(
     ) -> ArrowScalar | Self:
         if isinstance(result, pa.Scalar):
             return ArrowScalar.from_native(result, name, version=self.version)
-        return super()._with_native(result, name)
+        return self.from_native(result, name or self.name, self.version)
 
     def _dispatch_expr(
         self, node: ExprIR, frame: ArrowDataFrame, name: str
@@ -158,13 +174,6 @@ class ArrowExpr(
 
     def __len__(self) -> int:
         return len(self._evaluated)
-
-    def cast(  # type: ignore[override]
-        self, node: expr.Cast, frame: ArrowDataFrame, name: str
-    ) -> ArrowScalar | Self:
-        data_type = narwhals_to_native_dtype(node.dtype, frame.version)
-        native = self._dispatch(node.expr, frame, name).native
-        return self._with_native(pc.cast(native, data_type), name)
 
     def sort(self, node: expr.Sort, frame: ArrowDataFrame, name: str) -> ArrowExpr:
         native = self._dispatch_expr(node.expr, frame, name).native
@@ -304,22 +313,11 @@ def chunked_array(
 
 
 class ArrowScalar(
-    ExprDispatch["ArrowDataFrame", "ArrowScalar", "ArrowNamespace"],
+    _ArrowDispatch["ArrowScalar"],
     _StoresNative[NativeScalar],
     EagerScalar["ArrowDataFrame", ArrowSeries],
 ):
-    _name: str
     _evaluated: NativeScalar
-    _version: Version
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
-
-    @property
-    def name(self) -> str:
-        return self._name
 
     @classmethod
     def from_native(
@@ -370,6 +368,9 @@ class ArrowScalar(
         msg = f"Expected unreachable, but hit at: {node!r}"
         raise InvalidOperationError(msg)
 
+    def _with_native(self, native: Any, name: str, /) -> Self:
+        return self.from_native(native, name or self.name, self.version)
+
     @property
     def native(self) -> NativeScalar:
         return self._evaluated
@@ -387,11 +388,6 @@ class ArrowScalar(
             pa_repeat: Incomplete = pa.repeat
             chunked = chunked_array(pa_repeat(scalar, length))
         return ArrowSeries.from_native(chunked, self.name, version=self.version)
-
-    def cast(self, node: expr.Cast, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        data_type = narwhals_to_native_dtype(node.dtype, frame.version)
-        native = self._dispatch(node.expr, frame, name).native
-        return self._with_native(pc.cast(native, data_type), name)
 
     def arg_min(self, node: ArgMin, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         return self._with_native(pa.scalar(0), name)
