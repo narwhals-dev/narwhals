@@ -71,23 +71,12 @@ def to_native(
     | LazyFrame[IntoFrameT]
     | Series[IntoSeriesT],
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = False,
 ) -> IntoDataFrameT | IntoFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: Determine what happens if `narwhals_object` isn't a Narwhals class
-
-            - `True` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
 
             - `False` (default): raise an error
@@ -96,13 +85,8 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
-    from narwhals._utils import validate_strict_and_pass_though
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
-
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
-    )
 
     if isinstance(narwhals_object, BaseFrame):
         return narwhals_object._compliant_frame._native_frame
