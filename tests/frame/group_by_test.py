@@ -93,6 +93,16 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     assert sorted(keys) == sorted(expected_keys)
 
 
+def test_group_by_iter_non_str_pandas() -> None:
+    expected = {"a": {0: [1], 1: ["a"]}, "b": {0: [2], 1: ["b"]}}
+    df = nw.from_native(pd.DataFrame({0: [1, 2], 1: ["a", "b"]}))
+    groups: dict[Any, Any] = {keys[0]: df for keys, df in df.group_by(1)}  # type: ignore[arg-type]
+    assert groups.keys() == {"a", "b"}
+    groups["a"] = groups["a"].to_dict(as_series=False)
+    groups["b"] = groups["b"].to_dict(as_series=False)
+    assert_equal_data(groups, expected)
+
+
 def test_group_by_nw_all(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
     result = df.group_by("a").agg(nw.all().sum()).sort("a")
