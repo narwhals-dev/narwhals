@@ -10,6 +10,7 @@ from narwhals._plan.common import is_expr
 from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 from tests.namespace_test import backends
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -105,7 +106,7 @@ def test_select(
     frame = pa.table(data_small)
     df = DummyFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
-    assert result == expected
+    assert_equal_data(result, expected)
 
 
 if TYPE_CHECKING:
