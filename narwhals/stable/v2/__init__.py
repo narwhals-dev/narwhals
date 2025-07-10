@@ -171,14 +171,6 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def is_unique(self) -> Series[Any]:
         return _stableify(super().is_unique())
 
-    def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new DataFrame.
-        """
-        return self.select(all()._l1_norm())
-
 
 class LazyFrame(NwLazyFrame[IntoFrameT]):
     @inherit_doc(NwLazyFrame)
@@ -194,14 +186,6 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
-
-    def _l1_norm(self) -> Self:
-        """Private, just used to test the stable API.
-
-        Returns:
-            A new lazyframe.
-        """
-        return self.select(all()._l1_norm())
 
     def tail(self, n: int = 5) -> Self:
         r"""Get the last `n` rows.
@@ -285,9 +269,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
 
 
-class Expr(NwExpr):
-    def _l1_norm(self) -> Self:
-        return super()._taxicab_norm()
+class Expr(NwExpr): ...
 
 
 class Schema(NwSchema):
