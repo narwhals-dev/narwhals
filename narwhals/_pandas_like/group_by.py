@@ -354,7 +354,7 @@ class PandasLikeGroupBy(
         func = self._apply_exprs_function(exprs)
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)
+            return apply(func, include_groups=False)  # pyright: ignore[reportCallIssue]
         else:  # pragma: no cover
             return apply(func)
 
