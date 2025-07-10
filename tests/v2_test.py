@@ -60,8 +60,8 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
         mean_h=nw_v2.mean_horizontal("a"),
         len=nw_v2.len(),
         concat_str=nw_v2.concat_str(nw_v2.lit("a"), nw_v2.lit("b")),
-        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True)),  # noqa: FBT003
-        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True)),  # noqa: FBT003
+        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
+        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
         first=nw_v2.nth(0),
         no_first=nw_v2.exclude("a", "c"),
         coalesce=nw_v2.coalesce("c", "a"),
@@ -270,11 +270,8 @@ def test_any_horizontal() -> None:
     df = nw_v2.from_native(
         pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
     )
-    result = df.select(nw_v2.any_horizontal("a", "b"))
-    expected = {"a": [True, True, None]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
+    result = df.select(nw_v2.any_horizontal("a", "b", ignore_nulls=True))
+    expected = {"a": [True, True, False]}
     assert_equal_data(result, expected)
 
 
@@ -286,11 +283,8 @@ def test_all_horizontal() -> None:
     df = nw_v2.from_native(
         pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
     )
-    result = df.select(nw_v2.all_horizontal("a", "b"))
-    expected = {"a": [True, None, False]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
+    result = df.select(nw_v2.all_horizontal("a", "b", ignore_nulls=True))
+    expected = {"a": [True, True, False]}
     assert_equal_data(result, expected)
 
 

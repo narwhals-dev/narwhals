@@ -19,9 +19,10 @@ def remove_docstring_examples(doc: str) -> str:
 
 
 def test_stable_api_completeness() -> None:
+    v1_only = {"get_level"}
     v_1_api = nw_v1.__all__
     main_namespace_api = nw.__all__
-    extra = set(v_1_api).difference(main_namespace_api)
+    extra = set(v_1_api).difference(main_namespace_api).difference(v1_only)
     assert not extra
     missing = set(main_namespace_api).difference(v_1_api).difference({"stable"})
     assert not missing
@@ -32,9 +33,22 @@ def test_stable_api_docstrings() -> None:
     for item in main_namespace_api:
         if (doc := getdoc(getattr(nw, item))) is None:
             continue
-        if item in {"from_native", "narwhalify", "get_level"}:
+        if item in {
+            "from_native",
+            "narwhalify",
+            "get_level",
+            "from_arrow",
+            "from_dict",
+            "from_numpy",
+            "new_series",
+            "read_csv",
+            "read_parquet",
+            "scan_csv",
+            "scan_parquet",
+        }:
             # `eager_or_interchange` param was removed from main namespace,
             # but is still present in v1 docstring.
+            # IO functions (`from_dict`, `read_csv`, ...) used to have a `native_namespace` argument which has been removed.
             continue
         if item == "Enum":
             # In v1 this was Polars-only, after that pandas ordered categoricals

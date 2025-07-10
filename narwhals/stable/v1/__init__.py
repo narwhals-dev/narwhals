@@ -1346,7 +1346,7 @@ def all_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `True`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:
@@ -1367,7 +1367,7 @@ def any_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `False`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:

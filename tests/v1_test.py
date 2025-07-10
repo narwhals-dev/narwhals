@@ -353,8 +353,6 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
-    with pytest.deprecated_call():
-        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -362,38 +360,6 @@ def test_get_level() -> None:
         )
         == "interchange"
     )
-
-
-def test_any_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v1.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v1.any_horizontal("a", "b"))
-    expected = {"a": [True, True, None]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
-    assert_equal_data(result, expected)
-
-
-def test_all_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v1.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v1.all_horizontal("a", "b"))
-    expected = {"a": [True, None, False]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_with_row_index(constructor: Constructor) -> None:

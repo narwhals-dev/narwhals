@@ -63,17 +63,6 @@ def test_from_dict_with_backend_invalid() -> None:
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 
-def test_from_dict_both_backend_and_namespace(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw.get_native_namespace(df)
-    with pytest.raises(ValueError, match="Can't pass both"):
-        nw.from_dict(
-            {"c": [1, 2], "d": [5, 6]},
-            backend="pandas",
-            native_namespace=native_namespace,
-        )
-
-
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Implementation | str
