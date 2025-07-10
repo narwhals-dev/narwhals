@@ -1,8 +1,8 @@
 # Test assorted functions which we overwrite in stable.v1
-
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -29,6 +29,7 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_table,
 )
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -412,3 +413,73 @@ def test_with_row_index(constructor: Constructor) -> None:
 
         expected = {"index": [0, 1], **data}
         assert_equal_data(result, expected)
+
+
+def test_renamed_taxicab_norm(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
+    # We need `narwhals.stable.v1` to stay stable. So, we
+    # make the change in `narwhals`, and then add the new method
+    # to the subclass of `Expr` in `narwhals.stable.v1`.
+    # Here, we check that anyone who wrote code using the old
+    # API will still be able to use it, without the main namespace
+    # getting cluttered by the new name.
+
+    df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    result = df.with_columns(b=nw.col("a")._taxicab_norm())
+    expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
+    assert_equal_data(result, expected)
+
+    with pytest.raises(AttributeError):
+        result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
+
+    df_v1 = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    # The newer `_taxicab_norm` can still work in the old API, no issue.
+    # It's new, so it couldn't be backwards-incompatible.
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._taxicab_norm())
+    expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
+    assert_equal_data(result_v1, expected)
+
+    # The older `_l1_norm` still works in the stable api
+    result_v1 = df_v1.with_columns(b=nw_v1.col("a")._l1_norm())
+    assert_equal_data(result_v1, expected)
+
+
+def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api.
+    def func(df_any: Any) -> Any:
+        df = nw_v1.from_native(df_any)
+        df = df._l1_norm()
+        return df.to_native()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    assert_equal_data(result, expected)
+
+
+def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+    # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
+    # in the main namespace. Here, we check that it's still usable from
+    # the stable api when using `narwhalify`.
+    @nw_v1.narwhalify
+    def func(df: Any) -> Any:
+        return df._l1_norm()
+
+    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    expected = {"a": [15]}
+    assert_equal_data(result, expected)
+
+
+def test_dtypes() -> None:
+    df = nw_v1.from_native(
+        pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
+    )
+    dtype = df.collect_schema()["b"]
+    assert dtype in {nw_v1.Datetime}
+    assert isinstance(dtype, nw_v1.Datetime)
+    dtype = df.collect_schema()["c"]
+    assert dtype in {nw_v1.Duration}
+    assert isinstance(dtype, nw_v1.Duration)
