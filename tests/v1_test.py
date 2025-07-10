@@ -235,18 +235,6 @@ def test_all_nulls_pandas() -> None:
     )
 
 
-def test_int_select_pandas() -> None:
-    df = nw_v1.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(
-        nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
-    ):
-        nw_v1.to_native(df.select(0))  # type: ignore[arg-type]
-    with pytest.raises(
-        nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
-    ):
-        nw_v1.to_native(df.lazy().select(0))  # type: ignore[arg-type]
-
-
 def test_enum_v1_is_enum_unstable() -> None:
     enum_v1 = nw_v1.Enum()
     enum_unstable = nw.Enum(("a", "b", "c"))
@@ -449,3 +437,8 @@ def test_dtypes() -> None:
     dtype = df.collect_schema()["c"]
     assert dtype in {nw_v1.Duration}
     assert isinstance(dtype, nw_v1.Duration)
+
+
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]

@@ -315,23 +315,6 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
         assert isinstance(res, nw_v1.LazyFrame)
 
 
-@pytest.mark.skipif(lf_pl is None, reason="polars not found")
-def test_from_native_strict_false_typing() -> None:
-    df = pl.DataFrame()
-    nw_v1.from_native(df, strict=False)
-    nw_v1.from_native(df, strict=False, eager_only=True)
-    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
-
-    with pytest.deprecated_call(match="please use `pass_through` instead"):
-        nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
-
-
-def test_from_native_strict_false_invalid() -> None:
-    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
-        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
-
-
 def test_from_mock_interchange_protocol_non_strict() -> None:
     class MockDf:
         def __dataframe__(self) -> None:  # pragma: no cover

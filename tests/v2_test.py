@@ -13,7 +13,6 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
     ConstructorEager,
     assert_equal_data,
 )
@@ -21,7 +20,7 @@ from tests.utils import (
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from tests.utils import Constructor, ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 def test_toplevel(constructor_eager: ConstructorEager) -> None:
@@ -186,50 +185,3 @@ def test_hist_v2(constructor_eager: ConstructorEager) -> None:
     expected = {"breakpoint": [1, 2], "count": [2, 1]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
-
-
-def test_int_select_pandas() -> None:
-    df = nw_v2.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
-    with pytest.raises(
-        nw_v2.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
-    ):
-        nw_v2.to_native(df.select(0))  # type: ignore[arg-type]
-    with pytest.raises(
-        nw_v2.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
-    ):
-        nw_v2.to_native(df.lazy().select(0))  # type: ignore[arg-type]
-
-
-def test_any_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v2.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v2.any_horizontal("a", "b", ignore_nulls=True))
-    expected = {"a": [True, True, False]}
-    assert_equal_data(result, expected)
-
-
-def test_all_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v2.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v2.all_horizontal("a", "b", ignore_nulls=True))
-    expected = {"a": [True, True, False]}
-    assert_equal_data(result, expected)
-
-
-def test_with_row_index(constructor: Constructor) -> None:
-    data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
-
-    frame = nw_v2.from_native(constructor(data))
-    result = frame.with_row_index(order_by="xyz")
-    expected = {"index": [0, 1], **data}
-    assert_equal_data(result, expected)

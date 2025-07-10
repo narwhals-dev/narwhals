@@ -182,23 +182,6 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
-    def with_row_index(
-        self, name: str = "index", *, order_by: str | Sequence[str]
-    ) -> Self:
-        """Insert column which enumerates rows.
-
-        Arguments:
-            name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
-
-        Returns:
-            The original object with the column added.
-        """
-        order_by_ = [order_by] if isinstance(order_by, str) else order_by
-        return self._with_compliant(
-            self._compliant_frame.with_row_index(name=name, order_by=order_by_)
-        )
-
 
 class Series(NwSeries[IntoSeriesT]):
     @inherit_doc(NwSeries)
