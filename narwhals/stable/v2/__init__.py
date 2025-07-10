@@ -344,17 +344,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoSeriesT,
     *,
     pass_through: Literal[True],
@@ -362,28 +351,6 @@ def from_native(
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
 
 
 @overload
@@ -428,17 +395,6 @@ def from_native(
     series_only: Literal[True],
     allow_series: None = ...,
 ) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 
 
 # All params passed in as variables
@@ -1012,7 +968,6 @@ def new_series(
     Returns:
         A new Series
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
@@ -1035,7 +990,6 @@ def from_arrow(
     Returns:
         A new DataFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
@@ -1103,7 +1057,6 @@ def from_numpy(
     Returns:
         A new DataFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
@@ -1128,15 +1081,11 @@ def read_csv(
     Returns:
         DataFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
 def scan_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1159,15 +1108,11 @@ def scan_csv(
     Returns:
         LazyFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
 def read_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -1187,7 +1132,6 @@ def read_parquet(
     Returns:
         DataFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
@@ -1229,7 +1173,6 @@ def scan_parquet(
     Returns:
         LazyFrame.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 

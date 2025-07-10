@@ -105,7 +105,7 @@ def test_constructors() -> None:
 
 def test_join(constructor_eager: ConstructorEager) -> None:
     df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.join(df, how="inner", on="a").sort("a")  # type: ignore[arg-type]
+    result = df.join(df, how="inner", on="a").sort("a")
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.LazyFrame)

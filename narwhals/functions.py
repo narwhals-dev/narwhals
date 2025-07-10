@@ -5,7 +5,7 @@ import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -209,7 +209,6 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend)
 
 
@@ -379,7 +378,6 @@ def from_numpy(
         |  e: [[1,3]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
@@ -460,7 +458,6 @@ def from_arrow(
         |  └─────┴─────┘   |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
@@ -586,7 +583,6 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     eager_backend = Implementation.from_backend(backend)
     native_namespace = eager_backend.to_native_namespace()
     native_frame: NativeFrame
@@ -613,10 +609,7 @@ def read_csv(
 
 
 def scan_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -653,7 +646,6 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
@@ -734,7 +726,6 @@ def read_parquet(
         |c: [[0.2,0.1]]    |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame
@@ -827,7 +818,6 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
