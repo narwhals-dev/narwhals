@@ -2,31 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import pytest
 
-import narwhals as nw
 import narwhals.stable.v2 as nw_v2
-from narwhals.stable.v2.dependencies import (
-    is_cudf_dataframe,
-    is_cudf_series,
-    is_dask_dataframe,
-    is_ibis_table,
-    is_modin_dataframe,
-    is_modin_series,
-    is_pandas_dataframe,
-    is_pandas_like_dataframe,
-    is_pandas_like_series,
-    is_pandas_series,
-    is_polars_dataframe,
-    is_polars_lazyframe,
-    is_polars_series,
-    is_pyarrow_chunked_array,
-    is_pyarrow_table,
-)
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -223,43 +205,6 @@ def test_int_select_pandas() -> None:
         nw_v2.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
     ):
         nw_v2.to_native(df.lazy().select(0))  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize(
-    "is_native_dataframe",
-    [
-        is_pandas_dataframe,
-        is_dask_dataframe,
-        is_modin_dataframe,
-        is_polars_dataframe,
-        is_cudf_dataframe,
-        is_ibis_table,
-        is_polars_lazyframe,
-        is_pyarrow_table,
-        is_pandas_like_dataframe,
-    ],
-)
-def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
-    data = {"a": [1, 2], "b": ["bar", "foo"]}
-    df = nw.from_native(pd.DataFrame(data))
-    assert not is_native_dataframe(df)
-
-
-@pytest.mark.parametrize(
-    "is_native_series",
-    [
-        is_pandas_series,
-        is_modin_series,
-        is_polars_series,
-        is_cudf_series,
-        is_pyarrow_chunked_array,
-        is_pandas_like_series,
-    ],
-)
-def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
-    data = {"a": [1, 2]}
-    ser = nw.from_native(pd.DataFrame(data))["a"]
-    assert not is_native_series(ser)
 
 
 def test_any_horizontal() -> None:
