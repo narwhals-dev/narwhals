@@ -134,11 +134,11 @@ def test_horizontal_expressions_empty(constructor: Constructor) -> None:
     with pytest.raises(
         ValueError, match=r"At least one expression must be passed.*all_horizontal"
     ):
-        df.select(nw.all_horizontal())
+        df.select(nw.all_horizontal(ignore_nulls=True))
     with pytest.raises(
         ValueError, match=r"At least one expression must be passed.*any_horizontal"
     ):
-        df.select(nw.any_horizontal())
+        df.select(nw.any_horizontal(ignore_nulls=True))
     with pytest.raises(
         ValueError, match=r"At least one expression must be passed.*mean_horizontal"
     ):
