@@ -613,7 +613,7 @@ def narwhalify(
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
             - `False`: raise an error
-            - `True`: pass object through as-is
+            - `True` (default): pass object through as-is
         eager_only: Whether to only allow eager objects
 
             - `False` (default): don't require `native_object` to be eager

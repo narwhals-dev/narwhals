@@ -21,7 +21,6 @@ from narwhals._utils import (
     maybe_set_index,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.dependencies import get_polars
 from narwhals.dtypes import (
     Array,
     Binary,
@@ -52,13 +51,12 @@ from narwhals.dtypes import (
     UInt128,
     Unknown,
 )
-from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
+from narwhals.typing import IntoDataFrameT, IntoFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -631,8 +629,8 @@ def narwhalify(
         func: Function to wrap in a `from_native`-`to_native` block.
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
-            - `False` (default): raise an error
-            - `True`: pass object through as-is
+            - `False`: raise an error
+            - `True` (default): pass object through as-is
         eager_only: Whether to only allow eager objects
 
             - `False` (default): don't require `native_object` to be eager
@@ -1302,8 +1300,6 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
-    "IntoLazyFrameT",
-    "InvalidIntoExprError",
     "LazyFrame",
     "List",
     "Object",
@@ -1335,7 +1331,6 @@ __all__ = [
     "from_numpy",
     "generate_temporary_column_name",
     "get_native_namespace",
-    "get_polars",
     "is_ordered_categorical",
     "len",
     "lit",
