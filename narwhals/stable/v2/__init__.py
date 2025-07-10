@@ -182,17 +182,6 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
-    def tail(self, n: int = 5) -> Self:
-        r"""Get the last `n` rows.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
-        return super().tail(n)
-
     def with_row_index(
         self, name: str = "index", *, order_by: str | Sequence[str]
     ) -> Self:

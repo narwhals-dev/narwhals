@@ -2655,22 +2655,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().head(n)
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
-        r"""Get the last `n` rows.
-
-        Warning:
-            `LazyFrame.tail` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
-        return super().tail(n)
-
     def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""Remove columns from the LazyFrame.
 
