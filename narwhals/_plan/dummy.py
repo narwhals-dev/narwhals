@@ -538,62 +538,101 @@ class DummyExpr:
         rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
+    def __radd__(self, other: IntoExpr) -> Self:
+        op = ops.Add()
+        lhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+
     def __sub__(self, other: IntoExpr) -> Self:
         op = ops.Sub()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
+    def __rsub__(self, other: IntoExpr) -> Self:
+        op = ops.Sub()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
     def __mul__(self, other: IntoExpr) -> Self:
         op = ops.Multiply()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
+    def __rmul__(self, other: IntoExpr) -> Self:
+        op = ops.Multiply()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
     def __truediv__(self, other: IntoExpr) -> Self:
         op = ops.TrueDivide()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
+    def __rtruediv__(self, other: IntoExpr) -> Self:
+        op = ops.TrueDivide()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
     def __floordiv__(self, other: IntoExpr) -> Self:
         op = ops.FloorDivide()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
+
+    def __rfloordiv__(self, other: IntoExpr) -> Self:
+        op = ops.FloorDivide()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
     def __mod__(self, other: IntoExpr) -> Self:
         op = ops.Modulus()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __and__(self, other: IntoExpr) -> Self:
+    def __rmod__(self, other: IntoExpr) -> Self:
+        op = ops.Modulus()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+
+    def __and__(self, other: IntoExprColumn | int | bool) -> Self:
         op = ops.And()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __rand__(self, other: IntoExpr) -> Self:
-        return (self & other).alias("literal")
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Self:
+        op = ops.And()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
-    def __or__(self, other: IntoExpr) -> Self:
+    def __or__(self, other: IntoExprColumn | int | bool) -> Self:
         op = ops.Or()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __ror__(self, other: IntoExpr) -> Self:
-        return (self | other).alias("literal")
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Self:
+        op = ops.Or()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
 
-    def __xor__(self, other: IntoExpr) -> Self:
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Self:
         op = ops.ExclusiveOr()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
+        rhs = parse.parse_into_expr_ir(other)
         return self._from_ir(op.to_binary_expr(self._ir, rhs))
 
-    def __rxor__(self, other: IntoExpr) -> Self:
-        return (self ^ other).alias("literal")
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self:
+        op = ops.ExclusiveOr()
+        lhs = parse.parse_into_expr_ir(other)
+        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+
+    def __pow__(self, exponent: IntoExprColumn | float) -> Self:
+        exp = parse.parse_into_expr_ir(exponent)
+        return self._from_ir(F.Pow().to_function_expr(self._ir, exp))
+
+    def __rpow__(self, base: IntoExprColumn | float) -> Self:
+        base_ = parse.parse_into_expr_ir(base)
+        return self._from_ir(F.Pow().to_function_expr(base_, self._ir))
 
     def __invert__(self) -> Self:
         return self._from_ir(boolean.Not().to_function_expr(self._ir))
-
-    def __pow__(self, other: IntoExpr) -> Self:
-        exponent = parse.parse_into_expr_ir(other, str_as_lit=True)
-        base = self._ir
-        return self._from_ir(F.Pow().to_function_expr(base, exponent))
 
     @property
     def meta(self) -> IRMetaNamespace:
@@ -679,8 +718,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
     @t.overload
-    def __or__(self, other: IntoExpr) -> DummyExpr: ...
-    def __or__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __or__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __or__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -689,8 +728,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
     @t.overload
-    def __and__(self, other: IntoExpr) -> DummyExpr: ...
-    def __and__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __and__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __and__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if is_column(other) and (name := other.meta.output_name()):
             other = by_name(name)
         if isinstance(other, type(self)):
@@ -711,8 +750,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
     @t.overload
-    def __xor__(self, other: IntoExpr) -> DummyExpr: ...
-    def __xor__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __xor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -738,8 +777,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rand__(self, other: Self) -> Self: ...
     @t.overload
-    def __rand__(self, other: IntoExpr) -> DummyExpr: ...
-    def __rand__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __rand__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) & self
         return self._to_expr().__rand__(other)
@@ -747,8 +786,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __ror__(self, other: Self) -> Self: ...
     @t.overload
-    def __ror__(self, other: IntoExpr) -> DummyExpr: ...
-    def __ror__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __ror__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) | self
         return self._to_expr().__ror__(other)
@@ -756,8 +795,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rxor__(self, other: Self) -> Self: ...
     @t.overload
-    def __rxor__(self, other: IntoExpr) -> DummyExpr: ...
-    def __rxor__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) ^ self
         return self._to_expr().__rxor__(other)

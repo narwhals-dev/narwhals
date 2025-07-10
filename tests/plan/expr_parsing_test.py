@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import operator
 import re
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -14,6 +15,7 @@ from narwhals._plan import (
     boolean,
     expr,
     functions as F,  # noqa: N812
+    operators as ops,
 )
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
@@ -34,7 +36,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OperatorFn, Seq
 
 
 IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
@@ -386,3 +388,68 @@ def test_lit_series_roundtrip() -> None:
     assert isinstance(unwrapped, DummySeries)
     assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
     assert unwrapped.to_list() == data
+
+
+@pytest.mark.parametrize(
+    ("arg_1", "arg_2", "function", "op"),
+    [
+        (nwd.col("a"), 1, operator.eq, ops.Eq),
+        (nwd.col("a"), "b", operator.eq, ops.Eq),
+        (nwd.col("a"), 1, operator.ne, ops.NotEq),
+        (nwd.col("a"), "b", operator.ne, ops.NotEq),
+        (nwd.col("a"), "b", operator.ge, ops.GtEq),
+        (nwd.col("a"), "b", operator.gt, ops.Gt),
+        (nwd.col("a"), "b", operator.le, ops.LtEq),
+        (nwd.col("a"), "b", operator.lt, ops.Lt),
+        ((nwd.col("a") != 1), False, operator.and_, ops.And),
+        ((nwd.col("a") != 1), False, operator.or_, ops.Or),
+        ((nwd.col("a")), True, operator.xor, ops.ExclusiveOr),
+        (nwd.col("a"), 6, operator.add, ops.Add),
+        (nwd.col("a"), 2.1, operator.mul, ops.Multiply),
+        (nwd.col("a"), nwd.col("b"), operator.sub, ops.Sub),
+        (nwd.col("a"), 2, operator.pow, F.Pow),
+        (nwd.col("a"), 2, operator.mod, ops.Modulus),
+        (nwd.col("a"), 2, operator.floordiv, ops.FloorDivide),
+        (nwd.col("a"), 4, operator.truediv, ops.TrueDivide),
+    ],
+)
+def test_operators_left_right(
+    arg_1: IntoExpr,
+    arg_2: IntoExpr,
+    function: OperatorFn,
+    op: type[ops.Operator | Function],
+) -> None:
+    inverse: Mapping[type[ops.Operator], type[ops.Operator]] = {
+        ops.Gt: ops.Lt,
+        ops.Lt: ops.Gt,
+        ops.GtEq: ops.LtEq,
+        ops.LtEq: ops.GtEq,
+    }
+    result_1 = function(arg_1, arg_2)
+    result_2 = function(arg_2, arg_1)
+    assert isinstance(result_1, DummyExpr)
+    assert isinstance(result_2, DummyExpr)
+    ir_1 = result_1._ir
+    ir_2 = result_2._ir
+    if op in {ops.Eq, ops.NotEq}:
+        assert ir_1 == ir_2
+    else:
+        assert ir_1 != ir_2
+    if issubclass(op, ops.Operator):
+        assert isinstance(ir_1, BinaryExpr)
+        assert isinstance(ir_1.op, op)
+        assert isinstance(ir_2, BinaryExpr)
+        op_inverse = inverse.get(op, op)
+        assert isinstance(ir_2.op, op_inverse)
+        if op in {ops.Eq, ops.NotEq, *inverse}:
+            assert ir_1.left == ir_2.left
+            assert ir_1.right == ir_2.right
+        else:
+            assert ir_1.left == ir_2.right
+            assert ir_1.right == ir_2.left
+    else:
+        assert isinstance(ir_1, FunctionExpr)
+        assert isinstance(ir_1.function, op)
+        assert isinstance(ir_2, FunctionExpr)
+        assert isinstance(ir_2.function, op)
+        assert tuple(reversed(ir_2.input)) == ir_1.input
