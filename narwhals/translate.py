@@ -277,8 +277,7 @@ def from_native(
 def from_native(  # noqa: D417
     native_object: IntoLazyFrameT | IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = False,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
@@ -293,19 +292,9 @@ def from_native(  # noqa: D417
             - a Dataframe / Lazyframe / Series supported by Narwhals (pandas, Polars, PyArrow, ...)
             - an object which implements `__narwhals_dataframe__`, `__narwhals_lazyframe__`,
               or `__narwhals_series__`
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
-            - `False` or `None` (default): raise an error
+            - `False` (default): raise an error
             - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects
 
@@ -324,11 +313,6 @@ def from_native(  # noqa: D417
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    from narwhals._utils import validate_strict_and_pass_though
-
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=True
-    )
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
@@ -625,8 +609,7 @@ def _get_native_namespace_single_obj(
 def narwhalify(
     func: Callable[..., Any] | None = None,
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = True,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = True,
@@ -643,19 +626,9 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            *Deprecated* (v1.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
-            - `False` or `None` (default): raise an error
+            - `False`: raise an error
             - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects
 
@@ -688,11 +661,6 @@ def narwhalify(
         ... def agnostic_group_by_sum(df):
         ...     return df.group_by("a").agg(nw.col("b").sum())
     """
-    from narwhals._utils import validate_strict_and_pass_though
-
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, emit_deprecation_warning=True
-    )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)

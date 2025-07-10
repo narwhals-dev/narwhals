@@ -19,7 +19,6 @@ from narwhals._utils import (
     maybe_get_index,
     maybe_reset_index,
     maybe_set_index,
-    validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dependencies import get_polars
@@ -60,7 +59,7 @@ from narwhals.stable.v2.dtypes import (
     Unknown,
 )
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -75,7 +74,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoFrame,
-        IntoLazyFrameT,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -329,199 +327,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT | IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    strict: Literal[False],
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[True],
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-# NOTE: `pl.LazyFrame` originally matched here
-@overload
-def from_native(
-    native_object: IntoFrameT,
-    *,
-    strict: Literal[True] = ...,
-    eager_only: Literal[False] = ...,
-    eager_or_interchange_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoDataFrameT | IntoSeries,
     *,
     pass_through: Literal[True],
@@ -716,8 +521,7 @@ def from_native(
 def from_native(  # noqa: D417
     native_object: IntoFrameT | IntoFrame | IntoSeriesT | IntoSeries | T,
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = False,
     eager_only: bool = False,
     eager_or_interchange_only: bool = False,
     series_only: bool = False,
@@ -733,19 +537,9 @@ def from_native(  # noqa: D417
             - a Dataframe / Lazyframe / Series supported by Narwhals (pandas, Polars, PyArrow, ...)
             - an object which implements `__narwhals_dataframe__`, `__narwhals_lazyframe__`,
               or `__narwhals_series__`
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v2.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
-            - `False` or `None` (default): raise an error
+            - `False` (default): raise an error
             - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects
 
@@ -780,9 +574,6 @@ def from_native(  # noqa: D417
     if isinstance(native_object, Series) and (series_only or allow_series):
         return native_object
 
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
-    )
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
@@ -798,20 +589,6 @@ def from_native(  # noqa: D417
     )
 
 
-@overload
-def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT], *, strict: Literal[True] = ...
-) -> IntoDataFrameT: ...
-@overload
-def to_native(
-    narwhals_object: LazyFrame[IntoFrameT], *, strict: Literal[True] = ...
-) -> IntoFrameT: ...
-@overload
-def to_native(
-    narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] = ...
-) -> IntoSeriesT: ...
-@overload
-def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 @overload
 def to_native(
     narwhals_object: DataFrame[IntoDataFrameT], *, pass_through: Literal[False] = ...
@@ -833,23 +610,12 @@ def to_native(
     | LazyFrame[IntoFrameT]
     | Series[IntoSeriesT],
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = False,
 ) -> IntoFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:
         narwhals_object: Narwhals object.
-        strict: Determine what happens if `narwhals_object` isn't a Narwhals class
-
-            - `True` (default): raise an error
-            - `False`: pass object through as-is
-
-            *Deprecated* (v2.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
 
             - `False` (default): raise an error
@@ -858,13 +624,8 @@ def to_native(
     Returns:
         Object of class that user started with.
     """
-    from narwhals._utils import validate_strict_and_pass_though
     from narwhals.dataframe import BaseFrame
     from narwhals.series import Series
-
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
-    )
 
     if isinstance(narwhals_object, BaseFrame):
         return narwhals_object._compliant_frame._native_frame
@@ -880,8 +641,7 @@ def to_native(
 def narwhalify(
     func: Callable[..., Any] | None = None,
     *,
-    strict: bool | None = None,
-    pass_through: bool | None = None,
+    pass_through: bool = True,
     eager_only: bool = False,
     eager_or_interchange_only: bool = False,
     series_only: bool = False,
@@ -899,19 +659,9 @@ def narwhalify(
 
     Arguments:
         func: Function to wrap in a `from_native`-`to_native` block.
-        strict: Determine what happens if the object can't be converted to Narwhals
-
-            *Deprecated* (v2.13.0)
-
-            Please use `pass_through` instead. Note that `strict` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v2`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
-
-            - `True` or `None` (default): raise an error
-            - `False`: pass object through as-is
         pass_through: Determine what happens if the object can't be converted to Narwhals
 
-            - `False` or `None` (default): raise an error
+            - `False` (default): raise an error
             - `True`: pass object through as-is
         eager_only: Whether to only allow eager objects
 
@@ -939,9 +689,6 @@ def narwhalify(
     Returns:
         Decorated function.
     """
-    pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
-    )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
@@ -1616,6 +1363,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
+    "IntoLazyFrameT",
     "InvalidIntoExprError",
     "LazyFrame",
     "List",
