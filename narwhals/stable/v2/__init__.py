@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
-from warnings import warn
 
 import narwhals as nw
 from narwhals import dependencies, dtypes, exceptions, functions as nw_f, selectors
@@ -10,7 +9,6 @@ from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
-    find_stacklevel,
     generate_temporary_column_name,
     inherit_doc,
     is_ordered_categorical,
@@ -19,6 +17,7 @@ from narwhals._utils import (
     maybe_get_index,
     maybe_reset_index,
     maybe_set_index,
+    not_implemented,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.dtypes import (
@@ -215,25 +214,8 @@ class Series(NwSeries[IntoSeriesT]):
             )
         )
 
-    def hist(
-        self,
-        bins: list[float | int] | None = None,
-        *,
-        bin_count: int | None = None,
-        include_breakpoint: bool = True,
-    ) -> DataFrame[Any]:
-        from narwhals.exceptions import NarwhalsUnstableWarning
-
-        msg = (
-            "`Series.hist` is being called from the stable API although considered "
-            "an unstable feature."
-        )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
-        return _stableify(
-            super().hist(
-                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
-            )
-        )
+    # Too unstable to consider including here.
+    hist = not_implemented()
 
 
 class Expr(NwExpr): ...
