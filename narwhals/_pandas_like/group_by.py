@@ -105,11 +105,12 @@ class AggExpr:
     ) -> pd.DataFrame | pd.Series[Any]:
         """Evaluate the wrapped expression as a group_by operation."""
         result: pd.DataFrame | pd.Series[Any]
+        names = self.output_names
         if self.is_len() and self.is_anonymous():
             result = group_by._grouped.size()
         else:
-            native_agg = self.native_agg()
-            result = native_agg(group_by._grouped[list(self.output_names)])
+            select = names[0] if len(names) == 1 else list(names)
+            result = self.native_agg()(group_by._grouped[select])
         if is_pandas_like_dataframe(result):
             result.columns = list(self.aliases)
         else:
