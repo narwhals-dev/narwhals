@@ -34,6 +34,11 @@ def test_from_dict_schema(backend: Implementation | str) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
+    with pytest.deprecated_call():
+        result = nw.from_dict(
+            {"c": [1, 2], "d": [5, 6]}, native_namespace=backend, schema=schema
+        )  # type: ignore[arg-type]
+        assert result.collect_schema() == schema
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])

@@ -243,7 +243,7 @@ def _new_series_impl(
     raise ValueError(msg)
 
 
-@deprecate_native_namespace()
+@deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
