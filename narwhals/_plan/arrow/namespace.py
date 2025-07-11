@@ -7,8 +7,6 @@ from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan import expr, functions as F  # noqa: N812
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
@@ -95,40 +93,40 @@ class ArrowNamespace(
 
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def all_horizontal(
         self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def min_horizontal(
         self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def concat_str(
         self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
 
     def int_range(
         self, node: RangeExpr[IntRange], frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> ArrowExpr:
         raise NotImplementedError
