@@ -483,3 +483,174 @@ def test_dtypes() -> None:
     dtype = df.collect_schema()["c"]
     assert dtype in {nw_v1.Duration}
     assert isinstance(dtype, nw_v1.Duration)
+
+
+@pytest.mark.parametrize(
+    ("strict", "context"),
+    [
+        (
+            True,
+            pytest.raises(
+                TypeError,
+                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
+            ),
+        ),
+        (False, does_not_raise()),
+    ],
+)
+def test_strict(strict: Any, context: Any) -> None:
+    arr = np.array([1, 2, 3])
+
+    with context:
+        res = nw_v1.from_native(arr, strict=strict)
+        assert isinstance(res, np.ndarray)
+
+
+def test_from_native_strict_false_typing() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame()
+    nw_v1.from_native(df, strict=False)
+    nw_v1.from_native(df, strict=False, eager_only=True)
+    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
+
+    with pytest.deprecated_call(match="please use `pass_through` instead"):
+        nw.from_native(df, strict=False)  # type: ignore[call-overload]
+        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
+
+
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
+
+
+def test_from_mock_interchange_protocol_non_strict() -> None:
+    class MockDf:
+        def __dataframe__(self) -> None:  # pragma: no cover
+            pass
+
+    mockdf = MockDf()
+    result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
+    assert result is mockdf
+
+
+def test_from_native_lazyframe() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    stable_lazy = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    if TYPE_CHECKING:
+        assert_type(stable_lazy, nw_v1.LazyFrame[pl.LazyFrame])
+
+    assert isinstance(stable_lazy, nw_v1.LazyFrame)
+
+
+def test_dataframe_recursive_v1() -> None:
+    """`v1` always returns a `Union` for `DataFrame`."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AttributeError):
+        nw_v1.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        assert_type(
+            nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
+        )
+        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")
+        assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(
+            nw_frame_early_return,
+            "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]",
+        )
+
+
+def test_lazyframe_recursive_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AttributeError):
+        nw_v1.LazyFrame(nw_frame, level="lazy")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.LazyFrame)
+        assert_type(nw_frame, nw_v1.LazyFrame[pl.LazyFrame])
+
+        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")
+        # NOTE: Checking that the type is `LazyFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
+        assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
+
+
+def test_series_recursive_v1() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = nw_v1.from_native(pl_series, series_only=True)
+    with pytest.raises(AttributeError):
+        nw_v1.Series(nw_series, level="full")
+
+    nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, nw_v1.Series[pl.Series])
+
+        nw_series_depth_2 = nw_v1.Series(nw_series, level="full")
+        # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
+        assert_type(nw_series_depth_2, nw_v1.Series[Any])
+        assert_type(nw_series_early_return, nw_v1.Series[pl.Series])
+
+
+def test_from_native_already_nw() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(pl.DataFrame({"a": [1]}))
+    assert isinstance(nw_v1.from_native(df), nw_v1.DataFrame)
+    assert nw_v1.from_native(df) is df
+    lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    assert isinstance(nw_v1.from_native(lf), nw_v1.LazyFrame)
+    assert nw_v1.from_native(lf) is lf
+    s = df["a"]
+    assert isinstance(nw_v1.from_native(s, series_only=True), nw_v1.Series)
+    assert nw_v1.from_native(df) is df
+
+
+def test_from_native_invalid_kwds() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    with pytest.raises(TypeError, match="got an unexpected keyword"):
+        nw_v1.from_native(pl.DataFrame({"a": [1]}), belugas=True)  # type: ignore[arg-type]
+
+
+def test_io(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    csv_filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    parquet_filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    pl.DataFrame({"a": [1]}).write_csv(csv_filepath)
+    pl.DataFrame({"a": [1]}).write_parquet(parquet_filepath)
+    result = nw_v1.read_csv(csv_filepath, backend="polars")
+    assert isinstance(result, nw_v1.DataFrame)
+    result = nw_v1.scan_csv(csv_filepath, backend="polars")
+    assert isinstance(result, nw_v1.LazyFrame)
+    result = nw_v1.read_parquet(parquet_filepath, backend="polars")
+    assert isinstance(result, nw_v1.DataFrame)
+    result = nw_v1.scan_parquet(parquet_filepath, backend="polars")
+    assert isinstance(result, nw_v1.LazyFrame)
