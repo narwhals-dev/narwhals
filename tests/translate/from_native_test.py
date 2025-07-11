@@ -19,7 +19,7 @@ for each attempted `@overload` match.
 
 from __future__ import annotations
 
-# mypy: disallow-any-generics=false, disable-error-code="var-annotated"
+# mypy: disallow-any-generics=false
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
@@ -343,7 +343,7 @@ def test_dataframe_recursive() -> None:
         assert_type(pl_frame, pl.DataFrame)
         assert_type(nw_frame, nw.DataFrame[pl.DataFrame])
 
-        nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")
+        nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
@@ -364,7 +364,7 @@ def test_lazyframe_recursive() -> None:
         assert_type(pl_frame, pl.LazyFrame)
         assert_type(nw_frame, nw.LazyFrame[pl.LazyFrame])
 
-        nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")
+        nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
@@ -386,7 +386,7 @@ def test_series_recursive() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, nw.Series[pl.Series])
 
-        nw_series_depth_2 = nw.Series(nw_series, level="full")
+        nw_series_depth_2 = nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `Series[Unknown]`
         assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])

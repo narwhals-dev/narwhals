@@ -564,7 +564,7 @@ def test_dataframe_recursive_v1() -> None:
         assert_type(
             nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
         )
-        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")
+        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
         assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(
@@ -588,7 +588,7 @@ def test_lazyframe_recursive_v1() -> None:
         assert_type(pl_frame, pl.LazyFrame)
         assert_type(nw_frame, nw_v1.LazyFrame[pl.LazyFrame])
 
-        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")
+        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
@@ -636,7 +636,7 @@ def test_from_native_invalid_kwds() -> None:
     import polars as pl
 
     with pytest.raises(TypeError, match="got an unexpected keyword"):
-        nw_v1.from_native(pl.DataFrame({"a": [1]}), belugas=True)  # type: ignore[arg-type]
+        nw_v1.from_native(pl.DataFrame({"a": [1]}), belugas=True)  # type: ignore[call-overload]
 
 
 def test_io(tmpdir: pytest.TempdirFactory) -> None:
@@ -647,14 +647,14 @@ def test_io(tmpdir: pytest.TempdirFactory) -> None:
     parquet_filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     pl.DataFrame({"a": [1]}).write_csv(csv_filepath)
     pl.DataFrame({"a": [1]}).write_parquet(parquet_filepath)
-    result = nw_v1.read_csv(csv_filepath, backend="polars")
-    assert isinstance(result, nw_v1.DataFrame)
-    result = nw_v1.scan_csv(csv_filepath, backend="polars")
-    assert isinstance(result, nw_v1.LazyFrame)
-    result = nw_v1.read_parquet(parquet_filepath, backend="polars")
-    assert isinstance(result, nw_v1.DataFrame)
-    result = nw_v1.scan_parquet(parquet_filepath, backend="polars")
-    assert isinstance(result, nw_v1.LazyFrame)
+    assert isinstance(nw_v1.read_csv(csv_filepath, backend="polars"), nw_v1.DataFrame)
+    assert isinstance(nw_v1.scan_csv(csv_filepath, backend="polars"), nw_v1.LazyFrame)
+    assert isinstance(
+        nw_v1.read_parquet(parquet_filepath, backend="polars"), nw_v1.DataFrame
+    )
+    assert isinstance(
+        nw_v1.scan_parquet(parquet_filepath, backend="polars"), nw_v1.LazyFrame
+    )
 
 
 def test_narwhalify() -> None:
