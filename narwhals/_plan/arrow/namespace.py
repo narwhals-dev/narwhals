@@ -165,6 +165,6 @@ class ArrowNamespace(
         else:
             msg = (
                 f"All inputs for `int_range()` resolve to int, but got \n"
-                f"{start_!r}\n{start_!r}"
+                f"{start_!r}\n{end_!r}"
             )
             raise InvalidOperationError(msg)
