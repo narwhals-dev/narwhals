@@ -455,7 +455,7 @@ def test_deprecate_native_namespace() -> None:
     ) -> Any:
         return native_namespace
 
-    @deprecate_native_namespace(warn_version="3.0.0")
+    @deprecate_native_namespace()
     def func2(
         arg: str,  # noqa: ARG001
         *,
@@ -477,12 +477,6 @@ def test_deprecate_native_namespace() -> None:
     non_default = cast("ModuleType", "non_default")
 
     assert func1(param, native_namespace=non_default) is None
-    with pytest.warns(
-        DeprecationWarning,
-        match="`native_namespace` is deprecated, please use `backend` instead",
-    ):
-        result = func2(param, native_namespace=pl)
-    assert result is pl
     assert func2(param, backend=pl) is pl
 
     with pytest.raises(ValueError, match=r"`backend` must be specified in `func3`"):

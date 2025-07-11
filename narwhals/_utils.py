@@ -1484,18 +1484,10 @@ def validate_strict_and_pass_though(
     pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
-    emit_deprecation_warning: bool,
 ) -> bool:
     if strict is None and pass_through is None:
         pass_through = pass_through_default
     elif strict is not None and pass_through is None:
-        if emit_deprecation_warning:
-            msg = (
-                "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
-                "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict
     elif strict is None and pass_through is not None:
         pass
@@ -1506,7 +1498,7 @@ def validate_strict_and_pass_though(
 
 
 def deprecate_native_namespace(
-    *, warn_version: str = "", required: bool = False
+    *, required: bool = False
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator to transition from `native_namespace` to `backend` argument.
 
@@ -1524,13 +1516,6 @@ def deprecate_native_namespace(
             backend = kwds.pop("backend", None)
             native_namespace = kwds.pop("native_namespace", None)
             if native_namespace is not None and backend is None:
-                if warn_version:
-                    msg = (
-                        "`native_namespace` is deprecated, please use `backend` instead.\n\n"
-                        "Note: `native_namespace` will remain available in `narwhals.stable.v1`.\n"
-                        "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-                    )
-                    issue_deprecation_warning(msg, _version=warn_version)
                 backend = native_namespace
             elif native_namespace is not None and backend is not None:
                 msg = "Can't pass both `native_namespace` and `backend`"

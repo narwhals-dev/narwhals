@@ -957,7 +957,7 @@ def from_native(  # noqa: D417
         return native_object
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=False
     )
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
@@ -1039,7 +1039,7 @@ def to_native(
     from narwhals.series import Series
 
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=False
     )
 
     if isinstance(narwhals_object, BaseFrame):
@@ -1116,7 +1116,7 @@ def narwhalify(
         Decorated function.
     """
     pass_through = validate_strict_and_pass_though(
-        strict, pass_through, pass_through_default=True, emit_deprecation_warning=False
+        strict, pass_through, pass_through_default=True
     )
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
