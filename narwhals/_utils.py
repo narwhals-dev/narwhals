@@ -1468,7 +1468,7 @@ def find_stacklevel() -> int:
     return n
 
 
-def issue_deprecation_warning(message: str, _version: str) -> None:
+def issue_deprecation_warning(message: str, _version: str) -> None:  # pragma: no cover
     """Issue a deprecation warning.
 
     Arguments:
