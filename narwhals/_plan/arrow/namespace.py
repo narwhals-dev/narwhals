@@ -7,12 +7,18 @@ from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan import expr
+    from narwhals._plan import expr, functions as F  # noqa: N812
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.series import ArrowSeries
+    from narwhals._plan.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.ranges import IntRange
+    from narwhals._plan.strings import ConcatHorizontal
     from narwhals.typing import NonNestedLiteral
 
 
@@ -86,3 +92,43 @@ class ArrowNamespace(
         return self._expr.from_native(
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
+
+    def any_horizontal(
+        self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def all_horizontal(
+        self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def sum_horizontal(
+        self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def min_horizontal(
+        self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def max_horizontal(
+        self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def mean_horizontal(
+        self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def concat_str(
+        self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def int_range(
+        self, node: RangeExpr[IntRange], frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError

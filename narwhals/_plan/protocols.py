@@ -3,7 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan import aggregation as agg, expr
+from narwhals._plan import (  # noqa: N812
+    aggregation as agg,
+    boolean,
+    expr,
+    functions as F,
+    strings,
+)
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
@@ -13,7 +19,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.dummy import DummyFrame, DummySeries
+    from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.ranges import IntRange
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -443,6 +451,28 @@ class CompliantNamespace(
         self, node: expr.Literal[Any], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def len(self, node: expr.Len, frame: FrameT, name: str) -> ScalarT_co: ...
+    def any_horizontal(
+        self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def all_horizontal(
+        self, node: FunctionExpr[boolean.AllHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def sum_horizontal(
+        self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def min_horizontal(
+        self, node: FunctionExpr[F.MinHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def max_horizontal(
+        self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def mean_horizontal(
+        self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def concat_str(
+        self, node: FunctionExpr[strings.ConcatHorizontal], frame: FrameT, name: str
+    ) -> Self: ...
+    def int_range(self, node: RangeExpr[IntRange], frame: FrameT, name: str) -> Self: ...
 
 
 class EagerNamespace(
