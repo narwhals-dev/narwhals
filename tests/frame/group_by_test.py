@@ -337,9 +337,8 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "modin", "cudf")):
+    if any(x in str(constructor) for x in ("dask", "cudf")):
         # bugged in dask https://github.com/dask/dask/issues/11612
-        # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
@@ -351,9 +350,8 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf", "modin")):
+    if any(x in str(constructor) for x in ("dask", "cudf")):
         # bugged in dask https://github.com/dask/dask/issues/11612
-        # and modin lol https://github.com/modin-project/modin/issues/7414
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
@@ -553,11 +551,9 @@ def test_group_by_len_1_column(
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/tests/_plugins/ui/_impl/tables/test_narwhals.py#L1098-L1108
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/marimo/_plugins/ui/_impl/tables/narwhals_table.py#L163-L188
     """
-    if any(x in str(constructor) for x in ("dask", "modin")):
+    if any(x in str(constructor) for x in ("dask",)):
         # `dask`
         #     ValueError: conflicting aggregation functions: [('size', 'a'), ('size', 'a')]
-        # `modin[pyarrow]`
-        #     KeyError: "['size'] not in index"  # noqa: ERA001
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 1, 2, 3, 4]}
     expected = {"a": [1, 2, 3, 4], "len": [2, 2, 1, 1], "len_a": [2, 2, 1, 1]}
@@ -596,10 +592,7 @@ def test_group_by_len_1_column(
     ],
 )
 def test_group_by_no_preserve_dtype(
-    constructor_eager: ConstructorEager,
-    low: NonNestedLiteral,
-    high: NonNestedLiteral,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, low: NonNestedLiteral, high: NonNestedLiteral
 ) -> None:
     """Minimal repro for [`px.sunburst` failure].
 
@@ -625,12 +618,4 @@ def test_group_by_no_preserve_dtype(
     )
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
-
-    request.applymarker(
-        pytest.mark.xfail(
-            any(x in str(constructor_eager) for x in ("modin_pyarrow", "pandas_pyarrow"))
-            and isinstance(low, bool),
-            reason="Unclear why, but `n_unique` returns `[1, 1, 1]`",
-        )
-    )
     assert_equal_data(result, expected)

@@ -438,10 +438,8 @@ class PandasLikeDataFrame(
         )
 
     def with_columns(self, *exprs: PandasLikeExpr) -> Self:
-        if not exprs:
-            return self
         columns = self._evaluate_into_exprs(*exprs)
-        if not columns and len(self) == 0:  # pragma: no cover
+        if not columns and len(self) == 0:
             return self
         name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}
         to_concat = []
@@ -460,11 +458,9 @@ class PandasLikeDataFrame(
         return self._with_native(df, validate_column_names=False)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
-        if mapping:
-            return self._with_native(
-                rename(self.native, columns=mapping, implementation=self._implementation)
-            )
-        return self._with_native(self.native, validate_column_names=False)
+        return self._with_native(
+            rename(self.native, columns=mapping, implementation=self._implementation)
+        )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
