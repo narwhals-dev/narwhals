@@ -27,7 +27,9 @@ class RangeFunction(Function):
 
 
 class IntRange(RangeFunction):
-    """Not implemented yet, but might push forward [#2722].
+    """N-ary (start, end).
+
+    Not implemented yet, but might push forward [#2722].
 
     See [`rust` entrypoint], which is roughly:
 
@@ -48,3 +50,7 @@ class IntRange(RangeFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.row_separable()
+
+    def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        start, end = node.input
+        return start, end

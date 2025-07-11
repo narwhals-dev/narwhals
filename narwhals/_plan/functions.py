@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import AnonymousExpr, RollingExpr
+    from narwhals._plan.expr import AnonymousExpr, FunctionExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals._plan.typing import Seq, Udf
     from narwhals.dtypes import DType
@@ -97,12 +97,18 @@ class Exp(Function):
 
 
 class Pow(Function):
+    """N-ary (base, exponent)."""
+
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
 
     def __repr__(self) -> str:
         return "pow"
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        base, exponent = node.input
+        return base, exponent
 
 
 class Sqrt(Function):
@@ -128,12 +134,18 @@ class Kurtosis(Function):
 
 
 class FillNull(Function):
+    """N-ary (expr, value)."""
+
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
 
     def __repr__(self) -> str:
         return "fill_null"
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
+        expr, value = node.input
+        return expr, value
 
 
 class FillNullWithStrategy(Function):

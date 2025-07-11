@@ -9,9 +9,11 @@ from narwhals._plan.options import FunctionFlags, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
+    from typing_extensions import Self
+
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import DummySeries
-    from narwhals._plan.expr import Literal  # noqa: F401
+    from narwhals._plan.expr import FunctionExpr, Literal  # noqa: F401
     from narwhals._plan.typing import NativeSeriesT, Seq  # noqa: F401
     from narwhals.typing import ClosedInterval
 
@@ -73,10 +75,7 @@ class AnyHorizontal(BooleanFunction):
 
 
 class IsBetween(BooleanFunction):
-    """`lower_bound`, `upper_bound` aren't spec'd in the function enum.
-
-    https://github.com/pola-rs/polars/blob/62257860a43ec44a638e8492ed2cf98a49c05f2e/crates/polars-plan/src/dsl/function_expr/boolean.rs#L225-L237
-    """
+    """N-ary (expr, lower_bound, upper_bound)."""
 
     __slots__ = ("closed",)
     closed: ClosedInterval
@@ -84,6 +83,10 @@ class IsBetween(BooleanFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
+        expr, lower_bound, upper_bound = node.input
+        return expr, lower_bound, upper_bound
 
 
 class IsDuplicated(BooleanFunction):
