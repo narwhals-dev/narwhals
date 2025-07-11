@@ -10,7 +10,7 @@ from narwhals._plan import (  # noqa: N812
     functions as F,
     strings,
 )
-from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
+from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -171,9 +171,6 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     def rolling_expr(
         self, node: expr.RollingExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
-    def function_expr(
-        self, node: expr.FunctionExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
     # series only (section 3)
     def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
     def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
@@ -261,9 +258,15 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         expr.AnonymousExpr: lambda self, node, frame, name: self.map_batches(
             node, frame, name
         ),
-        expr.FunctionExpr: lambda self, node, frame, name: self.function_expr(
+        expr.FunctionExpr: lambda self, node, frame, name: self._dispatch_function(
             node, frame, name
         ),
+        # NOTE: Keeping it simple for now
+        # When adding other `*_range` functions, this should instead map to `range_expr`
+        expr.RangeExpr: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().int_range(node, frame, name),
         expr.OrderedWindowExpr: lambda self, node, frame, name: self.over_ordered(
             node, frame, name
         ),
@@ -272,6 +275,38 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             node, frame, name
         ),
     }
+    _DISPATCH_FUNCTION: ClassVar[
+        Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
+    ] = {
+        boolean.AnyHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().any_horizontal(node, frame, name),
+        boolean.AllHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().all_horizontal(node, frame, name),
+        F.SumHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().sum_horizontal(node, frame, name),
+        F.MinHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().min_horizontal(node, frame, name),
+        F.MaxHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().max_horizontal(node, frame, name),
+        F.MeanHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().mean_horizontal(node, frame, name),
+        strings.ConcatHorizontal: lambda self,
+        node,
+        frame,
+        name: self.__narwhals_namespace__().concat_str(node, frame, name),
+    }
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         if (method := self._DISPATCH.get(node.__class__)) and (
@@ -279,6 +314,17 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         ):
             return result  # type: ignore[no-any-return]
         msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
+        raise NotImplementedError(msg)
+
+    def _dispatch_function(
+        self, node: FunctionExpr, frame: FrameT_contra, name: str
+    ) -> R_co:
+        fn = node.function
+        if (method := self._DISPATCH_FUNCTION.get(fn.__class__)) and (
+            result := method(self, node, frame, name)
+        ):
+            return result  # type: ignore[no-any-return]
+        msg = f"Support for {fn.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
     @classmethod
@@ -412,6 +458,8 @@ class EagerScalar(
 ):
     def __len__(self) -> int:
         return 1
+
+    def to_python(self) -> PythonLiteral: ...
 
 
 class LazyScalar(

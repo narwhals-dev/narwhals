@@ -378,6 +378,9 @@ class ArrowScalar(
     def to_series(self) -> ArrowSeries:
         return self.broadcast(1)
 
+    def to_python(self) -> PythonLiteral:
+        return self.native.as_py()  # type: ignore[no-any-return]
+
     def broadcast(self, length: int) -> ArrowSeries:
         scalar = self.native
         if length == 1:

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
+import pyarrow as pa  # ignore-banned-import
+
+from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
@@ -17,7 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatHorizontal
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import NonNestedLiteral, PythonLiteral
 
 
 class ArrowNamespace(
@@ -129,4 +133,38 @@ class ArrowNamespace(
     def int_range(
         self, node: RangeExpr[IntRange], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr:
-        raise NotImplementedError
+        start_: PythonLiteral
+        end_: PythonLiteral
+        start, end = node.function.unwrap_input(node)
+        step = node.function.step
+        dtype = node.function.dtype
+        if is_literal_scalar(start) and is_literal_scalar(end):
+            start_, end_ = start.unwrap(), end.unwrap()
+        else:
+            scalar_start = self._expr.from_ir(start, frame, "start")
+            scalar_end = self._expr.from_ir(end, frame, "end")
+            if isinstance(scalar_start, self._scalar) and isinstance(
+                scalar_end, self._scalar
+            ):
+                start_, end_ = scalar_start.to_python(), scalar_end.to_python()
+            else:
+                msg = (
+                    f"All inputs for `int_range()` must be scalar or aggregations, but got \n"
+                    f"{scalar_start.native!r}\n{scalar_end.native!r}"
+                )
+                raise InvalidOperationError(msg)
+        if isinstance(start_, int) and isinstance(end_, int):
+            import numpy as np  # ignore-banned-import
+
+            from narwhals._plan.arrow.expr import chunked_array
+
+            pa_dtype = narwhals_to_native_dtype(dtype, self.version)
+            native = chunked_array(pa.array(np.arange(start_, end_, step), pa_dtype))
+            return self._expr.from_native(native, name, self.version)
+
+        else:
+            msg = (
+                f"All inputs for `int_range()` resolve to int, but got \n"
+                f"{start_!r}\n{start_!r}"
+            )
+            raise InvalidOperationError(msg)
