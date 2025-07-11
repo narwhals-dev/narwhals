@@ -809,3 +809,18 @@ def test_narwhalify_backends_cross2() -> None:
         match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
     ):
         func(pl.DataFrame(data), pd.Series(data["a"]))
+
+
+def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
+    )
+
+    result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
+    expected_expr = (2, 1)
+    assert result_expr == expected_expr
+
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
+        df.select(nw.col("a").sample(n=2))
