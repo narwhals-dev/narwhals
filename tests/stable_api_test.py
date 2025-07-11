@@ -30,6 +30,10 @@ def test_stable_api_completeness() -> None:
 def test_stable_api_docstrings() -> None:
     main_namespace_api = nw.__all__
     for item in main_namespace_api:
+        if item in {"from_dict"}:
+            # We keep `native_namespace` around in the main namespace
+            # until at least hierarchical forecast make a release
+            continue
         if (doc := getdoc(getattr(nw, item))) is None:
             continue
         v2_doc = getdoc(getattr(nw_v2, item))
