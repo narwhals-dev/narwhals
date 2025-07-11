@@ -204,7 +204,7 @@ def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
     return isinstance(obj, allowed)
 
 
-def _order_dependent_error(node: agg.OrderableAgg) -> OrderDependentExprError:
+def _order_dependent_error(node: agg.OrderableAggExpr) -> OrderDependentExprError:
     previous = node.expr
     method = repr(node).removeprefix(f"{previous!r}.")
     msg = (
@@ -222,7 +222,7 @@ def _order_dependent_error(node: agg.OrderableAgg) -> OrderDependentExprError:
 def ensure_orderable_rules(*exprs: DummyExpr) -> tuple[DummyExpr, ...]:
     for expr in exprs:
         node = expr._ir
-        if isinstance(node, agg.OrderableAgg):
+        if isinstance(node, agg.OrderableAggExpr):
             previous = node.expr
             if not _is_order_enforcing_previous(previous):
                 raise _order_dependent_error(node)

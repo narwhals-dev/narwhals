@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
 
-    from narwhals._plan.aggregation import Agg
+    from narwhals._plan.aggregation import AggExpr
     from narwhals._plan.common import ExprIR, Function
     from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.operators import Operator
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 
 # TODO @dangotbanned: Use arguments in error message
-def agg_scalar_error(agg: Agg, scalar: ExprIR, /) -> InvalidOperationError:  # noqa: ARG001
+def agg_scalar_error(agg: AggExpr, scalar: ExprIR, /) -> InvalidOperationError:  # noqa: ARG001
     msg = "Can't apply aggregations to scalar-like expressions."
     return InvalidOperationError(msg)
 

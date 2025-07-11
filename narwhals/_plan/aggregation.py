@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
 
 
-class Agg(ExprIR):
+class AggExpr(ExprIR):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -24,7 +24,7 @@ class Agg(ExprIR):
 
     def __repr__(self) -> str:
         tp = type(self)
-        if tp in {Agg, OrderableAgg}:
+        if tp in {AggExpr, OrderableAggExpr}:
             return tp.__name__
         m = {ArgMin: "arg_min", ArgMax: "arg_max", NUnique: "n_unique"}
         name = m.get(tp, tp.__name__.lower())
@@ -56,56 +56,56 @@ class Agg(ExprIR):
         super().__init__(expr=expr, **kwds)  # pyright: ignore[reportCallIssue]
 
 
-class Count(Agg): ...
+class Count(AggExpr): ...
 
 
-class Max(Agg): ...
+class Max(AggExpr): ...
 
 
-class Mean(Agg): ...
+class Mean(AggExpr): ...
 
 
-class Median(Agg): ...
+class Median(AggExpr): ...
 
 
-class Min(Agg): ...
+class Min(AggExpr): ...
 
 
-class NUnique(Agg): ...
+class NUnique(AggExpr): ...
 
 
-class Quantile(Agg):
-    __slots__ = (*Agg.__slots__, "interpolation", "quantile")
+class Quantile(AggExpr):
+    __slots__ = (*AggExpr.__slots__, "interpolation", "quantile")
 
     quantile: float
     interpolation: RollingInterpolationMethod
 
 
-class Std(Agg):
-    __slots__ = (*Agg.__slots__, "ddof")
+class Std(AggExpr):
+    __slots__ = (*AggExpr.__slots__, "ddof")
     ddof: int
 
 
-class Sum(Agg): ...
+class Sum(AggExpr): ...
 
 
-class Var(Agg):
-    __slots__ = (*Agg.__slots__, "ddof")
+class Var(AggExpr):
+    __slots__ = (*AggExpr.__slots__, "ddof")
     ddof: int
 
 
-class OrderableAgg(Agg): ...
+class OrderableAggExpr(AggExpr): ...
 
 
-class First(OrderableAgg):
+class First(OrderableAggExpr):
     """https://github.com/narwhals-dev/narwhals/issues/2526."""
 
 
-class Last(OrderableAgg):
+class Last(OrderableAggExpr):
     """https://github.com/narwhals-dev/narwhals/issues/2526."""
 
 
-class ArgMin(OrderableAgg): ...
+class ArgMin(OrderableAggExpr): ...
 
 
-class ArgMax(OrderableAgg): ...
+class ArgMax(OrderableAggExpr): ...

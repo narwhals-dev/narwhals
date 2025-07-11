@@ -6,7 +6,7 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan.aggregation import Agg, OrderableAgg
+from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import (
     ExprIR,
     SelectorIR,
@@ -49,7 +49,7 @@ if t.TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 __all__ = [
-    "Agg",
+    "AggExpr",
     "Alias",
     "All",
     "AnonymousExpr",
@@ -66,7 +66,7 @@ __all__ = [
     "Len",
     "Literal",
     "Nth",
-    "OrderableAgg",
+    "OrderableAggExpr",
     "RenameAlias",
     "RollingExpr",
     "RootSelector",

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expr
     from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
     from narwhals._plan.expr import (
-        Agg,
+        AggExpr,
         BinaryExpr,
         Cast,
         Column,
@@ -487,14 +487,13 @@ def is_binary_expr(obj: Any) -> TypeIs[BinaryExpr]:
     return isinstance(obj, BinaryExpr)
 
 
-# TODO @dangotbanned: Rename `Agg` -> `AggExpr`
-def is_agg_expr(obj: Any) -> TypeIs[Agg]:
-    from narwhals._plan.expr import Agg
+def is_agg_expr(obj: Any) -> TypeIs[AggExpr]:
+    from narwhals._plan.expr import AggExpr
 
-    return isinstance(obj, Agg)
+    return isinstance(obj, AggExpr)
 
 
-def is_aggregation(obj: Any) -> TypeIs[Agg | FunctionExpr[Any]]:
+def is_aggregation(obj: Any) -> TypeIs[AggExpr | FunctionExpr[Any]]:
     """Superset of `ExprIR.is_scalar`, excludes literals & len."""
     return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar)
 
