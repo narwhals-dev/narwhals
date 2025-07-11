@@ -25,7 +25,6 @@ from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
-import numpy as np
 import pytest
 
 import narwhals as nw
@@ -118,27 +117,6 @@ else:  # pragma: no cover
     pass
 
 all_frames = [*eager_frames, *lazy_frames]
-
-
-@pytest.mark.parametrize(
-    ("strict", "context"),
-    [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
-        (False, does_not_raise()),
-    ],
-)
-def test_strict(strict: Any, context: Any) -> None:
-    arr = np.array([1, 2, 3])
-
-    with context:
-        res = nw_v1.from_native(arr, strict=strict)
-        assert isinstance(res, np.ndarray)
 
 
 @pytest.mark.parametrize("dframe", lazy_frames)

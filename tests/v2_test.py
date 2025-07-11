@@ -169,3 +169,20 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result["a"], nw_v2.Series)
+
+
+def test_new_series_v2(constructor_eager: ConstructorEager) -> None:
+    s = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    result = nw_v2.new_series("b", [4, 1, 2], backend=nw_v2.get_native_namespace(s))
+    expected = {"b": [4, 1, 2]}
+    # all supported libraries auto-infer this to be int64, we can always special-case
+    # something different if necessary
+    assert result.dtype == nw_v2.Int64
+    assert_equal_data(result.to_frame(), expected)
+
+    result = nw_v2.new_series(
+        "b", [4, 1, 2], nw_v2.Int32, backend=nw_v2.get_native_namespace(s)
+    )
+    expected = {"b": [4, 1, 2]}
+    assert result.dtype == nw_v2.Int32
+    assert_equal_data(result.to_frame(), expected)

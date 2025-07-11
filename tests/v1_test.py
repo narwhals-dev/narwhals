@@ -552,3 +552,41 @@ def test_gather_every_dask_v1(n: int, offset: int) -> None:
     result = df_v1.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}
     assert_equal_data(result, expected)
+
+
+def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
+    s = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    result = nw_v1.new_series("b", [4, 1, 2], backend=nw_v1.get_native_namespace(s))
+    expected = {"b": [4, 1, 2]}
+    # all supported libraries auto-infer this to be int64, we can always special-case
+    # something different if necessary
+    assert result.dtype == nw_v1.Int64
+    assert_equal_data(result.to_frame(), expected)
+
+    result = nw_v1.new_series(
+        "b", [4, 1, 2], nw_v1.Int32, backend=nw_v1.get_native_namespace(s)
+    )
+    expected = {"b": [4, 1, 2]}
+    assert result.dtype == nw_v1.Int32
+    assert_equal_data(result.to_frame(), expected)
+
+
+@pytest.mark.parametrize(
+    ("strict", "context"),
+    [
+        (
+            True,
+            pytest.raises(
+                TypeError,
+                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
+            ),
+        ),
+        (False, does_not_raise()),
+    ],
+)
+def test_strict(strict: Any, context: Any) -> None:
+    arr = np.array([1, 2, 3])
+
+    with context:
+        res = nw_v1.from_native(arr, strict=strict)
+        assert isinstance(res, np.ndarray)
