@@ -523,6 +523,9 @@ class RangeExpr(FunctionExpr[RangeT]):
         if len(input) < 2:
             msg = f"Expected at least 2 inputs for `{function!r}()`, but got `{len(input)}`.\n`{input}`"
             raise InvalidOperationError(msg)
+        if not all(e.is_scalar for e in input):
+            msg = f"All inputs for `{function!r}()` must be scalar or aggregations, but got \n`{input}`"
+            raise InvalidOperationError(msg)
         super(ExprIR, self).__init__(
             **dict(input=input, function=function, options=options, **kwds)
         )

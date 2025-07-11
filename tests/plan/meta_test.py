@@ -174,8 +174,8 @@ def test_meta_root_names(
             nwd.int_range(0, 10), pl.int_range(0, 10), "literal", id="IntRange-Literal"
         ),
         pytest.param(
-            nwd.int_range(nwd.col("b"), 10),
-            pl.int_range(pl.col("b"), 10),
+            nwd.int_range(nwd.col("b").first(), 10),
+            pl.int_range(pl.col("b").first(), 10),
             "b",
             id="IntRange-Column",
         ),

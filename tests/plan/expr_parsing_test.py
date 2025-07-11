@@ -165,6 +165,24 @@ def test_invalid_agg_non_elementwise() -> None:
 def test_agg_non_elementwise_range_special() -> None:
     e = nwd.int_range(0, 100)
     assert isinstance(e._ir, RangeExpr)
+    e = nwd.int_range(nwd.len(), dtype=nw.UInt32).alias("index")
+    ir = e._ir
+    assert isinstance(ir, expr.Alias)
+    assert isinstance(ir.expr, RangeExpr)
+    assert isinstance(ir.expr.input[0], expr.Literal)
+    assert isinstance(ir.expr.input[1], expr.Len)
+
+
+def test_invalid_int_range() -> None:
+    pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwd.int_range(nwd.col("a"))
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwd.int_range(nwd.nth(1), 10)
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwd.int_range(0, nwd.col("a").abs())
+    with pytest.raises(InvalidOperationError, match=pattern):
+        nwd.int_range(nwd.col("a") + 1)
 
 
 # NOTE: Non-`polars`` rule
