@@ -18,6 +18,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
+    deprecate_native_namespace,
     flatten,
     is_compliant_expr,
     is_eager_allowed,
@@ -242,11 +243,13 @@ def _new_series_impl(
     raise ValueError(msg)
 
 
+@deprecate_native_namespace()
 def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -270,6 +273,7 @@ def from_dict(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: deprecated, same as `backend`.
 
     Returns:
         A new DataFrame.
