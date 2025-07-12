@@ -11,6 +11,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals.exceptions import InvalidOperationError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -838,3 +839,57 @@ def test_with_version(constructor: Constructor) -> None:
     lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
+
+
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize("offset", [1, 2])
+def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) -> None:
+    data = {"a": list(range(10))}
+    df_v1 = nw_v1.from_native(constructor_eager(data))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+    # Test deprecation for LazyFrame in main namespace
+    lf = nw.from_native(constructor_eager(data)).lazy()
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
+        lf.gather_every(n=n, offset=offset)
+
+
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize("offset", [1, 2])
+def test_gather_every_dask_v1(n: int, offset: int) -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    data = {"a": list(range(10))}
+
+    df_v1 = nw_v1.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+
+def test_unique_series_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 1, 2]}
+    series = nw.from_native(pl.DataFrame(data), eager_only=True)["a"]
+    # this shouldn't warn
+    series.to_frame().select(nw_v1.col("a").unique().sum())
+
+    series = nw_v1.from_native(pl.DataFrame(data), eager_only=True)["a"]
+    with pytest.warns(
+        UserWarning,
+        match="`maintain_order` has no effect and is only kept around for backwards-compatibility.",
+    ):
+        # this warns that maintain_order has no effect
+        series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
+
+
+def test_head_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw_v1.col("a").mean().head()
