@@ -893,3 +893,24 @@ def test_unique_series_v1() -> None:
 def test_head_aggregation() -> None:
     with pytest.raises(InvalidOperationError):
         nw_v1.col("a").mean().head()
+
+
+def test_deprecated_expr_methods() -> None:
+    data = {"a": [0, 0, 2, -1]}
+    df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
+    result = df.select(
+        c=nw_v1.col("a").sort().head(2),
+        d=nw_v1.col("a").sort().tail(2),
+        e=(nw_v1.col("a") == 0).arg_true(),
+        f=nw_v1.col("a").gather_every(2),
+    )
+    expected = {"c": [-1, 0], "d": [0, 2], "e": [0, 1], "f": [0, 2]}
+    assert_equal_data(result, expected)
+
+    with pytest.deprecated_call():
+        df.select(
+            c=nw.col("a").sort().head(2),
+            d=nw.col("a").sort().tail(2),
+            e=(nw.col("a") == 0).arg_true(),
+            f=nw.col("a").gather_every(2),
+        )
