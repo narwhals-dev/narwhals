@@ -23,12 +23,11 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Version
 from tests.utils import Constructor, maybe_get_modin_df
 
@@ -410,9 +409,6 @@ def _iter_roundtrip_cases(iterable: Iterable[Any], **kwds: Any) -> Iterator[Para
 
 
 @pytest.mark.parametrize(
-    "from_native", [nw.from_native, nw_v1.from_native], ids=["MAIN", "V1"]
-)
-@pytest.mark.parametrize(
     ("native", "kwds"),
     list(
         chain(
@@ -421,10 +417,8 @@ def _iter_roundtrip_cases(iterable: Iterable[Any], **kwds: Any) -> Iterator[Para
         )
     ),
 )
-def test_from_native_roundtrip_identity(
-    from_native: Callable[..., Any], native: Any, kwds: dict[str, Any]
-) -> None:
-    nw_wrapped = from_native(native, **kwds)
+def test_from_native_roundtrip_identity(native: Any, kwds: dict[str, Any]) -> None:
+    nw_wrapped = nw.from_native(native, **kwds)
     roundtrip = nw_wrapped.to_native()
     assert roundtrip is native
 
