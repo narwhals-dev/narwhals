@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
 from narwhals._utils import (
     Implementation,
@@ -69,6 +69,8 @@ class Series(Generic[IntoSeriesT]):
             narwhals.new_series(name="price", values=[10.5, 9.4, 1.2], backend="pandas")
             ```
     """
+
+    _accessors: ClassVar[set[str]] = {"cat", "dt", "list", "str", "struct"}
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
