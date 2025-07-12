@@ -12,7 +12,7 @@ from narwhals._arrow.utils import (
     floordiv_compat,
     narwhals_to_native_dtype,
 )
-from narwhals._plan import functions as F, operators as ops  # noqa: N812
+from narwhals._plan import boolean, functions as F, operators as ops  # noqa: N812
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, into_dtype
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.boolean import IsBetween
+    from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull
     from narwhals._plan.expr import BinaryExpr, FunctionExpr
     from narwhals.typing import ClosedInterval, IntoDType, PythonLiteral
 
@@ -72,6 +72,14 @@ def truediv_compat(lhs: Any, rhs: Any) -> Any:
 def modulus(lhs: Any, rhs: Any) -> Any:
     floor_div = floordiv_compat(lhs, rhs)
     return pc.subtract(lhs, pc.multiply(floor_div, rhs))
+
+
+def any_(native: Any) -> pa.BooleanScalar:
+    return pc.any(native, min_count=0)
+
+
+def all_(native: Any) -> pa.BooleanScalar:
+    return pc.all(native, min_count=0)
 
 
 DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
@@ -144,6 +152,47 @@ class _ArrowDispatch(
         fn_lhs, fn_rhs = IS_BETWEEN[node.function.closed]
         result = pc.and_kleene(fn_lhs(native, lower), fn_rhs(native, upper))
         return self._with_native(result, name)
+
+    def _unary_function(
+        self, fn: Callable[[Any], Any], /
+    ) -> Callable[[FunctionExpr[Any], ArrowDataFrame, str], _StoresNativeT_co]:
+        def func(
+            node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
+        ) -> _StoresNativeT_co:
+            native = self._dispatch(node.input[0], frame, name).native
+            return self._with_native(fn(native), name)
+
+        return func
+
+    def not_(
+        self, node: FunctionExpr[boolean.Not], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(pc.invert)(node, frame, name)
+
+    def all(
+        self, node: FunctionExpr[boolean.All], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(all_)(node, frame, name)
+
+    def any(
+        self, node: FunctionExpr[boolean.Any], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(any_)(node, frame, name)
+
+    def is_finite(
+        self, node: FunctionExpr[IsFinite], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(pc.is_finite)(node, frame, name)
+
+    def is_nan(
+        self, node: FunctionExpr[IsNan], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(pc.is_nan)(node, frame, name)
+
+    def is_null(
+        self, node: FunctionExpr[IsNull], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        return self._unary_function(pc.is_null)(node, frame, name)
 
 
 class ArrowExpr(  # type: ignore[misc]

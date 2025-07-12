@@ -144,6 +144,11 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
                 "e_sort_wild": [7, 9, 4],
             },
         ),
+        (nwd.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
+        (
+            [(~nwd.col("e", "d").is_null()).all(), "b"],
+            {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
+        ),
     ],
     ids=_ids_ir,
 )

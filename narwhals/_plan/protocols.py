@@ -156,11 +156,23 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
+    def not_(
+        self, node: FunctionExpr[boolean.Not], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def fill_null(
         self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_between(
         self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_finite(
+        self, node: FunctionExpr[boolean.IsFinite], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_nan(
+        self, node: FunctionExpr[boolean.IsNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_null(
+        self, node: FunctionExpr[boolean.IsNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def binary_expr(
         self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
@@ -224,6 +236,12 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def min(
         self, node: agg.Min, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def all(
+        self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def any(
+        self, node: FunctionExpr[boolean.Any], frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
 
@@ -318,6 +336,14 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         boolean.IsBetween: lambda self, node, frame, name: self.is_between(
             node, frame, name
         ),
+        boolean.IsFinite: lambda self, node, frame, name: self.is_finite(
+            node, frame, name
+        ),
+        boolean.IsNan: lambda self, node, frame, name: self.is_nan(node, frame, name),
+        boolean.IsNull: lambda self, node, frame, name: self.is_null(node, frame, name),
+        boolean.Not: lambda self, node, frame, name: self.not_(node, frame, name),
+        boolean.Any: lambda self, node, frame, name: self.any(node, frame, name),
+        boolean.All: lambda self, node, frame, name: self.all(node, frame, name),
     }
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
