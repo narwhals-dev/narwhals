@@ -8,8 +8,6 @@ if t.TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._compliant import CompliantNamespace as Namespace
-    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, NamedIR, SelectorIR
     from narwhals._plan.dummy import DummyExpr, DummySeries
@@ -78,15 +76,6 @@ LiteralT = TypeVar(
 )
 MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
-
-# NOTE: Shorter aliases of `_compliant.typing`
-# - Aiming to try and preserve the types as much as possible
-# - Recursion between `Expr` and `Frame` is an issue
-Expr: TypeAlias = "CompliantExprAny"
-ExprT = TypeVar("ExprT", bound="Expr")
-Ns: TypeAlias = "Namespace[t.Any, ExprT]"
-"""A `CompliantNamespace`, ignoring the `Frame` type."""
-
 
 T = TypeVar("T")
 

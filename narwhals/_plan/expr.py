@@ -7,24 +7,16 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
-from narwhals._plan.common import (
-    ExprIR,
-    SelectorIR,
-    collect,
-    is_non_nested_literal,
-    is_regex_projection,
-)
+from narwhals._plan.common import ExprIR, SelectorIR, collect, is_regex_projection
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
-    ExprT,
     FunctionT,
     LeftSelectorT,
     LeftT,
     LeftT2,
     LiteralT,
     MapIR,
-    Ns,
     OperatorT,
     RangeT,
     RightSelectorT,
@@ -118,9 +110,6 @@ class Column(ExprIR):
     def __repr__(self) -> str:
         return f"col({self.name!r})"
 
-    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        return plx.col(self.name)
-
     def with_name(self, name: str, /) -> Column:
         return self if name == self.name else col(name)
 
@@ -141,9 +130,6 @@ class Columns(_ColumnSelection):
 
     def __repr__(self) -> str:
         return f"cols({list(self.names)!r})"
-
-    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        return plx.col(*self.names)
 
 
 class Nth(_ColumnSelection):
@@ -236,12 +222,6 @@ class Literal(ExprIR, t.Generic[LiteralT]):
 
     def __repr__(self) -> str:
         return f"lit({self.value!r})"
-
-    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        value = self.unwrap()
-        if is_non_nested_literal(value):
-            return plx.lit(value, self.dtype)
-        raise NotImplementedError(type(self.value))
 
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()

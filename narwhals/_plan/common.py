@@ -9,13 +9,11 @@ from narwhals._plan.typing import (
     DTypeT,
     ExprIRT,
     ExprIRT2,
-    ExprT,
     IRNamespaceT,
     MapIR,
     NamedOrExprIRT,
     NativeSeriesT,
     NonNestedDTypeT,
-    Ns,
     Seq,
 )
 from narwhals._utils import _hasattr_static
@@ -178,9 +176,6 @@ class ExprIR(Immutable):
         if version is Version.MAIN:
             return dummy.DummyExpr._from_ir(self)
         return dummy.DummyExprV1._from_ir(self)
-
-    def to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        raise NotImplementedError
 
     @property
     def is_scalar(self) -> bool:

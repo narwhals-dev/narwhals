@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from narwhals._plan.strings import ExprStringNamespace
     from narwhals._plan.struct import ExprStructNamespace
     from narwhals._plan.temporal import ExprDateTimeNamespace
-    from narwhals._plan.typing import ExprT, IntoExpr, IntoExprColumn, Ns, Seq, Udf
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq, Udf
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -103,9 +103,6 @@ class DummyExpr:
         obj = cls.__new__(cls)
         obj._ir = ir
         return obj
-
-    def _to_compliant(self, plx: Ns[ExprT], /) -> ExprT:
-        return self._ir.to_compliant(plx)
 
     @property
     def version(self) -> Version:

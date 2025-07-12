@@ -8,14 +8,11 @@ import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
 from narwhals.exceptions import ComputeError
-from narwhals.utils import Version
-from tests.namespace_test import backends
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._namespace import BackendName
     from narwhals._plan.dummy import DummyExpr
 
 
@@ -34,25 +31,6 @@ def _ids_ir(expr: DummyExpr | Any) -> str:
     if is_expr(expr):
         return repr(expr._ir)
     return repr(expr)
-
-
-@pytest.mark.parametrize(
-    ("expr"),
-    [
-        nwd.col("a"),
-        nwd.col("a", "b"),
-        nwd.lit(1),
-        nwd.lit(2.0),
-        nwd.lit(None, nw.String()),
-    ],
-    ids=_ids_ir,
-)
-@backends
-def test_to_compliant(backend: BackendName, expr: DummyExpr) -> None:
-    pytest.importorskip(backend)
-    namespace = Version.MAIN.namespace.from_backend(backend).compliant
-    compliant_expr = expr._to_compliant(namespace)
-    assert isinstance(compliant_expr, namespace._expr)
 
 
 XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
