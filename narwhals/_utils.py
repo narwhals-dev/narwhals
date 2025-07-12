@@ -1579,6 +1579,48 @@ def generate_repr(header: str, native_repr: str) -> str:
     )
 
 
+# NOTE: Unsure on how to test this reliably
+def generate_repr_html(
+    header: Literal["Narwhals DataFrame", "Narwhals LazyFrame", "Narwhals Series"],
+    native_html: str,
+) -> str | None:  # pragma: no cover
+    if header == "Narwhals LazyFrame" and "LazyFrame" in native_html:
+        html = native_html.replace("LazyFrame", "LazyFrame.to_native()")
+        return f"{html}<p><b>{header}</b></p>"
+    import io
+    import xml.etree.ElementTree as ET
+
+    style_css = (
+        ".dataframe caption { "
+        "caption-side: bottom; "
+        "text-align: center; "
+        "font-weight: bold; "
+        "padding-top: 8px;"
+        "}"
+    )
+    try:
+        tree = ET.parse(io.StringIO(native_html.replace("<style scoped>", "<style>")))  # noqa: S314
+    except (SyntaxError, TypeError):
+        return None
+    table = tree.find("table")
+    if table is None:
+        return None
+    caption = ET.Element("caption")
+    caption.text = header
+    table.insert(0, caption)
+    style = tree.find("style")
+    if style is not None:
+        text_existing = style.text or ""
+        style.text = f"{text_existing}\n{style_css}"
+    else:
+        style = ET.Element("style")
+        style.text = style_css
+        tree.getroot().insert(0, style)
+    buf = io.BytesIO()
+    tree.write(buf, "utf-8", method="html")
+    return buf.getvalue().decode()
+
+
 def check_columns_exist(
     subset: Collection[str], /, *, available: Collection[str]
 ) -> ColumnNotFoundError | None:
