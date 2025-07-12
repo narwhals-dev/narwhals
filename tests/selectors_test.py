@@ -7,7 +7,7 @@ from typing import Literal
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1.selectors as ncs
+import narwhals.selectors as ncs
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
