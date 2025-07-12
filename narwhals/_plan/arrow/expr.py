@@ -50,11 +50,15 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.boolean import IsBetween
     from narwhals._plan.expr import BinaryExpr, FunctionExpr
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import ClosedInterval, IntoDType, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
 BinOp: TypeAlias = Callable[..., "ChunkedArrayAny | NativeScalar"]
+LogicalOp: TypeAlias = Callable[
+    ..., "pa.ChunkedArray[pa.BooleanScalar] | pa.BooleanScalar"
+]
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 _StoresNativeAny: TypeAlias = _StoresNative[Any]
@@ -88,6 +92,13 @@ DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
     ops.ExclusiveOr: pc.xor,
 }
 
+IS_BETWEEN: Mapping[ClosedInterval, tuple[LogicalOp, LogicalOp]] = {
+    "left": (pc.greater_equal, pc.less),
+    "right": (pc.greater, pc.less_equal),
+    "none": (pc.greater, pc.less),
+    "both": (pc.greater_equal, pc.less_equal),
+}
+
 
 class _ArrowDispatch(
     ExprDispatch["ArrowDataFrame", _StoresNativeT_co, "ArrowNamespace"], Protocol
@@ -114,6 +125,25 @@ class _ArrowDispatch(
         base_ = self._dispatch(base, frame, "base").native
         exponent_ = self._dispatch(exponent, frame, "exponent").native
         return self._with_native(pc.power(base_, exponent_), name)
+
+    def fill_null(
+        self, node: FunctionExpr[F.FillNull], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        expr, value = node.function.unwrap_input(node)
+        native = self._dispatch(expr, frame, name).native
+        value_ = self._dispatch(value, frame, "value").native
+        return self._with_native(pc.fill_null(native, value_), name)
+
+    def is_between(
+        self, node: FunctionExpr[IsBetween], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        expr, lower_bound, upper_bound = node.function.unwrap_input(node)
+        native = self._dispatch(expr, frame, name).native
+        lower = self._dispatch(lower_bound, frame, "lower").native
+        upper = self._dispatch(upper_bound, frame, "upper").native
+        fn_lhs, fn_rhs = IS_BETWEEN[node.function.closed]
+        result = pc.and_kleene(fn_lhs(native, lower), fn_rhs(native, upper))
+        return self._with_native(result, name)
 
 
 class ArrowExpr(  # type: ignore[misc]

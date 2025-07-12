@@ -21,7 +21,13 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def data_small() -> dict[str, Any]:
-    return {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4], "d": [8, 7, 8]}
+    return {
+        "a": ["A", "B", "A"],
+        "b": [1, 2, 3],
+        "c": [9, 2, 4],
+        "d": [8, 7, 8],
+        "e": [None, 9, 7],
+    }
 
 
 def _ids_ir(expr: DummyExpr | Any) -> str:
@@ -98,6 +104,45 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
         (
             [2 ** nwd.col("b"), (nwd.lit(2.0) ** nwd.nth(1)).alias("lit")],
             {"literal": [2, 4, 8], "lit": [2, 4, 8]},
+        ),
+        (
+            [
+                nwd.col("b").is_between(2, 3, "left").alias("left"),
+                nwd.col("b").is_between(2, 3, "right").alias("right"),
+                nwd.col("b").is_between(2, 3, "none").alias("none"),
+                nwd.col("b").is_between(2, 3, "both").alias("both"),
+                nwd.col("c").is_between(
+                    nwd.col("c").mean() - 1, 7 - nwd.col("b"), "both"
+                ),
+                nwd.col("c")
+                .alias("c_right")
+                .is_between(nwd.col("c").mean() - 1, 7 - nwd.col("b"), "right"),
+            ],
+            {
+                "left": [False, True, False],
+                "right": [False, False, True],
+                "none": [False, False, False],
+                "both": [False, True, True],
+                "c": [False, False, True],
+                "c_right": [False, False, False],
+            },
+        ),
+        (
+            [
+                nwd.col("e").fill_null(0).alias("e_0"),
+                nwd.col("e").fill_null(nwd.col("b")).alias("e_b"),
+                nwd.col("e").fill_null(nwd.col("b").last()).alias("e_b_last"),
+                nwd.col("e")
+                .sort(nulls_last=True)
+                .fill_null(nwd.col("d").last() - nwd.col("c"))
+                .alias("e_sort_wild"),
+            ],
+            {
+                "e_0": [0, 9, 7],
+                "e_b": [1, 9, 7],
+                "e_b_last": [3, 9, 7],
+                "e_sort_wild": [7, 9, 4],
+            },
         ),
     ],
     ids=_ids_ir,

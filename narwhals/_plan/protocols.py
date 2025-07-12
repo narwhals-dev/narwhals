@@ -156,6 +156,12 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
+    def fill_null(
+        self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_between(
+        self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
+    ) -> Self: ...
     def binary_expr(
         self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -308,6 +314,10 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         frame,
         name: self.__narwhals_namespace__().concat_str(node, frame, name),
         F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
+        F.FillNull: lambda self, node, frame, name: self.fill_null(node, frame, name),
+        boolean.IsBetween: lambda self, node, frame, name: self.is_between(
+            node, frame, name
+        ),
     }
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
