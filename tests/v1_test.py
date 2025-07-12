@@ -824,3 +824,10 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
         match="is deprecated and will be removed in a future version"
     ):
         df.select(nw.col("a").sample(n=2))
+
+
+def test_is_frame(constructor: Constructor) -> None:
+    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+    assert isinstance(lf, nw_v1.LazyFrame)
+    assert nw_v1.dependencies.is_narwhals_lazyframe(lf)
+    assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
