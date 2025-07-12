@@ -25,7 +25,6 @@ from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
-import numpy as np
 import pytest
 
 import narwhals as nw
@@ -118,27 +117,6 @@ else:  # pragma: no cover
     pass
 
 all_frames = [*eager_frames, *lazy_frames]
-
-
-@pytest.mark.parametrize(
-    ("strict", "context"),
-    [
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
-            ),
-        ),
-        (False, does_not_raise()),
-    ],
-)
-def test_strict(strict: Any, context: Any) -> None:
-    arr = np.array([1, 2, 3])
-
-    with context:
-        res = nw_v1.from_native(arr, strict=strict)
-        assert isinstance(res, np.ndarray)
 
 
 @pytest.mark.parametrize("dframe", lazy_frames)
@@ -313,23 +291,6 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     with context:
         res = nw_v1.from_native(df, eager_only=eager_only)
         assert isinstance(res, nw_v1.LazyFrame)
-
-
-@pytest.mark.skipif(lf_pl is None, reason="polars not found")
-def test_from_native_strict_false_typing() -> None:
-    df = pl.DataFrame()
-    nw_v1.from_native(df, strict=False)
-    nw_v1.from_native(df, strict=False, eager_only=True)
-    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
-
-    with pytest.deprecated_call(match="please use `pass_through` instead"):
-        nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
-
-
-def test_from_native_strict_false_invalid() -> None:
-    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
-        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
 
 
 def test_from_mock_interchange_protocol_non_strict() -> None:

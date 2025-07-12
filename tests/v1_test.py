@@ -353,8 +353,6 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
-    with pytest.deprecated_call():
-        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -362,38 +360,6 @@ def test_get_level() -> None:
         )
         == "interchange"
     )
-
-
-def test_any_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v1.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v1.any_horizontal("a", "b"))
-    expected = {"a": [True, True, None]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
-    assert_equal_data(result, expected)
-
-
-def test_all_horizontal() -> None:
-    # here, it defaults to Kleene logic.
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = nw_v1.from_native(
-        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
-    )
-    result = df.select(nw_v1.all_horizontal("a", "b"))
-    expected = {"a": [True, None, False]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_with_row_index(constructor: Constructor) -> None:
@@ -483,3 +449,144 @@ def test_dtypes() -> None:
     dtype = df.collect_schema()["c"]
     assert dtype in {nw_v1.Duration}
     assert isinstance(dtype, nw_v1.Duration)
+
+
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
+
+
+@pytest.mark.parametrize(
+    ("descending", "nulls_last", "expected"),
+    [
+        (True, True, {"a": [0, 0, 2, -1], "b": [3, 2, 1, None]}),
+        (True, False, {"a": [0, 0, 2, -1], "b": [None, 3, 2, 1]}),
+        (False, True, {"a": [0, 0, 2, -1], "b": [1, 2, 3, None]}),
+        (False, False, {"a": [0, 0, 2, -1], "b": [None, 1, 2, 3]}),
+    ],
+)
+def test_sort_expr(
+    constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
+) -> None:
+    data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
+    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(
+        "a", nw_v1.col("b").sort(descending=descending, nulls_last=nulls_last)
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+@pytest.mark.parametrize("offset", [1, 2, 3])
+def test_gather_every_expr(
+    constructor_eager: ConstructorEager, n: int, offset: int
+) -> None:
+    data = {"a": list(range(10))}
+    df = nw_v1.from_native(constructor_eager(data))
+
+    result = df.select(nw_v1.col("a").gather_every(n=n, offset=offset))
+    expected = {"a": data["a"][offset::n]}
+
+    assert_equal_data(result, expected)
+
+
+def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
+    )
+
+    result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
+    expected_expr = (2, 1)
+    assert result_expr == expected_expr
+
+
+@pytest.mark.parametrize("n", [2, -1])
+def test_expr_tail(
+    constructor_eager: ConstructorEager, n: int, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor_eager) and n < 0:
+        request.applymarker(pytest.mark.xfail)
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}))
+    result = df.select(nw_v1.col("a").tail(n))
+    expected = {"a": [2, 3]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("n", [2, -1])
+def test_head(
+    constructor_eager: ConstructorEager, n: int, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor_eager) and n < 0:
+        request.applymarker(pytest.mark.xfail)
+    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}))
+    result = df.select(nw_v1.col("a").head(n))
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_arg_true(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1, None, None, 3]}))
+    result = df.select(nw_v1.col("a").is_null().arg_true())
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+@pytest.mark.parametrize("offset", [1, 2, 3])
+def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) -> None:
+    data = {"a": list(range(10))}
+    df_v1 = nw_v1.from_native(constructor_eager(data))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+@pytest.mark.parametrize("offset", [1, 2, 3])
+def test_gather_every_dask_v1(n: int, offset: int) -> None:
+    data = {"a": list(range(10))}
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df_v1 = nw_v1.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+
+def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
+    s = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    result = nw_v1.new_series("b", [4, 1, 2], backend=nw_v1.get_native_namespace(s))
+    expected = {"b": [4, 1, 2]}
+    # all supported libraries auto-infer this to be int64, we can always special-case
+    # something different if necessary
+    assert result.dtype == nw_v1.Int64
+    assert_equal_data(result.to_frame(), expected)
+
+    result = nw_v1.new_series(
+        "b", [4, 1, 2], nw_v1.Int32, backend=nw_v1.get_native_namespace(s)
+    )
+    expected = {"b": [4, 1, 2]}
+    assert result.dtype == nw_v1.Int32
+    assert_equal_data(result.to_frame(), expected)
+
+
+@pytest.mark.parametrize(
+    ("strict", "context"),
+    [
+        (
+            True,
+            pytest.raises(
+                TypeError,
+                match="Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe",
+            ),
+        ),
+        (False, does_not_raise()),
+    ],
+)
+def test_strict(strict: Any, context: Any) -> None:
+    arr = np.array([1, 2, 3])
+
+    with context:
+        res = nw_v1.from_native(arr, strict=strict)
+        assert isinstance(res, np.ndarray)
