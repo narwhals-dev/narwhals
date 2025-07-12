@@ -12,7 +12,7 @@ from narwhals._arrow.utils import (
     floordiv_compat,
     narwhals_to_native_dtype,
 )
-from narwhals._plan import operators as ops
+from narwhals._plan import functions as F, operators as ops  # noqa: N812
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR, into_dtype
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.expr import BinaryExpr
+    from narwhals._plan.expr import BinaryExpr, FunctionExpr
     from narwhals.typing import IntoDType, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
@@ -106,6 +106,14 @@ class _ArrowDispatch(
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
         native = self._dispatch(node.expr, frame, name).native
         return self._with_native(pc.cast(native, data_type), name)
+
+    def pow(
+        self, node: FunctionExpr[F.Pow], frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        base, exponent = node.function.unwrap_input(node)
+        base_ = self._dispatch(base, frame, "base").native
+        exponent_ = self._dispatch(exponent, frame, "exponent").native
+        return self._with_native(pc.power(base_, exponent_), name)
 
 
 class ArrowExpr(  # type: ignore[misc]

@@ -155,6 +155,7 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
 
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
+    def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
     def binary_expr(
         self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -306,6 +307,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         node,
         frame,
         name: self.__narwhals_namespace__().concat_str(node, frame, name),
+        F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
     }
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:

@@ -94,6 +94,11 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
         ([nwd.int_range(nwd.len())], {"literal": [0, 1, 2]}),
         (nwd.int_range(nwd.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
         (nwd.int_range(nwd.col("b").min() + 4, nwd.col("d").last()), {"b": [5, 6, 7]}),
+        (nwd.col("b") ** 2, {"b": [1, 4, 9]}),
+        (
+            [2 ** nwd.col("b"), (nwd.lit(2.0) ** nwd.nth(1)).alias("lit")],
+            {"literal": [2, 4, 8], "lit": [2, 4, 8]},
+        ),
     ],
     ids=_ids_ir,
 )
