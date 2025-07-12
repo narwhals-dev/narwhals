@@ -270,7 +270,7 @@ def from_native(
     pass_through: bool,
     eager_only: bool,
     series_only: bool,
-    allow_series: bool | None,
+    allow_series: bool | None = ...,
 ) -> Any: ...
 
 

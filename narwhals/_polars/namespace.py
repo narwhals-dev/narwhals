@@ -100,7 +100,7 @@ class PolarsNamespace:
         self,
         data: _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = ...,
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
