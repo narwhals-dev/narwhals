@@ -58,14 +58,6 @@ def test_from_numpy_non_eager() -> None:
         nw.from_numpy(arr, backend="duckdb")
 
 
-def test_from_numpy_v1(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
-    backend = nw.get_native_namespace(df)
-    result = nw.from_numpy(arr, backend=backend)
-    assert_equal_data(result, expected)
-    assert isinstance(result, nw.DataFrame)
-
-
 def test_from_numpy_not2d(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)

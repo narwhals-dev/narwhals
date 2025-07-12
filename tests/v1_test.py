@@ -880,6 +880,8 @@ def test_unique_series_v1() -> None:
     series = nw.from_native(pl.DataFrame(data), eager_only=True)["a"]
     # this shouldn't warn
     series.to_frame().select(nw_v1.col("a").unique().sum())
+
+    series = nw_v1.from_native(pl.DataFrame(data), eager_only=True)["a"]
     with pytest.warns(
         UserWarning,
         match="`maintain_order` has no effect and is only kept around for backwards-compatibility.",
