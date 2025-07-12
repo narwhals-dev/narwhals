@@ -4,7 +4,6 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
@@ -19,6 +18,7 @@ from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
+    _get_version,
     deprecate_native_namespace,
     flatten,
     is_compliant_expr,
@@ -562,18 +562,19 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError
-
     from narwhals import __version__
 
-    deps = ("pandas", "polars", "cudf", "modin", "pyarrow", "numpy")
     deps_info = {"narwhals": __version__}
 
-    for modname in deps:
+    for impl in Implementation:
+        if impl in {Implementation.UNKNOWN, Implementation.PYSPARK_CONNECT}:
+            continue
+
         try:
-            deps_info[modname] = version(modname)
-        except PackageNotFoundError:  # noqa: PERF203
-            deps_info[modname] = ""
+            deps_info[impl.name.lower()] = _get_version(impl)
+        except ModuleNotFoundError:
+            deps_info[impl.name.lower()] = ""
+
     return deps_info
 
 
