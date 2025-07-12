@@ -28,6 +28,7 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_chunked_array,
     is_pyarrow_table,
 )
+from narwhals.utils import Version
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -831,3 +832,9 @@ def test_is_frame(constructor: Constructor) -> None:
     assert isinstance(lf, nw_v1.LazyFrame)
     assert nw_v1.dependencies.is_narwhals_lazyframe(lf)
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
+
+
+def test_with_version(constructor: Constructor) -> None:
+    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+    assert isinstance(lf, nw_v1.LazyFrame)
+    assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
