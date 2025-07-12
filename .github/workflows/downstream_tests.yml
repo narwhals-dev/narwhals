@@ -37,8 +37,6 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          # temporary pin to get ci green
-          uv pip install "mypy<1.16.0" --system
           uv pip install -e ".[dev, all]" --system
       - name: install-narwhals-dev
         run: |
@@ -456,8 +454,6 @@ jobs:
           cd pointblank
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
-          # temporary pin to get ci green
-          uv pip install "great-tables<0.18.0"
           uv pip install . --group dev
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
