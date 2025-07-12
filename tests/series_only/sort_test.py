@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import narwhals.stable.v1 as nw_v1
+import narwhals as nw
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -24,9 +24,8 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 def test_sort_series(
     constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["b"]
+    series = nw.from_native(constructor_eager(data), eager_only=True)["b"]
     result = series.sort(descending=descending, nulls_last=nulls_last)
     assert (
-        result
-        == nw_v1.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
+        result == nw.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
     )

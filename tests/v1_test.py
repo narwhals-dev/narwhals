@@ -914,3 +914,35 @@ def test_deprecated_expr_methods() -> None:
             e=(nw.col("a") == 0).arg_true(),
             f=nw.col("a").gather_every(2),
         )
+
+
+def test_dask_order_dependent_ops() -> None:
+    # Preserve these for narwhals.stable.v1, even though they
+    # raise after stable.v1.
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+    result = df.select(
+        a=nw_v1.col("a").cum_sum(),
+        b=nw_v1.col("a").cum_count(),
+        c=nw_v1.col("a").cum_prod(),
+        d=nw_v1.col("a").cum_max(),
+        e=nw_v1.col("a").cum_min(),
+        f=nw_v1.col("a").shift(1),
+        g=nw_v1.col("a").diff(),
+        h=nw_v1.col("a").is_first_distinct(),
+        i=nw_v1.col("a").is_last_distinct(),
+    )
+    expected = {
+        "a": [1, 3, 6],
+        "b": [1, 2, 3],
+        "c": [1, 2, 6],
+        "d": [1, 2, 3],
+        "e": [1, 1, 1],
+        "f": [None, 1.0, 2.0],
+        "g": [None, 1.0, 1.0],
+        "h": [True, True, True],
+        "i": [True, True, True],
+    }
+    assert_equal_data(result, expected)
