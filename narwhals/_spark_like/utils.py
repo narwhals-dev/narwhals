@@ -6,7 +6,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
 
 from narwhals._utils import Implementation, isinstance_or_issubclass
-from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from sqlframe.base.session import _BaseSession as Session
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._utils import Version
@@ -292,3 +293,31 @@ def true_divide(F: Any, left: Column, right: Column) -> Column:  # noqa: N803
     # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
     divide = getattr(F, "try_divide", operator.truediv)
     return divide(left, right)
+
+
+def catch_pyspark_sql_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
+
+
+def catch_pyspark_connect_exception(
+    exception: Exception, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors.exceptions.connect import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError(str(exception))
+    # Just return exception as-is.
+    return exception
