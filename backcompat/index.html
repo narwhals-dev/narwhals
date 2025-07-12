@@ -1,0 +1,2503 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../overhead/">
+      
+      
+        <link rel="next" href="../extending/">
+      
+      
+      <link rel="icon" href="../assets/logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
+    
+    
+      
+        <title>Perfect backwards compatibility policy - Narwhals</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="https://unpkg.com/katex@0/dist/katex.min.css">
+    
+      <link rel="stylesheet" href="../css/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#perfect-backwards-compatibility-policy" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Narwhals" class="md-header__button md-logo" aria-label="Narwhals" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Narwhals
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Perfect backwards compatibility policy
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/narwhals-dev/narwhals.git" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Narwhals" class="md-nav__button md-logo" aria-label="Narwhals" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    Narwhals
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/narwhals-dev/narwhals.git" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Why
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation and quick start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Intro tutorial
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Intro tutorial
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DataFrame
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/series/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Series
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/complete_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Complete example
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basics/dataframe_conversion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Conversion between libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generating_sql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Narwhals and SQL
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Concepts
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/order_dependence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Order-dependence
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/pandas_index/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    What about the pandas Index?
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/improve_group_by_operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Avoiding the UserWarning error while using Pandas group_by
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/column_names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Column names
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/boolean/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Boolean columns
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/null_handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Null/NaN handling
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overhead/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overhead
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Perfect backwards compatibility policy
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Perfect backwards compatibility policy
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#background" class="md-nav__link">
+    <span class="md-ellipsis">
+      Background
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#narwhals-stable-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narwhals' Stable API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Narwhals&#39; Stable API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Exceptions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-narwhals-as-nw-or-import-narwhalsstablev1-as-nw" class="md-nav__link">
+    <span class="md-ellipsis">
+      import narwhals as nw or import narwhals.stable.v1 as nw?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-vs-stablev1" class="md-nav__link">
+    <span class="md-ellipsis">
+      main vs stable.v1
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported libraries and extending Narwhals
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how_it_works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    How it works
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ecosystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ecosystem
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Resources
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api-completeness/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    API Completeness
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_14" id="__nav_14_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            API Completeness
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported DataFrame methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/lazyframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported LazyFrame methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_cat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.cat methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_dt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.dt methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.list methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.name methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_str/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.str methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/expr_struct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Expr.struct methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series_cat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series.cat methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series_dt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series.dt methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series_list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series.list methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series_str/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series.str methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-completeness/series_struct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supported Series.struct methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api-reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_15" id="__nav_15_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/narwhals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Top-level functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.DataFrame
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_cat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.cat
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_dt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.dt
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.list
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.name
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_str/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.str
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/expr_struct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Expr.struct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/group_by/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.GroupBy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/lazy_group_by/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.LazyGroupBy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/lazyframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.LazyFrame
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Schema
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_cat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series.cat
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_dt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series.dt
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series.list
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_str/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series.str
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/series_struct/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Series.struct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.dependencies
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/implementation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.Implementation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/dtypes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.dtypes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.exceptions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/selectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.selectors
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/typing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.typing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    narwhals.utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../this/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    This
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#background" class="md-nav__link">
+    <span class="md-ellipsis">
+      Background
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#narwhals-stable-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narwhals' Stable API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Narwhals&#39; Stable API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exceptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Exceptions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-narwhals-as-nw-or-import-narwhalsstablev1-as-nw" class="md-nav__link">
+    <span class="md-ellipsis">
+      import narwhals as nw or import narwhals.stable.v1 as nw?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-vs-stablev1" class="md-nav__link">
+    <span class="md-ellipsis">
+      main vs stable.v1
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="perfect-backwards-compatibility-policy">Perfect backwards compatibility policy</h1>
+<p>Narwhals is primarily aimed at library maintainers rather than end users. As such,
+we need to take stability and backwards compatibility extra-seriously. Our policy is:</p>
+<ul>
+<li>If you write code using <code>import narwhals.stable.v1 as nw</code>, then we promise to
+  never change or remove any public function you're using.</li>
+<li>If we need to make a backwards-incompatible change, it will be pushed into
+  <code>narwhals.stable.v2</code>, leaving <code>narwhals.stable.v1</code> unaffected.</li>
+<li>We will maintain <code>narwhals.stable.v1</code> indefinitely, even as <code>narwhals.stable.v2</code> and other
+  stable APIs come out. For example, Narwhals version 1.0.0 will offer
+  <code>narwhals.stable.v1</code>, whereas Narwhals 2.0.0 will offer both <code>narwhals.stable.v1</code> and
+  <code>narwhals.stable.v2</code>.</li>
+</ul>
+<p>Like this, we enable different packages to be on different Narwhals stable APIs, and for
+end-users to use all of them in the same project without conflicts nor
+incompatibilities.</p>
+<h2 id="background">Background</h2>
+<p>Ever upgraded a package, only to find that it breaks all your tests because of an intentional
+API change? Did you end up having to litter your code with statements such as the following?</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="n">parse_version</span><span class="p">(</span><span class="n">pdx</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">parse_version</span><span class="p">(</span><span class="s2">&quot;1.3.0&quot;</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">brewbeer</span><span class="p">()</span>
+<span class="k">elif</span> <span class="n">parse_version</span><span class="p">(</span><span class="s2">&quot;1.3.0&quot;</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">parse_version</span><span class="p">(</span><span class="n">pdx</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">parse_version</span><span class="p">(</span><span class="s2">&quot;1.5.0&quot;</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">brew_beer</span><span class="p">()</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">brew_drink</span><span class="p">(</span><span class="s2">&quot;beer&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Now imagine multiplying that complexity over all the dataframe libraries you want to support...</p>
+<p>Narwhals offers a simple solution, inspired by Rust editions.</p>
+<h2 id="narwhals-stable-api">Narwhals' Stable API</h2>
+<p>Narwhals implements a subset of the Polars API. What will Narwhals do if/when Polars makes
+a backwards-incompatible change? Would you need to update your Narwhals code?</p>
+<p>To understand the solution, let's go through an example. Suppose that, hypothetically, in Polars 2.0,
+<code>polars.Expr.cum_sum</code> was renamed to <code>polars.Expr.cumulative_sum</code>. In Narwhals, we
+have <code>narwhals.Expr.cum_sum</code>. Does this mean that Narwhals will also rename its method,
+and deprecate the old one? The answer is...no!</p>
+<p>Narwhals offers a <code>stable</code> namespace, which allows you to write your code once and forget about
+it. That is to say, if you write your code like this:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">from/to_native</label><label for="__tabbed_1_2">@narwhalify</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals.stable.v1</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">narwhals.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntoFrameT</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">IntoFrameT</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IntoFrameT</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_native</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cum_sum</span><span class="p">())</span><span class="o">.</span><span class="n">to_native</span><span class="p">()</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals.stable.v1</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">narwhals.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">FrameT</span>
+
+
+<span class="nd">@nw</span><span class="o">.</span><span class="n">narwhalify</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">FrameT</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FrameT</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cum_sum</span><span class="p">())</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>then we, in Narwhals, promise that your code will keep working, even in newer versions of Polars
+after they have renamed their method.</p>
+<p>Concretely, we would do the following:</p>
+<ul>
+<li><code>narwhals.stable.v1</code>: you can keep using <code>Expr.cum_sum</code></li>
+<li><code>narwhals.stable.v2</code>: you can only use <code>Expr.cumulative_sum</code>, <code>Expr.cum_sum</code> will have been removed</li>
+<li><code>narwhals</code>:  you can only use <code>Expr.cumulative_sum</code>, <code>Expr.cum_sum</code> will have been removed</li>
+</ul>
+<p>So, although Narwhals' main API (and <code>narwhals.stable.v2</code>) will have introduced a breaking change,
+users of <code>narwhals.stable.v1</code> will have their code unaffected.</p>
+<h3 id="exceptions">Exceptions</h3>
+<p>Are we really promising perfect backwards compatibility in all cases, without exceptions? Not quite.
+There are some exceptions, which we'll now list. But we'll never intentionally break your code.
+Anything currently in <code>narwhals.stable.v1</code> will not be changed or removed in future Narwhals versions.</p>
+<p>Here are exceptions to our backwards compatibility policy:</p>
+<ul>
+<li>Unambiguous bugs. If a function contains what is unambiguously a bug, then we'll fix it, without
+  considering that to be a breaking change.</li>
+<li>Radical changes in backends. Suppose that Polars was to remove
+  expressions, or pandas were to remove support for categorical data. At that point, we might
+  need to rethink Narwhals. However, we expect such radical changes to be exceedingly unlikely.</li>
+<li>We may consider making some type hints more precise.</li>
+<li>Anything labelled "unstable".</li>
+<li>We may sometimes need to bump the minimum versions of supported backends.</li>
+</ul>
+<p>In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
+before making any change.</p>
+<h3 id="import-narwhals-as-nw-or-import-narwhalsstablev1-as-nw"><code>import narwhals as nw</code> or <code>import narwhals.stable.v1 as nw</code>?</h3>
+<p>Which should you use? In general we recommend:</p>
+<ul>
+<li>When prototyping, use <code>import narwhals as nw</code>, so you can iterate quickly.</li>
+<li>Once you're happy with what you've got and want to release something production-ready and stable,
+  then switch out your <code>import narwhals as nw</code> usage for <code>import narwhals.stable.v1 as nw</code>.</li>
+</ul>
+<h2 id="main-vs-stablev1"><code>main</code> vs <code>stable.v1</code></h2>
+<ul>
+<li>
+<p>Since Narwhals 1.45:</p>
+<ul>
+<li><code>nw.any_horizontal</code> and <code>nw.all_horizontal</code> have a <code>ignore_nulls</code> keyword. In <code>narwhals.stable.v1</code>,
+  it defaults to <code>False</code>, but in Narwhals 2.0 it will become a required argument in the main namespace.</li>
+<li><code>LazyFrame.with_row_index</code> requires <code>order_by</code> to be specified as it is an order-dependent operation, in the main Narwhals namespace.</li>
+</ul>
+</li>
+<li>
+<p>Since Narwhals 1.43:</p>
+<ul>
+<li><code>nw.get_level</code> is deprecated in the main Narwhals namespace.</li>
+</ul>
+</li>
+<li>
+<p>Since Narwhals 1.35:</p>
+<ul>
+<li>pandas' ordered categoricals get mapped to <code>nw.Enum</code> instead of <code>nw.Categorical</code>.</li>
+<li><code>nw.Enum</code> must be provided <code>categories</code> at instantiation.</li>
+</ul>
+</li>
+<li>
+<p>Since Narwhals 1.29.0, <code>LazyFrame.gather_every</code> has been deprecated from the main namespace.</p>
+</li>
+<li>
+<p>Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
+  be of dtype <code>String</code>. Previously, it would have been inferred as <code>Object</code>.</p>
+</li>
+<li>
+<p>Since Narwhals 1.23:</p>
+<ul>
+<li>Passing an <code>ibis.Table</code> to <code>from_native</code> returns a <code>LazyFrame</code>. In
+  <code>narwhals.stable.v1</code>, it returns a <code>DataFrame</code> with <code>level='interchange'</code>.</li>
+<li><code>eager_or_interchange_only</code> has been removed from <code>from_native</code> and <code>narwhalify</code>.</li>
+<li>Order-dependent expressions can no longer be used with <code>narwhals.LazyFrame</code>.</li>
+<li>The following expressions have been deprecated from the main namespace: <code>Expr.head</code>,
+  <code>Expr.tail</code>, <code>Expr.gather_every</code>, <code>Expr.sample</code>, <code>Expr.arg_true</code>, <code>Expr.sort</code>.</li>
+</ul>
+</li>
+<li>
+<p>Since Narwhals 1.21, passing a <code>DuckDBPyRelation</code> to <code>from_native</code> returns a <code>LazyFrame</code>. In
+  <code>narwhals.stable.v1</code>, it returns a <code>DataFrame</code> with <code>level='interchange'</code>.</p>
+</li>
+<li>
+<p>Since Narwhals 1.15, <code>Series</code> is generic in the native Series, meaning that you can
+  write:
+  <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+
+<span class="n">s_pl</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">from_native</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">series_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1"># mypy infers `s.to_native()` to be `polars.Series`</span>
+<span class="n">reveal_type</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">to_native</span><span class="p">())</span>
+</code></pre></div>
+  Previously, <code>Series</code> was not generic, so in the above example
+  <code>s.to_native()</code> would have been inferred as <code>Any</code>.</p>
+</li>
+<li>
+<p>Since Narwhals 1.13.0, the <code>strict</code> parameter in <code>from_native</code>, <code>to_native</code>, and <code>narwhalify</code>
+    has been deprecated in favour of <code>pass_through</code>. This is because several users expressed
+    confusion/surprise over what <code>strict=False</code> did.
+    <div class="highlight"><pre><span></span><code><span class="c1"># v1 syntax:</span>
+<span class="n">nw</span><span class="o">.</span><span class="n">from_native</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># main namespace (and, when we get there, v2) syntax:</span>
+<span class="n">nw</span><span class="o">.</span><span class="n">from_native</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pass_through</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+    If you are using Narwhals&gt;=1.13.0, then we recommend using <code>pass_through</code>, as that
+    works consistently across namespaces.</p>
+<p>In the future:</p>
+<ul>
+<li>in the main Narwhals namespace, <code>strict</code> will be removed in favour of <code>pass_through</code></li>
+<li>in <code>stable.v1</code>, we will keep both <code>strict</code> and <code>pass_through</code></li>
+</ul>
+</li>
+<li>
+<p>Since Narwhals 1.9.0, <code>Datetime</code> and <code>Duration</code> dtypes hash using both <code>time_unit</code> and
+    <code>time_zone</code>.
+    The effect of this can be seen when placing these dtypes in sets:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">narwhals.stable.v1</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw_v1</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">narwhals</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nw</span>
+
+<span class="c1"># v1 behaviour:</span>
+<span class="k">assert</span> <span class="n">nw_v1</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">{</span><span class="n">nw_v1</span><span class="o">.</span><span class="n">Datetime</span><span class="p">}</span>
+
+<span class="c1"># main namespace (and, when we get there, v2) behaviour:</span>
+<span class="k">assert</span> <span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span><span class="p">}</span>
+<span class="k">assert</span> <span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">{</span><span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)}</span>
+</code></pre></div>
+<p>To check if a dtype is a datetime (regardless of <code>time_unit</code> or <code>time_zone</code>)
+we recommend using <code>==</code> instead, as that works consistently
+across namespaces:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Recommended</span>
+<span class="k">assert</span> <span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">nw</span><span class="o">.</span><span class="n">Datetime</span>
+<span class="k">assert</span> <span class="n">nw_v1</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">&quot;us&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">nw_v1</span><span class="o">.</span><span class="n">Datetime</span>
+</code></pre></div>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../overhead/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Overhead">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Overhead
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../extending/" class="md-footer__link md-footer__link--next" aria-label="Next: Supported libraries and extending Narwhals">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Supported libraries and extending Narwhals
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "content.code.annotate", "navigation.footer", "navigation.indexes", "navigation.top"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      
+        <script src="../javascripts/katex.js"></script>
+      
+        <script src="../javascripts/extra.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/katex.min.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"></script>
+      
+    
+  </body>
+</html>
