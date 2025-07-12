@@ -896,11 +896,8 @@ def test_head_aggregation() -> None:
 
 
 def test_deprecated_expr_methods() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
     data = {"a": [0, 0, 2, -1]}
-    df = nw_v1.from_native(pl.DataFrame(data), eager_only=True)
+    df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
     result = df.select(
         c=nw_v1.col("a").sort().head(2),
         d=nw_v1.col("a").sort().tail(2),
