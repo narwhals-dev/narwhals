@@ -149,6 +149,9 @@ def test_offset_by_tz(
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
+    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
+        # cudf: https://github.com/rapidsai/cudf/issues/19363
+        request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
@@ -164,16 +167,13 @@ def test_offset_by_tz(
 @pytest.mark.parametrize(
     ("by", "expected"),
     [
-        ("2d", ["2020-10-27T02:00+0100"]),
-        ("5mo", ["2021-03-25T02:00+0100"]),
-        ("1q", ["2021-01-25T02:00+0100"]),
+        ("2d", "2020-10-27T02:00+0100"),
+        ("5mo", "2021-03-25T02:00+0100"),
+        ("1q", "2021-01-25T02:00+0100"),
     ],
 )
 def test_offset_by_dst(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    by: str,
-    expected: list[datetime],
+    request: pytest.FixtureRequest, constructor: Constructor, by: str, expected: str
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
@@ -187,6 +187,9 @@ def test_offset_by_dst(
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
+    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
+        # cudf: https://github.com/rapidsai/cudf/issues/19363
+        request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow")
     ):
@@ -196,8 +199,7 @@ def test_offset_by_dst(
     df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
     result = df.select(nw.col("a").dt.offset_by(by))
-    result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
-    assert_equal_data(result_str, {"a": expected})
+    assert_equal_data(result, {"a": [datetime.strptime(expected, "%Y-%m-%dT%H:%M%z")]})
 
 
 def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
