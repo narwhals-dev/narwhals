@@ -1035,22 +1035,11 @@ def to_native(
         Object of class that user started with.
     """
     from narwhals._utils import validate_strict_and_pass_though
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
-
-    if isinstance(narwhals_object, BaseFrame):
-        return narwhals_object._compliant_frame._native_frame
-    if isinstance(narwhals_object, Series):
-        return narwhals_object._compliant_series.native
-
-    if not pass_through:
-        msg = f"Expected Narwhals object, got {type(narwhals_object)}."
-        raise TypeError(msg)
-    return narwhals_object
+    return nw.to_native(narwhals_object, pass_through=pass_through)
 
 
 def narwhalify(
@@ -1446,6 +1435,25 @@ def concat_str(
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
+
+
+def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.coalesce(exprs, *more_exprs))
 
 
 def get_level(
@@ -1874,6 +1882,7 @@ __all__ = [
     "all",
     "all_horizontal",
     "any_horizontal",
+    "coalesce",
     "col",
     "concat",
     "concat_str",

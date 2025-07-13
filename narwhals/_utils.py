@@ -216,53 +216,53 @@ class Version(Enum):
 
     @property
     def namespace(self) -> type[Namespace[Any]]:
-        if self is Version.MAIN:
-            from narwhals._namespace import Namespace
+        if self is Version.V1:
+            from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
-            return Namespace
-        from narwhals.stable.v1._namespace import Namespace
+            return NamespaceV1
+        from narwhals._namespace import Namespace
 
         return Namespace
 
     @property
     def dtypes(self) -> DTypes:
-        if self is Version.MAIN:
-            from narwhals import dtypes
+        if self is Version.V1:
+            from narwhals.stable.v1 import dtypes as dtypes_v1
 
-            return dtypes
-        from narwhals.stable.v1 import dtypes as v1_dtypes
+            return dtypes_v1
+        from narwhals import dtypes
 
-        return v1_dtypes
+        return dtypes
 
     @property
     def dataframe(self) -> type[DataFrame[Any]]:
-        if self is Version.MAIN:
-            from narwhals.dataframe import DataFrame
+        if self is Version.V1:
+            from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrame
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
+            return DataFrameV1
+        from narwhals.dataframe import DataFrame
 
-        return DataFrameV1
+        return DataFrame
 
     @property
     def lazyframe(self) -> type[LazyFrame[Any]]:
-        if self is Version.MAIN:
-            from narwhals.dataframe import LazyFrame
+        if self is Version.V1:
+            from narwhals.stable.v1 import LazyFrame as LazyFrameV1
 
-            return LazyFrame
-        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+            return LazyFrameV1
+        from narwhals.dataframe import LazyFrame
 
-        return LazyFrameV1
+        return LazyFrame
 
     @property
     def series(self) -> type[Series[Any]]:
-        if self is Version.MAIN:
-            from narwhals.series import Series
+        if self is Version.V1:
+            from narwhals.stable.v1 import Series as SeriesV1
 
-            return Series
-        from narwhals.stable.v1 import Series as SeriesV1
+            return SeriesV1
+        from narwhals.series import Series
 
-        return SeriesV1
+        return Series
 
 
 class Implementation(NoAutoEnum):
