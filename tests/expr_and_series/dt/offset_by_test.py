@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -137,7 +136,6 @@ def test_offset_by_tz(
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
@@ -179,7 +177,6 @@ def test_offset_by_dst(
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(

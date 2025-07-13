@@ -12,12 +12,7 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from tests.utils import (
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 rnd = Random(0)  # noqa: S311
 
@@ -68,8 +63,6 @@ def test_hist_bin(
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
 
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -131,9 +124,6 @@ def test_hist_count(
     else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
-
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -184,9 +174,6 @@ def test_hist_count_no_spread(library: str) -> None:
     else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
-
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
 
@@ -226,8 +213,6 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -257,8 +242,6 @@ def test_hist_small_bins(library: str) -> None:
     else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -370,9 +353,6 @@ def test_hist_count_hypothesis(
     else:
         pa = pytest.importorskip("pyarrow")
         constructor_eager = pa.table
-    if library == "pyarrow" and PYARROW_VERSION < (13,):
-        pytest.skip()
-
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )

@@ -10,7 +10,6 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     assert_equal_data,
     is_windows,
@@ -86,7 +85,6 @@ def test_convert_time_zone_from_none(
         or ("pyarrow_table" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
