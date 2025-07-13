@@ -9,7 +9,6 @@ env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
 
-
 jobs:
   pytest-39:
     strategy:
