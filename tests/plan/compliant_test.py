@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# ruff: noqa: FBT003
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -37,9 +38,6 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
     reason="Bug in `meta` namespace impl", raises=ComputeError
 )
 
-XFAIL_NOT_IMPL_WHEN = pytest.mark.xfail(
-    reason="Not implemented when-then-otherwise", raises=NotImplementedError
-)
 XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
     reason="Not implemented all_horizontal", raises=NotImplementedError
 )
@@ -135,14 +133,14 @@ XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
         ),
         pytest.param(
-            nwd.when(d=8).then("c"), {"c": [9, None, 4]}, marks=XFAIL_NOT_IMPL_WHEN
+            nwd.when(d=8).then("c"), {"c": [9, None, 4]}, id="When-otherwise-none"
         ),
         pytest.param(
             nwd.when(nwd.col("e").is_null())
             .then(nwd.col("b") + nwd.col("c"))
             .otherwise(50),
             {"b": [10, 50, 50]},
-            marks=XFAIL_NOT_IMPL_WHEN,
+            id="When-otherwise-native-broadcast",
         ),
         pytest.param(
             nwd.when(nwd.col("a") == nwd.lit("C"))
@@ -155,12 +153,31 @@ XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
             .then(nwd.lit("a"))
             .alias("A"),
             {"A": ["a", "b", "a"]},
-            marks=XFAIL_NOT_IMPL_WHEN,
+            id="When-then-x4",
         ),
         pytest.param(
             nwd.when(nwd.col("c") > 5, b=1).then(999),
             {"literal": [999, None, None]},
-            marks=[XFAIL_NOT_IMPL_WHEN, XFAIL_NOT_ALL_HORIZONTAL],
+            marks=[XFAIL_NOT_ALL_HORIZONTAL],
+            id="When-multiple-predicates",
+        ),
+        pytest.param(
+            nwd.when(nwd.lit(True)).then("c"),
+            {"c": [9, 2, 4]},
+            id="When-literal-then-column",
+        ),
+        pytest.param(
+            nwd.when(nwd.lit(True)).then(nwd.col("c").mean()),
+            {"c": [5.0]},
+            id="When-literal-then-agg",
+        ),
+        pytest.param(
+            [
+                nwd.when(nwd.lit(True)).then(nwd.col("e").last()),
+                nwd.col("b").sort(descending=True),
+            ],
+            {"e": [7, 7, 7], "b": [3, 2, 1]},
+            id="When-literal-then-agg-broadcast",
         ),
     ],
     ids=_ids_ir,

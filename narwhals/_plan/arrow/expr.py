@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull
-    from narwhals._plan.expr import BinaryExpr, FunctionExpr
+    from narwhals._plan.expr import BinaryExpr, FunctionExpr, Ternary
     from narwhals.typing import ClosedInterval, IntoDType, PythonLiteral
 
 NativeScalar: TypeAlias = "pa.Scalar[Any]"
@@ -193,6 +193,15 @@ class _ArrowDispatch(
         self, node: FunctionExpr[IsNull], frame: ArrowDataFrame, name: str
     ) -> _StoresNativeT_co:
         return self._unary_function(pc.is_null)(node, frame, name)
+
+    def ternary_expr(
+        self, node: Ternary, frame: ArrowDataFrame, name: str
+    ) -> _StoresNativeT_co:
+        when = self._dispatch(node.predicate, frame, name)
+        then = self._dispatch(node.truthy, frame, name)
+        otherwise = self._dispatch(node.falsy, frame, name)
+        result = pc.if_else(when.native, then.native, otherwise.native)
+        return self._with_native(result, name)
 
 
 class ArrowExpr(  # type: ignore[misc]
