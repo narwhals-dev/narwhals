@@ -128,17 +128,14 @@ def test_offset_by(
 @pytest.mark.parametrize(
     ("by", "expected"),
     [
-        ("2d", ["2024-01-03T05:45+0545"]),
-        ("5mo", ["2024-06-01T05:45+0545"]),
-        ("7q", ["2025-10-01T05:45+0545"]),
-        ("5y", ["2029-01-01T05:45+0545"]),
+        ("2d", "2024-01-03T05:45+0545"),
+        ("5mo", "2024-06-01T05:45+0545"),
+        ("7q", "2025-10-01T05:45+0545"),
+        ("5y", "2029-01-01T05:45+0545"),
     ],
 )
 def test_offset_by_tz(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    by: str,
-    expected: list[datetime],
+    request: pytest.FixtureRequest, constructor: Constructor, by: str, expected: str
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
@@ -161,8 +158,7 @@ def test_offset_by_tz(
     df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
-    result_str = result.select(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M%z"))
-    assert_equal_data(result_str, {"a": expected})
+    assert_equal_data(result, {"a": [datetime.strptime(expected, "%Y-%m-%dT%H:%M%z")]})
 
 
 @pytest.mark.parametrize(
