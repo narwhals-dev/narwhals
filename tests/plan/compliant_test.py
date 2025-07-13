@@ -37,6 +37,13 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
     reason="Bug in `meta` namespace impl", raises=ComputeError
 )
 
+XFAIL_NOT_IMPL_WHEN = pytest.mark.xfail(
+    reason="Not implemented when-then-otherwise", raises=NotImplementedError
+)
+XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
+    reason="Not implemented all_horizontal", raises=NotImplementedError
+)
+
 
 @pytest.mark.parametrize(
     ("expr", "expected"),
@@ -126,6 +133,34 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
         (
             [(~nwd.col("e", "d").is_null()).all(), "b"],
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
+        ),
+        pytest.param(
+            nwd.when(d=8).then("c"), {"c": [9, None, 4]}, marks=XFAIL_NOT_IMPL_WHEN
+        ),
+        pytest.param(
+            nwd.when(nwd.col("e").is_null())
+            .then(nwd.col("b") + nwd.col("c"))
+            .otherwise(50),
+            {"b": [10, 50, 50]},
+            marks=XFAIL_NOT_IMPL_WHEN,
+        ),
+        pytest.param(
+            nwd.when(nwd.col("a") == nwd.lit("C"))
+            .then(nwd.lit("c"))
+            .when(nwd.col("a") == nwd.lit("D"))
+            .then(nwd.lit("d"))
+            .when(nwd.col("a") == nwd.lit("B"))
+            .then(nwd.lit("b"))
+            .when(nwd.col("a") == nwd.lit("A"))
+            .then(nwd.lit("a"))
+            .alias("A"),
+            {"A": ["a", "b", "a"]},
+            marks=XFAIL_NOT_IMPL_WHEN,
+        ),
+        pytest.param(
+            nwd.when(nwd.col("c") > 5, b=1).then(999),
+            {"literal": [999, None, None]},
+            marks=[XFAIL_NOT_IMPL_WHEN, XFAIL_NOT_ALL_HORIZONTAL],
         ),
     ],
     ids=_ids_ir,
