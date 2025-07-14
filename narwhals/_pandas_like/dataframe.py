@@ -557,7 +557,10 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on)
             if right_key != left_key
         ]
-        return result_native.drop(columns=extra)
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=extra, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
@@ -584,17 +587,17 @@ class PandasLikeDataFrame(
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=(*self.columns, *other.columns)
             )
-            return (
-                self.native.assign(**{key_token: 0})
-                .merge(
-                    other.native.assign(**{key_token: 0}),
-                    how="inner",
-                    left_on=key_token,
-                    right_on=key_token,
-                    suffixes=("", suffix),
-                )
-                .drop(columns=key_token)
+            result_native = self.native.assign(**{key_token: 0}).merge(
+                other.native.assign(**{key_token: 0}),
+                how="inner",
+                left_on=key_token,
+                right_on=key_token,
+                suffixes=("", suffix),
             )
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
+            return result_native
         return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
@@ -628,18 +631,18 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return (
-            self.native.merge(
-                other_native,
-                # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
-                how="left" if implementation.is_pandas() else "outer",
-                indicator=indicator_token,
-                left_on=left_on,
-                right_on=left_on,
-            )
-            .loc[lambda t: t[indicator_token] == "left_only"]
-            .drop(columns=indicator_token)
-        )
+        result_native = self.native.merge(
+            other_native,
+            # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
+            how="left" if implementation.is_pandas() else "outer",
+            indicator=indicator_token,
+            left_on=left_on,
+            right_on=left_on,
+        ).loc[lambda t: t[indicator_token] == "left_only"]
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_filter_rename(
         self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]

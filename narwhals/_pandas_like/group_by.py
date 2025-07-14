@@ -219,6 +219,9 @@ class PandasLikeGroupBy(
             raise empty_results_error()
         else:
             result = self._apply_aggs(exprs)
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result.reset_index(inplace=True)  # noqa: PD002
         return self._select_results(result, agg_exprs)
 
     def _select_results(
@@ -228,9 +231,6 @@ class PandasLikeGroupBy(
 
         See `ParseKeysGroupBy`.
         """
-        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        df.reset_index(inplace=True)  # noqa: PD002
         new_names = chain.from_iterable(e.aliases for e in agg_exprs)
         return (
             self.compliant._with_native(df, validate_column_names=False)
@@ -269,13 +269,13 @@ class PandasLikeGroupBy(
         into_series = ns._series.from_iterable
 
         def fn(df: pd.DataFrame) -> pd.Series[Any]:
-            out_group = []
-            out_names = []
-            for expr in exprs:
-                results_keys = expr(self.compliant._with_native(df))
-                for keys in results_keys:
-                    out_group.append(keys.native.iloc[0])
-                    out_names.append(keys.name)
+            compliant = self.compliant._with_native(df)
+            results = (
+                (keys.native.iloc[0], keys.name)
+                for expr in exprs
+                for keys in expr(compliant)
+            )
+            out_group, out_names = zip(*results) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
         return fn

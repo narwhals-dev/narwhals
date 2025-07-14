@@ -604,7 +604,7 @@ def test_group_by_no_preserve_dtype(
     if (
         "polars" in str(constructor_eager)
         and isinstance(low, Decimal)
-        and POLARS_VERSION < (1, 0, 0)
+        and POLARS_VERSION < (1, 21, 0)
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     data = {
