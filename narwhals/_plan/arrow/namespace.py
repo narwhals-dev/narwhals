@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING, overload
 
 import pyarrow as pa  # ignore-banned-import
+import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.literal import is_literal_scalar
@@ -97,37 +99,41 @@ class ArrowNamespace(
 
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def all_horizontal(
         self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
-        raise NotImplementedError
+    ) -> ArrowExpr | ArrowScalar:
+        it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+        result = reduce(pc.and_kleene, it)  # type: ignore[arg-type]
+        if isinstance(result, pa.Scalar):
+            return self._scalar.from_native(result, name, self.version)
+        return self._expr.from_native(result, name, self.version)
 
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def min_horizontal(
         self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def concat_str(
         self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
     def int_range(

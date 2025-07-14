@@ -38,10 +38,6 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
     reason="Bug in `meta` namespace impl", raises=ComputeError
 )
 
-XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
-    reason="Not implemented all_horizontal", raises=NotImplementedError
-)
-
 
 @pytest.mark.parametrize(
     ("expr", "expected"),
@@ -158,8 +154,16 @@ XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
         pytest.param(
             nwd.when(nwd.col("c") > 5, b=1).then(999),
             {"literal": [999, None, None]},
-            marks=[XFAIL_NOT_ALL_HORIZONTAL],
             id="When-multiple-predicates",
+        ),
+        pytest.param(
+            nwd.when(nwd.col("b") == nwd.col("c"), nwd.col("d").mean() > nwd.col("d"))
+            .then(123)
+            .when(nwd.lit(True), ~nwd.nth(-1).is_null())
+            .then(456)
+            .otherwise(nwd.col("c")),
+            {"literal": [9, 123, 456]},
+            id="When-multiple-predicates-mixed-broadcast",
         ),
         pytest.param(
             nwd.when(nwd.lit(True)).then("c"),
@@ -178,6 +182,38 @@ XFAIL_NOT_ALL_HORIZONTAL = pytest.mark.xfail(
             ],
             {"e": [7, 7, 7], "b": [3, 2, 1]},
             id="When-literal-then-agg-broadcast",
+        ),
+        (
+            [
+                nwd.all_horizontal(
+                    nwd.col("b") < nwd.col("c"),
+                    nwd.col("a") != nwd.lit("B"),
+                    nwd.col("e").cast(nw.Boolean),
+                    nwd.lit(True),
+                ),
+                nwd.nth(1).last().name.suffix("_last"),
+            ],
+            {"b": [None, False, True], "b_last": [3, 3, 3]},
+        ),
+        (
+            [
+                nwd.all_horizontal(nwd.lit(True), nwd.lit(True)).alias("a"),
+                nwd.all_horizontal(nwd.lit(False), nwd.lit(True)).alias("b"),
+                nwd.all_horizontal(nwd.lit(False), nwd.lit(False)).alias("c"),
+                nwd.all_horizontal(nwd.lit(None, nw.Boolean), nwd.lit(True)).alias("d"),
+                nwd.all_horizontal(nwd.lit(None, nw.Boolean), nwd.lit(False)).alias("e"),
+                nwd.all_horizontal(
+                    nwd.lit(None, nw.Boolean), nwd.lit(None, nw.Boolean)
+                ).alias("f"),
+            ],
+            {
+                "a": [True],
+                "b": [False],
+                "c": [False],
+                "d": [None],
+                "e": [False],
+                "f": [None],
+            },
         ),
     ],
     ids=_ids_ir,
