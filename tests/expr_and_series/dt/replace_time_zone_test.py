@@ -7,13 +7,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    PYARROW_VERSION,
-    Constructor,
-    assert_equal_data,
-    is_windows,
-)
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -26,7 +20,6 @@ def test_replace_time_zone(
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
 
@@ -54,7 +47,6 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     data = {
@@ -81,7 +73,6 @@ def test_replace_time_zone_series(
         ("pyarrow" in str(constructor_eager) and is_windows())
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     if any(x in str(constructor_eager) for x in ("cudf",)):
@@ -108,7 +99,6 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
         ("pyarrow" in str(constructor_eager) and is_windows())
         or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
     ):
         pytest.skip()
     data = {

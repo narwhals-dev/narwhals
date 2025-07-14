@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, PYARROW_VERSION, is_windows
+from tests.utils import PANDAS_VERSION, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -25,10 +25,8 @@ def test_to_numpy(constructor_eager: ConstructorEager) -> None:
 def test_to_numpy_tz_aware(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
-        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
-        or ("pyarrow" in str(constructor_eager) and is_windows())
+    if ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2)) or (
+        "pyarrow" in str(constructor_eager) and is_windows()
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(

@@ -38,9 +38,6 @@ POLARS_VERSION = [
     "1.1.0",
 ]
 PYARROW_VERSION = [
-    "11.0.0",
-    "12.0.0",
-    "12.0.1",
     "13.0.0",
     "14.0.0",
     "14.0.1",
@@ -50,6 +47,9 @@ PYARROW_VERSION = [
     "15.0.2",
     "16.0.0",
     "16.1.0",
+    "17.0.0",
+    "18.0.0",
+    "18.1.0",
 ]
 
 pandas_version, numpy_version = random.choice(PANDAS_AND_NUMPY_VERSION)
