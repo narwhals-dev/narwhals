@@ -236,7 +236,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     raise AssertionError(msg)
 
 
-def timedelta_to_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
+def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
     return ibis.interval(
         days=td.days,
         hours=td.seconds // 3600,
