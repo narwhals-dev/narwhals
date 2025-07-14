@@ -170,8 +170,10 @@ If you add code that should be tested, please add tests.
     full copies of the input data.
 
     - Instead of `assign`, prefer using `with_columns` at the compliant level.
-    - For `drop` and `reset_index`, use `inplace=True`. This may need updating if/when it's deprecated/removed,
-      but please keep it for older pandas versions https://github.com/pandas-dev/pandas/pull/51466/files.
+    - For `drop` and `reset_index`, use `inplace=True`, so long as you're only modifying a new object which
+      you created. Again, you should never modify user input. This may need updating if/when it's
+      deprecated/removed, but please keep it for older pandas versions
+      https://github.com/pandas-dev/pandas/pull/51466/files.
     - Instead of `rename`, prefer `alias` at the compliant level.
 
 - Polars:
