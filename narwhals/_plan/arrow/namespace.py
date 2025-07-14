@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -13,6 +13,8 @@ from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan import expr, functions as F  # noqa: N812
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
@@ -97,40 +99,54 @@ class ArrowNamespace(
             nw_ser.to_native(), name or node.name, nw_ser.version
         )
 
+    # NOTE: Update with `ignore_nulls`/`fill_null` behavior once added to each `Function`
+    # https://github.com/narwhals-dev/narwhals/pull/2719
+    def _horizontal_function(
+        self, fn: Callable[[Any, Any], Any], /
+    ) -> Callable[[FunctionExpr[Any], ArrowDataFrame, str], ArrowExpr | ArrowScalar]:
+        def func(
+            node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
+        ) -> ArrowExpr | ArrowScalar:
+            it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+            result = reduce(fn, it)
+            if isinstance(result, pa.Scalar):
+                return self._scalar.from_native(result, name, self.version)
+            return self._expr.from_native(result, name, self.version)
+
+        return func
+
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        return self._horizontal_function(pc.or_kleene)(node, frame, name)
 
     def all_horizontal(
         self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        it = (self._expr.from_ir(e, frame, name).native for e in node.input)
-        result = reduce(pc.and_kleene, it)  # type: ignore[arg-type]
-        if isinstance(result, pa.Scalar):
-            return self._scalar.from_native(result, name, self.version)
-        return self._expr.from_native(result, name, self.version)
+        return self._horizontal_function(pc.and_kleene)(node, frame, name)
 
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        return self._horizontal_function(pc.add)(node, frame, name)
 
     def min_horizontal(
         self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        return self._horizontal_function(pc.min_element_wise)(node, frame, name)
 
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        return self._horizontal_function(pc.max_element_wise)(node, frame, name)
 
+    # TODO @dangotbanned: Impl `mean_horizontal`
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
         raise NotImplementedError
 
+    # TODO @dangotbanned: Impl `concat_str`
     def concat_str(
         self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
