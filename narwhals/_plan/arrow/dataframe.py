@@ -54,7 +54,7 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         }
 
     def __len__(self) -> int:
-        return len(self.native)
+        return self.native.num_rows
 
     def to_narwhals(self) -> DummyFrame[pa.Table, ChunkedArrayAny]:
         return DummyFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, Protocol, cast, overload
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -299,15 +299,13 @@ class ArrowExpr(  # type: ignore[misc]
     def first(self, node: First, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = lit(native[0]) if len(prev) else lit(None, native.type)
+        result = native[0] if len(prev) else lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: ArrowDataFrame, name: str) -> ArrowScalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = (
-            lit(native[height - 1]) if (height := len(prev)) else lit(None, native.type)
-        )
+        result = native[height - 1] if (height := len(prev)) else lit(None, native.type)
         return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: ArrowDataFrame, name: str) -> ArrowScalar:
@@ -383,23 +381,13 @@ class ArrowExpr(  # type: ignore[misc]
 
 
 def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
-    # NOTE: Needed for `pyarrow<13`
-    if isinstance(value, pa.Scalar):
-        return value
     # NOTE: PR that fixed this the overloads was closed
     # https://github.com/zen-xu/pyarrow-stubs/pull/208
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
-# NOTE: https://github.com/apache/arrow/issues/21761
-# fmt: off
-if BACKEND_VERSION >= (13,):
-    def array(value: NativeScalar) -> ArrayAny:
-        return pa.array([value], value.type)
-else:
-    def array(value: NativeScalar) -> ArrayAny:
-        return cast("ArrayAny", pa.array([value.as_py()], value.type))
-# fmt: on
+def array(value: NativeScalar) -> ArrayAny:
+    return pa.array([value], value.type)
 
 
 def chunked_array(
