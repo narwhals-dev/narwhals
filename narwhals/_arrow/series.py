@@ -29,7 +29,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
-    requires,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -156,7 +155,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def _from_scalar(self, value: Any) -> Self:
-        if self._backend_version < (13,) and hasattr(value, "as_py"):
+        if hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
 
@@ -866,7 +865,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         dtypes = self._version.dtypes
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
-    @requires.backend_version((13,))
     def cum_min(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_min(self.native, skip_nulls=True)
@@ -875,7 +873,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def cum_max(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_max(self.native, skip_nulls=True)
@@ -884,7 +881,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def cum_prod(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_prod(self.native, skip_nulls=True)
@@ -1023,7 +1019,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def hist(  # noqa: C901, PLR0912, PLR0915
         self,
         bins: list[float | int] | None,
