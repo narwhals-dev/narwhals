@@ -29,7 +29,6 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-    from types import ModuleType
 
     import pandas as pd
     import polars as pl
@@ -122,7 +121,11 @@ class PandasLikeSeries(EagerSeries[Any]):
     def native(self) -> Any:
         return self._native_series
 
-    def __native_namespace__(self) -> ModuleType:
+    def __native_namespace__(self):  # type: ignore[no-untyped-def] # noqa: ANN204
+        if TYPE_CHECKING:
+            import pandas as pd
+
+            return pd
         if self._implementation.is_pandas_like():
             return self._implementation.to_native_namespace()
 

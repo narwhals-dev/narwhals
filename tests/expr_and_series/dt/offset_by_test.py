@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -219,3 +219,17 @@ def test_offset_by_invalid_interval(constructor: Constructor) -> None:
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.offset_by("1r"))
+
+
+def test_offset_by_date_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [date(2020, 1, 1)]}, dtype="date32[pyarrow]"))
+    result = df.select(nw.col("a").dt.offset_by("1d"))
+    expected = {"a": [date(2020, 1, 2)]}
+    assert_equal_data(result, expected)
+    df = nw.from_native(pd.DataFrame({"a": [date(2020, 1, 1)]}))
+    result = df.select(nw.col("a").dt.offset_by("1d"))
+    expected = {"a": [date(2020, 1, 2)]}
+    assert_equal_data(result, expected)

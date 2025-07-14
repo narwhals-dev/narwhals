@@ -270,17 +270,21 @@ class PandasLikeSeriesDateTimeNamespace(
             if unit == "q":
                 multiple *= 3
                 unit = "mo"
-            offset: pd.DateOffset | pd.Timedelta | timedelta
+            offset: pd.DateOffset | timedelta
             if unit == "y":
                 offset = pdx.DateOffset(years=multiple)
             elif unit == "mo":
                 offset = pdx.DateOffset(months=multiple)
             elif unit == "ns":
-                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])
+                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
             else:
                 offset = interval.to_timedelta()
-            if unit == "d" and (
-                original_tz := getattr(self.compliant.dtype, "time_zone", None)
+            if (
+                unit == "d"
+                and isinstance(
+                    dtype := self.compliant.dtype, self.version.dtypes.Datetime
+                )
+                and (original_tz := dtype.time_zone)
             ):
                 native_without_timezone = native.dt.tz_localize(None)
                 result_pd = native_without_timezone + offset
