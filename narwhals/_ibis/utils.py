@@ -237,10 +237,4 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
 
 
 def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
-    return ibis.interval(
-        days=td.days,
-        hours=td.seconds // 3600,
-        minutes=(td.seconds % 3600) // 60,
-        seconds=td.seconds % 60,
-        microseconds=td.microseconds,
-    )
+    return ibis.interval(days=td.days, seconds=td.seconds, microseconds=td.microseconds)
