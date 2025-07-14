@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant import CompliantDataFrame
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.typing import (
@@ -473,7 +472,7 @@ class EagerExpr(
                 be expressifiable (e.g. `nw.col('a').str.replace('abc', nw.col('b')))`).
         """
 
-        def inner(df: CompliantDataFrame) -> list[CompliantSeries]:
+        def inner(df: EagerDataFrameT) -> list[EagerSeriesT]:
             kwargs = {
                 name: df._evaluate_expr(value) if self._is_expr(value) else value
                 for name, value in expressifiable_args.items()
