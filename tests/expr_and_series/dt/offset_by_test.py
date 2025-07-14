@@ -221,6 +221,7 @@ def test_offset_by_invalid_interval(constructor: Constructor) -> None:
         df.select(nw.col("a").dt.offset_by("1r"))
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="too old for pyarrow date type")
 def test_offset_by_date_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd

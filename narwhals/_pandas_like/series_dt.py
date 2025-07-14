@@ -276,7 +276,7 @@ class PandasLikeSeriesDateTimeNamespace(
             elif unit == "mo":
                 offset = pdx.DateOffset(months=multiple)
             elif unit == "ns":
-                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])  # type: ignore[arg-type]
+                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])
             else:
                 offset = interval.to_timedelta()
             dtype = self.compliant.dtype
