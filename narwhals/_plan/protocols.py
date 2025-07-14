@@ -126,125 +126,6 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         return max_length if required else None
 
 
-class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
-    """Everything common to `Expr`/`Series` and `Scalar` literal values.
-
-    Early notes:
-    - Separating series/scalar makes a lot of sense
-    - Handling the recursive case *without* intermediate (non-pyarrow) objects seems unachievable
-      - Everywhere would need to first check if it a scalar, which isn't ergonomic
-    - Broadcasting being separated is working
-    - A lot of `pyarrow.compute` (section 2) can work on either scalar or series (`FunctionExpr`)
-      - Aggregation can't, but that is already handled in `ExprIR`
-      - `polars` noops on aggregating a scalar, which we might be able to support this way
-    """
-
-    _evaluated: Any
-    """Compliant or native value."""
-
-    @property
-    def name(self) -> str: ...
-
-    @classmethod
-    def from_native(
-        cls, native: Any, name: str = "", /, version: Version = Version.MAIN
-    ) -> Self: ...
-
-    def _with_native(self, native: Any, name: str, /) -> Self:
-        return self.from_native(native, name or self.name, self.version)
-
-    # series & scalar
-    def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
-    def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
-    def not_(
-        self, node: FunctionExpr[boolean.Not], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def fill_null(
-        self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_between(
-        self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_finite(
-        self, node: FunctionExpr[boolean.IsFinite], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_nan(
-        self, node: FunctionExpr[boolean.IsNan], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_null(
-        self, node: FunctionExpr[boolean.IsNull], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def binary_expr(
-        self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def ternary_expr(
-        self, node: expr.Ternary, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def over(self, node: expr.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
-    def over_ordered(
-        self, node: expr.OrderedWindowExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def map_batches(
-        self, node: expr.AnonymousExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def rolling_expr(
-        self, node: expr.RollingExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    # series only (section 3)
-    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
-    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
-    def filter(self, node: expr.Filter, frame: FrameT_contra, name: str) -> Self: ...
-    # series -> scalar
-    def first(
-        self, node: agg.First, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def last(
-        self, node: agg.Last, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def arg_min(
-        self, node: agg.ArgMin, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def arg_max(
-        self, node: agg.ArgMax, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def sum(
-        self, node: agg.Sum, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def n_unique(
-        self, node: agg.NUnique, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def std(
-        self, node: agg.Std, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def var(
-        self, node: agg.Var, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def quantile(
-        self, node: agg.Quantile, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def count(
-        self, node: agg.Count, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def max(
-        self, node: agg.Max, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def mean(
-        self, node: agg.Mean, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def median(
-        self, node: agg.Median, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def min(
-        self, node: agg.Min, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def all(
-        self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def any(
-        self, node: FunctionExpr[boolean.Any], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-
-
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
         expr.Column: lambda self, node, frame, name: self.__narwhals_namespace__().col(
@@ -377,6 +258,125 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
 
     # NOTE: Needs to stay `covariant` and never be used as a parameter
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
+
+class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
+    """Everything common to `Expr`/`Series` and `Scalar` literal values.
+
+    Early notes:
+    - Separating series/scalar makes a lot of sense
+    - Handling the recursive case *without* intermediate (non-pyarrow) objects seems unachievable
+      - Everywhere would need to first check if it a scalar, which isn't ergonomic
+    - Broadcasting being separated is working
+    - A lot of `pyarrow.compute` (section 2) can work on either scalar or series (`FunctionExpr`)
+      - Aggregation can't, but that is already handled in `ExprIR`
+      - `polars` noops on aggregating a scalar, which we might be able to support this way
+    """
+
+    _evaluated: Any
+    """Compliant or native value."""
+
+    @property
+    def name(self) -> str: ...
+
+    @classmethod
+    def from_native(
+        cls, native: Any, name: str = "", /, version: Version = Version.MAIN
+    ) -> Self: ...
+
+    def _with_native(self, native: Any, name: str, /) -> Self:
+        return self.from_native(native, name or self.name, self.version)
+
+    # series & scalar
+    def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
+    def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
+    def not_(
+        self, node: FunctionExpr[boolean.Not], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def fill_null(
+        self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_between(
+        self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_finite(
+        self, node: FunctionExpr[boolean.IsFinite], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_nan(
+        self, node: FunctionExpr[boolean.IsNan], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def is_null(
+        self, node: FunctionExpr[boolean.IsNull], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def binary_expr(
+        self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def ternary_expr(
+        self, node: expr.Ternary, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def over(self, node: expr.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
+    def over_ordered(
+        self, node: expr.OrderedWindowExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def map_batches(
+        self, node: expr.AnonymousExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def rolling_expr(
+        self, node: expr.RollingExpr, frame: FrameT_contra, name: str
+    ) -> Self: ...
+    # series only (section 3)
+    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
+    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
+    def filter(self, node: expr.Filter, frame: FrameT_contra, name: str) -> Self: ...
+    # series -> scalar
+    def first(
+        self, node: agg.First, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def last(
+        self, node: agg.Last, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def arg_min(
+        self, node: agg.ArgMin, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def arg_max(
+        self, node: agg.ArgMax, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def sum(
+        self, node: agg.Sum, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def n_unique(
+        self, node: agg.NUnique, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def std(
+        self, node: agg.Std, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def var(
+        self, node: agg.Var, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def quantile(
+        self, node: agg.Quantile, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def count(
+        self, node: agg.Count, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def max(
+        self, node: agg.Max, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def mean(
+        self, node: agg.Mean, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def median(
+        self, node: agg.Median, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def min(
+        self, node: agg.Min, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def all(
+        self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def any(
+        self, node: FunctionExpr[boolean.Any], frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
 
 
 class CompliantScalar(

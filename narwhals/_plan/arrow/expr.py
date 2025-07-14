@@ -82,6 +82,22 @@ def all_(native: Any) -> pa.BooleanScalar:
     return pc.all(native, min_count=0)
 
 
+def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
+    # NOTE: PR that fixed these the overloads was closed
+    # https://github.com/zen-xu/pyarrow-stubs/pull/208
+    return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
+
+
+def array(value: NativeScalar) -> ArrayAny:
+    return pa.array([value], value.type)
+
+
+def chunked_array(
+    arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
+) -> ChunkedArrayAny:
+    return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+
+
 DISPATCH_BINARY: Mapping[type[ops.Operator], BinOp] = {
     ops.Eq: pc.equal,
     ops.NotEq: pc.not_equal,
@@ -378,22 +394,6 @@ class ArrowExpr(  # type: ignore[misc]
         fn = DISPATCH_BINARY[node.op.__class__]
         result = fn(lhs.native, rhs.native)
         return self._with_native(result, name)
-
-
-def lit(value: Any, dtype: pa.DataType | None = None) -> NativeScalar:
-    # NOTE: PR that fixed this the overloads was closed
-    # https://github.com/zen-xu/pyarrow-stubs/pull/208
-    return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
-
-
-def array(value: NativeScalar) -> ArrayAny:
-    return pa.array([value], value.type)
-
-
-def chunked_array(
-    arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
-) -> ChunkedArrayAny:
-    return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
 
 
 class ArrowScalar(
