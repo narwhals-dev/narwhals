@@ -34,7 +34,6 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -207,8 +206,6 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        pytest.skip()
     if "cudf" in str(constructor_eager):
         pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)

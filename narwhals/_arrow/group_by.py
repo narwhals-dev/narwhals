@@ -122,12 +122,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         ]
         new_column_names = [new_column_names[i] for i in index_map]
         result_simple = result_simple.rename_columns(new_column_names)
-        if self.compliant._backend_version < (12, 0, 0):
-            columns = result_simple.column_names
-            result_simple = result_simple.select(
-                [*self._keys, *[col for col in columns if col not in self._keys]]
-            )
-
         return self.compliant._with_native(result_simple).rename(
             dict(zip(self._keys, self._output_key_names))
         )
