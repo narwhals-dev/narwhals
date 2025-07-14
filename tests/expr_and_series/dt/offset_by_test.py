@@ -127,6 +127,108 @@ def test_offset_by(
 @pytest.mark.parametrize(
     ("by", "expected"),
     [
+        (
+            "-2us",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 49010),
+                datetime(2020, 1, 2, 2, 4, 14, 715121),
+            ],
+        ),
+        (
+            "-2000ns",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 49010),
+                datetime(2020, 1, 2, 2, 4, 14, 715121),
+            ],
+        ),
+        (
+            "-2ms",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 47012),
+                datetime(2020, 1, 2, 2, 4, 14, 713123),
+            ],
+        ),
+        (
+            "-10s",
+            [
+                datetime(2021, 3, 1, 12, 34, 46, 49012),
+                datetime(2020, 1, 2, 2, 4, 4, 715123),
+            ],
+        ),
+        (
+            "-7m",
+            [
+                datetime(2021, 3, 1, 12, 27, 56, 49012),
+                datetime(2020, 1, 2, 1, 57, 14, 715123),
+            ],
+        ),
+        (
+            "-7h",
+            [
+                datetime(2021, 3, 1, 5, 34, 56, 49012),
+                datetime(2020, 1, 1, 19, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-13d",
+            [
+                datetime(2021, 2, 16, 12, 34, 56, 49012),
+                datetime(2019, 12, 20, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-3mo",
+            [
+                datetime(2020, 12, 1, 12, 34, 56, 49012),
+                datetime(2019, 10, 2, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-2q",
+            [
+                datetime(2020, 9, 1, 12, 34, 56, 49012),
+                datetime(2019, 7, 2, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-3y",
+            [
+                datetime(2018, 3, 1, 12, 34, 56, 49012),
+                datetime(2017, 1, 2, 2, 4, 14, 715123),
+            ],
+        ),
+    ],
+)
+def test_offset_by_negative(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    by: str,
+    expected: list[datetime],
+) -> None:
+    df = nw.from_native(constructor(data))
+    if df.implementation.is_pyspark_connect():
+        # missing feature upstream
+        request.applymarker(pytest.mark.xfail())
+    if by == "-2q" and "sqlframe" in str(constructor):
+        # https://github.com/eakmanrq/sqlframe/issues/443
+        request.applymarker(pytest.mark.xfail())
+    if any(x in by for x in ("y", "q", "mo")) and any(
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
+    ):
+        request.applymarker(pytest.mark.xfail())
+    if "ns" in by and any(
+        x in str(constructor) for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
+    ):
+        request.applymarker(pytest.mark.xfail())
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
+        request.applymarker(pytest.mark.xfail())
+    result = df.select(nw.col("a").dt.offset_by(by))
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("by", "expected"),
+    [
         ("2d", "2024-01-03T05:45+0545"),
         ("5mo", "2024-06-01T05:45+0545"),
         ("7q", "2025-10-01T05:45+0545"),

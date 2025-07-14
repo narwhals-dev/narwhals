@@ -10,6 +10,7 @@ from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from datetime import timedelta
 
     import ibis.expr.types as ir
     from ibis.common.temporal import TimestampUnit
@@ -233,3 +234,13 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def timedelta_to_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
+    return ibis.interval(
+        days=td.days,
+        hours=td.seconds // 3600,
+        minutes=(td.seconds % 3600) // 60,
+        seconds=td.seconds % 60,
+        microseconds=td.microseconds,
+    )
