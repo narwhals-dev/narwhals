@@ -70,13 +70,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
-
-        _slice_length: int | None = (
-            self.len_chars().max() if self.backend_version < (13, 0) else None
-        )
         first_char, remaining_chars = (
             self.slice(0, 1).native,
-            self.slice(1, _slice_length).native,
+            self.slice(1, None).native,
         )
 
         # Conditions
