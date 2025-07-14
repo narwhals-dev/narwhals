@@ -37,7 +37,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 pandas = ["pandas>=1.1.3"]
 modin = ["modin"]
 cudf = ["cudf>=24.10.0"]
-pyarrow = ["pyarrow>=11.0.0"]
+pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
@@ -93,6 +93,7 @@ docs = [
 ]
 dev = [
   "pre-commit",
+  "ruff",
   {include-group = "tests"},
   {include-group = "typing"},
 ]
