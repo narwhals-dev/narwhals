@@ -295,9 +295,8 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
-        # NOTE: `pyarrow==11.*` doesn't allow keywords in `Array.cast`
-        return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
-            pa_object, pa.float64(), safe=False
+        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(
+            pa.float64(), safe=False
         )
 
     return arrow_array, pa_object
