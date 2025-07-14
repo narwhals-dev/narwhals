@@ -54,8 +54,9 @@ tests = [
   "covdefaults",
   "pytest",
   "pytest-cov",
-  "pytest-randomly",
   "pytest-env",
+  "pytest-randomly",
+  "pytest-xdist",
   "hypothesis",
 ]
 extra = [  # heavier dependencies we don't necessarily need in every testing job
