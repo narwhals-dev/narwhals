@@ -269,13 +269,13 @@ class PandasLikeGroupBy(
         into_series = ns._series.from_iterable
 
         def fn(df: pd.DataFrame) -> pd.Series[Any]:
-            out_group = []
-            out_names = []
-            for expr in exprs:
-                results_keys = expr(self.compliant._with_native(df))
-                for keys in results_keys:
-                    out_group.append(keys.native.iloc[0])
-                    out_names.append(keys.name)
+            compliant = self.compliant._with_native(df)
+            results = (
+                (keys.native.iloc[0], keys.name)
+                for expr in exprs
+                for keys in expr(compliant)
+            )
+            out_group, out_names = zip(*results) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
         return fn
