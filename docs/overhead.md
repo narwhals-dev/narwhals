@@ -9,8 +9,6 @@ Sometimes it's even negative, because of how careful we are in Narwhals
 to avoid unnecessary copies and index resets. Here are timings from the
 TPC-H queries, comparing running pandas directly vs running pandas via Narwhals:
 
-![Comparison of pandas vs "pandas via Narwhals" timings on TPC-H queries showing neglibile overhead](https://github.com/user-attachments/assets/bbd6fcaf-5c25-46a6-8c03-9ce42efca787)
-
 [Complete code to reproduce](https://www.kaggle.com/code/marcogorelli/narwhals-vs-pandas-overhead-tpc-h-s2).
 
 ## Plotly's story
