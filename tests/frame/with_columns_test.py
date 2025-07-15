@@ -6,7 +6,13 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
-from tests.utils import PYARROW_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    maybe_collect,
+)
 
 
 def test_with_columns_int_col_name_pandas() -> None:
@@ -101,10 +107,6 @@ def test_with_columns_missing_column(
             r"The following columns were not found: \[.*\]"
             r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
         )
-    if isinstance(df, nw.LazyFrame):
-        # In the lazy case, Polars only errors when we call `collect`
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.with_columns(d=nw.col("c") + 1).collect()
-    else:
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.with_columns(d=nw.col("c") + 1)
+
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        maybe_collect(df.with_columns(d=nw.col("c") + 1))

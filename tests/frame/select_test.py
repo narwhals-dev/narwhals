@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -14,10 +14,8 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    maybe_collect,
 )
-
-if TYPE_CHECKING:
-    from narwhals.typing import Frame
 
 
 class Foo: ...
@@ -97,18 +95,11 @@ def test_missing_columns(
     df = nw.from_native(constructor(data))
     selected_columns = ["a", "e", "f"]
 
-    def maybe_collect(df: Frame) -> Frame:
-        if isinstance(df, nw.LazyFrame) and (
-            constructor_id in {"polars[lazy]", "pyspark[connect]"}
-        ):
-            # In the lazy case, Polars only errors when we call `collect`,
-            # and we have no way to recover exactly which columns the user
-            # tried selecting. So, we just emit their message (which varies
-            # across versions...)
-            return df.collect()
-        return df
-
     if constructor_id == "polars[lazy]":
+        # In the lazy case, Polars only errors when we call `collect`,
+        # and we have no way to recover exactly which columns the user
+        # tried selecting. So, we just emit their message (which varies
+        # across versions...)
         msg = r"^e"
     elif constructor_id == "pyspark[connect]":  # pragma: no cover
         msg = r"^\[UNRESOLVED_COLUMN.WITH_SUGGESTION\]"
