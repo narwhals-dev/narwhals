@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+pytest.importorskip("pyarrow")
+import pyarrow as pa
+
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
@@ -25,6 +28,12 @@ def data_small() -> dict[str, Any]:
         "c": [9, 2, 4],
         "d": [8, 7, 8],
         "e": [None, 9, 7],
+        "f": [True, False, None],
+        "g": [False, None, False],
+        "h": [None, None, True],
+        "i": [None, None, None],
+        "j": [12.1, 13.2, 4.0],
+        "k": [42, 10, 12],
     }
 
 
@@ -36,6 +45,12 @@ def _ids_ir(expr: DummyExpr | Any) -> str:
 
 XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
     reason="Bug in `meta` namespace impl", raises=ComputeError
+)
+XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
+    reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
+    "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
+    "Function 'or_kleene' has no kernel matching input types (bool, null)",
+    raises=pa.ArrowNotImplementedError,
 )
 
 
@@ -219,6 +234,34 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             },
             id="all-horizontal-kleene",
         ),
+        pytest.param(
+            [
+                nwd.any_horizontal("f", "g"),
+                nwd.any_horizontal("g", "h"),
+                nwd.any_horizontal(nwd.lit(False), nwd.col("g").last()).alias(
+                    "False-False"
+                ),
+            ],
+            {
+                "f": [True, None, None],
+                "g": [None, None, True],
+                "False-False": [False, False, False],
+            },
+            id="any-horizontal-kleene",
+        ),
+        pytest.param(
+            [
+                nwd.any_horizontal(nwd.lit(None, nw.Boolean), "i").alias("None-None"),
+                nwd.any_horizontal(nwd.lit(True), "i").alias("True-None"),
+                nwd.any_horizontal(nwd.lit(False), "i").alias("False-None"),
+            ],
+            {
+                "None-None": [None, None, None],
+                "True-None": [True, True, True],
+                "False-None": [None, None, None],
+            },
+            id="any-horizontal-kleene-full-null",
+            marks=XFAIL_KLEENE_ALL_NULL,
         ),
     ],
     ids=_ids_ir,
@@ -228,9 +271,6 @@ def test_select(
     expected: dict[str, Any],
     data_small: dict[str, Any],
 ) -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
     from narwhals._plan.dummy import DummyFrame
 
     frame = pa.table(data_small)
