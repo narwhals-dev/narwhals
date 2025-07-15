@@ -32,8 +32,8 @@ def data_small() -> dict[str, Any]:
         "g": [False, None, False],
         "h": [None, None, True],
         "i": [None, None, None],
-        "j": [12.1, 13.2, 4.0],
-        "k": [42, 10, 12],
+        "j": [12.1, None, 4.0],
+        "k": [42, 10, None],
         "l": [4, 5, 6],
         "m": [0, 1, 2],
     }
@@ -289,9 +289,11 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
                 "mean": [10.5, 10.5, 10.5],
             },
             id="sumh_broadcasting",
-            marks=pytest.mark.xfail(
-                reason="`mean_horizontal` not implemented", raises=NotImplementedError
-            ),
+        ),
+        pytest.param(
+            nwd.mean_horizontal("j", nwd.col("k"), "e"),
+            {"j": [27.05, 9.5, 5.5]},
+            id="mean_horizontal-null",
         ),
     ],
     ids=_ids_ir,

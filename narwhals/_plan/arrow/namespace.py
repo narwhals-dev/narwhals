@@ -15,7 +15,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
     from narwhals._plan import expr, functions as F  # noqa: N812
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
@@ -140,11 +140,21 @@ class ArrowNamespace(
     ) -> ArrowExpr | ArrowScalar:
         return self._horizontal_function(pc.max_element_wise)(node, frame, name)
 
-    # TODO @dangotbanned: Impl `mean_horizontal`
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        from narwhals._plan.arrow.expr import lit, truediv_compat
+
+        # NOTE: Overloads too broken
+        add: Incomplete = pc.add
+        sub = pc.subtract
+        inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
+        filled = (pc.fill_null(native, lit(0)) for native in inputs)
+        not_null = (sub(lit(1), pc.is_null(native).cast(pa.int64())) for native in inputs)
+        result = truediv_compat(reduce(add, filled), reduce(add, not_null))
+        if isinstance(result, pa.Scalar):
+            return self._scalar.from_native(result, name, self.version)
+        return self._expr.from_native(result, name, self.version)
 
     # TODO @dangotbanned: Impl `concat_str`
     def concat_str(
