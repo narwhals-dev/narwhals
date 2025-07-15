@@ -196,7 +196,7 @@ builtins-ignorelist = ["format"]
   "PLR0916", # too-many-boolean-expressions
 ]
 "tpch/tests/*" = ["S101"]
-"utils/*" = ["S311", "PTH123"]
+"utils/*" = ["S311"]
 "utils/bump_version.py" = ["S603", "S607", "T201"]
 "tpch/execute/*" = ["T201"]
 "tpch/notebooks/*" = [
