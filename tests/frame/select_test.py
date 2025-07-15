@@ -90,7 +90,7 @@ def test_missing_columns(
 ) -> None:
     constructor_id = str(request.node.callspec.id)
     if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
-        # These backend raise errors at collect
+        # These raise a different error depending on their underlying backend
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
