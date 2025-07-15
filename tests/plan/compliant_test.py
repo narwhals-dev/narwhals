@@ -34,6 +34,8 @@ def data_small() -> dict[str, Any]:
         "i": [None, None, None],
         "j": [12.1, 13.2, 4.0],
         "k": [42, 10, 12],
+        "l": [4, 5, 6],
+        "m": [0, 1, 2],
     }
 
 
@@ -262,6 +264,34 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             },
             id="any-horizontal-kleene-full-null",
             marks=XFAIL_KLEENE_ALL_NULL,
+        ),
+        pytest.param(
+            [
+                nwd.col("b").alias("a"),
+                nwd.col("l").alias("b"),
+                nwd.col("m").alias("i"),
+                nwd.any_horizontal(nwd.sum("b", "l").cast(nw.Boolean)).alias("any"),
+                nwd.all_horizontal(nwd.sum("b", "l").cast(nw.Boolean)).alias("all"),
+                nwd.max_horizontal(nwd.sum("b"), nwd.sum("l")).alias("max"),
+                nwd.min_horizontal(nwd.sum("b"), nwd.sum("l")).alias("min"),
+                nwd.sum_horizontal(nwd.sum("b"), nwd.sum("l")).alias("sum"),
+                nwd.mean_horizontal(nwd.sum("b"), nwd.sum("l")).alias("mean"),
+            ],
+            {
+                "a": [1, 2, 3],
+                "b": [4, 5, 6],
+                "i": [0, 1, 2],
+                "any": [True, True, True],
+                "all": [True, True, True],
+                "max": [15, 15, 15],
+                "min": [6, 6, 6],
+                "sum": [21, 21, 21],
+                "mean": [10.5, 10.5, 10.5],
+            },
+            id="sumh_broadcasting",
+            marks=pytest.mark.xfail(
+                reason="`mean_horizontal` not implemented", raises=NotImplementedError
+            ),
         ),
     ],
     ids=_ids_ir,
