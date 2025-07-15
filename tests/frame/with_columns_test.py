@@ -99,7 +99,7 @@ def test_with_columns_missing_column(
             r"The following columns were not found: \[.*\]"
             r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
         )
-    if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
+    if isinstance(df, nw.LazyFrame):
         # In the lazy case, Polars only errors when we call `collect`
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.with_columns(d=nw.col("c") + 1).collect()
