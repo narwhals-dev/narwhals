@@ -84,7 +84,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             [2 ** nwd.col("b"), (nwd.lit(2.0) ** nwd.nth(1)).alias("lit")],
             {"literal": [2, 4, 8], "lit": [2, 4, 8]},
         ),
-        (
+        pytest.param(
             [
                 nwd.col("b").is_between(2, 3, "left").alias("left"),
                 nwd.col("b").is_between(2, 3, "right").alias("right"),
@@ -105,8 +105,9 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
                 "c": [False, False, True],
                 "c_right": [False, False, False],
             },
+            id="is_between",
         ),
-        (
+        pytest.param(
             [
                 nwd.col("e").fill_null(0).alias("e_0"),
                 nwd.col("e").fill_null(nwd.col("b")).alias("e_b"),
@@ -122,6 +123,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
                 "e_b_last": [3, 9, 7],
                 "e_sort_wild": [7, 9, 4],
             },
+            id="sort",
         ),
         (nwd.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
         (
@@ -159,7 +161,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
         pytest.param(
             nwd.when(nwd.col("b") == nwd.col("c"), nwd.col("d").mean() > nwd.col("d"))
             .then(123)
-            .when(nwd.lit(True), ~nwd.nth(-1).is_null())
+            .when(nwd.lit(True), ~nwd.nth(4).is_null())
             .then(456)
             .otherwise(nwd.col("c")),
             {"literal": [9, 123, 456]},
@@ -183,7 +185,7 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
             {"e": [7, 7, 7], "b": [3, 2, 1]},
             id="When-literal-then-agg-broadcast",
         ),
-        (
+        pytest.param(
             [
                 nwd.all_horizontal(
                     nwd.col("b") < nwd.col("c"),
@@ -194,8 +196,9 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
                 nwd.nth(1).last().name.suffix("_last"),
             ],
             {"b": [None, False, True], "b_last": [3, 3, 3]},
+            id="all-horizontal-mixed-broadcast",
         ),
-        (
+        pytest.param(
             [
                 nwd.all_horizontal(nwd.lit(True), nwd.lit(True)).alias("a"),
                 nwd.all_horizontal(nwd.lit(False), nwd.lit(True)).alias("b"),
@@ -214,6 +217,8 @@ XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
                 "e": [False],
                 "f": [None],
             },
+            id="all-horizontal-kleene",
+        ),
         ),
     ],
     ids=_ids_ir,
