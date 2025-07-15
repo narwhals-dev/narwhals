@@ -8,7 +8,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, PYARROW_VERSION, is_windows
+from tests.utils import PANDAS_VERSION, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -38,8 +38,7 @@ def test_to_numpy_tz_aware(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
-        ("pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (12,))
-        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
+        ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
         or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
         or ("pyarrow" in str(constructor_eager) and is_windows())
     ):

@@ -13,7 +13,6 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -108,10 +107,6 @@ def test_timestamp_datetimes_tz_aware(
         (
             "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,),
             "Requires pandas >= 2.0 for pyarrow support",
-        ),
-        (
-            "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,),
-            "Requires pyarrow >= 12.0",
         ),
         (
             "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 2),
