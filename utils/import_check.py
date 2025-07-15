@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import sys
+from pathlib import Path
 
 BANNED_IMPORTS = {
     "cudf",
@@ -76,8 +77,7 @@ class ImportPandasChecker(ast.NodeVisitor):
 
 
 def check_import_pandas(filename: str) -> bool:
-    with open(filename, encoding="utf-8") as file:
-        content = file.read()
+    content = Path(filename).read_text("utf-8")
     tree = ast.parse(content, filename=filename)
 
     checker = ImportPandasChecker(filename, content.splitlines())
