@@ -13,6 +13,7 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.series import Series
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
-    from narwhals.series import Series
     from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
 
     T = TypeVar("T")
@@ -673,6 +673,28 @@ class PolarsSeriesStringNamespace:
         name = series.name
         ns = series.__narwhals_namespace__()
         return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+
+    def replace(
+        self, pattern: str, value: str | Series, *, literal: bool = False, n: int = 1
+    ) -> PolarsSeries:
+        if isinstance(value, Series):
+            value = value.to_native()
+
+        return self._compliant_series._with_native(
+            self._compliant_series.native.str.replace(
+                pattern, value, literal=literal, n=n
+            )
+        )
+
+    def replace_all(
+        self, pattern: str, value: str | Series, *, literal: bool = False
+    ) -> PolarsSeries:
+        if isinstance(value, Series):
+            value = value.to_native()
+
+        return self._compliant_series._with_native(
+            self._compliant_series.native.str.replace_all(pattern, value, literal=literal)
+        )
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:

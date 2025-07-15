@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from functools import partial
-from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
 
 from narwhals._compliant.any_namespace import (
@@ -365,8 +364,7 @@ class EagerExpr(
 
     def _reuse_series(
         self,
-        method_name: str,
-        *,
+        *method_name: str,
         returns_scalar: bool = False,
         scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
@@ -395,7 +393,7 @@ class EagerExpr(
         return self._from_callable(
             func,
             depth=self._depth + 1,
-            function_name=f"{self._function_name}->{method_name}",
+            function_name=f"{self._function_name}->{'.'.join(method_name)}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             scalar_kwargs=scalar_kwargs,
@@ -417,11 +415,16 @@ class EagerExpr(
         self,
         df: EagerDataFrameT,
         *,
-        method_name: str,
+        method_name: tuple[str],
         returns_scalar: bool,
         scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
+        def recurse_method(obj: Any, *names: str) -> Any:
+            for name in names:
+                obj = getattr(obj, name)
+            return obj
+
         kwargs = {
             **scalar_kwargs,
             **{
@@ -429,17 +432,16 @@ class EagerExpr(
                 for name, value in expressifiable_args.items()
             },
         }
-        method = methodcaller(
-            method_name,
-            **self._reuse_series_extra_kwargs(returns_scalar=returns_scalar),
-            **kwargs,
-        )
         out: Sequence[EagerSeriesT] = [
-            series._from_scalar(method(series)) if returns_scalar else method(series)
+            series._from_scalar(recurse_method(series, *method_name)(**kwargs))
+            if returns_scalar
+            else recurse_method(series, *method_name)(**kwargs)
             for series in self(df)
         ]
         aliases = self._evaluate_aliases(df)
-        if [s.name for s in out] != list(aliases):  # pragma: no cover
+        if len(method_name) == 1 and [s.name for s in out] != list(
+            aliases
+        ):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
                 f"Expression aliases: {aliases}\n"
@@ -940,93 +942,91 @@ class EagerExprCatNamespace(
     EagerExprNamespace[EagerExprT], CatNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def get_categories(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("cat", "get_categories")
+        return self.compliant._reuse_series("cat", "get_categories")
 
 
 class EagerExprDateTimeNamespace(
     EagerExprNamespace[EagerExprT], DateTimeNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def to_string(self, format: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "to_string", format=format)
+        return self.compliant._reuse_series("dt", "to_string", format=format)
 
     def replace_time_zone(self, time_zone: str | None) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
+        return self.compliant._reuse_series(
             "dt", "replace_time_zone", time_zone=time_zone
         )
 
     def convert_time_zone(self, time_zone: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
+        return self.compliant._reuse_series(
             "dt", "convert_time_zone", time_zone=time_zone
         )
 
     def timestamp(self, time_unit: TimeUnit) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
-            "dt", "timestamp", time_unit=time_unit
-        )
+        return self.compliant._reuse_series("dt", "timestamp", time_unit=time_unit)
 
     def date(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "date")
+        return self.compliant._reuse_series("dt", "date")
 
     def year(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "year")
+        return self.compliant._reuse_series("dt", "year")
 
     def month(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "month")
+        return self.compliant._reuse_series("dt", "month")
 
     def day(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "day")
+        return self.compliant._reuse_series("dt", "day")
 
     def hour(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "hour")
+        return self.compliant._reuse_series("dt", "hour")
 
     def minute(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "minute")
+        return self.compliant._reuse_series("dt", "minute")
 
     def second(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "second")
+        return self.compliant._reuse_series("dt", "second")
 
     def millisecond(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "millisecond")
+        return self.compliant._reuse_series("dt", "millisecond")
 
     def microsecond(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "microsecond")
+        return self.compliant._reuse_series("dt", "microsecond")
 
     def nanosecond(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "nanosecond")
+        return self.compliant._reuse_series("dt", "nanosecond")
 
     def ordinal_day(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "ordinal_day")
+        return self.compliant._reuse_series("dt", "ordinal_day")
 
     def weekday(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "weekday")
+        return self.compliant._reuse_series("dt", "weekday")
 
     def total_minutes(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "total_minutes")
+        return self.compliant._reuse_series("dt", "total_minutes")
 
     def total_seconds(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "total_seconds")
+        return self.compliant._reuse_series("dt", "total_seconds")
 
     def total_milliseconds(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "total_milliseconds")
+        return self.compliant._reuse_series("dt", "total_milliseconds")
 
     def total_microseconds(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "total_microseconds")
+        return self.compliant._reuse_series("dt", "total_microseconds")
 
     def total_nanoseconds(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "total_nanoseconds")
+        return self.compliant._reuse_series("dt", "total_nanoseconds")
 
     def truncate(self, every: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
+        return self.compliant._reuse_series("dt", "truncate", every=every)
 
     def offset_by(self, by: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("dt", "offset_by", by=by)
+        return self.compliant._reuse_series("dt", "offset_by", by=by)
 
 
 class EagerExprListNamespace(
     EagerExprNamespace[EagerExprT], ListNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def len(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("list", "len")
+        return self.compliant._reuse_series("list", "len")
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
@@ -1101,62 +1101,58 @@ class EagerExprStringNamespace(
     EagerExprNamespace[EagerExprT], StringNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def len_chars(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "len_chars")
+        return self.compliant._reuse_series("str", "len_chars")
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
+    def replace(
+        self, pattern: str, value: str | EagerExprT, *, literal: bool, n: int
+    ) -> EagerExprT:
+        return self.compliant._reuse_series(
             "str", "replace", pattern=pattern, value=value, literal=literal, n=n
         )
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
+        return self.compliant._reuse_series(
             "str", "replace_all", pattern=pattern, value=value, literal=literal
         )
 
     def strip_chars(self, characters: str | None) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
-            "str", "strip_chars", characters=characters
-        )
+        return self.compliant._reuse_series("str", "strip_chars", characters=characters)
 
     def starts_with(self, prefix: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "starts_with", prefix=prefix)
+        return self.compliant._reuse_series("str", "starts_with", prefix=prefix)
 
     def ends_with(self, suffix: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "ends_with", suffix=suffix)
+        return self.compliant._reuse_series("str", "ends_with", suffix=suffix)
 
     def contains(self, pattern: str, *, literal: bool) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
+        return self.compliant._reuse_series(
             "str", "contains", pattern=pattern, literal=literal
         )
 
     def slice(self, offset: int, length: int | None) -> EagerExprT:
-        return self.compliant._reuse_series_namespace(
-            "str", "slice", offset=offset, length=length
-        )
+        return self.compliant._reuse_series("str", "slice", offset=offset, length=length)
 
     def split(self, by: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "split", by=by)
+        return self.compliant._reuse_series("str", "split", by=by)
 
     def to_datetime(self, format: str | None) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "to_datetime", format=format)
+        return self.compliant._reuse_series("str", "to_datetime", format=format)
 
     def to_date(self, format: str | None) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "to_date", format=format)
+        return self.compliant._reuse_series("str", "to_date", format=format)
 
     def to_lowercase(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "to_lowercase")
+        return self.compliant._reuse_series("str", "to_lowercase")
 
     def to_uppercase(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "to_uppercase")
+        return self.compliant._reuse_series("str", "to_uppercase")
 
     def zfill(self, width: int) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("str", "zfill", width=width)
+        return self.compliant._reuse_series("str", "zfill", width=width)
 
 
 class EagerExprStructNamespace(
     EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]
 ):
     def field(self, name: str) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("struct", "field", name=name).alias(
-            name
-        )
+        return self.compliant._reuse_series("struct", "field", name=name).alias(name)

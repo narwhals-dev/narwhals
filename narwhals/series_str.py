@@ -63,7 +63,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> SeriesT:
+    def replace_all(
+        self, pattern: str, value: str | SeriesT, *, literal: bool = False
+    ) -> SeriesT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:

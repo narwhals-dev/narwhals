@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+from narwhals._expression_parsing import apply_n_ary_operation
+
 if TYPE_CHECKING:
     from narwhals.expr import Expr
 
@@ -44,7 +46,7 @@ class ExprStringNamespace(Generic[ExprT]):
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | ExprT, *, literal: bool = False, n: int = 1
     ) -> ExprT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -72,8 +74,16 @@ class ExprStringNamespace(Generic[ExprT]):
             └──────────────────────┘
         """
         return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.replace(
-                pattern, value, literal=literal, n=n
+            lambda plx: (
+                apply_n_ary_operation(
+                    plx,
+                    lambda self, value: self.str.replace(
+                        pattern, value, literal=literal, n=n
+                    ),
+                    self._expr,
+                    value,
+                    str_as_lit=True,
+                )
             )
         )
 
@@ -103,8 +113,16 @@ class ExprStringNamespace(Generic[ExprT]):
             └──────────────────────┘
         """
         return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.replace_all(
-                pattern, value, literal=literal
+            lambda plx: (
+                apply_n_ary_operation(
+                    plx,
+                    lambda self, value: self.str.replace_all(
+                        pattern, value, literal=literal
+                    ),
+                    self._expr,
+                    value,
+                    str_as_lit=True,
+                )
             )
         )
 

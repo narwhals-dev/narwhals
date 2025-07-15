@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace, is_dtype_pyarrow
+from narwhals._pandas_like.utils import (
+    PandasLikeSeriesNamespace,
+    align_and_extract_native,
+    is_dtype_pyarrow,
+)
 
 if TYPE_CHECKING:
+    from narwhals import Expr
     from narwhals._pandas_like.series import PandasLikeSeries
 
 
@@ -16,11 +22,32 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.len())
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool, n: int
+        self, pattern: str, value: str | Expr, *, literal: bool, n: int
     ) -> PandasLikeSeries:
-        return self.with_native(
-            self.native.str.replace(pat=pattern, repl=value, n=n, regex=not literal)
-        )
+        if isinstance(value, str):
+            series = self.native.str.replace(
+                pat=pattern, repl=value, n=n, regex=not literal
+            )
+        else:
+            if n > 1:
+                msg = "multivalue `Series.str.replace` with 'n > 1' not supported"
+                raise ValueError(msg)
+            _, other_native = align_and_extract_native(self.compliant, value)
+            values: list[str]
+            if literal:
+                values = [
+                    string.replace(pattern, repl, n)
+                    for string, repl in zip(self.native, value)
+                ]
+            else:
+                regex = re.compile(pattern)
+                values = [
+                    regex.sub(repl, string, count=max(n, 0))
+                    for string, repl in zip(self.native, value)
+                ]
+            constructor = self.compliant.__native_namespace__().Series
+            series = constructor(values, dtype=self.native.dtype, name=self.native.name)
+        return self.with_native(series)
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> PandasLikeSeries:
         return self.replace(pattern, value, literal=literal, n=-1)

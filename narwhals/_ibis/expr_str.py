@@ -77,6 +77,11 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
         return fn
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> IbisExpr:
+        from narwhals._ibis.expr import IbisExpr
+
+        if isinstance(value, IbisExpr):
+            msg = "Ibis backed `Expr.str.replace_all` does not support Expr-like replacement values"
+            raise TypeError(msg)
         fn = self._replace_all_literal if literal else self._replace_all
         return self.compliant._with_callable(fn(pattern, value))
 

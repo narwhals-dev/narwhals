@@ -17,12 +17,26 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> ArrowSeries:
+    def replace(
+        self, pattern: str, value: str | ArrowSeries, *, literal: bool, n: int
+    ) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        if isinstance(value, ArrowSeries):
+            msg = "Series.str.replace does not support Series-like replacement values"
+            raise TypeError(msg)
         fn = pc.replace_substring if literal else pc.replace_substring_regex
         arr = fn(self.native, pattern, replacement=value, max_replacements=n)
         return self.with_native(arr)
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> ArrowSeries:
+    def replace_all(
+        self, pattern: str, value: str | ArrowSeries, *, literal: bool
+    ) -> ArrowSeries:
+        from narwhals._arrow.series import ArrowSeries
+
+        if isinstance(value, ArrowSeries):
+            msg = "PyArrow backed `Series.str.replace_all` does not support Series-like replacement values"
+            raise TypeError(msg)
         return self.replace(pattern, value, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
