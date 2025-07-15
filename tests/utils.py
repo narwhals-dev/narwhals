@@ -187,6 +187,6 @@ def maybe_collect(df: Frame) -> Frame:
     Use this function to test specific behaviors during collection.
     For example, Polars only errors when we call `collect` in the lazy case.
     """
-    if isinstance(df, nw.LazyFrame):  # pragma: no cover
+    if isinstance(df, nw.LazyFrame):
         return df.collect()
-    return df
+    return df  # pragma: no cover
