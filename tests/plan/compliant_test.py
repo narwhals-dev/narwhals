@@ -46,7 +46,10 @@ def _ids_ir(expr: DummyExpr | Any) -> str:
 
 
 XFAIL_REWRITE_SPECIAL_ALIASES = pytest.mark.xfail(
-    reason="Bug in `meta` namespace impl", raises=ComputeError
+    reason="https://github.com/narwhals-dev/narwhals/blob/3732e5a6b56411157f13307dfdbd25e397d5b8e6/narwhals/_plan/meta.py#L142-L162\n"
+    "Matches behavior of `polars`\n"
+    "pl.select(pl.lit(1).name.suffix('_suffix'))",
+    raises=ComputeError,
 )
 XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
