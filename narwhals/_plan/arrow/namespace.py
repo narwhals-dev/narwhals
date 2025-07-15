@@ -102,12 +102,16 @@ class ArrowNamespace(
     # NOTE: Update with `ignore_nulls`/`fill_null` behavior once added to each `Function`
     # https://github.com/narwhals-dev/narwhals/pull/2719
     def _horizontal_function(
-        self, fn: Callable[[Any, Any], Any], /
+        self, fn: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
     ) -> Callable[[FunctionExpr[Any], ArrowDataFrame, str], ArrowExpr | ArrowScalar]:
+        from narwhals._plan.arrow.expr import lit
+
         def func(
             node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
         ) -> ArrowExpr | ArrowScalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+            if fill is not None:
+                it = (pc.fill_null(native, lit(fill)) for native in it)
             result = reduce(fn, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
@@ -128,7 +132,7 @@ class ArrowNamespace(
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.add)(node, frame, name)
+        return self._horizontal_function(pc.add, fill=0)(node, frame, name)
 
     def min_horizontal(
         self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str

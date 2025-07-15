@@ -295,6 +295,11 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             {"j": [27.05, 9.5, 5.5]},
             id="mean_horizontal-null",
         ),
+        pytest.param(
+            nwd.sum_horizontal("j", nwd.col("k"), "e"),
+            {"j": [54.1, 19.0, 11.0]},
+            id="sum_horizontal-null",
+        ),
     ],
     ids=_ids_ir,
 )
