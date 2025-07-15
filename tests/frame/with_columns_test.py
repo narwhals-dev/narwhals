@@ -94,6 +94,8 @@ def test_with_columns_missing_column(
         msg = r"^c"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+    elif constructor_id == "pyspark[connect]":  # pragma: no cover
+        msg = r"^\[UNRESOLVED_COLUMN.WITH_SUGGESTION\]"
     else:
         msg = (
             r"The following columns were not found: \[.*\]"
