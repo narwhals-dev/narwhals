@@ -211,6 +211,14 @@ class PolarsExpr:
     def __floordiv__(self, other: Any) -> Self:
         return self._with_native(self.native.__floordiv__(extract_native(other)))
 
+    def __rfloordiv__(self, other: Any) -> Self:
+        native = self.native
+        result = native.__rfloordiv__(extract_native(other))
+        if self._backend_version < (1, 10, 0):
+            # Polars 1.9.0 and earlier returns 0 for division by 0 in rfloordiv.
+            result = pl.when(native != 0).then(result).otherwise(None)
+        return self._with_native(result)
+
     def __mod__(self, other: Any) -> Self:
         return self._with_native(self.native.__mod__(extract_native(other)))
 
