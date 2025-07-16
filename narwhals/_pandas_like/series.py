@@ -53,6 +53,7 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
+        _AnyDArray,
         _SliceIndex,
     )
 
@@ -946,10 +947,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
+        data: dict[str, Sequence[int | float | str] | _AnyDArray]
 
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
             data = {"breakpoint": [], "count": []}
-
         elif self.native.count() < 1:
             data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
         else:
@@ -963,7 +964,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _hist_from_empty_series(
         self, bins: list[float | int] | None, bin_count: int | None
-    ) -> dict[str, list[int | float]]:
+    ) -> dict[str, Sequence[int | float | str] | _AnyDArray]:
         """Create histogram result for empty data."""
         from numpy import linspace, zeros
 
@@ -1003,7 +1004,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _hist_from_bins(
         self, ns: ModuleType, bins: list[float]
-    ) -> dict[str, list[int | float]]:
+    ) -> dict[str, Sequence[int | float | str] | _AnyDArray]:
         """Calculate the actual histogram."""
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
         #   happen since the bins were explicitly passed in.
