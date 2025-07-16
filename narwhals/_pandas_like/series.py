@@ -943,44 +943,31 @@ class PandasLikeSeries(EagerSeries[Any]):
         bin_count: int | None,
         include_breakpoint: bool,
     ) -> PandasLikeDataFrame:
-        if bin_count == 0 or (bins is not None and len(bins) <= 1):
-            return self._empty_hist(include_breakpoint=include_breakpoint)
-
-        if self.native.count() < 1:
-            return self._hist_from_empty_series(
-                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
-            )
-
-        # Prepare bins for histogram calculation
-        final_bins = self._prepare_bins(bins, bin_count)
-
-        # Handle single bin edge case
-        if len(final_bins) == 2:
-            return self._hist_from_single_bin(
-                final_bins, include_breakpoint=include_breakpoint
-            )
-
-        # Calculate histogram
-        ns = self.__native_namespace__()
-        return self._calculate_histogram(
-            ns=ns, bins=final_bins, include_breakpoint=include_breakpoint
-        )
-
-    def _empty_hist(self, *, include_breakpoint: bool) -> PandasLikeDataFrame:
-        """Create empty histogram result."""
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        dtypes = self._version.dtypes
-        data, schema = {}, {}
+        ns = self.__native_namespace__()
 
-        if include_breakpoint:
-            data["breakpoint"] = []
-            schema["breakpoint"] = dtypes.Float64()
+        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+            data = self._empty_hist(include_breakpoint=include_breakpoint)
 
-        data["count"] = []
-        schema["breakpoint"] = dtypes.UInt32()
+        elif self.native.count() < 1:
+            data = self._hist_from_empty_series(
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
+        else:
+            # Prepare bins for histogram calculation
+            final_bins = self._prepare_bins(bins=bins, bin_count=bin_count)
+            data = self._hist_from_bins(
+                ns=ns, bins=final_bins, include_breakpoint=include_breakpoint
+            )
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-        return PandasLikeDataFrame.from_dict(data, context=self, schema=schema)
+    def _empty_hist(self, *, include_breakpoint: bool) -> dict[str, list[int | float]]:
+        """Create empty histogram result."""
+        data = {"breakpoint": [], "count": []}
+        if not include_breakpoint:
+            del data["breakpoint"]
+        return data
 
     def _hist_from_empty_series(
         self,
@@ -988,16 +975,14 @@ class PandasLikeSeries(EagerSeries[Any]):
         bin_count: int | None,
         *,
         include_breakpoint: bool,
-    ) -> PandasLikeDataFrame:
+    ) -> dict[str, list[int | float]]:
         """Create histogram result for empty data."""
         from numpy import linspace, zeros
-
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         if bins is not None:
             data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
         else:
-            count = int(bin_count) if bin_count is not None else 1
+            count = bin_count if bin_count is not None else 1
             data = (
                 {"breakpoint": [1.0], "count": [0]}
                 if count == 1
@@ -1010,7 +995,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not include_breakpoint:
             del data["breakpoint"]
 
-        return PandasLikeDataFrame.from_dict(data, context=self, schema=None)
+        return data
 
     def _prepare_bins(
         self, bins: list[float | int] | None, bin_count: int | None
@@ -1031,44 +1016,31 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return linspace(lower, upper, bin_count + 1)
 
-    def _hist_from_single_bin(
-        self, bins: list[float], *, include_breakpoint: bool
-    ) -> PandasLikeDataFrame:
-        """Create result for single bin case."""
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        data = {"breakpoint": [bins[1]], "count": [self.native.count()]}
-        if not include_breakpoint:
-            del data["breakpoint"]
-
-        return PandasLikeDataFrame.from_dict(data, context=self, schema=None)
-
-    def _calculate_histogram(
+    def _hist_from_bins(
         self, ns: ModuleType, bins: list[float], *, include_breakpoint: bool
-    ) -> PandasLikeDataFrame:
+    ) -> dict[str, list[int | float]]:
         """Calculate the actual histogram."""
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        # Create categories using pandas cut
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
+        #   happen since the bins were explicitly passed in.
         categories = ns.cut(
             self.native,
             bins=bins,
             include_lowest=True,  # Polars 1.27.0 always includes the lowest bin
         )
-
-        # Get value counts and reindex to include empty bins
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations,
+        #   .reindex is necessary to restore these bins.
         result = categories.value_counts(dropna=True, sort=False).reindex(
             categories.cat.categories, fill_value=0
         )
+        result.reset_index(drop=True, inplace=True)  # noqa: PD002
 
-        # Prepare final data
         data = {}
         if include_breakpoint:
             data["breakpoint"] = bins[1:]
-        result.reset_index(drop=True, inplace=True)  # noqa: PD002
+
         data["count"] = result
 
-        return PandasLikeDataFrame.from_dict(data, context=self, schema=None)
+        return data
 
     def log(self, base: float) -> Self:
         native = self.native
