@@ -948,33 +948,21 @@ class PandasLikeSeries(EagerSeries[Any]):
         ns = self.__native_namespace__()
 
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
-            data = self._empty_hist(include_breakpoint=include_breakpoint)
+            data = {"breakpoint": [], "count": []}
 
         elif self.native.count() < 1:
-            data = self._hist_from_empty_series(
-                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
-            )
+            data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
         else:
-            # Prepare bins for histogram calculation
             final_bins = self._prepare_bins(bins=bins, bin_count=bin_count)
-            data = self._hist_from_bins(
-                ns=ns, bins=final_bins, include_breakpoint=include_breakpoint
-            )
-        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+            data = self._hist_from_bins(ns=ns, bins=final_bins)
 
-    def _empty_hist(self, *, include_breakpoint: bool) -> dict[str, list[int | float]]:
-        """Create empty histogram result."""
-        data = {"breakpoint": [], "count": []}
         if not include_breakpoint:
             del data["breakpoint"]
-        return data
+
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
     def _hist_from_empty_series(
-        self,
-        bins: list[float | int] | None,
-        bin_count: int | None,
-        *,
-        include_breakpoint: bool,
+        self, bins: list[float | int] | None, bin_count: int | None
     ) -> dict[str, list[int | float]]:
         """Create histogram result for empty data."""
         from numpy import linspace, zeros
@@ -991,9 +979,6 @@ class PandasLikeSeries(EagerSeries[Any]):
                     "count": zeros(shape=count),
                 }
             )
-
-        if not include_breakpoint:
-            del data["breakpoint"]
 
         return data
 
@@ -1017,7 +1002,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return linspace(lower, upper, bin_count + 1)
 
     def _hist_from_bins(
-        self, ns: ModuleType, bins: list[float], *, include_breakpoint: bool
+        self, ns: ModuleType, bins: list[float]
     ) -> dict[str, list[int | float]]:
         """Calculate the actual histogram."""
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
@@ -1034,13 +1019,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         result.reset_index(drop=True, inplace=True)  # noqa: PD002
 
-        data = {}
-        if include_breakpoint:
-            data["breakpoint"] = bins[1:]
-
-        data["count"] = result
-
-        return data
+        return {"breakpoint": bins[1:], "count": result}
 
     def log(self, base: float) -> Self:
         native = self.native
