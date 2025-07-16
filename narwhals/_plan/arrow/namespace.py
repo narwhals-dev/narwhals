@@ -160,11 +160,17 @@ class ArrowNamespace(
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
-    # TODO @dangotbanned: Impl `concat_str`
     def concat_str(
         self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        raise NotImplementedError
+        exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
+        aligned = (ser.native for ser in self._expr.align(exprs))
+        separator = node.function.separator
+        ignore_nulls = node.function.ignore_nulls
+        result = fn.concat_str(*aligned, separator=separator, ignore_nulls=ignore_nulls)
+        if isinstance(result, pa.Scalar):
+            return self._scalar.from_native(result, name, self.version)
+        return self._expr.from_native(result, name, self.version)
 
     def int_range(
         self, node: RangeExpr[IntRange], frame: ArrowDataFrame, name: str

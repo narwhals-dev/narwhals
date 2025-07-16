@@ -36,6 +36,8 @@ def data_small() -> dict[str, Any]:
         "k": [42, 10, None],
         "l": [4, 5, 6],
         "m": [0, 1, 2],
+        "n": ["dogs", "cats", None],
+        "o": ["play", "swim", "walk"],
     }
 
 
@@ -302,6 +304,35 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             nwd.sum_horizontal("j", nwd.col("k"), "e"),
             {"j": [54.1, 19.0, 11.0]},
             id="sum_horizontal-null",
+        ),
+        pytest.param(
+            nwd.concat_str(nwd.col("b") * 2, "n", nwd.col("o"), separator=" "),
+            {"b": ["2 dogs play", "4 cats swim", None]},
+            id="concat_str-preserve_nulls",
+        ),
+        pytest.param(
+            nwd.concat_str(
+                nwd.col("b") * 2, "n", nwd.col("o"), separator=" ", ignore_nulls=True
+            ),
+            {"b": ["2 dogs play", "4 cats swim", "6 walk"]},
+            id="concat_str-ignore_nulls",
+        ),
+        pytest.param(
+            nwd.concat_str("a", nwd.lit("a")),
+            {"a": ["Aa", "Ba", "Aa"]},
+            id="concat_str-lit",
+        ),
+        pytest.param(
+            nwd.concat_str(
+                nwd.lit("a"),
+                nwd.lit("b"),
+                nwd.lit("c"),
+                nwd.lit("d"),
+                nwd.col("e").last() + 13,
+                separator="|",
+            ),
+            {"literal": ["a|b|c|d|20"]},
+            id="concat_str-all-lit",
         ),
     ],
     ids=_ids_ir,

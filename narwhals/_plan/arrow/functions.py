@@ -16,9 +16,14 @@ from narwhals._arrow.utils import (
 from narwhals._plan import operators as ops
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from narwhals._arrow.typing import ArrayAny, ArrayOrScalar, ChunkedArrayAny
+    from narwhals._arrow.typing import (
+        ArrayAny,
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+    )
     from narwhals._plan.arrow.typing import (
         BinaryComp,
         BinaryLogical,
@@ -33,6 +38,7 @@ if TYPE_CHECKING:
         Scalar,
         ScalarAny,
         ScalarT,
+        StringScalar,
         UnaryFunction,
     )
     from narwhals.typing import ClosedInterval
@@ -166,6 +172,26 @@ def binary(
     lhs: ChunkedOrScalarAny, op: type[ops.Operator], rhs: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
     return _DISPATCH_BINARY[op](lhs, rhs)
+
+
+def concat_str(
+    *arrays: ChunkedArrayAny, separator: str = "", ignore_nulls: bool = False
+) -> ChunkedArray[StringScalar]:
+    fn: Incomplete = pc.binary_join_element_wise
+    it, sep = _cast_to_comparable_string_types(arrays, separator)
+    return fn(*it, sep, null_handling="skip" if ignore_nulls else "emit_null")  # type: ignore[no-any-return]
+
+
+def _cast_to_comparable_string_types(
+    arrays: Sequence[ChunkedArrayAny], /, separator: str
+) -> tuple[Iterator[ChunkedArray[StringScalar]], StringScalar]:
+    # Ensure `chunked_arrays` are either all `string` or all `large_string`.
+    dtype = (
+        pa.string()
+        if not any(pa.types.is_large_string(obj.type) for obj in arrays)
+        else pa.large_string()
+    )
+    return (obj.cast(dtype) for obj in arrays), pa.scalar(separator, dtype)
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
