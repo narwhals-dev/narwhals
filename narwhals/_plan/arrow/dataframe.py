@@ -16,9 +16,9 @@ from narwhals._utils import Version
 if t.TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
-    from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
@@ -26,9 +26,6 @@ if t.TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-
-
-UnaryFn: TypeAlias = "t.Callable[[ChunkedArrayAny], ScalarAny]"
 
 
 def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:

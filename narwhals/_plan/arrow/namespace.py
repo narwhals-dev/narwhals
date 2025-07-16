@@ -7,6 +7,8 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow.functions import lit
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
@@ -15,7 +17,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan import expr, functions as F  # noqa: N812
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
@@ -102,17 +104,15 @@ class ArrowNamespace(
     # NOTE: Update with `ignore_nulls`/`fill_null` behavior once added to each `Function`
     # https://github.com/narwhals-dev/narwhals/pull/2719
     def _horizontal_function(
-        self, fn: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
+        self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
     ) -> Callable[[FunctionExpr[Any], ArrowDataFrame, str], ArrowExpr | ArrowScalar]:
-        from narwhals._plan.arrow.expr import lit
-
         def func(
             node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
         ) -> ArrowExpr | ArrowScalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
                 it = (pc.fill_null(native, lit(fill)) for native in it)
-            result = reduce(fn, it)
+            result = reduce(fn_native, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
             return self._expr.from_native(result, name, self.version)
@@ -122,40 +122,40 @@ class ArrowNamespace(
     def any_horizontal(
         self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.or_kleene)(node, frame, name)
+        return self._horizontal_function(fn.or_)(node, frame, name)
 
     def all_horizontal(
         self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.and_kleene)(node, frame, name)
+        return self._horizontal_function(fn.and_)(node, frame, name)
 
     def sum_horizontal(
         self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.add, fill=0)(node, frame, name)
+        return self._horizontal_function(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
         self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.min_element_wise)(node, frame, name)
+        return self._horizontal_function(fn.min_horizontal)(node, frame, name)
 
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        return self._horizontal_function(pc.max_element_wise)(node, frame, name)
+        return self._horizontal_function(fn.max_horizontal)(node, frame, name)
 
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
-        from narwhals._plan.arrow.expr import lit, truediv_compat
-
-        # NOTE: Overloads too broken
-        add: Incomplete = pc.add
-        sub = pc.subtract
+        int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
         filled = (pc.fill_null(native, lit(0)) for native in inputs)
-        not_null = (sub(lit(1), pc.is_null(native).cast(pa.int64())) for native in inputs)
-        result = truediv_compat(reduce(add, filled), reduce(add, not_null))
+        # NOTE: `mypy` doesn't like that `add` is overloaded
+        sum_not_null = reduce(
+            fn.add,  # type: ignore[arg-type]
+            (fn.cast(fn.is_not_null(native), int64) for native in inputs),
+        )
+        result = fn.truediv(reduce(fn.add, filled), sum_not_null)
         if isinstance(result, pa.Scalar):
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
@@ -192,10 +192,8 @@ class ArrowNamespace(
         if isinstance(start_, int) and isinstance(end_, int):
             import numpy as np  # ignore-banned-import
 
-            from narwhals._plan.arrow.expr import chunked_array
-
             pa_dtype = narwhals_to_native_dtype(dtype, self.version)
-            native = chunked_array(pa.array(np.arange(start_, end_, step), pa_dtype))
+            native = fn.chunked_array(fn.array(np.arange(start_, end_, step), pa_dtype))
             return self._expr.from_native(native, name, self.version)
 
         else:
