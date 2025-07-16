@@ -605,7 +605,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             dtype: datetime64[ns, Asia/Kathmandu]
         """
         if time_zone is None:
-            msg = "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use `replace_time_zone(None)` if you want to remove the time zone."
+            msg = (
+                "Target `time_zone` cannot be `None` in `convert_time_zone`. Please use "
+                "`replace_time_zone(None)` if you want to remove the time zone."
+            )
             raise TypeError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)

@@ -94,7 +94,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Remove leading and trailing characters.
 
         Arguments:
-            characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
+            characters: The set of characters to be removed. All combinations of this set
+                of characters will be stripped from the start and end of the string.
+                If set to None (default), all leading and trailing whitespace is removed
+                instead.
 
         Returns:
             A new Series with leading and trailing characters removed.
@@ -291,9 +294,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
             A new Series containing the last n characters of each string.
 
         Notes:
-            1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
-            the string. For example, if `n = -3`, then all characters except the first three are returned.
-            2. If the length of the string has fewer than `n` characters, the full string is returned.
+            1. When the `n` input is negative, `tail` returns characters starting from
+                the n-th from the beginning of the string. For example, if `n = -3`, then
+                all characters except the first three are returned.
+            2. If the length of the string has fewer than `n` characters, the full string
+                is returned.
 
         Examples:
             >>> import pyarrow as pa
@@ -435,7 +440,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Pad strings with zeros on the left.
 
         Arguments:
-            width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
+            width: The target width of the string. If the string is shorter than this
+                width, it will be padded with zeros on the left.
 
         Returns:
             A new Series with strings padded with zeros on the left.
