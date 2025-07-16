@@ -5,8 +5,14 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ShapeError
-from tests.utils import PYARROW_VERSION, Constructor, ConstructorEager, assert_equal_data
+from narwhals.exceptions import ColumnNotFoundError, ShapeError
+from tests.utils import (
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    maybe_collect,
+)
 
 
 def test_with_columns_int_col_name_pandas() -> None:
@@ -78,3 +84,29 @@ def test_with_columns_series_shape_mismatch(constructor_eager: ConstructorEager)
     ]
     with pytest.raises(ShapeError):
         df1.with_columns(second=second)
+
+
+def test_with_columns_missing_column(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    constructor_id = str(request.node.callspec.id)
+    if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
+        # `sqlframe` raises a different error depending on its underlying backend
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2], "b": [3, 4]}
+    df = nw.from_native(constructor(data))
+
+    if "polars" in str(constructor):
+        msg = r"^c"
+    elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
+        msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+    elif constructor_id == "pyspark[connect]":  # pragma: no cover
+        msg = r"^\[UNRESOLVED_COLUMN.WITH_SUGGESTION\]"
+    else:
+        msg = (
+            r"The following columns were not found: \[.*\]"
+            r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
+        )
+
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        maybe_collect(df.with_columns(d=nw.col("c") + 1))
