@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
+    from narwhals.typing import Into1DArray, IntoDType, NonNestedLiteral, PythonLiteral
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
@@ -696,12 +696,28 @@ class DummyCompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
         obj._version = version
         return obj
 
+    @classmethod
+    def from_numpy(
+        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
+    ) -> Self: ...
+
+    @classmethod
+    def from_iterable(
+        cls,
+        data: Iterable[Any],
+        *,
+        version: Version,
+        name: str = "",
+        dtype: IntoDType | None = None,
+    ) -> Self: ...
+
     def _with_native(self, native: NativeSeriesT) -> Self:
         return self.from_native(native, self.name, version=self.version)
 
     def alias(self, name: str) -> Self:
         return self.from_native(self.native, name, version=self.version)
 
+    def cast(self, dtype: IntoDType) -> Self: ...
     def __len__(self) -> int:
         return len(self.native)
 

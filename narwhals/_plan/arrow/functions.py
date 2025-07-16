@@ -18,12 +18,15 @@ from narwhals._plan import operators as ops
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+    from typing_extensions import TypeIs
+
     from narwhals._arrow.typing import (
         ArrayAny,
         ArrayOrScalar,
         ChunkedArrayAny,
         Incomplete,
     )
+    from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
         BinaryComp,
         BinaryLogical,
@@ -214,3 +217,9 @@ def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+
+
+def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
+    from narwhals._plan.arrow.series import ArrowSeries
+
+    return isinstance(obj, ArrowSeries)

@@ -51,7 +51,7 @@ if TYPE_CHECKING:
         WindowExpr,
     )
     from narwhals._plan.functions import FillNull, Pow
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -324,11 +324,10 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     # TODO @dangotbanned: top-level, complex-ish nodes
-    # - All are fairly complex
-    # - `over`/`_ordered` (with partitions) requires `group_by`, `join`
-    # - `over_ordered` alone should be possible w/ the current API
-    # - `map_batches` is defined in `EagerExpr`, might be simpler here than on main
-    # - `rolling_expr` has 4 variants
+    # - [ ] `over`/`_ordered` (with partitions) requires `group_by`, `join`
+    # - [ ] `over_ordered` alone should be possible w/ the current API
+    # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
+    # - [ ] `rolling_expr` has 4 variants
 
     def over(self, node: WindowExpr, frame: ArrowDataFrame, name: str) -> Self:
         raise NotImplementedError
@@ -338,8 +337,20 @@ class ArrowExpr(  # type: ignore[misc]
     ) -> Self:
         raise NotImplementedError
 
+    # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: AnonymousExpr, frame: ArrowDataFrame, name: str) -> Self:
-        raise NotImplementedError
+        if node.is_scalar:
+            # NOTE: Just trying to avoid redoing the whole API for `ArrowSeries`
+            msg = "Only elementwise is currently supported"
+            raise NotImplementedError(msg)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        udf = node.function.function
+        result: ArrowSeries | Into1DArray = udf(series)
+        if not fn.is_series(result):
+            result = ArrowSeries.from_numpy(result, name, version=self.version)
+        if dtype := node.function.return_dtype:
+            result = result.cast(dtype)
+        return self.from_series(result)
 
     def rolling_expr(self, node: RollingExpr, frame: ArrowDataFrame, name: str) -> Self:
         raise NotImplementedError

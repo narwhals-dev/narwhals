@@ -7,6 +7,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
 from narwhals._plan.dummy import DummyFrame
@@ -16,7 +17,7 @@ from narwhals._utils import Version
 if t.TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
@@ -26,10 +27,6 @@ if t.TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-
-
-def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
-    return isinstance(obj, ArrowSeries)
 
 
 class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
@@ -60,7 +57,7 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
     def from_series(
         cls, series: t.Iterable[ArrowSeries] | ArrowSeries, *more_series: ArrowSeries
     ) -> Self:
-        lhs = (series,) if is_series(series) else series
+        lhs = (series,) if fn.is_series(series) else series
         it = chain(lhs, more_series) if more_series else lhs
         return cls.from_dict({s.name: s.native for s in it})
 
