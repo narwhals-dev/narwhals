@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import narwhals.stable.v1 as nw_v1
+import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 data = {"a": list(range(10))}
@@ -13,7 +13,7 @@ data = {"a": list(range(10))}
 def test_gather_every_series(
     constructor_eager: ConstructorEager, n: int, offset: int
 ) -> None:
-    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
 
     result = series.gather_every(n=n, offset=offset)
     expected = data["a"][offset::n]

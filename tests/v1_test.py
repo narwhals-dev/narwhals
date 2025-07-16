@@ -11,6 +11,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals.exceptions import InvalidOperationError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -28,11 +29,11 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_chunked_array,
     is_pyarrow_table,
 )
+from narwhals.utils import Version
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -41,6 +42,7 @@ from tests.utils import (
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
+    from narwhals.typing import IntoDataFrameT
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -204,8 +206,6 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
 def test_hist_v1(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        pytest.skip()
     if "cudf" in str(constructor_eager):
         pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
@@ -353,6 +353,8 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
+    with pytest.deprecated_call():
+        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -360,6 +362,38 @@ def test_get_level() -> None:
         )
         == "interchange"
     )
+
+
+def test_any_horizontal() -> None:
+    # here, it defaults to Kleene logic.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(
+        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
+    )
+    result = df.select(nw_v1.any_horizontal("a", "b"))
+    expected = {"a": [True, True, None]}
+    assert_equal_data(result, expected)
+    with pytest.deprecated_call(match="ignore_nulls"):
+        result = df.select(nw.any_horizontal("a", "b"))
+    assert_equal_data(result, expected)
+
+
+def test_all_horizontal() -> None:
+    # here, it defaults to Kleene logic.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(
+        pl.DataFrame({"a": [True, True, False], "b": [True, None, None]})
+    )
+    result = df.select(nw_v1.all_horizontal("a", "b"))
+    expected = {"a": [True, None, False]}
+    assert_equal_data(result, expected)
+    with pytest.deprecated_call(match="ignore_nulls"):
+        result = df.select(nw.all_horizontal("a", "b"))
+    assert_equal_data(result, expected)
 
 
 def test_with_row_index(constructor: Constructor) -> None:
@@ -451,126 +485,6 @@ def test_dtypes() -> None:
     assert isinstance(dtype, nw_v1.Duration)
 
 
-def test_from_native_strict_false_invalid() -> None:
-    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
-        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
-
-
-@pytest.mark.parametrize(
-    ("descending", "nulls_last", "expected"),
-    [
-        (True, True, {"a": [0, 0, 2, -1], "b": [3, 2, 1, None]}),
-        (True, False, {"a": [0, 0, 2, -1], "b": [None, 3, 2, 1]}),
-        (False, True, {"a": [0, 0, 2, -1], "b": [1, 2, 3, None]}),
-        (False, False, {"a": [0, 0, 2, -1], "b": [None, 1, 2, 3]}),
-    ],
-)
-def test_sort_expr(
-    constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
-) -> None:
-    data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
-    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
-    result = df.select(
-        "a", nw_v1.col("b").sort(descending=descending, nulls_last=nulls_last)
-    )
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize("n", [1, 2, 3])
-@pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every_expr(
-    constructor_eager: ConstructorEager, n: int, offset: int
-) -> None:
-    data = {"a": list(range(10))}
-    df = nw_v1.from_native(constructor_eager(data))
-
-    result = df.select(nw_v1.col("a").gather_every(n=n, offset=offset))
-    expected = {"a": data["a"][offset::n]}
-
-    assert_equal_data(result, expected)
-
-
-def test_expr_sample(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
-    )
-
-    result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
-    expected_expr = (2, 1)
-    assert result_expr == expected_expr
-
-
-@pytest.mark.parametrize("n", [2, -1])
-def test_expr_tail(
-    constructor_eager: ConstructorEager, n: int, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor_eager) and n < 0:
-        request.applymarker(pytest.mark.xfail)
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}))
-    result = df.select(nw_v1.col("a").tail(n))
-    expected = {"a": [2, 3]}
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize("n", [2, -1])
-def test_head(
-    constructor_eager: ConstructorEager, n: int, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor_eager) and n < 0:
-        request.applymarker(pytest.mark.xfail)
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}))
-    result = df.select(nw_v1.col("a").head(n))
-    expected = {"a": [1, 2]}
-    assert_equal_data(result, expected)
-
-
-def test_arg_true(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, None, None, 3]}))
-    result = df.select(nw_v1.col("a").is_null().arg_true())
-    expected = {"a": [1, 2]}
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize("n", [1, 2, 3])
-@pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) -> None:
-    data = {"a": list(range(10))}
-    df_v1 = nw_v1.from_native(constructor_eager(data))
-    result = df_v1.gather_every(n=n, offset=offset)
-    expected = {"a": data["a"][offset::n]}
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize("n", [1, 2, 3])
-@pytest.mark.parametrize("offset", [1, 2, 3])
-def test_gather_every_dask_v1(n: int, offset: int) -> None:
-    data = {"a": list(range(10))}
-    pytest.importorskip("dask")
-    import dask.dataframe as dd
-
-    df_v1 = nw_v1.from_native(dd.from_pandas(pd.DataFrame(data)))
-    result = df_v1.gather_every(n=n, offset=offset)
-    expected = {"a": data["a"][offset::n]}
-    assert_equal_data(result, expected)
-
-
-def test_new_series_v1(constructor_eager: ConstructorEager) -> None:
-    s = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    result = nw_v1.new_series("b", [4, 1, 2], backend=nw_v1.get_native_namespace(s))
-    expected = {"b": [4, 1, 2]}
-    # all supported libraries auto-infer this to be int64, we can always special-case
-    # something different if necessary
-    assert result.dtype == nw_v1.Int64
-    assert_equal_data(result.to_frame(), expected)
-
-    result = nw_v1.new_series(
-        "b", [4, 1, 2], nw_v1.Int32, backend=nw_v1.get_native_namespace(s)
-    )
-    expected = {"b": [4, 1, 2]}
-    assert result.dtype == nw_v1.Int32
-    assert_equal_data(result.to_frame(), expected)
-
-
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
@@ -590,3 +504,442 @@ def test_strict(strict: Any, context: Any) -> None:
     with context:
         res = nw_v1.from_native(arr, strict=strict)
         assert isinstance(res, np.ndarray)
+
+
+def test_from_native_strict_false_typing() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = pl.DataFrame()
+    nw_v1.from_native(df, strict=False)
+    nw_v1.from_native(df, strict=False, eager_only=True)
+    nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
+
+    with pytest.deprecated_call(match="please use `pass_through` instead"):
+        nw.from_native(df, strict=False)  # type: ignore[call-overload]
+        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
+
+
+def test_from_native_strict_false_invalid() -> None:
+    with pytest.raises(ValueError, match="Cannot pass both `strict`"):
+        nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
+
+
+def test_from_mock_interchange_protocol_non_strict() -> None:
+    class MockDf:
+        def __dataframe__(self) -> None:  # pragma: no cover
+            pass
+
+    mockdf = MockDf()
+    result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
+    assert result is mockdf
+
+
+def test_from_native_lazyframe() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    stable_lazy = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    if TYPE_CHECKING:
+        assert_type(stable_lazy, nw_v1.LazyFrame[pl.LazyFrame])
+
+    assert isinstance(stable_lazy, nw_v1.LazyFrame)
+
+
+def test_dataframe_recursive_v1() -> None:
+    """`v1` always returns a `Union` for `DataFrame`."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]})
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AttributeError):
+        nw_v1.DataFrame(nw_frame, level="full")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.DataFrame)
+        assert_type(
+            nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
+        )
+        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
+        assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
+        # NOTE: Checking that the type is `DataFrame[Unknown]`
+        assert_type(
+            nw_frame_early_return,
+            "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]",
+        )
+
+
+def test_lazyframe_recursive_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
+    nw_frame = nw_v1.from_native(pl_frame)
+    with pytest.raises(AttributeError):
+        nw_v1.LazyFrame(nw_frame, level="lazy")
+
+    nw_frame_early_return = nw_v1.from_native(nw_frame)
+
+    if TYPE_CHECKING:
+        assert_type(pl_frame, pl.LazyFrame)
+        assert_type(nw_frame, nw_v1.LazyFrame[pl.LazyFrame])
+
+        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
+        # NOTE: Checking that the type is `LazyFrame[Unknown]`
+        assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
+        assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
+
+
+def test_series_recursive_v1() -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/2239."""
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_series = pl.Series(name="test", values=[1, 2, 3])
+    nw_series = nw_v1.from_native(pl_series, series_only=True)
+    with pytest.raises(AttributeError):
+        nw_v1.Series(nw_series, level="full")
+
+    nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
+
+    if TYPE_CHECKING:
+        assert_type(pl_series, pl.Series)
+        assert_type(nw_series, nw_v1.Series[pl.Series])
+
+        nw_series_depth_2 = nw_v1.Series(nw_series, level="full")
+        # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
+        assert_type(nw_series_depth_2, nw_v1.Series[Any])
+        assert_type(nw_series_early_return, nw_v1.Series[pl.Series])
+
+
+def test_from_native_already_nw() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v1.from_native(pl.DataFrame({"a": [1]}))
+    assert isinstance(nw_v1.from_native(df), nw_v1.DataFrame)
+    assert nw_v1.from_native(df) is df
+    lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    assert isinstance(nw_v1.from_native(lf), nw_v1.LazyFrame)
+    assert nw_v1.from_native(lf) is lf
+    s = df["a"]
+    assert isinstance(nw_v1.from_native(s, series_only=True), nw_v1.Series)
+    assert nw_v1.from_native(df) is df
+
+
+def test_from_native_invalid_kwds() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    with pytest.raises(TypeError, match="got an unexpected keyword"):
+        nw_v1.from_native(pl.DataFrame({"a": [1]}), belugas=True)  # type: ignore[call-overload]
+
+
+def test_io(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    csv_filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    parquet_filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    pl.DataFrame({"a": [1]}).write_csv(csv_filepath)
+    pl.DataFrame({"a": [1]}).write_parquet(parquet_filepath)
+    assert isinstance(nw_v1.read_csv(csv_filepath, backend="polars"), nw_v1.DataFrame)
+    assert isinstance(nw_v1.scan_csv(csv_filepath, backend="polars"), nw_v1.LazyFrame)
+    assert isinstance(
+        nw_v1.read_parquet(parquet_filepath, backend="polars"), nw_v1.DataFrame
+    )
+    assert isinstance(
+        nw_v1.scan_parquet(parquet_filepath, backend="polars"), nw_v1.LazyFrame
+    )
+
+
+def test_narwhalify() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v1.narwhalify
+    def func(df: nw_v1.DataFrame[IntoDataFrameT]) -> nw_v1.DataFrame[IntoDataFrameT]:
+        return df.with_columns(nw_v1.all() + 1)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = func(df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_method() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    class Foo:
+        @nw_v1.narwhalify
+        def func(
+            self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v1.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v1.all() + a)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = Foo().func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(a=1, df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_method_called() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    class Foo:
+        @nw_v1.narwhalify
+        def func(
+            self, df: nw_v1.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v1.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v1.all() + a)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = Foo().func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(a=1, df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_method_invalid() -> None:
+    class Foo:
+        @nw_v1.narwhalify(strict=True, eager_only=True)
+        def func(self) -> Foo:  # pragma: no cover
+            return self
+
+        @nw_v1.narwhalify(strict=True, eager_only=True)
+        def fun2(self, df: Any) -> Any:  # pragma: no cover
+            return df
+
+    with pytest.raises(TypeError):
+        Foo().func()
+
+
+def test_narwhalify_invalid() -> None:
+    @nw_v1.narwhalify(strict=True)
+    def func() -> None:  # pragma: no cover
+        return None
+
+    with pytest.raises(TypeError):
+        func()
+
+
+def test_narwhalify_backends_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v1.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    func(pd.DataFrame(data), pd.Series(data["a"]))
+
+
+def test_narwhalify_backends_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v1.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    func(pl.DataFrame(data), pl.Series(data["a"]))
+
+
+def test_narwhalify_backends_cross() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v1.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    with pytest.raises(
+        ValueError,
+        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
+    ):
+        func(pd.DataFrame(data), pl.DataFrame(data))
+
+
+def test_narwhalify_backends_cross2() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v1.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    with pytest.raises(
+        ValueError,
+        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
+    ):
+        func(pl.DataFrame(data), pd.Series(data["a"]))
+
+
+def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
+    )
+
+    result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
+    expected_expr = (2, 1)
+    assert result_expr == expected_expr
+
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
+        df.select(nw.col("a").sample(n=2))
+
+
+def test_is_frame(constructor: Constructor) -> None:
+    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+    assert isinstance(lf, nw_v1.LazyFrame)
+    assert nw_v1.dependencies.is_narwhals_lazyframe(lf)
+    assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
+
+
+def test_with_version(constructor: Constructor) -> None:
+    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+    assert isinstance(lf, nw_v1.LazyFrame)
+    assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
+
+
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize("offset", [1, 2])
+def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) -> None:
+    data = {"a": list(range(10))}
+    df_v1 = nw_v1.from_native(constructor_eager(data))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+    # Test deprecation for LazyFrame in main namespace
+    lf = nw.from_native(constructor_eager(data)).lazy()
+    with pytest.deprecated_call(
+        match="is deprecated and will be removed in a future version"
+    ):
+        lf.gather_every(n=n, offset=offset)
+
+
+@pytest.mark.parametrize("n", [1, 2])
+@pytest.mark.parametrize("offset", [1, 2])
+def test_gather_every_dask_v1(n: int, offset: int) -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    data = {"a": list(range(10))}
+
+    df_v1 = nw_v1.from_native(dd.from_pandas(pd.DataFrame(data)))
+    result = df_v1.gather_every(n=n, offset=offset)
+    expected = {"a": data["a"][offset::n]}
+    assert_equal_data(result, expected)
+
+
+def test_unique_series_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 1, 2]}
+    series = nw.from_native(pl.DataFrame(data), eager_only=True)["a"]
+    # this shouldn't warn
+    series.to_frame().select(nw_v1.col("a").unique().sum())
+
+    series = nw_v1.from_native(pl.DataFrame(data), eager_only=True)["a"]
+    with pytest.warns(
+        UserWarning,
+        match="`maintain_order` has no effect and is only kept around for backwards-compatibility.",
+    ):
+        # this warns that maintain_order has no effect
+        series.to_frame().select(nw_v1.col("a").unique(maintain_order=False).sum())
+
+
+def test_head_aggregation() -> None:
+    with pytest.raises(InvalidOperationError):
+        nw_v1.col("a").mean().head()
+
+
+def test_deprecated_expr_methods() -> None:
+    data = {"a": [0, 0, 2, -1]}
+    df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
+    result = df.select(
+        c=nw_v1.col("a").sort().head(2),
+        d=nw_v1.col("a").sort().tail(2),
+        e=(nw_v1.col("a") == 0).arg_true(),
+        f=nw_v1.col("a").gather_every(2),
+    )
+    expected = {"c": [-1, 0], "d": [0, 2], "e": [0, 1], "f": [0, 2]}
+    assert_equal_data(result, expected)
+
+    with pytest.deprecated_call():
+        df.select(
+            c=nw.col("a").sort().head(2),
+            d=nw.col("a").sort().tail(2),
+            e=(nw.col("a") == 0).arg_true(),
+            f=nw.col("a").gather_every(2),
+        )
+
+
+def test_dask_order_dependent_ops() -> None:
+    # Preserve these for narwhals.stable.v1, even though they
+    # raise after stable.v1.
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
+    result = df.select(
+        a=nw_v1.col("a").cum_sum(),
+        b=nw_v1.col("a").cum_count(),
+        c=nw_v1.col("a").cum_prod(),
+        d=nw_v1.col("a").cum_max(),
+        e=nw_v1.col("a").cum_min(),
+        f=nw_v1.col("a").shift(1),
+        g=nw_v1.col("a").diff(),
+        h=nw_v1.col("a").is_first_distinct(),
+        i=nw_v1.col("a").is_last_distinct(),
+    )
+    expected = {
+        "a": [1, 3, 6],
+        "b": [1, 2, 3],
+        "c": [1, 2, 6],
+        "d": [1, 2, 3],
+        "e": [1, 1, 1],
+        "f": [None, 1.0, 2.0],
+        "g": [None, 1.0, 1.0],
+        "h": [True, True, True],
+        "i": [True, True, True],
+    }
+    assert_equal_data(result, expected)

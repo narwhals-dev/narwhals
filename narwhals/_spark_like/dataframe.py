@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
+    catch_pyspark_connect_exception,
+    catch_pyspark_sql_exception,
     evaluate_exprs,
     import_functions,
     import_native_dtypes,
@@ -200,7 +202,7 @@ class SparkLikeLazyFrame(
             )
         return self._cached_columns
 
-    def collect(
+    def _collect(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
@@ -238,6 +240,16 @@ class SparkLikeLazyFrame(
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
 
+    def collect(
+        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
+        if self._implementation.is_pyspark_connect():
+            try:
+                return self._collect(backend, **kwargs)
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_connect_exception(e) from None
+        return self._collect(backend, **kwargs)
+
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
@@ -245,22 +257,42 @@ class SparkLikeLazyFrame(
         new_columns = evaluate_exprs(self, *exprs)
 
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
+        if self._implementation.is_pyspark():
+            try:
+                return self._with_native(self.native.agg(*new_columns_list))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_sql_exception(e, self) from None
         return self._with_native(self.native.agg(*new_columns_list))
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
+        if self._implementation.is_pyspark():  # pragma: no cover
+            try:
+                return self._with_native(self.native.select(*new_columns_list))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_sql_exception(e, self) from None
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
+        if self._implementation.is_pyspark():  # pragma: no cover
+            try:
+                return self._with_native(self.native.withColumns(dict(new_columns)))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_sql_exception(e, self) from None
+
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
     def filter(self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]
-        spark_df = self.native.where(condition)
-        return self._with_native(spark_df)
+        if self._implementation.is_pyspark():
+            try:
+                return self._with_native(self.native.where(condition))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_sql_exception(e, self) from None
+        return self._with_native(self.native.where(condition))
 
     @property
     def schema(self) -> dict[str, DType]:

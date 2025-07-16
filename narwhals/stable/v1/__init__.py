@@ -1035,22 +1035,11 @@ def to_native(
         Object of class that user started with.
     """
     from narwhals._utils import validate_strict_and_pass_though
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False
     )
-
-    if isinstance(narwhals_object, BaseFrame):
-        return narwhals_object._compliant_frame._native_frame
-    if isinstance(narwhals_object, Series):
-        return narwhals_object._compliant_series.native
-
-    if not pass_through:
-        msg = f"Expected Narwhals object, got {type(narwhals_object)}."
-        raise TypeError(msg)
-    return narwhals_object
+    return nw.to_native(narwhals_object, pass_through=pass_through)
 
 
 def narwhalify(
