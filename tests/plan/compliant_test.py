@@ -361,7 +361,7 @@ if TYPE_CHECKING:
         pytest.importorskip("pyarrow")
         from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
 
-        expr = ArrowExpr()  # type: ignore[abstract]
-        scalar = ArrowScalar()  # type: ignore[abstract]
+        expr = ArrowExpr()
+        scalar = ArrowScalar()
         assert expr
         assert scalar

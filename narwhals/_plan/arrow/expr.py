@@ -41,7 +41,15 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull
-    from narwhals._plan.expr import BinaryExpr, FunctionExpr, Ternary
+    from narwhals._plan.expr import (
+        AnonymousExpr,
+        BinaryExpr,
+        FunctionExpr,
+        OrderedWindowExpr,
+        RollingExpr,
+        Ternary,
+        WindowExpr,
+    )
     from narwhals._plan.functions import FillNull, Pow
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -132,6 +140,16 @@ class _ArrowDispatch(
     ) -> StoresNativeT_co:
         return self._unary_function(fn.is_null)(node, frame, name)
 
+    def binary_expr(
+        self, node: BinaryExpr, frame: ArrowDataFrame, name: str
+    ) -> StoresNativeT_co:
+        lhs, rhs = (
+            self._dispatch(node.left, frame, name),
+            self._dispatch(node.right, frame, name),
+        )
+        result = fn.binary(lhs.native, node.op.__class__, rhs.native)
+        return self._with_native(result, name)
+
     def ternary_expr(
         self, node: Ternary, frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
@@ -148,6 +166,7 @@ class ArrowExpr(  # type: ignore[misc]
     EagerExpr["ArrowDataFrame", ArrowSeries],
 ):
     _evaluated: ArrowSeries
+    _version: Version
 
     @property
     def name(self) -> str:
@@ -304,15 +323,26 @@ class ArrowExpr(  # type: ignore[misc]
         result: NativeScalar = fn.min_(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def binary_expr(  # type: ignore[override]
-        self, node: BinaryExpr, frame: ArrowDataFrame, name: str
-    ) -> ArrowScalar | Self:
-        lhs, rhs = (
-            self._dispatch(node.left, frame, name),
-            self._dispatch(node.right, frame, name),
-        )
-        result = fn.binary(lhs.native, node.op.__class__, rhs.native)
-        return self._with_native(result, name)
+    # TODO @dangotbanned: top-level, complex-ish nodes
+    # - All are fairly complex
+    # - `over`/`_ordered` (with partitions) requires `group_by`, `join`
+    # - `over_ordered` alone should be possible w/ the current API
+    # - `map_batches` is defined in `EagerExpr`, might be simpler here than on main
+    # - `rolling_expr` has 4 variants
+
+    def over(self, node: WindowExpr, frame: ArrowDataFrame, name: str) -> Self:
+        raise NotImplementedError
+
+    def over_ordered(
+        self, node: OrderedWindowExpr, frame: ArrowDataFrame, name: str
+    ) -> Self:
+        raise NotImplementedError
+
+    def map_batches(self, node: AnonymousExpr, frame: ArrowDataFrame, name: str) -> Self:
+        raise NotImplementedError
+
+    def rolling_expr(self, node: RollingExpr, frame: ArrowDataFrame, name: str) -> Self:
+        raise NotImplementedError
 
 
 class ArrowScalar(
@@ -321,6 +351,8 @@ class ArrowScalar(
     EagerScalar["ArrowDataFrame", ArrowSeries],
 ):
     _evaluated: NativeScalar
+    _version: Version
+    _name: str
 
     @classmethod
     def from_native(
@@ -415,3 +447,7 @@ class ArrowScalar(
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
     filter = not_implemented()
+    over = not_implemented()
+    over_ordered = not_implemented()
+    map_batches = not_implemented()
+    rolling_expr = not_implemented()
