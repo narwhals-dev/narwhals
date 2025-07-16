@@ -37,8 +37,8 @@ def test_from_dict_schema(backend: Implementation | str) -> None:
     with pytest.deprecated_call():
         result = nw.from_dict(
             {"c": [1, 2], "d": [5, 6]},
-            native_namespace=backend,
-            schema=schema,  # type: ignore[arg-type]
+            native_namespace=backend,  # type: ignore[arg-type]
+            schema=schema,
         )
         assert result.collect_schema() == schema
 
