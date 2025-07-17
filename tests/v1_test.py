@@ -467,13 +467,10 @@ def test_renamed_taxicab_norm_dataframe() -> None:
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
-    def func(df_any: Any) -> Any:
-        df = nw_v1.from_native(df_any)
-        df = df._l1_norm()
-        return df.to_native()
-
-    result = nw_v1.from_native(func(pa.table({"a": [1, 2, 3, -4, 5]})))
+    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))._l1_norm()
     expected = {"a": [15]}
+    assert_equal_data(result, expected)
+    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
     assert_equal_data(result, expected)
 
 
