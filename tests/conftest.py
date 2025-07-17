@@ -45,7 +45,7 @@ else:
     )
 
 
-def pytest_addoption(parser: Any) -> None:
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
