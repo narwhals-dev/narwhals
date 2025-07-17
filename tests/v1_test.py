@@ -855,11 +855,8 @@ def test_is_frame() -> None:
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
 
 
-def test_with_version() -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
-    lf = nw_v1.from_native(pa.table({"a": [1, 2]})).lazy()
+def test_with_version(constructor: Constructor) -> None:
+    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
