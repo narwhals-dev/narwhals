@@ -349,7 +349,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         self, bins: list[float | int] | None, bin_count: int | None
     ) -> dict[str, Any]:
         """Create histogram result if self is an empty series."""
-        from numpy import linspace, zeros
+        from numpy import linspace, zeros  # ignore-banned-import
 
         if bins is not None:
             return {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}

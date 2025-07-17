@@ -1056,7 +1056,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         assert bin_count is not None  # noqa: S101
 
-        from numpy import linspace
+        from numpy import linspace  # ignore-banned-import
 
         d = pc.min_max(self.native)
         lower, upper = d["min"].as_py(), d["max"].as_py()
