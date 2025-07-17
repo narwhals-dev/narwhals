@@ -126,7 +126,7 @@ def test_join() -> None:
     import pandas as pd
 
     df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]})).lazy()
-    result = df.join(df, how="inner", on="a").sort("a")  # type: ignore[arg-type]
+    result = df.join(df, how="inner", on="a").sort("a")
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.LazyFrame)
