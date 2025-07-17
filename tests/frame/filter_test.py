@@ -77,7 +77,7 @@ def test_filter_missing_column(
     df = nw.from_native(constructor(data))
 
     if "polars" in str(constructor):
-        msg = r"^unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
+        msg = r"unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
     else:
