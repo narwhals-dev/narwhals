@@ -37,6 +37,8 @@ if TYPE_CHECKING:
         ChunkedOrScalarAny,
         DataType,
         DataTypeT,
+        IntegerScalar,
+        IntegerType,
         NativeScalar,
         Scalar,
         ScalarAny,
@@ -195,6 +197,22 @@ def _cast_to_comparable_string_types(
         else pa.large_string()
     )
     return (obj.cast(dtype) for obj in arrays), pa.scalar(separator, dtype)
+
+
+def int_range(
+    start: int = 0,
+    end: int | None = None,
+    step: int = 1,
+    /,
+    *,
+    dtype: IntegerType = pa.int64(),  # noqa: B008
+) -> ChunkedArray[IntegerScalar]:
+    import numpy as np  # ignore-banned-import
+
+    if end is None:
+        end = start
+        start = 0
+    return pa.chunked_array([pa.array(np.arange(start, end, step), dtype)])
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:

@@ -9,10 +9,23 @@ from narwhals._utils import _StoresNative as StoresNative
 if TYPE_CHECKING:
     import pyarrow as pa
     import pyarrow.compute as pc
-    from pyarrow.lib import LargeStringType, StringType
+    from pyarrow.lib import (
+        Int8Type,
+        Int16Type,
+        Int32Type,
+        Int64Type,
+        LargeStringType,
+        StringType,
+        Uint8Type,
+        Uint16Type,
+        Uint32Type,
+        Uint64Type,
+    )
     from typing_extensions import TypeAlias
 
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
+    IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
+    IntegerScalar: TypeAlias = "Scalar[IntegerType]"
 
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")

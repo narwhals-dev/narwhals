@@ -196,10 +196,10 @@ class ArrowNamespace(
                 )
                 raise InvalidOperationError(msg)
         if isinstance(start_, int) and isinstance(end_, int):
-            import numpy as np  # ignore-banned-import
-
             pa_dtype = narwhals_to_native_dtype(dtype, self.version)
-            native = fn.chunked_array(fn.array(np.arange(start_, end_, step), pa_dtype))
+            if not pa.types.is_integer(pa_dtype):
+                raise TypeError(pa_dtype)
+            native = fn.int_range(start_, end_, step, dtype=pa_dtype)
             return self._expr.from_native(native, name, self.version)
 
         else:
