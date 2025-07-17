@@ -229,7 +229,13 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         "float[pyarrow]",
     }:
         return dtypes.Float32()
-    if dtype in {"string", "string[python]", "string[pyarrow]", "large_string[pyarrow]"}:
+    if dtype in {
+        "string",
+        "string[python]",
+        "string[pyarrow]",
+        "large_string[pyarrow]",
+        "str",
+    }:
         return dtypes.String()
     if dtype in {"bool", "boolean", "boolean[pyarrow]", "bool[pyarrow]"}:
         return dtypes.Boolean()
