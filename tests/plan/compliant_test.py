@@ -6,11 +6,14 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 pytest.importorskip("pyarrow")
+pytest.importorskip("numpy")
+import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
+from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
 
@@ -333,6 +336,48 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             ),
             {"literal": ["a|b|c|d|20"]},
             id="concat_str-all-lit",
+        ),
+        pytest.param(
+            [
+                nwd.col("a")
+                .alias("...")
+                .map_batches(
+                    lambda s: s.from_iterable(
+                        [*((len(s) - 1) * [type(s.dtype).__name__.lower()]), "last"],
+                        version=Version.MAIN,
+                        name="funky",
+                    ),
+                    is_elementwise=True,
+                ),
+                nwd.col("a"),
+            ],
+            {"funky": ["string", "string", "last"], "a": ["A", "B", "A"]},
+            id="map_batches-series",
+        ),
+        pytest.param(
+            nwd.col("b")
+            .map_batches(lambda s: s.to_numpy() + 1, nw.Float64(), is_elementwise=True)
+            .sum(),
+            {"b": [9.0]},
+            id="map_batches-numpy",
+        ),
+        pytest.param(
+            ndcs.by_name("b", "c", "d")
+            .map_batches(lambda s: np.append(s.to_numpy(), [10, 2]), is_elementwise=True)
+            .sort(),
+            {"b": [1, 2, 2, 3, 10], "c": [2, 2, 4, 9, 10], "d": [2, 7, 8, 8, 10]},
+            id="map_batches-selector",
+        ),
+        pytest.param(
+            nwd.col("j", "k")
+            .fill_null(15)
+            .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
+            {"j": [15], "k": [42]},
+            id="map_batches-return_scalar",
+            marks=pytest.mark.xfail(
+                reason="not implemented `map_batches(returns_scalar=True)` for `pyarrow`",
+                raises=NotImplementedError,
+            ),
         ),
     ],
     ids=_ids_ir,

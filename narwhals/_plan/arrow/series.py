@@ -15,12 +15,15 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
     from narwhals.dtypes import DType
-    from narwhals.typing import Into1DArray, IntoDType
+    from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
 
 class ArrowSeries(DummyCompliantSeries["ChunkedArrayAny"]):
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.native.to_numpy()
 
     def __len__(self) -> int:
         return self.native.length()
