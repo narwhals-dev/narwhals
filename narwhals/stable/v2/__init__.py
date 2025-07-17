@@ -484,6 +484,28 @@ def to_native(
 def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 
+def to_native(
+    narwhals_object: DataFrame[IntoDataFrameT]
+    | LazyFrame[IntoFrameT]
+    | Series[IntoSeriesT],
+    *,
+    pass_through: bool = False,
+) -> IntoFrameT | IntoSeriesT | Any:
+    """Convert Narwhals object to native one.
+
+    Arguments:
+        narwhals_object: Narwhals object.
+        pass_through: Determine what happens if `narwhals_object` isn't a Narwhals class
+
+            - `False` (default): raise an error
+            - `True`: pass object through as-is
+
+    Returns:
+        Object of class that user started with.
+    """
+    return nw.to_native(narwhals_object, pass_through=pass_through)
+
+
 def narwhalify(
     func: Callable[..., Any] | None = None,
     *,
