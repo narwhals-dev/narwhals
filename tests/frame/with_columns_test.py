@@ -97,7 +97,7 @@ def test_with_columns_missing_column(
     df = nw.from_native(constructor(data))
 
     if "polars" in str(constructor):
-        msg = r"^c"
+        msg = r"c"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
     elif constructor_id == "pyspark[connect]":  # pragma: no cover
