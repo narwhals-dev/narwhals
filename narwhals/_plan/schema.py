@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Mapping
 from functools import lru_cache
+from itertools import chain, repeat
 from types import MappingProxyType
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from narwhals._plan.common import _IMMUTABLE_HASH_NAME, Immutable, NamedIR
 from narwhals.dtypes import Unknown
@@ -44,7 +46,7 @@ class FrozenSchema(Immutable):
         if context.is_select():
             return exprs, self._select(exprs)
         if context.is_with_columns():
-            raise NotImplementedError(context)
+            return self._with_columns(exprs)
         raise TypeError(context)
 
     def _select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
@@ -60,6 +62,18 @@ class FrozenSchema(Immutable):
         names = (e.name for e in exprs)
         default = Unknown()
         return freeze_schema((name, self.get(name, default)) for name in names)
+
+    def _with_columns(self, exprs: Seq[NamedIR]) -> tuple[Seq[NamedIR], FrozenSchema]:
+        exprs_out = deque[NamedIR]()
+        named: dict[str, NamedIR[Any]] = {e.name: e for e in exprs}
+        items: IntoFrozenSchema
+        for name in self:
+            exprs_out.append(named.pop(name, NamedIR.from_name(name)))
+        if named:
+            items = chain(self.items(), zip(named, repeat(Unknown(), len(named))))
+        else:
+            items = self
+        return tuple(exprs_out), freeze_schema(items)
 
     @property
     def __immutable_hash__(self) -> int:

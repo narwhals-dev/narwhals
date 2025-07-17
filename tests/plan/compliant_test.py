@@ -44,6 +44,13 @@ def data_small() -> dict[str, Any]:
     }
 
 
+@pytest.fixture
+def data_smaller(data_small: dict[str, Any]) -> dict[str, Any]:
+    """Use only columns `"a"-"f"`."""
+    keep = {"a", "b", "c", "d", "e", "f"}
+    return {k: v for k, v in data_small.items() if k in keep}
+
+
 def _ids_ir(expr: DummyExpr | Any) -> str:
     if is_expr(expr):
         return repr(expr._ir)
@@ -392,6 +399,77 @@ def test_select(
     frame = pa.table(data_small)
     df = DummyFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            ["d", nwd.col("a"), "b", nwd.col("e")],
+            {
+                "a": ["A", "B", "A"],
+                "b": [1, 2, 3],
+                "c": [9, 2, 4],
+                "d": [8, 7, 8],
+                "e": [None, 9, 7],
+                "f": [True, False, None],
+            },
+        ),
+        (
+            ndcs.numeric().cast(nw.String),
+            {
+                "a": ["A", "B", "A"],
+                "b": ["1", "2", "3"],
+                "c": ["9", "2", "4"],
+                "d": ["8", "7", "8"],
+                "e": [None, "9", "7"],
+                "f": [True, False, None],
+            },
+        ),
+        (
+            [
+                nwd.col("e").fill_null(nwd.col("e").last()),
+                nwd.col("f").sort(),
+                nwd.nth(1).max(),
+            ],
+            {
+                "a": ["A", "B", "A"],
+                "b": [3, 3, 3],
+                "c": [9, 2, 4],
+                "d": [8, 7, 8],
+                "e": [7, 9, 7],
+                "f": [None, False, True],
+            },
+        ),
+        pytest.param(
+            [nwd.col("a").alias("a?")],
+            {
+                "a": ["A", "B", "A"],
+                "b": [1, 2, 3],
+                "c": [9, 2, 4],
+                "d": [8, 7, 8],
+                "e": [None, 9, 7],
+                "f": [True, False, None],
+                "a?": ["A", "B", "A"],
+            },
+            id="with_columns-extend",
+            marks=pytest.mark.xfail(
+                reason="Non-replacing exprs are being silently dropped?"
+            ),
+        ),
+    ],
+)
+def test_with_columns(
+    expr: DummyExpr | Sequence[DummyExpr],
+    expected: dict[str, Any],
+    data_smaller: dict[str, Any],
+) -> None:
+    from narwhals._plan.dummy import DummyFrame
+
+    frame = pa.table(data_smaller)
+    df = DummyFrame.from_native(frame)
+    result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
 

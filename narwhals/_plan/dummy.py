@@ -28,7 +28,7 @@ from narwhals._plan.options import (
 from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
-from narwhals._utils import Version
+from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
@@ -851,6 +851,9 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
     def columns(self) -> list[str]:
         return self._compliant.columns
 
+    def __repr__(self) -> str:  # pragma: no cover
+        return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
+
     # NOTE: Gave up on trying to get typing working for now
     @classmethod
     def from_native(
@@ -919,6 +922,16 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
             exprs, named_exprs, ExprContext.SELECT
         )
         return self._from_compliant(self._compliant.select(named_irs, schema_projected))
+
+    def with_columns(
+        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any
+    ) -> Self:
+        named_irs, schema_projected = self._project(
+            exprs, named_exprs, ExprContext.WITH_COLUMNS
+        )
+        return self._from_compliant(
+            self._compliant.with_columns(named_irs, schema_projected)
+        )
 
     def sort(
         self,

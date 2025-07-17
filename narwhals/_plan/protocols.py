@@ -661,6 +661,9 @@ class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeS
     def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
         return self.from_series(self._evaluate_irs(irs))
 
+    def with_columns(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
+        return self.from_series(self._evaluate_irs(irs))
+
     def sort(
         self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
     ) -> Self: ...
