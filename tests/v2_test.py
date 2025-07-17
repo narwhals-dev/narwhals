@@ -186,3 +186,18 @@ def test_new_series_v2(constructor_eager: ConstructorEager) -> None:
     expected = {"b": [4, 1, 2]}
     assert result.dtype == nw_v2.Int32
     assert_equal_data(result.to_frame(), expected)
+
+
+def test_from_native_already_nw() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw_v2.from_native(pl.DataFrame({"a": [1]}))
+    assert isinstance(nw_v2.from_native(df), nw_v2.DataFrame)
+    assert nw_v2.from_native(df) is df
+    lf = nw_v2.from_native(pl.LazyFrame({"a": [1]}))
+    assert isinstance(nw_v2.from_native(lf), nw_v2.LazyFrame)
+    assert nw_v2.from_native(lf) is lf
+    s = df["a"]
+    assert isinstance(nw_v2.from_native(s, series_only=True), nw_v2.Series)
+    assert nw_v2.from_native(df) is df
