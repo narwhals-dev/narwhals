@@ -345,6 +345,18 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         else:
             assert_never(item)
 
+    def _hist_from_empty_series(
+        self, bins: list[float | int] | None, bin_count: int | None
+    ) -> dict[str, Any]:
+        """Create histogram result if self is an empty series."""
+        from numpy import linspace, zeros
+
+        if bins is not None:
+            return {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
+
+        count = bin_count if bin_count is not None else 1
+        return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": zeros(count)}
+
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
     @property

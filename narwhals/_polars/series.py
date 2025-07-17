@@ -464,7 +464,7 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    def hist(  # noqa: C901, PLR0912
+    def hist(
         self,
         bins: list[float | int] | None,
         *,
@@ -473,61 +473,111 @@ class PolarsSeries:
     ) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if (bins is not None and len(bins) <= 1) or (bin_count == 0):  # pragma: no cover
-            data: list[pl.Series] = []
-            if include_breakpoint:
-                data.append(pl.Series("breakpoint", [], dtype=pl.Float64))
-            data.append(pl.Series("count", [], dtype=pl.UInt32))
-            return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
+        data: dict[str, list[float | int] | pl.Series]
+        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+            data = {"breakpoint": [], "count": []}
+        elif self.native.count() < 1:
+            data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
+        else:
+            return self._hist_from_data(
+                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
 
-        if self.native.count() < 1:
-            data_dict: dict[str, Sequence[Any] | pl.Series]
-            if bins is not None:
-                data_dict = {
-                    "breakpoint": bins[1:],
-                    "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
-                }
-            elif (bin_count is not None) and bin_count == 1:
-                data_dict = {"breakpoint": [1.0], "count": [0]}
-            elif (bin_count is not None) and bin_count > 1:
-                data_dict = {
-                    "breakpoint": pl.int_range(1, bin_count + 1, eager=True) / bin_count,
-                    "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
-                }
-            else:  # pragma: no cover
-                msg = (
-                    "congratulations, you entered unreachable code - please report a bug"
-                )
-                raise AssertionError(msg)
-            if not include_breakpoint:
-                del data_dict["breakpoint"]
-            return PolarsDataFrame.from_native(pl.DataFrame(data_dict), context=self)
+        if not include_breakpoint:
+            del data["breakpoint"]
 
-        # polars <1.15 does not adjust the bins when they have equivalent min/max
-        # polars <1.5 with bin_count=...
-        # returns bins that range from -inf to +inf and has bin_count + 1 bins.
-        #   for compat: convert `bin_count=` call to `bins=`
-        if (self._backend_version < (1, 15)) and (
-            bin_count is not None
-        ):  # pragma: no cover
-            lower = cast("float", self.native.min())
-            upper = cast("float", self.native.max())
-            if lower == upper:
-                width = 1 / bin_count
-                lower -= 0.5
-                upper += 0.5
-            else:
-                width = (upper - lower) / bin_count
+        return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
 
-            bins = (pl.int_range(0, bin_count + 1, eager=True) * width + lower).to_list()
-            bin_count = None
+    def _hist_from_empty_series(  # Overrides EagerSeries
+        self, bins: list[float | int] | None, bin_count: int | None
+    ) -> dict[str, Any]:
+        if bins is not None:
+            return {
+                "breakpoint": bins[1:],
+                "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
+            }
+
+        count = bin_count if bin_count is not None else 1
+        return {
+            "breakpoint": pl.int_range(1, count + 1, eager=True) / count,
+            "count": pl.zeros(n=count, dtype=pl.Int64, eager=True),
+        }
+
+    def _hist_from_data(
+        self,
+        bins: list[float | int] | None,
+        bin_count: int | None,
+        *,
+        include_breakpoint: bool,
+    ) -> PolarsDataFrame:
+        """Calculate histogram from non-empty data."""
+        from narwhals._polars.dataframe import PolarsDataFrame
+
+        series = self.native
+        backend_version = self._backend_version
+
+        # Handle version-specific bin preparation
+        bins, bin_count = self._prepare_bins(
+            series=series, bins=bins, bin_count=bin_count, backend_version=backend_version
+        )
 
         # Polars inconsistently handles NaN values when computing histograms
         #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
-        series = self.native
         if self._backend_version < (1, 15) or bins is not None:
             series = series.set(series.is_nan(), None)
 
+        # Apply post-processing corrections
+        df = self._compute_hist(
+            series=series,
+            bins=bins,
+            bin_count=bin_count,
+            include_breakpoint=include_breakpoint,
+            backend_version=backend_version,
+        )
+
+        return PolarsDataFrame.from_native(df, context=self)
+
+    def _prepare_bins(
+        self,
+        series: pl.Series,
+        bins: list[float | int] | None,
+        bin_count: int | None,
+        backend_version: tuple[int, ...],
+    ) -> tuple[list[float] | None, int | None]:
+        """Prepare bins based on backend version compatibility.
+
+        polars <1.15 does not adjust the bins when they have equivalent min/max
+        polars <1.5 with bin_count=...
+        returns bins that range from -inf to +inf and has bin_count + 1 bins.
+          for compat: convert `bin_count=` call to `bins=`
+        """
+        if backend_version < (1, 15) and bin_count is not None:  # pragma: no cover
+            from typing import cast
+
+            lower = cast("float", series.min())
+            upper = cast("float", series.max())
+
+            if lower == upper:
+                lower -= 0.5
+                upper += 0.5
+
+            width = (upper - lower) / bin_count
+            bins = pl.int_range(0, bin_count + 1, eager=True) * width + lower  # type: ignore[assignment]
+            bin_count = None
+
+        return bins, bin_count
+
+    def _compute_hist(
+        self,
+        series: pl.Series,
+        bins: list[float | int] | None,
+        bin_count: int | None,
+        *,
+        include_breakpoint: bool,
+        backend_version: tuple[int, ...],
+    ) -> pl.DataFrame:
+        """Apply version-specific post-processing corrections."""
+        # Calculate histogram
         df = series.hist(
             bins,
             bin_count=bin_count,
@@ -535,22 +585,22 @@ class PolarsSeries:
             include_breakpoint=include_breakpoint,
         )
 
+        # Handle column naming
         if not include_breakpoint:
             df.columns = ["count"]
-
-        if self._backend_version < (1, 0) and include_breakpoint:
+        elif backend_version < (1, 0):
             df = df.rename({"break_point": "breakpoint"})
 
-        #  polars<1.15 implicitly adds -inf and inf to either end of bins
-        if self._backend_version < (1, 15) and bins is not None:  # pragma: no cover
+        # polars<1.15 implicitly adds -inf and inf to either end of bins
+        if backend_version < (1, 15) and bins is not None:  # pragma: no cover
             r = pl.int_range(0, len(df))
             df = df.filter((r > 0) & (r < len(df) - 1))
 
-        # polars<1.27 makes the lowest bin a left/right closed interval.
-        if self._backend_version < (1, 27) and bins is not None:
+        # polars<1.27 makes the lowest bin a left/right closed interval
+        if backend_version < (1, 27) and bins is not None:
             df[0, "count"] += (series == bins[0]).sum()
 
-        return PolarsDataFrame.from_native(df, context=self)
+        return df
 
     def to_polars(self) -> pl.Series:
         return self.native

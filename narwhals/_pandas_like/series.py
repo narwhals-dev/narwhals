@@ -53,7 +53,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
-        _AnyDArray,
         _SliceIndex,
     )
 
@@ -947,7 +946,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
-        data: dict[str, Sequence[int | float | str] | _AnyDArray]
+        data: dict[str, list[int | float] | _1DArray]
 
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
             data = {"breakpoint": [], "count": []}
@@ -961,27 +960,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             del data["breakpoint"]
 
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-
-    def _hist_from_empty_series(
-        self, bins: list[float | int] | None, bin_count: int | None
-    ) -> dict[str, Sequence[int | float | str] | _AnyDArray]:
-        """Create histogram result for empty data."""
-        from numpy import linspace, zeros
-
-        if bins is not None:
-            data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
-        else:
-            count = bin_count if bin_count is not None else 1
-            data = (
-                {"breakpoint": [1.0], "count": [0]}
-                if count == 1
-                else {
-                    "breakpoint": linspace(0, 1, count + 1)[1:],
-                    "count": zeros(shape=count),
-                }
-            )
-
-        return data
 
     def _prepare_bins(
         self, bins: list[float | int] | None, bin_count: int | None
@@ -1004,7 +982,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _hist_from_bins(
         self, ns: ModuleType, bins: list[float]
-    ) -> dict[str, Sequence[int | float | str] | _AnyDArray]:
+    ) -> dict[str, list[int | float] | _1DArray]:
         """Calculate the actual histogram."""
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
         #   happen since the bins were explicitly passed in.
