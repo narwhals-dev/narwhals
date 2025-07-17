@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
     UnitTarget: TypeAlias = TimeUnit
-    BinOpBroadcast: TypeAlias = Callable[[NativeSeriesT, int], NativeSeriesT]
+    BinOpBroadcast: TypeAlias = Callable[[Any, int], Any]
     IntoRhs: TypeAlias = int
 
 
@@ -580,7 +580,7 @@ def calculate_timestamp_datetime(
         return s
     elif item := _TIMESTAMP_DATETIME_OP_FACTOR.get((current, time_unit)):
         fn, factor = item
-        return fn(s, factor)  # type: ignore[arg-type,return-value]
+        return fn(s, factor)
     else:  # pragma: no cover
         msg = (
             f"unexpected time unit {current}, please report an issue at "
