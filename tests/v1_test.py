@@ -215,6 +215,9 @@ def test_to_dict_as_series() -> None:
     assert isinstance(result["a"], nw_v1.Series)
 
 
+@pytest.mark.filterwarnings(
+    "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
+)
 def test_hist_v1() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
