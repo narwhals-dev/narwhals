@@ -1068,7 +1068,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def _hist_from_bins(self, bins: list[float]) -> dict[str, Any]:
         """Calculate histogram from bins."""
-        import numpy as np
+        import numpy as np  # ignore-banned-import
 
         # Handle single bin case
         if len(bins) == 2:
