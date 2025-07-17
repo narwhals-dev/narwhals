@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
@@ -20,7 +22,9 @@ def test_contains_case_insensitive(
     )
     if "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         # pandas uses 'str' type, and the result is 'bool', which can't contain missing values.
-        expected = {"case_insensitive_match": [False, False, True, True, True, False]}
+        expected: dict[str, list[Any]] = {
+            "case_insensitive_match": [False, False, True, True, True, False]
+        }
     else:
         expected = {"case_insensitive_match": [False, False, True, True, True, None]}
     assert_equal_data(result, expected)
@@ -60,7 +64,7 @@ def test_contains_literal(constructor: Constructor) -> None:
     )
     if "pandas_constructor" in str(constructor) and PANDAS_VERSION >= (3,):
         # pandas uses 'str' type, and the result is 'bool', which can't contain missing values.
-        expected = {
+        expected: dict[str, Any] = {
             "default_match": [False, False, False, True, True, False],
             "literal_match": [False, False, False, False, True, False],
         }
