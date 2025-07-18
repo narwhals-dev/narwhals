@@ -27,7 +27,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._typing_compat import Protocol38
 from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
@@ -115,7 +115,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def max(self) -> Self: ...
     def arg_min(self) -> Self: ...
     def arg_max(self) -> Self: ...
-    def arg_true(self) -> Self: ...
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
@@ -215,8 +214,6 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
-    @deprecated("Since `1.22.0`")
-    def gather_every(self, n: int, offset: int) -> Self: ...
     def __and__(self, other: Any) -> Self: ...
     def __or__(self, other: Any) -> Self: ...
     def __add__(self, other: Any) -> Self: ...
@@ -664,9 +661,6 @@ class EagerExpr(
     def is_in(self, other: Any) -> Self:
         return self._reuse_series("is_in", other=other)
 
-    def arg_true(self) -> Self:
-        return self._reuse_series("arg_true")
-
     def filter(self, *predicates: Self) -> Self:
         plx = self.__narwhals_namespace__()
         predicate = plx.all_horizontal(*predicates, ignore_nulls=False)
@@ -908,15 +902,9 @@ class LazyExpr(
 ):
     arg_min: not_implemented = not_implemented()
     arg_max: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
     mode: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
