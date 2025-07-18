@@ -100,6 +100,20 @@ def test_constructors() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
+def test_join() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]})).lazy()
+    result = df.join(df, how="inner", on="a").sort("a")
+    expected = {"a": [1, 2, 3]}
+    assert_equal_data(result, expected)
+    assert isinstance(result, nw_v2.LazyFrame)
+    result_eager = df.collect().join(df.collect(), how="inner", on="a")
+    assert_equal_data(result_eager, expected)
+    assert isinstance(result_eager, nw_v2.DataFrame)
+
+
 def test_values_counts_v2() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -109,6 +123,17 @@ def test_values_counts_v2() -> None:
     expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_to_frame() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
+    s = df["a"]
+    assert isinstance(s, nw_v2.Series)
+    df = s.to_frame()
+    assert isinstance(df, nw_v2.DataFrame)
 
 
 def test_is_duplicated_unique() -> None:
@@ -244,6 +269,41 @@ def test_narwhalify_method_called() -> None:
     pd.testing.assert_frame_equal(result, pd.DataFrame(data))
     result = Foo().func(a=1, df=df)
     pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_backends_cross() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    import pandas as pd
+    import polars as pl
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v2.narwhalify
+    def func(
+        arg1: Any, arg2: Any, extra: int = 1
+    ) -> tuple[Any, Any, int]:  # pragma: no cover
+        return arg1, arg2, extra
+
+    with pytest.raises(
+        ValueError,
+        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
+    ):
+        func(pd.DataFrame(data), pl.DataFrame(data))
+
+
+def test_narwhalify_method_invalid() -> None:
+    class Foo:
+        @nw_v2.narwhalify(pass_through=False, eager_only=True)
+        def func(self) -> Foo:  # pragma: no cover
+            return self
+
+        @nw_v2.narwhalify(pass_through=False, eager_only=True)
+        def fun2(self, df: Any) -> Any:  # pragma: no cover
+            return df
+
+    with pytest.raises(TypeError):
+        Foo().func()
 
 
 def test_with_version(constructor: Constructor) -> None:
