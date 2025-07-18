@@ -22,6 +22,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import (
     Implementation,
+    Version,
     find_stacklevel,
     flatten,
     generate_repr,
@@ -2483,11 +2484,12 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> nw.from_native(lf_native).schema
             Schema({'a': Int32, 'b': Decimal})
         """
-        msg = (
-            "Resolving the schema of a LazyFrame is a potentially expensive operation. "
-            "Use `LazyFrame.collect_schema()` to get the schema without this warning."
-        )
-        issue_performance_warning(msg)
+        if self._compliant_frame._version is not Version.V1:
+            msg = (
+                "Resolving the schema of a LazyFrame is a potentially expensive operation. "
+                "Use `LazyFrame.collect_schema()` to get the schema without this warning."
+            )
+            issue_performance_warning(msg)
         return super().schema
 
     def collect_schema(self) -> Schema:

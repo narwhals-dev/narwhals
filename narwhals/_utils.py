@@ -46,7 +46,12 @@ from narwhals.dependencies import (
     is_polars_series,
     is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    PerformanceWarning,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -132,9 +137,6 @@ CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _ContextT = TypeVar("_ContextT", bound="_FullContext")
 _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
-
-
-class PerformanceWarning(Warning): ...
 
 
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
