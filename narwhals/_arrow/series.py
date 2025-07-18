@@ -1031,9 +1031,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if bin_count == 0 or (bins is not None and len(bins) <= 1):
             data = {"breakpoint": [], "count": []}
         elif pc.sum(
-            pc.invert(pc.or_(pc.is_nan(self.native), pc.is_null(self.native))).cast(
-                pa.uint64()
-            ),
+            pc.invert(pc.is_null(self.native, nan_is_null=True)).cast(pa.uint64()),
             min_count=0,
         ) == pa.scalar(0, type=pa.uint64()):
             data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
