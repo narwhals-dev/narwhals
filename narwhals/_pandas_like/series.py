@@ -961,6 +961,24 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
+    def _hist_from_empty_series(
+        self, bins: list[float | int] | None, bin_count: int | None
+    ) -> dict[str, Any]:
+        """Create histogram result if self is an empty series."""
+        array_funcs = self._array_funcs
+
+        if bins is not None:
+            return {
+                "breakpoint": bins[1:],
+                "count": array_funcs.zeros(shape=len(bins) - 1),
+            }
+
+        count = bin_count if bin_count is not None else 1
+        return {
+            "breakpoint": array_funcs.linspace(0, 1, count + 1)[1:],
+            "count": array_funcs.zeros(count),
+        }
+
     def _prepare_bins(
         self, bins: list[float | int] | None, bin_count: int | None
     ) -> list[float]:

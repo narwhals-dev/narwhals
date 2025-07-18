@@ -1047,6 +1047,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             pa.Table.from_pydict(data), version=self._version, validate_column_names=True
         )
 
+    def _hist_from_empty_series(
+        self, bins: list[float | int] | None, bin_count: int | None
+    ) -> dict[str, Any]:
+        """Create histogram result if self is an empty series."""
+        if bins is not None:
+            return {"breakpoint": bins[1:], "count": pa.repeat(0, len(bins) - 1)}
+
+        from numpy import linspace  # ignore-banned-import
+
+        count = bin_count if bin_count is not None else 1
+        return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": pa.repeat(0, count)}
+
     def _prepare_bins(
         self, bins: list[float | int] | None, bin_count: int | None
     ) -> list[float]:
