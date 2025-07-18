@@ -20,6 +20,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    zeros,
 )
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
@@ -1052,12 +1053,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     ) -> dict[str, Any]:
         """Create histogram result if self is an empty series."""
         if bins is not None:
-            return {"breakpoint": bins[1:], "count": pa.repeat(0, len(bins) - 1)}
+            return {"breakpoint": bins[1:], "count": zeros(len(bins) - 1)}
 
         from numpy import linspace  # ignore-banned-import
 
         count = bin_count if bin_count is not None else 1
-        return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": pa.repeat(0, count)}
+        return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": zeros(count)}
 
     def _prepare_bins(
         self, bins: list[float | int] | None, bin_count: int | None
