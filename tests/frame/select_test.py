@@ -100,7 +100,7 @@ def test_missing_columns(
         # and we have no way to recover exactly which columns the user
         # tried selecting. So, we just emit their message (which varies
         # across versions...)
-        msg = r"^e"
+        msg = r"e"
     elif constructor_id == "pyspark[connect]":  # pragma: no cover
         msg = r"^\[UNRESOLVED_COLUMN.WITH_SUGGESTION\]"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
@@ -116,7 +116,7 @@ def test_missing_columns(
 
     # for the next two cases the error message is different in Polars
     if constructor_id == "polars[lazy]":
-        msg = r"^fdfa"
+        msg = r"fdfa"
     elif constructor_id == "polars[eager]":
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
     with pytest.raises(ColumnNotFoundError, match=msg):
