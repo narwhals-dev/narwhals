@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyGroupBy
+from narwhals._sql.group_by import SQLGroupBy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
 
 
-class IbisGroupBy(LazyGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
+class IbisGroupBy(SQLGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
     def __init__(
         self,
         df: IbisLazyFrame,

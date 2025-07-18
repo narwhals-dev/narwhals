@@ -16,7 +16,6 @@ from narwhals._compliant.group_by import (
     CompliantGroupBy,
     DepthTrackingGroupBy,
     EagerGroupBy,
-    LazyGroupBy,
 )
 from narwhals._compliant.namespace import (
     CompliantNamespace,
@@ -100,7 +99,6 @@ __all__ = [
     "IntoCompliantExpr",
     "LazyExpr",
     "LazyExprNamespace",
-    "LazyGroupBy",
     "LazyNamespace",
     "LazySelectorNamespace",
     "LazyThen",

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
 
-class LazyGroupBy(
+class SQLGroupBy(
     ParseKeysGroupBy[CompliantLazyFrameT_co, SQLExprT_contra],
     CompliantGroupBy[CompliantLazyFrameT_co, SQLExprT_contra],
     Protocol38[CompliantLazyFrameT_co, SQLExprT_contra, NativeExprT_co],
