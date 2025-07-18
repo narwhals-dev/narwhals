@@ -1083,8 +1083,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             counts = [
                 pc.sum(
                     pc.and_(
-                        pc.greater_equal(self.native, pa.scalar(float(bins[0]))),
-                        pc.less_equal(self.native, pa.scalar(float(bins[1]))),
+                        pc.greater_equal(self.native, pa.scalar(bins[0])),
+                        pc.less_equal(self.native, pa.scalar(bins[1])),
                     ).cast(pa.uint8())
                 )
             ]
