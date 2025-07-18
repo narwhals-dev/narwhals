@@ -65,7 +65,10 @@ def test_rank_expr(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager) and is_windows():
+    if (
+        any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if (
@@ -99,7 +102,10 @@ def test_rank_series(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager) and is_windows():
+    if (
+        any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if (
@@ -143,7 +149,10 @@ def test_rank_expr_in_over_context(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
@@ -191,7 +200,10 @@ def test_lazy_rank_expr(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if (
@@ -233,7 +245,10 @@ def test_lazy_rank_expr_desc(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if (
@@ -277,7 +292,10 @@ def test_rank_expr_in_over_desc(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
@@ -306,7 +324,10 @@ def test_rank_expr_in_over_desc(
 def test_rank_with_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if "dask" in str(constructor):
@@ -337,7 +358,10 @@ def test_rank_with_order_by(
 def test_rank_with_order_by_and_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and is_windows():
+    if (
+        any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and is_windows()
+    ):
         # https://github.com/pandas-dev/pandas/issues/61896
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table", "cudf")):
