@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast, overload
 import polars as pl
 
 from narwhals._polars.utils import (
+    BACKEND_VERSION,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -514,16 +515,15 @@ class PolarsSeries:
         from narwhals._polars.dataframe import PolarsDataFrame
 
         series = self.native
-        backend_version = self._backend_version
 
         # Handle version-specific bin preparation
         bins, bin_count = self._prepare_bins(
-            series=series, bins=bins, bin_count=bin_count, backend_version=backend_version
+            series=series, bins=bins, bin_count=bin_count
         )
 
         # Polars inconsistently handles NaN values when computing histograms
         #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
-        if self._backend_version < (1, 15) or bins is not None:
+        if BACKEND_VERSION < (1, 15) or bins is not None:
             series = series.set(series.is_nan(), None)
 
         # Apply post-processing corrections
@@ -532,17 +532,12 @@ class PolarsSeries:
             bins=bins,
             bin_count=bin_count,
             include_breakpoint=include_breakpoint,
-            backend_version=backend_version,
         )
 
         return PolarsDataFrame.from_native(df, context=self)
 
     def _prepare_bins(
-        self,
-        series: pl.Series,
-        bins: list[float | int] | None,
-        bin_count: int | None,
-        backend_version: tuple[int, ...],
+        self, series: pl.Series, bins: list[float | int] | None, bin_count: int | None
     ) -> tuple[list[float] | None, int | None]:
         """Prepare bins based on backend version compatibility.
 
@@ -551,7 +546,7 @@ class PolarsSeries:
         returns bins that range from -inf to +inf and has bin_count + 1 bins.
           for compat: convert `bin_count=` call to `bins=`
         """
-        if backend_version < (1, 15) and bin_count is not None:  # pragma: no cover
+        if BACKEND_VERSION < (1, 15) and bin_count is not None:  # pragma: no cover
             from typing import cast
 
             lower = cast("float", series.min())
@@ -574,7 +569,6 @@ class PolarsSeries:
         bin_count: int | None,
         *,
         include_breakpoint: bool,
-        backend_version: tuple[int, ...],
     ) -> pl.DataFrame:
         """Apply version-specific post-processing corrections."""
         # Calculate histogram
@@ -588,16 +582,16 @@ class PolarsSeries:
         # Handle column naming
         if not include_breakpoint:
             df.columns = ["count"]
-        elif backend_version < (1, 0):
+        elif BACKEND_VERSION < (1, 0):
             df = df.rename({"break_point": "breakpoint"})
 
         # polars<1.15 implicitly adds -inf and inf to either end of bins
-        if backend_version < (1, 15) and bins is not None:  # pragma: no cover
+        if BACKEND_VERSION < (1, 15) and bins is not None:  # pragma: no cover
             r = pl.int_range(0, len(df))
             df = df.filter((r > 0) & (r < len(df) - 1))
 
         # polars<1.27 makes the lowest bin a left/right closed interval
-        if backend_version < (1, 27) and bins is not None:
+        if BACKEND_VERSION < (1, 27) and bins is not None:
             df[0, "count"] += (series == bins[0]).sum()
 
         return df
