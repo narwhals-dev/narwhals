@@ -254,7 +254,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             The LazyFrame containing only the selected rows.
         """
         return self._with_compliant(
-            self._compliant_frame.gather_every(n=n, offset=offset)
+            self._compliant_frame.gather_every(n=n, offset=offset)  # type: ignore[attr-defined]
         )
 
     def with_row_index(
@@ -346,7 +346,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)
+            lambda plx: self._to_compliant_expr(plx).head(n)  # type: ignore[attr-defined]
         )
 
     def tail(self, n: int = 10) -> Self:
@@ -359,7 +359,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).tail(n)
+            lambda plx: self._to_compliant_expr(plx).tail(n)  # type: ignore[attr-defined]
         )
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -373,7 +373,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
+            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)  # type: ignore[attr-defined]
         )
 
     def unique(self, *, maintain_order: bool | None = None) -> Self:
@@ -406,7 +406,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_window(
-            lambda plx: self._to_compliant_expr(plx).sort(
+            lambda plx: self._to_compliant_expr(plx).sort(  # type: ignore[attr-defined]
                 descending=descending, nulls_last=nulls_last
             )
         )
@@ -418,7 +418,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).arg_true()
+            lambda plx: self._to_compliant_expr(plx).arg_true()  # type: ignore[attr-defined]
         )
 
     def sample(
@@ -442,7 +442,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(
+            lambda plx: self._to_compliant_expr(plx).sample(  # type: ignore[attr-defined]
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
