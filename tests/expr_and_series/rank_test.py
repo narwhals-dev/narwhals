@@ -121,6 +121,19 @@ def test_rank_series(
         assert_equal_data(result, expected_data)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 1), reason="too old for pyarrow")
+def test_rank_series_pandas_namesless() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = nw.from_native(
+        pd.Series([1, 2, 3, None], dtype="Int64[pyarrow]"), series_only=True
+    )
+    result = s.rank(method="min")
+    assert result.name is None
+    assert_equal_data({"a": result}, {"a": [1, 2, 3, None]})
+
+
 @pytest.mark.parametrize("method", rank_methods)
 def test_rank_expr_in_over_context(
     request: pytest.FixtureRequest,
