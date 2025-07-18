@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
-from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._compliant import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -16,6 +16,7 @@ from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
+from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(LazyExpr["IbisLazyFrame", "ir.Column"]):
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     _implementation = Implementation.IBIS
 
     def __init__(

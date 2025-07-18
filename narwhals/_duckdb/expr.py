@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 from duckdb import CoalesceOperator, StarExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._compliant import WindowInputs
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
@@ -25,6 +25,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
     DuckDBWindowInputs = WindowInputs[Expression]
 
 
-class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
+class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(

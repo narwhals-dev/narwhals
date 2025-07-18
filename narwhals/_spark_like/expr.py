@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._compliant import WindowInputs
 from narwhals._expression_parsing import (
     ExprKind,
     combine_alias_output_names,
@@ -20,6 +20,7 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
     true_divide,
 )
+from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
     SparkWindowInputs = WindowInputs[Column]
 
 
-class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
+class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
         "min": "rank",
         "max": "rank",

@@ -205,27 +205,3 @@ class LazyWhen(
         obj._implementation = context._implementation
         obj._version = context._version
         return obj
-
-    def _window_function(
-        self, df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
-    ) -> Sequence[NativeExprT]:
-        is_expr = self._condition._is_expr
-        condition = self._condition.window_function(df, window_inputs)[0]
-        then_ = self._then_value
-        then = (
-            then_.window_function(df, window_inputs)[0]
-            if is_expr(then_)
-            else self.lit(then_)
-        )
-
-        other_ = self._otherwise_value
-        if other_ is None:
-            result = self.when(condition, then)
-        else:
-            other = (
-                other_.window_function(df, window_inputs)[0]
-                if is_expr(other_)
-                else self.lit(other_)
-            )
-            result = self.when(condition, then).otherwise(other)  # type: ignore  # noqa: PGH003
-        return [result]
