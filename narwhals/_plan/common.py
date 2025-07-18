@@ -503,6 +503,10 @@ def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr
     return is_function_expr(obj) and obj.options.is_input_wildcard_expansion()
 
 
+def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
+    return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
+
+
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
     dtypes = version.dtypes
     mapping: dict[type[NonNestedLiteral], type[NonNestedDType]] = {

@@ -16,7 +16,7 @@ from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan.dummy import DummyFrame, DummySeries
     from narwhals._plan.expr import FunctionExpr, RangeExpr
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
+        ConcatMethod,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
@@ -39,11 +40,20 @@ OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 
+ConcatT1 = TypeVar("ConcatT1")
+ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
+
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
 FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any, Any]"
-NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any, Any]"
+NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
+
+EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
+EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
+
+LazyExprAny: TypeAlias = "LazyExpr[Any, Any, Any]"
+LazyScalarAny: TypeAlias = "LazyScalar[Any, Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT = TypeVar("ScalarT", bound=ScalarAny)
@@ -54,10 +64,11 @@ FrameT = TypeVar("FrameT", bound=FrameAny)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
-EagerExprT_co = TypeVar("EagerExprT_co", bound="EagerExpr[Any, Any]", covariant=True)
-EagerScalarT_co = TypeVar(
-    "EagerScalarT_co", bound="EagerScalar[Any, Any]", covariant=True
-)
+EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
+EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
+
+LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
+LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
 
 # NOTE: Unlike the version in `nw._utils`, here `.version` it is public
@@ -513,9 +524,34 @@ class LazyScalar(
 ): ...
 
 
-class CompliantNamespace(
-    StoresVersion, Protocol[FrameT, SeriesT_co, ExprT_co, ScalarT_co]
-):
+# NOTE: `mypy` is wrong
+# error: Invariant type variable "ConcatT2" used in protocol where covariant one is expected  [misc]
+class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
+    @overload
+    def concat(self, items: Iterable[ConcatT1], *, how: ConcatMethod) -> ConcatT1: ...
+    # Series only supports vertical publicly (like in polars)
+    @overload
+    def concat(
+        self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
+    ) -> ConcatT2: ...
+    def concat(
+        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], *, how: ConcatMethod
+    ) -> ConcatT1 | ConcatT2: ...
+
+
+class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
+    def _concat_diagonal(self, items: Iterable[ConcatT1], /) -> ConcatT1: ...
+    # Series can be used here to go from [Series, Series] -> DataFrame
+    # but that is only available privately
+    def _concat_horizontal(
+        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], /
+    ) -> ConcatT1: ...
+    def _concat_vertical(
+        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], /
+    ) -> ConcatT1 | ConcatT2: ...
+
+
+class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     """Need to hold `Expr` and `Scalar` types outside of their defs.
 
     Likely, re-wrapping the output types will work like:
@@ -531,9 +567,7 @@ class CompliantNamespace(
     """
 
     @property
-    def _dataframe(self) -> type[FrameT]: ...
-    @property
-    def _series(self) -> type[SeriesT_co]: ...
+    def _frame(self) -> type[FrameT]: ...
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
@@ -570,9 +604,24 @@ class CompliantNamespace(
 
 
 class EagerNamespace(
-    CompliantNamespace[FrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
-    Protocol[FrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+    EagerConcat[FrameT, SeriesT],
+    CompliantNamespace[FrameT, EagerExprT_co, EagerScalarT_co],
+    Protocol[FrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
 ):
+    @property
+    def _series(self) -> type[SeriesT]: ...
+    @property
+    def _dataframe(self) -> type[FrameT]: ...
+    @property
+    def _frame(self) -> type[FrameT]:
+        return self._dataframe
+
+    def _is_series(self, obj: Any) -> TypeIs[SeriesT]:
+        return isinstance(obj, self._series)
+
+    def _is_dataframe(self, obj: Any) -> TypeIs[FrameT]:
+        return isinstance(obj, self._dataframe)
+
     @overload
     def lit(
         self, node: expr.Literal[NonNestedLiteral], frame: FrameT, name: str
@@ -596,6 +645,18 @@ class EagerNamespace(
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
+
+
+class LazyNamespace(
+    Concat[FrameT, FrameT],
+    CompliantNamespace[FrameT, LazyExprT_co, LazyScalarT_co],
+    Protocol[FrameT, LazyExprT_co, LazyScalarT_co],
+):
+    @property
+    def _lazyframe(self) -> type[FrameT]: ...
+    @property
+    def _frame(self) -> type[FrameT]:
+        return self._lazyframe
 
 
 class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeSeriesT]):

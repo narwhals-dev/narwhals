@@ -14,12 +14,14 @@ from narwhals._arrow.utils import (
     floordiv_compat as floordiv,
 )
 from narwhals._plan import operators as ops
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import TypeIs
 
+    from narwhals._arrow.dataframe import PromoteOptions
     from narwhals._arrow.typing import (
         ArrayAny,
         ArrayOrScalar,
@@ -47,6 +49,8 @@ if TYPE_CHECKING:
         UnaryFunction,
     )
     from narwhals.typing import ClosedInterval
+
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 is_null = pc.is_null
 is_not_null = t.cast("UnaryFunction[ScalarAny,pa.BooleanScalar]", pc.is_valid)
@@ -235,6 +239,30 @@ def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
+
+
+def concat_vertical_chunked(
+    arrays: Iterable[ChunkedArrayAny], dtype: DataType | None = None, /
+) -> ChunkedArrayAny:
+    # NOTE: Overloads are broken, this is legit
+    v_concat: Incomplete = pa.chunked_array
+    return v_concat(arrays, dtype)  # type: ignore[no-any-return]
+
+
+def concat_vertical_table(
+    tables: Iterable[pa.Table], /, promote_options: PromoteOptions = "none"
+) -> pa.Table:
+    return pa.concat_tables(tables, promote_options=promote_options)
+
+
+if BACKEND_VERSION >= (14,):
+
+    def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
+        return pa.concat_tables(tables, promote_options="default")
+else:
+
+    def concat_diagonal(tables: Iterable[pa.Table]) -> pa.Table:
+        return pa.concat_tables(tables, promote=True)
 
 
 def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:

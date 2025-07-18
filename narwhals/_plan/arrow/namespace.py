@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import reduce
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -9,13 +9,14 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.functions import lit
+from narwhals._plan.common import collect, is_tuple_of
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan import expr, functions as F  # noqa: N812
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatHorizontal
-    from narwhals.typing import NonNestedLiteral, PythonLiteral
+    from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 
 class ArrowNamespace(
@@ -208,3 +209,75 @@ class ArrowNamespace(
                 f"{start_!r}\n{end_!r}"
             )
             raise InvalidOperationError(msg)
+
+    @overload
+    def concat(
+        self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
+    ) -> ArrowDataFrame: ...
+
+    @overload
+    def concat(
+        self, items: Iterable[ArrowSeries], *, how: Literal["vertical"]
+    ) -> ArrowSeries: ...
+
+    def concat(
+        self,
+        items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries],
+        *,
+        how: ConcatMethod,
+    ) -> ArrowDataFrame | ArrowSeries:
+        if how == "vertical":
+            return self._concat_vertical(items)
+        if how == "horizontal":
+            return self._concat_horizontal(items)
+        it = iter(items)
+        first = next(it)
+        if self._is_series(first):
+            raise TypeError(first)
+        dfs = cast("Sequence[ArrowDataFrame]", (first, *it))
+        return self._concat_diagonal(dfs)
+
+    def _concat_diagonal(self, items: Iterable[ArrowDataFrame]) -> ArrowDataFrame:
+        return self._dataframe.from_native(
+            fn.concat_vertical_table(df.native for df in items), self.version
+        )
+
+    def _concat_horizontal(
+        self, items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries]
+    ) -> ArrowDataFrame:
+        def gen(
+            objs: Iterable[ArrowDataFrame | ArrowSeries],
+        ) -> Iterator[tuple[ChunkedArrayAny, str]]:
+            for item in objs:
+                if self._is_series(item):
+                    yield item.native, item.name
+                else:
+                    yield from zip(item.native.itercolumns(), item.columns)
+
+        arrays, names = zip(*gen(items))
+        native = pa.Table.from_arrays(arrays, list(names))
+        return self._dataframe.from_native(native, self.version)
+
+    def _concat_vertical(
+        self, items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries]
+    ) -> ArrowDataFrame | ArrowSeries:
+        collected = collect(items)
+        if is_tuple_of(collected, self._series):
+            sers = collected
+            chunked = fn.concat_vertical_chunked(ser.native for ser in sers)
+            return sers[0]._with_native(chunked)
+        if is_tuple_of(collected, self._dataframe):
+            dfs = collected
+            cols_0 = dfs[0].columns
+            for i, df in enumerate(dfs[1:], start=1):
+                cols_current = df.columns
+                if cols_current != cols_0:
+                    msg = (
+                        "unable to vstack, column names don't match:\n"
+                        f"   - dataframe 0: {cols_0}\n"
+                        f"   - dataframe {i}: {cols_current}\n"
+                    )
+                    raise TypeError(msg)
+            return df._with_native(fn.concat_vertical_table(df.native for df in dfs))
+        else:
+            raise TypeError(items)
