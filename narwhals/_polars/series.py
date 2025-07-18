@@ -491,7 +491,7 @@ class PolarsSeries:
 
     def _hist_from_empty_series(  # Overrides EagerSeries
         self, bins: list[float | int] | None, bin_count: int | None
-    ) -> dict[str, Any]:
+    ) -> dict[str, list[float | int] | pl.Series]:
         if bins is not None:
             return {
                 "breakpoint": bins[1:],
@@ -524,7 +524,7 @@ class PolarsSeries:
         # Polars inconsistently handles NaN values when computing histograms
         #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
         if BACKEND_VERSION < (1, 15) or bins is not None:
-            series = series.set(series.is_nan(), None)
+            series = series.fill_nan(None)
 
         # Apply post-processing corrections
         df = self._compute_hist(
