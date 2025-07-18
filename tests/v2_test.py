@@ -9,24 +9,21 @@ import pandas as pd
 import pytest
 
 import narwhals.stable.v2 as nw_v2
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    ConstructorEager,
-    assert_equal_data,
-)
+from narwhals.utils import Version
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from tests.utils import ConstructorEager
+    from narwhals.stable.v2.typing import IntoDataFrameT
 
 
-def test_toplevel(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        pytest.skip()
+def test_toplevel() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v2.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
+        pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
     )
     result = df.select(
         min=nw_v2.min("a"),
@@ -68,10 +65,11 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
-def test_when_then(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [6, 7, 8]})
-    )
+def test_when_then() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [6, 7, 8]}))
     result = df.select(nw_v2.when(nw_v2.col("a") > 1).then("b").otherwise("c"))
     expected = {"b": [6, 5, 6]}
     assert_equal_data(result, expected)
@@ -102,46 +100,33 @@ def test_constructors() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
-def test_join(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.join(df, how="inner", on="a").sort("a")
-    expected = {"a": [1, 2, 3]}
-    assert_equal_data(result, expected)
-    assert isinstance(result, nw_v2.LazyFrame)
-    result_eager = df.collect().join(df.collect(), how="inner", on="a")
-    assert_equal_data(result_eager, expected)
-    assert isinstance(result_eager, nw_v2.DataFrame)
+def test_values_counts_v2() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
 
-
-def test_by_name(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.select(nw_v2.col("a").alias("b"), "a")
-    expected = {"b": [1, 2, 3], "a": [1, 2, 3]}
-    assert_equal_data(result, expected)
-    assert isinstance(result, nw_v2.LazyFrame)
-    result_eager = df.collect().select(nw_v2.col("a").alias("b"), "a")
-    assert_equal_data(result_eager, expected)
-    assert isinstance(result_eager, nw_v2.DataFrame)
-
-
-def test_values_counts_v2(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
     result = df["a"].value_counts().sort("a")
     expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
 
 
-def test_is_duplicated_unique(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_is_duplicated_unique() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
     assert df.is_duplicated().to_list() == [False, False, False]
     assert df.is_unique().to_list() == [True, True, True]
     assert isinstance(df.is_duplicated(), nw_v2.Series)
     assert isinstance(df.is_unique(), nw_v2.Series)
 
 
-def test_concat(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_concat() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v2.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     result = nw_v2.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
@@ -150,42 +135,15 @@ def test_concat(constructor_eager: ConstructorEager) -> None:
         assert_type(result, nw_v2.DataFrame[Any])
 
 
-@pytest.mark.filterwarnings(
-    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
-)
-def test_to_dict(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
-    result = df.to_dict(as_series=False)
-    expected = {"a": [1, 2, 3]}
-    assert result == expected
+def test_to_dict_as_series() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
-
-@pytest.mark.filterwarnings(
-    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
-)
-def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
-    df = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    df = nw_v2.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     result = df.to_dict(as_series=True)
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result["a"], nw_v2.Series)
-
-
-def test_new_series_v2(constructor_eager: ConstructorEager) -> None:
-    s = nw_v2.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    result = nw_v2.new_series("b", [4, 1, 2], backend=nw_v2.get_native_namespace(s))
-    expected = {"b": [4, 1, 2]}
-    # all supported libraries auto-infer this to be int64, we can always special-case
-    # something different if necessary
-    assert result.dtype == nw_v2.Int64
-    assert_equal_data(result.to_frame(), expected)
-
-    result = nw_v2.new_series(
-        "b", [4, 1, 2], nw_v2.Int32, backend=nw_v2.get_native_namespace(s)
-    )
-    expected = {"b": [4, 1, 2]}
-    assert result.dtype == nw_v2.Int32
-    assert_equal_data(result.to_frame(), expected)
 
 
 def test_from_native_already_nw() -> None:
@@ -201,3 +159,94 @@ def test_from_native_already_nw() -> None:
     s = df["a"]
     assert isinstance(nw_v2.from_native(s, series_only=True), nw_v2.Series)
     assert nw_v2.from_native(df) is df
+
+
+def test_from_native_invalid_kwds() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    with pytest.raises(TypeError, match="got an unexpected keyword"):
+        nw_v2.from_native(pl.DataFrame({"a": [1]}), belugas=True)  # type: ignore[call-overload]
+
+
+def test_io(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    csv_filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    parquet_filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    pl.DataFrame({"a": [1]}).write_csv(csv_filepath)
+    pl.DataFrame({"a": [1]}).write_parquet(parquet_filepath)
+    assert isinstance(nw_v2.read_csv(csv_filepath, backend="polars"), nw_v2.DataFrame)
+    assert isinstance(nw_v2.scan_csv(csv_filepath, backend="polars"), nw_v2.LazyFrame)
+    assert isinstance(
+        nw_v2.read_parquet(parquet_filepath, backend="polars"), nw_v2.DataFrame
+    )
+    assert isinstance(
+        nw_v2.scan_parquet(parquet_filepath, backend="polars"), nw_v2.LazyFrame
+    )
+
+
+def test_narwhalify() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    @nw_v2.narwhalify
+    def func(df: nw_v2.DataFrame[IntoDataFrameT]) -> nw_v2.DataFrame[IntoDataFrameT]:
+        return df.with_columns(nw_v2.all() + 1)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = func(df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_method() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    class Foo:
+        @nw_v2.narwhalify
+        def func(
+            self, df: nw_v2.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v2.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v2.all() + a)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = Foo().func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(a=1, df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_narwhalify_method_called() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [2, 3, 4]}
+
+    class Foo:
+        @nw_v2.narwhalify
+        def func(
+            self, df: nw_v2.DataFrame[IntoDataFrameT], a: int = 1
+        ) -> nw_v2.DataFrame[IntoDataFrameT]:
+            return df.with_columns(nw_v2.all() + a)
+
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    result = Foo().func(df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+    result = Foo().func(a=1, df=df)
+    pd.testing.assert_frame_equal(result, pd.DataFrame(data))
+
+
+def test_with_version(constructor: Constructor) -> None:
+    lf = nw_v2.from_native(constructor({"a": [1, 2]})).lazy()
+    assert isinstance(lf, nw_v2.LazyFrame)
+    assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN

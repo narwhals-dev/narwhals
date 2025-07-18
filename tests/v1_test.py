@@ -35,7 +35,7 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from narwhals.typing import IntoDataFrameT
+    from narwhals.stable.v1.typing import IntoDataFrameT
     from tests.utils import Constructor, ConstructorEager
 
 
