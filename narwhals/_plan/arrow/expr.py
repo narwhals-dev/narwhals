@@ -239,7 +239,8 @@ class ArrowExpr(  # type: ignore[misc]
             self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
             for idx, e in enumerate(node.by)
         )
-        df = frame.from_series(series, *by)
+        ns = self.__narwhals_namespace__()
+        df = ns._concat_horizontal((series, *by))
         names = df.columns[1:]
         indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
         result: ChunkedArrayAny = df.native.column(0).take(indices)

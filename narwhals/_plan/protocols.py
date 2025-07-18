@@ -18,7 +18,7 @@ from narwhals._utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import DummyFrame, DummySeries
+    from narwhals._plan.dummy import DummyDataFrame, DummyFrame, DummySeries
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
@@ -43,14 +43,19 @@ NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 ConcatT1 = TypeVar("ConcatT1")
 ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
 
+ColumnT = TypeVar("ColumnT")
+ColumnT_co = TypeVar("ColumnT_co", covariant=True)
+
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
-FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any, Any]"
+FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any]"
+DataFrameAny: TypeAlias = "DummyCompliantDataFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
+EagerDataFrameAny: TypeAlias = "DummyEagerDataFrame[Any, Any, Any]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any, Any]"
 LazyScalarAny: TypeAlias = "LazyScalar[Any, Any, Any]"
@@ -66,6 +71,7 @@ NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
+EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 
 LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
@@ -604,44 +610,44 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
 
 
 class EagerNamespace(
-    EagerConcat[FrameT, SeriesT],
-    CompliantNamespace[FrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[FrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
+    EagerConcat[EagerDataFrameT, SeriesT],
+    CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
+    Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
 ):
     @property
     def _series(self) -> type[SeriesT]: ...
     @property
-    def _dataframe(self) -> type[FrameT]: ...
+    def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
-    def _frame(self) -> type[FrameT]:
+    def _frame(self) -> type[EagerDataFrameT]:
         return self._dataframe
 
     def _is_series(self, obj: Any) -> TypeIs[SeriesT]:
         return isinstance(obj, self._series)
 
-    def _is_dataframe(self, obj: Any) -> TypeIs[FrameT]:
+    def _is_dataframe(self, obj: Any) -> TypeIs[EagerDataFrameT]:
         return isinstance(obj, self._dataframe)
 
     @overload
     def lit(
-        self, node: expr.Literal[NonNestedLiteral], frame: FrameT, name: str
+        self, node: expr.Literal[NonNestedLiteral], frame: EagerDataFrameT, name: str
     ) -> EagerScalarT_co: ...
     @overload
     def lit(
-        self, node: expr.Literal[DummySeries[Any]], frame: FrameT, name: str
+        self, node: expr.Literal[DummySeries[Any]], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
     @overload
     def lit(
         self,
         node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
-        frame: FrameT,
+        frame: EagerDataFrameT,
         name: str,
     ) -> EagerExprT_co | EagerScalarT_co: ...
     def lit(
-        self, node: expr.Literal[Any], frame: FrameT, name: str
+        self, node: expr.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
 
-    def len(self, node: expr.Len, frame: FrameT, name: str) -> EagerScalarT_co:
+    def len(self, node: expr.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
@@ -659,19 +665,17 @@ class LazyNamespace(
         return self._lazyframe
 
 
-class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeSeriesT]):
+class DummyCompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     _native: NativeFrameT
 
     def __narwhals_namespace__(self) -> Any: ...
-
     @property
     def native(self) -> NativeFrameT:
         return self._native
 
     @property
     def columns(self) -> list[str]: ...
-
-    def to_narwhals(self) -> DummyFrame[NativeFrameT, NativeSeriesT]: ...
+    def to_narwhals(self) -> DummyFrame[NativeFrameT]: ...
 
     @classmethod
     def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
@@ -683,13 +687,22 @@ class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeS
     def _with_native(self, native: NativeFrameT) -> Self:
         return self.from_native(native, self.version)
 
-    @classmethod
-    def from_series(
-        cls, series: Iterable[SeriesT] | SeriesT, *more_series: SeriesT
-    ) -> Self:
-        """Return a new DataFrame, horizontally concatenating multiple Series."""
-        ...
+    @property
+    def schema(self) -> Mapping[str, DType]: ...
+    def _evaluate_irs(
+        self, nodes: Iterable[NamedIR[ExprIR]], /
+    ) -> Iterator[ColumnT_co]: ...
+    def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self: ...
+    def with_columns(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self: ...
+    def sort(
+        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
+    ) -> Self: ...
 
+
+class DummyCompliantDataFrame(
+    DummyCompliantFrame[SeriesT, NativeFrameT],
+    Protocol[SeriesT, NativeFrameT, NativeSeriesT],
+):
     @classmethod
     def from_dict(
         cls,
@@ -698,6 +711,8 @@ class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeS
         *,
         schema: Mapping[str, DType] | Schema | None = None,
     ) -> Self: ...
+
+    def to_narwhals(self) -> DummyDataFrame[NativeFrameT, NativeSeriesT]: ...
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
@@ -714,20 +729,19 @@ class DummyCompliantFrame(StoresVersion, Protocol[SeriesT, NativeFrameT, NativeS
 
     def __len__(self) -> int: ...
 
-    @property
-    def schema(self) -> Mapping[str, DType]: ...
 
-    def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[SeriesT]: ...
-
+class DummyEagerDataFrame(
+    DummyCompliantDataFrame[SeriesT, NativeFrameT, NativeSeriesT],
+    Protocol[SeriesT, NativeFrameT, NativeSeriesT],
+):
+    def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
-        return self.from_series(self._evaluate_irs(irs))
+        ns = self.__narwhals_namespace__()
+        return ns._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
-        return self.from_series(self._evaluate_irs(irs))
-
-    def sort(
-        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
-    ) -> Self: ...
+        ns = self.__narwhals_namespace__()
+        return ns._concat_horizontal(self._evaluate_irs(irs))
 
 
 class DummyCompliantSeries(StoresVersion, Protocol[NativeSeriesT]):

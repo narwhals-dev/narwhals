@@ -44,7 +44,11 @@ if TYPE_CHECKING:
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
-    from narwhals._plan.protocols import DummyCompliantFrame, DummyCompliantSeries
+    from narwhals._plan.protocols import (
+        DummyCompliantDataFrame,
+        DummyCompliantFrame,
+        DummyCompliantSeries,
+    )
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.strings import ExprStringNamespace
     from narwhals._plan.struct import ExprStructNamespace
@@ -64,7 +68,10 @@ if TYPE_CHECKING:
     )
 
 
-CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT, NativeSeriesT]"
+CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT]"
+CompliantDataFrame: TypeAlias = (
+    "DummyCompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]"
+)
 
 
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
@@ -831,17 +838,13 @@ class DummyCompliantExpr:
         return DummyExprV1._from_ir(self._ir)
 
 
-class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
-    _compliant: CompliantFrame[NativeFrameT, NativeSeriesT]
+class DummyFrame(Generic[NativeFrameT]):
+    _compliant: CompliantFrame[NativeFrameT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
     def version(self) -> Version:
         return self._version
-
-    @property
-    def _series(self) -> type[DummySeries[NativeSeriesT]]:
-        return DummySeries[NativeSeriesT]
 
     @property
     def schema(self) -> Schema:
@@ -854,54 +857,18 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    # NOTE: Gave up on trying to get typing working for now
     @classmethod
-    def from_native(
-        cls, native: NativeFrame, /
-    ) -> DummyFrame[pa.Table, pa.ChunkedArray[t.Any]]:
-        if is_pyarrow_table(native):
-            from narwhals._plan.arrow.dataframe import ArrowDataFrame
-
-            return ArrowDataFrame.from_native(native, cls._version).to_narwhals()
-
-        raise NotImplementedError(type(native))
+    def from_native(cls, native: t.Any, /) -> Self:
+        raise NotImplementedError
 
     @classmethod
-    def _from_compliant(
-        cls, compliant: CompliantFrame[NativeFrameT, NativeSeriesT], /
-    ) -> Self:
+    def _from_compliant(cls, compliant: CompliantFrame[NativeFrameT], /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
 
     def to_native(self) -> NativeFrameT:
         return self._compliant.native
-
-    @t.overload
-    def to_dict(
-        self, *, as_series: t.Literal[True] = ...
-    ) -> dict[str, DummySeries[NativeSeriesT]]: ...
-
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
-
-    @t.overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]: ...
-
-    def to_dict(
-        self, *, as_series: bool = True
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]:
-        if as_series:
-            return {
-                key: self._series._from_compliant(value)
-                for key, value in self._compliant.to_dict(as_series=as_series).items()
-            }
-        return self._compliant.to_dict(as_series=as_series)
-
-    def __len__(self) -> int:
-        return len(self._compliant)
 
     def _project(
         self,
@@ -948,6 +915,52 @@ class DummyFrame(Generic[NativeFrameT, NativeSeriesT]):
         )
         named_irs = expr_expansion.into_named_irs(irs, output_names)
         return self._from_compliant(self._compliant.sort(named_irs, opts, schema_frozen))
+
+
+class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
+    _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
+
+    @property
+    def _series(self) -> type[DummySeries[NativeSeriesT]]:
+        return DummySeries[NativeSeriesT]
+
+    # NOTE: Gave up on trying to get typing working for now
+    @classmethod
+    def from_native(  # type: ignore[override]
+        cls, native: NativeFrame, /
+    ) -> DummyDataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
+        if is_pyarrow_table(native):
+            from narwhals._plan.arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame.from_native(native, cls._version).to_narwhals()
+
+        raise NotImplementedError(type(native))
+
+    @t.overload
+    def to_dict(
+        self, *, as_series: t.Literal[True] = ...
+    ) -> dict[str, DummySeries[NativeSeriesT]]: ...
+
+    @t.overload
+    def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
+
+    @t.overload
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]: ...
+
+    def to_dict(
+        self, *, as_series: bool = True
+    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]:
+        if as_series:
+            return {
+                key: self._series._from_compliant(value)
+                for key, value in self._compliant.to_dict(as_series=as_series).items()
+            }
+        return self._compliant.to_dict(as_series=as_series)
+
+    def __len__(self) -> int:
+        return len(self._compliant)
 
 
 class DummySeries(Generic[NativeSeriesT]):

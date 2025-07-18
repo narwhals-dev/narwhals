@@ -13,6 +13,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
+from narwhals._plan.dummy import DummyDataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
@@ -394,10 +395,8 @@ def test_select(
     expected: dict[str, Any],
     data_small: dict[str, Any],
 ) -> None:
-    from narwhals._plan.dummy import DummyFrame
-
     frame = pa.table(data_small)
-    df = DummyFrame.from_native(frame)
+    df = DummyDataFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
@@ -470,10 +469,8 @@ def test_with_columns(
     expected: dict[str, Any],
     data_smaller: dict[str, Any],
 ) -> None:
-    from narwhals._plan.dummy import DummyFrame
-
     frame = pa.table(data_smaller)
-    df = DummyFrame.from_native(frame)
+    df = DummyDataFrame.from_native(frame)
     result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 

@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import typing as t
-from itertools import chain
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
-from narwhals._plan.dummy import DummyFrame
-from narwhals._plan.protocols import DummyCompliantFrame
+from narwhals._plan.protocols import DummyEagerDataFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
@@ -22,6 +19,7 @@ if t.TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
+    from narwhals._plan.dummy import DummyDataFrame
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
@@ -29,7 +27,7 @@ if t.TYPE_CHECKING:
     from narwhals.schema import Schema
 
 
-class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
+class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 
@@ -50,16 +48,10 @@ class ArrowDataFrame(DummyCompliantFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
     def __len__(self) -> int:
         return self.native.num_rows
 
-    def to_narwhals(self) -> DummyFrame[pa.Table, ChunkedArrayAny]:
-        return DummyFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
+    def to_narwhals(self) -> DummyDataFrame[pa.Table, ChunkedArrayAny]:
+        from narwhals._plan.dummy import DummyDataFrame
 
-    @classmethod
-    def from_series(
-        cls, series: t.Iterable[ArrowSeries] | ArrowSeries, *more_series: ArrowSeries
-    ) -> Self:
-        lhs = (series,) if fn.is_series(series) else series
-        it = chain(lhs, more_series) if more_series else lhs
-        return cls.from_dict({s.name: s.native for s in it})
+        return DummyDataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
 
     @classmethod
     def from_dict(
