@@ -927,9 +927,6 @@ class LazyExpr(
         return self._with_alias_output_names(fn)
 
     @classmethod
-    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
-
-    @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
 

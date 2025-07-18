@@ -43,6 +43,9 @@ class SQLExpr(
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @classmethod
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
+
+    @classmethod
     def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
     ) -> Self: ...

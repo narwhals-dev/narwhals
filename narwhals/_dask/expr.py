@@ -665,9 +665,7 @@ class DaskExpr(
         return DaskExprDateTimeNamespace(self)
 
     list = not_implemented()  # type: ignore[assignment]
+    cat = not_implemented()  # type: ignore[assignment]
     struct = not_implemented()  # type: ignore[assignment]
     rank = not_implemented()  # pyright: ignore[reportAssignmentType]
-    _alias_native = not_implemented()
     window_function = not_implemented()  # pyright: ignore[reportAssignmentType]
-    _from_elementwise_horizontal_op = not_implemented()
-    _with_binary = not_implemented()
