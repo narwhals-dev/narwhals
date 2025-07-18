@@ -215,7 +215,7 @@ class Series(NwSeries[IntoSeriesT]):
         )
 
     # Too unstable to consider including here.
-    hist = not_implemented()
+    hist: Any = not_implemented()
 
 
 class Expr(NwExpr): ...
