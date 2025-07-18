@@ -13,6 +13,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_windows,
 )
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
@@ -60,17 +61,19 @@ expected_over_desc = {
 @pytest.mark.parametrize("method", rank_methods)
 @pytest.mark.parametrize("data", [data_int, data_float])
 def test_rank_expr(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor_eager) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor_eager)
         and PANDAS_VERSION < (2, 1)
         and isinstance(data["a"][0], int)
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     context = (
         pytest.raises(
@@ -92,17 +95,19 @@ def test_rank_expr(
 @pytest.mark.parametrize("method", rank_methods)
 @pytest.mark.parametrize("data", [data_int, data_float])
 def test_rank_series(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor_eager) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor_eager)
         and PANDAS_VERSION < (2, 1)
         and isinstance(data["a"][0], int)
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     context = (
         pytest.raises(
@@ -138,6 +143,9 @@ def test_rank_expr_in_over_context(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
@@ -183,6 +191,9 @@ def test_lazy_rank_expr(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor)
         and PANDAS_VERSION < (2, 1)
@@ -222,6 +233,9 @@ def test_lazy_rank_expr_desc(
     method: Literal["average", "min", "max", "dense", "ordinal"],
     data: dict[str, list[float]],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor)
         and PANDAS_VERSION < (2, 1)
@@ -263,6 +277,9 @@ def test_rank_expr_in_over_desc(
     constructor: Constructor,
     method: Literal["average", "min", "max", "dense", "ordinal"],
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "cudf")):
         # Pyarrow raises:
         # > pyarrow.lib.ArrowKeyError: No function registered with name: hash_rank
@@ -289,6 +306,9 @@ def test_rank_expr_in_over_desc(
 def test_rank_with_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
         request.applymarker(pytest.mark.xfail)
@@ -317,6 +337,9 @@ def test_rank_with_order_by(
 def test_rank_with_order_by_and_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "pandas_pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/61896
+        pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table", "cudf")):
         # `rank` is not implemented in Dask
         # pyarrow only supports aggregations in `over(partition_by=...)`
