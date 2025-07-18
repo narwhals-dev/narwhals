@@ -57,7 +57,6 @@ from narwhals._compliant.when_then import (
     CompliantWhen,
     EagerWhen,
     LazyThen,
-    LazyWhen,
 )
 from narwhals._compliant.window import WindowInputs
 
@@ -102,7 +101,6 @@ __all__ = [
     "LazyNamespace",
     "LazySelectorNamespace",
     "LazyThen",
-    "LazyWhen",
     "NativeFrameT_co",
     "NativeSeriesT_co",
     "WindowInputs",

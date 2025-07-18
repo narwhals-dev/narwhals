@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import (
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyThen", "LazyWhen"]
+__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyThen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
@@ -172,36 +172,3 @@ class EagerWhen(
             when, then = align(when, then)
             result = self._if_then_else(when.native, then.native, self._otherwise_value)
         return [then._with_native(result)]
-
-
-class LazyWhen(
-    CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
-):
-    when: Callable[..., NativeExprT]
-    lit: Callable[..., NativeExprT]
-
-    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
-        is_expr = self._condition._is_expr
-        when = self.when
-        lit = self.lit
-        condition = df._evaluate_expr(self._condition)
-        then_ = self._then_value
-        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
-        other_ = self._otherwise_value
-        if other_ is None:
-            result = when(condition, then)
-        else:
-            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
-            result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
-        return [result]
-
-    @classmethod
-    def from_expr(cls, condition: LazyExprT, /, *, context: _LimitedContext) -> Self:
-        obj = cls.__new__(cls)
-        obj._condition = condition
-        obj._then_value = None
-        obj._otherwise_value = None
-        obj._implementation = context._implementation
-        obj._version = context._version
-        return obj

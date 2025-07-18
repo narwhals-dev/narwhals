@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
+from narwhals._compliant import LazyNamespace, LazyThen
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -17,6 +17,7 @@ from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import lit, narwhals_to_native_dtype
+from narwhals._sql.when_then import SQLWhen
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
@@ -167,7 +168,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
-class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
+class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
     lit = lit
 
     @property

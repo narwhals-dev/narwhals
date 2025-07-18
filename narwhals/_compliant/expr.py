@@ -927,11 +927,6 @@ class LazyExpr(  # type: ignore[misc]
 
         return self._with_alias_output_names(fn)
 
-    @classmethod
-    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return hasattr(obj, "__narwhals_expr__")
-
-    def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @property

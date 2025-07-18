@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from narwhals._compliant.typing import CompliantLazyFrameT, NativeExprT
 from narwhals._typing_compat import Protocol38
@@ -8,17 +8,47 @@ from narwhals._typing_compat import Protocol38
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from typing_extensions import Self
+
     from narwhals._compliant.window import WindowInputs
+    from narwhals._utils import _LimitedContext
 
-
-from narwhals._compliant.when_then import LazyWhen
+from narwhals._compliant.when_then import CompliantWhen
 from narwhals._sql.expr import SQLExprT
 
 
 class SQLWhen(
-    LazyWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    CompliantWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT, SQLExprT],
 ):
+    when: Callable[..., NativeExprT]
+    lit: Callable[..., NativeExprT]
+
+    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+        is_expr = self._condition._is_expr
+        when = self.when
+        lit = self.lit
+        condition = df._evaluate_expr(self._condition)
+        then_ = self._then_value
+        then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
+        other_ = self._otherwise_value
+        if other_ is None:
+            result = when(condition, then)
+        else:
+            otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
+            result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
+        return [result]
+
+    @classmethod
+    def from_expr(cls, condition: SQLExprT, /, *, context: _LimitedContext) -> Self:
+        obj = cls.__new__(cls)
+        obj._condition = condition
+        obj._then_value = None
+        obj._otherwise_value = None
+        obj._implementation = context._implementation
+        obj._version = context._version
+        return obj
+
     def _window_function(
         self, df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
     ) -> Sequence[NativeExprT]:
