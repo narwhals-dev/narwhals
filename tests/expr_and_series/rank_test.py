@@ -121,6 +121,17 @@ def test_rank_series(
         assert_equal_data(result, expected_data)
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 1), reason="too old for nullable")
+def test_rank_series_pandas_namesless() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = nw.from_native(pd.Series([1, 2, 3, None], dtype="Int64"), series_only=True)
+    result = s.rank(method="min")
+    assert result.name is None
+    assert_equal_data({"a": result}, {"a": [1, 2, 3, None]})
+
+
 @pytest.mark.parametrize("method", rank_methods)
 def test_rank_expr_in_over_context(
     request: pytest.FixtureRequest,
@@ -177,10 +188,10 @@ def test_lazy_rank_expr(
         and PANDAS_VERSION < (2, 1)
         and isinstance(data["a"][0], int)
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
@@ -216,10 +227,10 @@ def test_lazy_rank_expr_desc(
         and PANDAS_VERSION < (2, 1)
         and isinstance(data["a"][0], int)
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
 
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
