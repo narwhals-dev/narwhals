@@ -12,6 +12,7 @@ for their dataframe interoperability needs:
 * [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
 * [marimo](https://github.com/marimo-team/marimo)
 * [metalearners](https://github.com/Quantco/metalearners)
+* [mosaic](https://github.com/uwdata/mosaic)
 * [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 * [plotly](https://github.com/plotly/plotly.py)
 * [pointblank](https://github.com/posit-dev/pointblank)
