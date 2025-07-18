@@ -10,7 +10,7 @@ from narwhals._utils import not_implemented
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
 
@@ -34,14 +34,10 @@ class SQLExpr(
     ewm_mean: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
+    cat: not_implemented = not_implemented()
 
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
-
-    @classmethod
-    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return hasattr(obj, "__narwhals_expr__")
 
     def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
