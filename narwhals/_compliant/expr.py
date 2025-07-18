@@ -896,7 +896,8 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(
+# mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
+class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):

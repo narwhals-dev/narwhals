@@ -34,7 +34,7 @@ class SQLExpr(
     ewm_mean: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
