@@ -1036,7 +1036,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         ) == pa.scalar(0, type=pa.uint64()):
             data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
         else:
-            final_bins = self._prepare_bins(bins=bins, bin_count=bin_count)
+            final_bins = (
+                self._prepare_bins(bin_count=cast("int", bin_count))
+                if bins is None
+                else bins
+            )
             data = self._hist_from_bins(final_bins)
 
         if not include_breakpoint:
@@ -1058,15 +1062,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         count = bin_count if bin_count is not None else 1
         return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": zeros(count)}
 
-    def _prepare_bins(
-        self, bins: list[float | int] | None, bin_count: int | None
-    ) -> list[float]:
-        """Prepare bins for histogram calculation."""
-        if bins is not None:
-            return bins
-
-        assert bin_count is not None  # noqa: S101
-
+    def _prepare_bins(self, bin_count: int) -> list[float]:
+        """Prepare bins for histogram calculation from bin_count."""
         from numpy import linspace  # ignore-banned-import
 
         d = pc.min_max(self.native)

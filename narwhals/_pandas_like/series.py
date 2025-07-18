@@ -961,7 +961,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         elif self.native.count() < 1:
             data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
         else:
-            final_bins = self._prepare_bins(bins=bins, bin_count=bin_count)
+            final_bins = (
+                self._prepare_bins(bin_count=cast("int", bin_count))
+                if bins is None
+                else bins
+            )
             data = self._hist_from_bins(ns=ns, bins=final_bins)
 
         if not include_breakpoint:
@@ -987,24 +991,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             "count": array_funcs.zeros(count),
         }
 
-    def _prepare_bins(
-        self, bins: list[float | int] | None, bin_count: int | None
-    ) -> list[float]:
-        """Prepare bins for histogram calculation."""
-        if bins is not None:
-            return bins
-
-        assert bin_count is not None  # noqa: S101
-
-        # Use Polars binning behavior
-        from numpy import linspace
-
+    def _prepare_bins(self, bin_count: int) -> list[float]:
+        """Prepare bins for histogram calculation from bin_count."""
         lower, upper = self.native.min(), self.native.max()
         if lower == upper:
             lower -= 0.5
             upper += 0.5
 
-        return linspace(lower, upper, bin_count + 1)
+        return self._array_funcs.linspace(lower, upper, bin_count + 1)
 
     def _hist_from_bins(
         self, ns: ModuleType, bins: list[float]
