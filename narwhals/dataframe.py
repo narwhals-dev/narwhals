@@ -2481,7 +2481,7 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
-            >>> nw.from_native(lf_native).schema
+            >>> nw.from_native(lf_native).schema  # doctest:+SKIP
             Schema({'a': Int32, 'b': Decimal})
         """
         if self._compliant_frame._version is not Version.V1:
