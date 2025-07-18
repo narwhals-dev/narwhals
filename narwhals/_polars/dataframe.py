@@ -179,7 +179,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def schema(self) -> dict[str, DType]:
         return {
             name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema.items()
+            for name, dtype in self.native.collect_schema().items()
         }
 
     def join(

@@ -134,6 +134,9 @@ _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
+class PerformanceWarning(Warning): ...
+
+
 class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
     """Provides access to a native object.
 
@@ -1456,6 +1459,15 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
             bookkeeping.
     """
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+
+
+def issue_performance_warning(message: str) -> None:
+    """Issue a performance warning.
+
+    Arguments:
+        message: The message associated with the warning.
+    """
+    warn(message=message, category=PerformanceWarning, stacklevel=find_stacklevel())
 
 
 def validate_strict_and_pass_though(

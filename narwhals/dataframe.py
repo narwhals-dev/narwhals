@@ -32,6 +32,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     issue_deprecation_warning,
+    issue_performance_warning,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
@@ -2482,6 +2483,11 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> nw.from_native(lf_native).schema
             Schema({'a': Int32, 'b': Decimal})
         """
+        msg = (
+            "Resolving the schema of a LazyFrame is a potentially expensive operation. "
+            "Use `LazyFrame.collect_schema()` to get the schema without this warning."
+        )
+        issue_performance_warning(msg)
         return super().schema
 
     def collect_schema(self) -> Schema:
