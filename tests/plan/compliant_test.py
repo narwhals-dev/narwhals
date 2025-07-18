@@ -443,20 +443,25 @@ def test_select(
             },
         ),
         pytest.param(
-            [nwd.col("a").alias("a?")],
+            [
+                nwd.col("a").alias("a?"),
+                ndcs.by_name("a"),
+                nwd.col("b").cast(nw.Float64).name.suffix("_float"),
+                nwd.col("c").max() + 1,
+                nwd.sum_horizontal(1, "d", nwd.col("b"), nwd.lit(3)),
+            ],
             {
                 "a": ["A", "B", "A"],
                 "b": [1, 2, 3],
-                "c": [9, 2, 4],
+                "c": [10, 10, 10],
                 "d": [8, 7, 8],
                 "e": [None, 9, 7],
                 "f": [True, False, None],
                 "a?": ["A", "B", "A"],
+                "b_float": [1.0, 2.0, 3.0],
+                "literal": [13, 13, 15],
             },
             id="with_columns-extend",
-            marks=pytest.mark.xfail(
-                reason="Non-replacing exprs are being silently dropped?"
-            ),
         ),
     ],
 )

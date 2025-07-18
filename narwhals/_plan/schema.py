@@ -71,6 +71,7 @@ class FrozenSchema(Immutable):
             exprs_out.append(named.pop(name, NamedIR.from_name(name)))
         if named:
             items = chain(self.items(), zip(named, repeat(Unknown(), len(named))))
+            exprs_out.extend(named.values())
         else:
             items = self
         return tuple(exprs_out), freeze_schema(items)
