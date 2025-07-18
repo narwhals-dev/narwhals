@@ -914,6 +914,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         if (
             self._implementation is Implementation.PANDAS
             and self._backend_version < (3,)
+            and get_dtype_backend(self.native.dtype, self._implementation)
+            == "numpy_nullable"
             and self.dtype.is_integer()
             and (null_mask := self.is_null()).any()
         ):
