@@ -513,7 +513,7 @@ class PolarsSeries:
                 count = bin_count
                 bins = None
             return self._hist_from_data(
-                bins=bins,  # type: ignore[argument-type]
+                bins=bins,  # type: ignore[arg-type]
                 bin_count=count,
                 include_breakpoint=include_breakpoint,
             )
