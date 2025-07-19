@@ -84,7 +84,7 @@ class SQLThen(
     @classmethod
     def from_when(
         cls,
-        when: CompliantWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+        when: SQLWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
         then: IntoExpr[NativeExprT, SQLExprT],
         /,
     ) -> Self:
