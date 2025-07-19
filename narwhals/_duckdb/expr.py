@@ -92,8 +92,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         expr: Expression,
         partition_by: Sequence[str | Expression] = (),
         order_by: Sequence[str | Expression] = (),
-        rows_start: str = "",
-        rows_end: str = "",
+        rows_start: int | None = None,
+        rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
@@ -501,11 +501,10 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
                 df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
             ) -> Sequence[Expression]:
                 fill_func = "last_value" if strategy == "forward" else "first_value"
-                _limit = "unbounded" if limit is None else limit
                 rows_start, rows_end = (
-                    (f"{_limit} preceding", "current row")
+                    (-limit if limit is not None else None, 0)
                     if strategy == "forward"
-                    else ("current row", f"{_limit} following")
+                    else (0, limit)
                 )
                 return [
                     window_expression(

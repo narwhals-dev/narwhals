@@ -95,26 +95,23 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         expr: Column,
         partition_by: Sequence[str | Column] = (),
         order_by: Sequence[str | Column] = (),
-        rows_start: str | None = None,
-        rows_end: str | None = None,
+        rows_start: int | None = None,
+        rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
     ) -> Column:
-        window = self.partition_by(*partition_by).orderBy(
-            *self._sort(*order_by, descending=descending, nulls_last=nulls_last)
-        )
+        window = self.partition_by(*partition_by)
+        if order_by:
+            window = window.orderBy(
+                *self._sort(*order_by, descending=descending, nulls_last=nulls_last)
+            )
         if rows_start is not None and rows_end is not None:
-            mapping = {
-                "unbounded preceding": self._Window.unboundedPreceding,
-                "1 preceding": -1,
-                "2 preceding": -2,
-                "1 following": 1,
-                "2 following": 2,
-                "unbounded following": self._Window.unboundedFollowing,
-                "current row": self._Window.currentRow,
-            }
-            window = window.rowsBetween(mapping[rows_start], mapping[rows_end])
+            window = window.rowsBetween(rows_start, rows_end)
+        elif rows_end is not None:
+            window = window.rowsBetween(self._Window.unboundedPreceding, rows_end)
+        elif rows_start is not None:
+            window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:

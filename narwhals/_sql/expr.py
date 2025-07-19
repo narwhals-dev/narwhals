@@ -45,8 +45,8 @@ class SQLExpr(
         expr: NativeExprT,
         partition_by: Sequence[str | NativeExprT] = (),
         order_by: Sequence[str | NativeExprT] = (),
-        rows_start: str = "",
-        rows_end: str = "",
+        rows_start: int | None = None,
+        rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
@@ -68,8 +68,7 @@ class SQLExpr(
                     inputs.order_by,
                     descending=[reverse] * len(inputs.order_by),
                     nulls_last=[reverse] * len(inputs.order_by),
-                    rows_start="unbounded preceding",
-                    rows_end="current row",
+                    rows_end=0,
                 )
                 for expr in self(df)
             ]
@@ -89,11 +88,11 @@ class SQLExpr(
         if center:
             half = (window_size - 1) // 2
             remainder = (window_size - 1) % 2
-            start = f"{half + remainder} preceding"
-            end = f"{half} following"
+            start = -(half + remainder)
+            end = half
         else:
-            start = f"{window_size - 1} preceding"
-            end = "current row"
+            start = -(window_size - 1)
+            end = 0
 
         def func(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
