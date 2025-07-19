@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import platform
 import sys
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
@@ -549,17 +548,6 @@ def _get_sys_info() -> dict[str, str]:
     return dict(blob)
 
 
-def _get_dep_info(
-    target: str, dists: Iterable[tuple[str, str]]
-) -> Iterator[tuple[str, str]]:
-    def gen() -> Iterator[tuple[str, str]]:
-        for dist in dists:
-            if dist[0].startswith(target):
-                yield dist
-
-    yield next(gen(), (target, ""))
-
-
 def _get_deps_info() -> dict[str, str]:
     """Overview of the installed version of main dependencies.
 
@@ -581,8 +569,20 @@ def _get_deps_info() -> dict[str, str]:
     target_names = tuple(
         name.lower() for name in (*extra_names, *member_names) if name not in exclude
     )
-    dists = sorted([(d.name, d.version) for d in distributions()], key=lambda t: t[0])
-    return dict(chain.from_iterable(_get_dep_info(name, dists) for name in target_names))
+    result = dict.fromkeys(target_names, "")  # Initialize with empty strings
+
+    for dist in distributions():
+        dist_name, dist_version = dist.name.lower(), dist.version
+
+        if dist_name in result:  # exact match
+            result[dist_name] = dist_version
+        else:  # prefix match
+            for target in target_names:
+                if not result[target] and dist_name.startswith(target):
+                    result[target] = dist_version
+                    break
+
+    return result
 
 
 def show_versions() -> None:
