@@ -698,31 +698,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="sum")
-        )
-
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="max")
-        )
-
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="min")
-        )
-
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="count")
-        )
-
-    def cum_prod(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="product")
-        )
-
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

@@ -84,6 +84,9 @@ class SQLExpr(
         self, op: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
     ) -> Self: ...
     def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self: ...
+    def _with_window_function(
+        self, window_function: WindowFunction[CompliantLazyFrameT, NativeExprT]
+    ) -> Self: ...
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
@@ -184,6 +187,24 @@ class SQLExpr(
     def round(self, decimals: int) -> Self:
         return self._with_elementwise(
             lambda expr: self._function("round", expr, self._lit(decimals))
+        )
+
+    # Cumulative
+    def cum_sum(self, *, reverse: bool) -> Self:
+        return self._with_window_function(self._cum_window_func("sum", reverse=reverse))
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_window_function(self._cum_window_func("max", reverse=reverse))
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_window_function(self._cum_window_func("min", reverse=reverse))
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        return self._with_window_function(self._cum_window_func("count", reverse=reverse))
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        return self._with_window_function(
+            self._cum_window_func("product", reverse=reverse)
         )
 
     arg_max: not_implemented = not_implemented()
