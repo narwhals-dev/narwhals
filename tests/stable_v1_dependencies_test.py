@@ -6,7 +6,7 @@ pytest.importorskip("pandas")
 import pandas as pd
 
 
-def test_stable_v1_dependenies_import() -> None:
+def test_stable_v1_dependencies_import() -> None:
     # https://github.com/bokeh/bokeh/pull/14530#issuecomment-2984474111
     # Note: for some reason, this test needs to be in its own file to reproduce
     # the error observed in Bokeh's CI. Please don't move this test to
