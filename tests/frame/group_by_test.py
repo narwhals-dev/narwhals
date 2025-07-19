@@ -19,7 +19,6 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
-    is_pandas_like,
 )
 
 if TYPE_CHECKING:
@@ -631,23 +630,16 @@ XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
 
 
 @pytest.mark.parametrize(
-    ("keys", "aggs", "expected", "pre_sort", "marks"),
+    ("keys", "aggs", "expected", "pre_sort"),
     [
-        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None, None),
-        (
-            ["a"],
-            ["b"],
-            {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]},
-            {"descending": True},
-            None,
-        ),
-        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
         (
             ["a"],
             ["c"],
             {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
             {"nulls_last": True},
-            None,
         ),
     ],
 )
@@ -657,12 +649,8 @@ def test_group_by_agg_first(
     aggs: Sequence[str],
     expected: Mapping[str, Any],
     pre_sort: Mapping[str, Any] | None,
-    marks: Sequence[pytest.MarkDecorator] | None,
     request: pytest.FixtureRequest,
 ) -> None:
-    if is_pandas_like(constructor_eager) and marks is not None:
-        for mark in marks:
-            request.applymarker(mark)
     request.applymarker(
         pytest.mark.xfail(
             "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),

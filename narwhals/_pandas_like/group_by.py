@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import find_stacklevel
+from narwhals._utils import Implementation, find_stacklevel
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -62,6 +62,13 @@ NonStrHashable: TypeAlias = Any
 def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
+    if name == "first":
+        pd_version = Implementation.PANDAS._backend_version()
+        if pd_version >= (2, 2, 1):
+            return methodcaller(name, skipna=False)
+        else:
+            msg = f"Unsupported pandas version {pd_version!r}"
+            raise NotImplementedError(msg)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
