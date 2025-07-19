@@ -490,9 +490,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def count(self) -> Self:
         return self._with_callable(self._F.count)
 
-    def max(self) -> Self:
-        return self._with_callable(self._F.max)
-
     def mean(self) -> Self:
         return self._with_callable(self._F.mean)
 
@@ -508,9 +505,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.median(expr)
 
         return self._with_callable(_median)
-
-    def min(self) -> Self:
-        return self._with_callable(self._F.min)
 
     def null_count(self) -> Self:
         def _null_count(expr: Column) -> Column:

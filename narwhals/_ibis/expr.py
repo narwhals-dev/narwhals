@@ -370,12 +370,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_callable(lambda expr: _var(expr, ddof))
 
-    def max(self) -> Self:
-        return self._with_callable(lambda expr: expr.max())
-
-    def min(self) -> Self:
-        return self._with_callable(lambda expr: expr.min())
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isnull().sum())
 

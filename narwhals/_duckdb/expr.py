@@ -494,12 +494,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(_var)
 
-    def max(self) -> Self:
-        return self._with_callable(lambda expr: F("max", expr))
-
-    def min(self) -> Self:
-        return self._with_callable(lambda expr: F("min", expr))
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 

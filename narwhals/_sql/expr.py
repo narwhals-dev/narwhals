@@ -113,6 +113,12 @@ class SQLExpr(
     def abs(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("abs", expr))
 
+    def max(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("max", expr))
+
+    def min(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("min", expr))
+
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()
     arg_true: not_implemented = not_implemented()
