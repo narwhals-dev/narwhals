@@ -1065,12 +1065,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def _is_empty_series(self) -> bool:
-        non_null_count = pc.sum(
-            pc.invert(pc.is_null(self.native, nan_is_null=True)).cast(pa.uint64()),
-            min_count=0,
-        )
-
-        return non_null_count == lit(0, type=pa.uint64())
+        # NOTE: `ChunkedArray.combine_chunks` returns the concrete array type
+        # Stubs say `Array[pa.BooleanScalar]`, which is missing properties
+        # https://github.com/zen-xu/pyarrow-stubs/blob/6bedee748bc74feb8513b24bf43d64b24c7fddc8/pyarrow-stubs/__lib_pxi/array.pyi#L2395-L2399
+        is_null = self.native.is_null(nan_is_null=True)
+        arr = cast("pa.BooleanArray", is_null.combine_chunks())
+        return arr.false_count == 0
 
     def _bins_from_bin_count(self, bin_count: int) -> list[float | int]:
         """Prepare bins for histogram calculation from bin_count."""
