@@ -8,6 +8,7 @@ from narwhals._dask.expr import DaskExpr
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx  # noqa: F401
 
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._dask.dataframe import DaskLazyFrame  # noqa: F401
 
 
@@ -18,6 +19,10 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
 
 
 class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # type: ignore[misc]
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "selector"
+
     def _to_expr(self) -> DaskExpr:
         return DaskExpr(
             self._call,

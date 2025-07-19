@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 class WindowExpressionKwargs(TypedDict, total=False):
     partition_by: Sequence[str | Expression]
     order_by: Sequence[str | Expression]
-    rows_start: str
-    rows_end: str
+    rows_start: int | None
+    rows_end: int | None
     descending: Sequence[bool]
     nulls_last: Sequence[bool]
     ignore_nulls: bool

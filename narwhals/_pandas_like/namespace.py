@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -413,7 +414,9 @@ class PandasWhen(
     EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
 ):
     @property
-    def _then(self) -> type[PandasThen]:
+    # Signature of "_then" incompatible with supertype "CompliantWhen"
+    # ArrowWhen seems to follow the same pattern, but no mypy complaint there?
+    def _then(self) -> type[PandasThen]:  # type: ignore[override]
         return PandasThen
 
     def _if_then_else(
@@ -427,5 +430,9 @@ class PandasWhen(
 
 
 class PandasThen(
-    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr], PandasLikeExpr
-): ...
+    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, PandasWhen],
+    PandasLikeExpr,
+):
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "whenthen"

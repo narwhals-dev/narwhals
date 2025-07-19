@@ -28,23 +28,17 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import Protocol38, deprecated
-from narwhals._utils import _StoresCompliant, not_implemented
+from narwhals._utils import _StoresCompliant
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
 
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import (
-        AliasNames,
-        EvalNames,
-        EvalSeries,
-        ScalarKwargs,
-        WindowFunction,
-    )
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
@@ -902,36 +896,11 @@ class EagerExpr(
         return EagerExprStructNamespace(self)
 
 
-class LazyExpr(
+# mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
+class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
-    arg_min: not_implemented = not_implemented()
-    arg_max: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
-
-    @property
-    def _backend_version(self) -> tuple[int, ...]:
-        return self._implementation._backend_version()
-
-    @property
-    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
-
-    @classmethod
-    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return hasattr(obj, "__narwhals_expr__")
-
-    def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
@@ -942,81 +911,9 @@ class LazyExpr(
 
         return self._with_alias_output_names(fn)
 
-    @classmethod
-    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
-
-    @classmethod
-    def _from_elementwise_horizontal_op(
-        cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
-    ) -> Self: ...
-
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
-
-    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self: ...
-
-    def __eq__(self, other: Self) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__eq__(other), other)
-
-    def __ne__(self, other: Self) -> Self:  # type: ignore[override]
-        return self._with_binary(lambda expr, other: expr.__ne__(other), other)
-
-    def __add__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__add__(other), other)
-
-    def __sub__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__sub__(other), other)
-
-    def __rsub__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other - expr, other).alias("literal")
-
-    def __mul__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mul__(other), other)
-
-    def __truediv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__truediv__(other), other)
-
-    def __rtruediv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other / expr, other).alias("literal")
-
-    def __floordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__floordiv__(other), other)
-
-    def __rfloordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other // expr, other).alias(
-            "literal"
-        )
-
-    def __pow__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__pow__(other), other)
-
-    def __rpow__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other**expr, other).alias("literal")
-
-    def __mod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
-
-    def __rmod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other % expr, other).alias("literal")
-
-    def __ge__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__ge__(other), other)
-
-    def __gt__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__gt__(other), other)
-
-    def __le__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__le__(other), other)
-
-    def __lt__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__lt__(other), other)
-
-    def __and__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__and__(other), other)
-
-    def __or__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
 
 class _ExprNamespace(  # type: ignore[misc]

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 from duckdb import CoalesceOperator, StarExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._compliant import WindowInputs
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
@@ -25,6 +25,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented, requires
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ if TYPE_CHECKING:
     DuckDBWindowInputs = WindowInputs[Expression]
 
 
-class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
+class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
     def __init__(
@@ -77,18 +78,35 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
-    @property
-    def window_function(self) -> DuckDBWindowFunction:
-        def default_window_func(
-            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
-            assert not inputs.order_by  # noqa: S101
-            return [
-                window_expression(expr, inputs.partition_by, inputs.order_by)
-                for expr in self(df)
-            ]
+    def _function(self, name: str, *args: Expression) -> Expression:
+        return F(name, *args)
 
-        return self._window_function or default_window_func
+    def _lit(self, value: Any) -> Expression:
+        return lit(value)
+
+    def _when(self, condition: Expression, value: Expression) -> Expression:
+        return when(condition, value)
+
+    def _window_expression(
+        self,
+        expr: Expression,
+        partition_by: Sequence[str | Expression] = (),
+        order_by: Sequence[str | Expression] = (),
+        rows_start: int | None = None,
+        rows_end: int | None = None,
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> Expression:
+        return window_expression(
+            expr,
+            partition_by,
+            order_by,
+            rows_start,
+            rows_end,
+            descending=descending,
+            nulls_last=nulls_last,
+        )
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)
@@ -99,81 +117,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(version=self._version)
-
-    def _cum_window_func(
-        self,
-        func_name: Literal["sum", "max", "min", "count", "product"],
-        *,
-        reverse: bool,
-    ) -> DuckDBWindowFunction:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                window_expression(
-                    F(func_name, expr),
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
-                    rows_start="unbounded preceding",
-                    rows_end="current row",
-                )
-                for expr in self(df)
-            ]
-
-        return func
-
-    def _rolling_window_func(
-        self,
-        func_name: Literal["sum", "mean", "std", "var"],
-        window_size: int,
-        min_samples: int,
-        ddof: int | None = None,
-        *,
-        center: bool,
-    ) -> DuckDBWindowFunction:
-        supported_funcs = ["sum", "mean", "std", "var"]
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = f"{half + remainder} preceding"
-            end = f"{half} following"
-        else:
-            start = f"{window_size - 1} preceding"
-            end = "current row"
-
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            if func_name in {"sum", "mean"}:
-                func_: str = func_name
-            elif func_name == "var" and ddof == 0:
-                func_ = "var_pop"
-            elif func_name in "var" and ddof == 1:
-                func_ = "var_samp"
-            elif func_name == "std" and ddof == 0:
-                func_ = "stddev_pop"
-            elif func_name == "std" and ddof == 1:
-                func_ = "stddev_samp"
-            elif func_name in {"var", "std"}:  # pragma: no cover
-                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                raise ValueError(msg)
-            else:  # pragma: no cover
-                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                raise ValueError(msg)
-            window_kwargs: WindowExpressionKwargs = {
-                "partition_by": inputs.partition_by,
-                "order_by": inputs.order_by,
-                "rows_start": start,
-                "rows_end": end,
-            }
-            return [
-                when(
-                    window_expression(F("count", expr), **window_kwargs)
-                    >= lit(min_samples),
-                    window_expression(F(func_, expr), **window_kwargs),
-                )
-                for expr in self(df)
-            ]
-
-        return func
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
@@ -342,12 +285,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_elementwise(invert)
 
-    def abs(self) -> Self:
-        return self._with_elementwise(lambda expr: F("abs", expr))
-
-    def mean(self) -> Self:
-        return self._with_callable(lambda expr: F("mean", expr))
-
     def skew(self) -> Self:
         def func(expr: Expression) -> Expression:
             count = F("count", expr)
@@ -367,9 +304,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
-
-    def median(self) -> Self:
-        return self._with_callable(lambda expr: F("median", expr))
 
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
@@ -493,12 +427,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(_var)
 
-    def max(self) -> Self:
-        return self._with_callable(lambda expr: F("max", expr))
-
-    def min(self) -> Self:
-        return self._with_callable(lambda expr: F("min", expr))
-
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 
@@ -516,32 +444,17 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             version=self._version,
         )
 
-    def is_null(self) -> Self:
-        return self._with_elementwise(lambda expr: expr.isnull())
-
     def is_nan(self) -> Self:
         return self._with_elementwise(lambda expr: F("isnan", expr))
+
+    def is_null(self) -> Self:
+        return self._with_elementwise(lambda expr: expr.isnull())
 
     def is_finite(self) -> Self:
         return self._with_elementwise(lambda expr: F("isfinite", expr))
 
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
-
-    def round(self, decimals: int) -> Self:
-        return self._with_elementwise(lambda expr: F("round", expr, lit(decimals)))
-
-    @requires.backend_version((1, 3))
-    def shift(self, n: int) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            return [
-                window_expression(
-                    F("lag", expr, lit(n)), inputs.partition_by, inputs.order_by
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
 
     @requires.backend_version((1, 3))
     def is_first_distinct(self) -> Self:
@@ -573,71 +486,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_window_function(func)
 
-    @requires.backend_version((1, 3))
-    def diff(self) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                expr
-                - window_expression(F("lag", expr), inputs.partition_by, inputs.order_by)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    @requires.backend_version((1, 3))
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(self._cum_window_func("sum", reverse=reverse))
-
-    @requires.backend_version((1, 3))
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._with_window_function(self._cum_window_func("max", reverse=reverse))
-
-    @requires.backend_version((1, 3))
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._with_window_function(self._cum_window_func("min", reverse=reverse))
-
-    @requires.backend_version((1, 3))
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(self._cum_window_func("count", reverse=reverse))
-
-    @requires.backend_version((1, 3))
-    def cum_prod(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func("product", reverse=reverse)
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func("sum", window_size, min_samples, center=center)
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func("mean", window_size, min_samples, center=center)
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                "var", window_size, min_samples, ddof=ddof, center=center
-            )
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                "std", window_size, min_samples, ddof=ddof, center=center
-            )
-        )
-
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -653,11 +501,10 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
                 df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
             ) -> Sequence[Expression]:
                 fill_func = "last_value" if strategy == "forward" else "first_value"
-                _limit = "unbounded" if limit is None else limit
                 rows_start, rows_end = (
-                    (f"{_limit} preceding", "current row")
+                    (-limit if limit is not None else None, 0)
                     if strategy == "forward"
-                    else ("current row", f"{_limit} following")
+                    else (0, limit)
                 )
                 return [
                     window_expression(

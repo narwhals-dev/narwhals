@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._compliant import LazyExpr, WindowInputs
+from narwhals._compliant import WindowInputs
 from narwhals._expression_parsing import (
     ExprKind,
     combine_alias_output_names,
@@ -20,6 +20,7 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
     true_divide,
 )
+from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
     SparkWindowInputs = WindowInputs[Column]
 
 
-class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
+class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
         "min": "rank",
         "max": "rank",
@@ -80,18 +81,38 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
-    @property
-    def window_function(self) -> SparkWindowFunction:
-        def default_window_func(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> list[Column]:
-            assert not window_inputs.order_by  # noqa: S101
-            return [
-                expr.over(self.partition_by(*window_inputs.partition_by))
-                for expr in self(df)
-            ]
+    def _function(self, name: str, *args: Column) -> Column:
+        return getattr(self._F, name)(*args)
 
-        return self._window_function or default_window_func
+    def _lit(self, value: Any) -> Column:
+        return self._F.lit(value)
+
+    def _when(self, condition: Column, value: Column) -> Column:
+        return self._F.when(condition, value)
+
+    def _window_expression(
+        self,
+        expr: Column,
+        partition_by: Sequence[str | Column] = (),
+        order_by: Sequence[str | Column] = (),
+        rows_start: int | None = None,
+        rows_end: int | None = None,
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> Column:
+        window = self.partition_by(*partition_by)
+        if order_by:
+            window = window.orderBy(
+                *self._sort(*order_by, descending=descending, nulls_last=nulls_last)
+            )
+        if rows_start is not None and rows_end is not None:
+            window = window.rowsBetween(rows_start, rows_end)
+        elif rows_end is not None:
+            window = window.rowsBetween(self._Window.unboundedPreceding, rows_end)
+        elif rows_start is not None:
+            window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
+        return expr.over(window)
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
@@ -174,79 +195,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     @classmethod
     def _alias_native(cls, expr: Column, name: str) -> Column:
         return expr.alias(name)
-
-    def _cum_window_func(
-        self,
-        *,
-        reverse: bool,
-        func_name: Literal["sum", "max", "min", "count", "product"],
-    ) -> SparkWindowFunction:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = (
-                self.partition_by(*inputs.partition_by)
-                .orderBy(
-                    *self._sort(
-                        *inputs.order_by, descending=[reverse], nulls_last=[reverse]
-                    )
-                )
-                .rowsBetween(self._Window.unboundedPreceding, 0)
-            )
-            return [
-                getattr(self._F, func_name)(expr).over(window) for expr in self._call(df)
-            ]
-
-        return func
-
-    def _rolling_window_func(
-        self,
-        *,
-        func_name: Literal["sum", "mean", "std", "var"],
-        center: bool,
-        window_size: int,
-        min_samples: int,
-        ddof: int | None = None,
-    ) -> SparkWindowFunction:
-        supported_funcs = ["sum", "mean", "std", "var"]
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = self._Window.currentRow - half - remainder
-            end = self._Window.currentRow + half
-        else:
-            start = self._Window.currentRow - window_size + 1
-            end = self._Window.currentRow
-
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = (
-                self.partition_by(*inputs.partition_by)
-                .orderBy(*self._sort(*inputs.order_by))
-                .rowsBetween(start, end)
-            )
-            if func_name in {"sum", "mean"}:
-                func_: str = func_name
-            elif func_name == "var" and ddof == 0:
-                func_ = "var_pop"
-            elif func_name in "var" and ddof == 1:
-                func_ = "var_samp"
-            elif func_name == "std" and ddof == 0:
-                func_ = "stddev_pop"
-            elif func_name == "std" and ddof == 1:
-                func_ = "stddev_samp"
-            elif func_name in {"var", "std"}:  # pragma: no cover
-                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                raise ValueError(msg)
-            else:  # pragma: no cover
-                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                raise ValueError(msg)
-            return [
-                self._F.when(
-                    self._F.count(expr).over(window) >= min_samples,
-                    getattr(self._F, func_)(expr).over(window),
-                )
-                for expr in self._call(df)
-            ]
-
-        return func
 
     @classmethod
     def from_column_names(
@@ -421,9 +369,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         invert = cast("Callable[..., Column]", operator.invert)
         return self._with_elementwise(invert)
 
-    def abs(self) -> Self:
-        return self._with_elementwise(self._F.abs)
-
     def all(self) -> Self:
         def f(expr: Column) -> Column:
             return self._F.coalesce(self._F.bool_and(expr), self._F.lit(True))  # noqa: FBT003
@@ -489,12 +434,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
     def count(self) -> Self:
         return self._with_callable(self._F.count)
 
-    def max(self) -> Self:
-        return self._with_callable(self._F.max)
-
-    def mean(self) -> Self:
-        return self._with_callable(self._F.mean)
-
     def median(self) -> Self:
         def _median(expr: Column) -> Column:
             if self._implementation in {
@@ -507,9 +446,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.median(expr)
 
         return self._with_callable(_median)
-
-    def min(self) -> Self:
-        return self._with_callable(self._F.min)
 
     def null_count(self) -> Self:
         def _null_count(expr: Column) -> Column:
@@ -635,12 +571,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_len)
 
-    def round(self, decimals: int) -> Self:
-        def _round(expr: Column) -> Column:
-            return self._F.round(expr, decimals)
-
-        return self._with_elementwise(_round)
-
     def skew(self) -> Self:
         return self._with_callable(self._F.skewness)
 
@@ -667,23 +597,11 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-    def is_null(self) -> Self:
-        return self._with_elementwise(self._F.isnull)
-
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:
             return self._F.when(self._F.isnull(expr), None).otherwise(self._F.isnan(expr))
 
         return self._with_elementwise(_is_nan)
-
-    def shift(self, n: int) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = self.partition_by(*inputs.partition_by).orderBy(
-                *self._sort(*inputs.order_by)
-            )
-            return [self._F.lag(expr, n).over(window) for expr in self(df)]
-
-        return self._with_window_function(func)
 
     def is_first_distinct(self) -> Self:
         def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
@@ -714,40 +632,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             ]
 
         return self._with_window_function(func)
-
-    def diff(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = self.partition_by(*inputs.partition_by).orderBy(
-                *self._sort(*inputs.order_by)
-            )
-            return [expr - self._F.lag(expr).over(window) for expr in self(df)]
-
-        return self._with_window_function(func)
-
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="sum")
-        )
-
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="max")
-        )
-
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="min")
-        )
-
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="count")
-        )
-
-    def cum_prod(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="product")
-        )
 
     def fill_null(
         self,
@@ -782,52 +666,6 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         return self._with_elementwise(_fill_constant, value=value)
-
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="sum",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="mean",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="var",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
-
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="std",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         func_name = self._REMAP_RANK_METHOD[method]

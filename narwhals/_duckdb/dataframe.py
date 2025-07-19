@@ -17,6 +17,7 @@ from narwhals._duckdb.utils import (
     native_to_narwhals_dtype,
     window_expression,
 )
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -28,7 +29,6 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 
 class DuckDBLazyFrame(
-    CompliantLazyFrame[
+    SQLLazyFrame[
         "DuckDBExpr",
         "duckdb.DuckDBPyRelation",
         "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",

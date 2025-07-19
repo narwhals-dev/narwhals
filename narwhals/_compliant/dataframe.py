@@ -11,7 +11,6 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
-    NativeExprT,
     NativeFrameT,
     NativeSeriesT,
 )
@@ -47,10 +46,8 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.expr import LazyExpr
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
-    from narwhals._compliant.window import WindowInputs
     from narwhals._translate import IntoArrowTable
     from narwhals._utils import Implementation, _LimitedContext
     from narwhals.dataframe import DataFrame
@@ -367,16 +364,6 @@ class CompliantLazyFrame(
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
     def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
         result = expr(self)
-        assert len(result) == 1  # debug assertion  # noqa: S101
-        return result[0]
-
-    def _evaluate_window_expr(
-        self,
-        expr: LazyExpr[Self, NativeExprT],
-        /,
-        window_inputs: WindowInputs[NativeExprT],
-    ) -> NativeExprT:
-        result = expr.window_function(self, window_inputs)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
 
