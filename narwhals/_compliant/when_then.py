@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.typing import EvalSeries
-    from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import NonNestedLiteral
 
@@ -50,10 +49,6 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     @property
     def _then(self) -> type[CompliantThen[FrameT, SeriesT, ExprT]]: ...
     def __call__(self, compliant_frame: FrameT, /) -> Sequence[SeriesT]: ...
-    def _window_function(
-        self, compliant_frame: FrameT, window_inputs: WindowInputs[Any]
-    ) -> Sequence[SeriesT]: ...
-
     def then(
         self, value: IntoExpr[SeriesT, ExprT], /
     ) -> CompliantThen[FrameT, SeriesT, ExprT]:
