@@ -511,6 +511,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def is_nan(self) -> Self:
         return self._with_elementwise(lambda expr: F("isnan", expr))
 
+    def is_null(self) -> Self:
+        return self._with_elementwise(lambda expr: expr.isnull())
+
     def is_finite(self) -> Self:
         return self._with_elementwise(lambda expr: F("isfinite", expr))
 
