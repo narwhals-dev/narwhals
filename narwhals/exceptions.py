@@ -103,3 +103,6 @@ class UnsupportedDTypeError(NarwhalsError):
 
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
+
+
+class PerformanceWarning(Warning): ...
