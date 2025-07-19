@@ -1018,7 +1018,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
-    def _hist_from_bins(
+    def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
@@ -1038,7 +1038,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             pa.Table.from_pydict(data), version=self._version, validate_column_names=True
         )
 
-    def _hist_from_bin_count(
+    def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame

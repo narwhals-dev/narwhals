@@ -471,7 +471,7 @@ class PolarsSeries:
         False: ["count"],
     }
 
-    def _hist_from_bins(
+    def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
         if len(bins) <= 1:
@@ -491,7 +491,7 @@ class PolarsSeries:
             )
         return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
 
-    def _hist_from_bin_count(
+    def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PolarsDataFrame:
         if bin_count == 0:
@@ -542,7 +542,7 @@ class PolarsSeries:
     def _hist_from_data(
         self, bins: list[float] | None, bin_count: int | None, *, include_breakpoint: bool
     ) -> PolarsDataFrame:
-        """Calculate histogram from non-empty data."""
+        """Calculate histogram from non-empty data and post-process the results based on the backend version."""
         from narwhals._polars.dataframe import PolarsDataFrame
 
         series = self.native

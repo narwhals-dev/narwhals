@@ -262,13 +262,19 @@ class CompliantSeries(
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...
     @unstable
-    def _hist_from_bins(
+    def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
-    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]:
+        """`Series.hist(bins=..., bin_count=None)`."""
+        ...
+
     @unstable
-    def _hist_from_bin_count(
+    def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
-    ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    ) -> CompliantDataFrame[Self, Any, Any, Any]:
+        """`Series.hist(bins=None, bin_count=...)`."""
+        ...
+
     @property
     def str(self) -> Any: ...
     @property

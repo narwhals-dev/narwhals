@@ -2594,14 +2594,14 @@ class Series(Generic[IntoSeriesT]):
             if bin_count is not None:
                 msg = f"can only provide one of `bin_count` or `bins`, got: {bin_count=}, {bins=}"
                 raise ComputeError(msg)
-            result = self._compliant_series._hist_from_bins(
+            result = self._compliant_series.hist_from_bins(
                 bins=bins, include_breakpoint=include_breakpoint
             )
         else:
             # polars (v1.20) sets bin=10 if neither are provided.
             default = 10
             bin_count = default if bin_count is None else bin_count
-            result = self._compliant_series._hist_from_bin_count(
+            result = self._compliant_series.hist_from_bin_count(
                 bin_count=bin_count, include_breakpoint=include_breakpoint
             )
 
