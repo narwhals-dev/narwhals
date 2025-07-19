@@ -89,7 +89,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         if name == "stddev_pop":
             assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).std(how="pop")
-        if name == "stddev_sample":
+        if name == "stddev_samp":
             assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).std(how="sample")
         return getattr(expr, name)(*args[1:])
