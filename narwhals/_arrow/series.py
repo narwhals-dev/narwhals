@@ -1018,30 +1018,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
-    def hist(
-        self,
-        bins: list[float | int] | None,
-        *,
-        bin_count: int | None,
-        include_breakpoint: bool,
+    def _hist_from_bins(
+        self, bins: list[float | int], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         data: dict[str, Any]
-        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+        if len(bins) <= 1:
             data = {"breakpoint": [], "count": []}
-        elif pc.sum(
-            pc.invert(pc.is_null(self.native, nan_is_null=True)).cast(pa.uint64()),
-            min_count=0,
-        ) == pa.scalar(0, type=pa.uint64()):
-            data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
+        elif self._is_empty_series():
+            data = {"breakpoint": bins[1:], "count": zeros(len(bins) - 1)}
         else:
-            final_bins = (
-                self._prepare_bins(bin_count=cast("int", bin_count))
-                if bins is None
-                else bins
-            )
-            data = self._hist_from_bins(final_bins)
+            data = self._hist_data_from_bins(bins=bins)
 
         if not include_breakpoint:
             del data["breakpoint"]
@@ -1050,19 +1038,41 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             pa.Table.from_pydict(data), version=self._version, validate_column_names=True
         )
 
-    def _hist_from_empty_series(
-        self, bins: list[float | int] | None, bin_count: int | None
-    ) -> dict[str, Any]:
-        """Create histogram result if self is an empty series."""
-        if bins is not None:
-            return {"breakpoint": bins[1:], "count": zeros(len(bins) - 1)}
+    def _hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> ArrowDataFrame:
+        from narwhals._arrow.dataframe import ArrowDataFrame
 
-        from numpy import linspace  # ignore-banned-import
+        data: dict[str, Any]
+        if bin_count == 0:
+            data = {"breakpoint": [], "count": []}
+        elif self._is_empty_series():
+            from numpy import linspace  # ignore-banned-import
 
-        count = bin_count if bin_count is not None else 1
-        return {"breakpoint": linspace(0, 1, count + 1)[1:], "count": zeros(count)}
+            data = {
+                "breakpoint": linspace(0, 1, bin_count + 1)[1:],
+                "count": zeros(bin_count),
+            }
+        else:
+            bins = self._bins_from_bin_count(bin_count=bin_count)
+            data = self._hist_data_from_bins(bins=bins)
 
-    def _prepare_bins(self, bin_count: int) -> list[float]:
+        if not include_breakpoint:
+            del data["breakpoint"]
+
+        return ArrowDataFrame(
+            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
+        )
+
+    def _is_empty_series(self) -> bool:
+        non_null_count = pc.sum(
+            pc.invert(pc.is_null(self.native, nan_is_null=True)).cast(pa.uint64()),
+            min_count=0,
+        )
+
+        return non_null_count == lit(0, type=pa.uint64())
+
+    def _bins_from_bin_count(self, bin_count: int) -> list[float | int]:
         """Prepare bins for histogram calculation from bin_count."""
         from numpy import linspace  # ignore-banned-import
 
@@ -1074,7 +1084,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         return linspace(lower, upper, bin_count + 1)
 
-    def _hist_from_bins(self, bins: list[float]) -> dict[str, Any]:
+    def _hist_data_from_bins(self, bins: list[float]) -> dict[str, Any]:
         """Calculate histogram from bins."""
         import numpy as np  # ignore-banned-import
 

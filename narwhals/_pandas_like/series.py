@@ -944,54 +944,57 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
-    def hist(
-        self,
-        bins: list[float | int] | None,
-        *,
-        bin_count: int | None,
-        include_breakpoint: bool,
+    def _hist_from_bins(
+        self, bins: list[float | int], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
         data: dict[str, list[int | float] | _1DArray]
 
-        if bin_count == 0 or (bins is not None and len(bins) <= 1):
+        if len(bins) <= 1:
             data = {"breakpoint": [], "count": []}
         elif self.native.count() < 1:
-            data = self._hist_from_empty_series(bins=bins, bin_count=bin_count)
+            data = {
+                "breakpoint": bins[1:],
+                "count": self._array_funcs.zeros(shape=len(bins) - 1),
+            }
         else:
-            final_bins = (
-                self._prepare_bins(bin_count=cast("int", bin_count))
-                if bins is None
-                else bins
-            )
-            data = self._hist_from_bins(ns=ns, bins=final_bins)
+            data = self._hist_data_from_bins(ns=ns, bins=bins)
 
         if not include_breakpoint:
             del data["breakpoint"]
 
         return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-    def _hist_from_empty_series(
-        self, bins: list[float | int] | None, bin_count: int | None
-    ) -> dict[str, Any]:
-        """Create histogram result if self is an empty series."""
-        array_funcs = self._array_funcs
+    def _hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> PandasLikeDataFrame:
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-        if bins is not None:
-            return {
-                "breakpoint": bins[1:],
-                "count": array_funcs.zeros(shape=len(bins) - 1),
+        ns = self.__native_namespace__()
+        data: dict[str, list[int | float] | _1DArray]
+
+        if bin_count == 0:
+            data = {"breakpoint": [], "count": []}
+        elif self.native.count() < 1:
+            array_funcs = self._array_funcs
+
+            data = {
+                "breakpoint": array_funcs.linspace(0, 1, bin_count + 1)[1:],
+                "count": array_funcs.zeros(bin_count),
             }
 
-        count = bin_count if bin_count is not None else 1
-        return {
-            "breakpoint": array_funcs.linspace(0, 1, count + 1)[1:],
-            "count": array_funcs.zeros(count),
-        }
+        else:
+            bins = self._bins_from_bin_count(bin_count=bin_count)
+            data = self._hist_data_from_bins(ns=ns, bins=bins)
 
-    def _prepare_bins(self, bin_count: int) -> list[float]:
+        if not include_breakpoint:
+            del data["breakpoint"]
+
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+
+    def _bins_from_bin_count(self, bin_count: int) -> list[float]:
         """Prepare bins for histogram calculation from bin_count."""
         lower, upper = self.native.min(), self.native.max()
         if lower == upper:
@@ -1000,7 +1003,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return self._array_funcs.linspace(lower, upper, bin_count + 1)
 
-    def _hist_from_bins(
+    def _hist_data_from_bins(
         self, ns: ModuleType, bins: list[float]
     ) -> dict[str, list[int | float] | _1DArray]:
         """Calculate the actual histogram."""

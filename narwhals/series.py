@@ -2587,24 +2587,29 @@ class Series(Generic[IntoSeriesT]):
             |3        8.00      2|
             └────────────────────┘
         """
-        if bins is not None and bin_count is not None:
-            msg = "can only provide one of `bin_count` or `bins`"
-            raise ComputeError(msg)
-        if bins is None and bin_count is None:
-            bin_count = 10  # polars (v1.20) sets bin=10 if neither are provided.
-
         if bins is not None:
-            for i in range(1, len(bins)):
-                if bins[i - 1] >= bins[i]:
-                    msg = "bins must increase monotonically"
-                    raise ComputeError(msg)
+            if any(bins[i - 1] >= bins[i] for i in range(1, len(bins))):
+                msg = "bins must increase monotonically"
+                raise ComputeError(msg)
+            if bin_count is None:
+                result = self._compliant_series._hist_from_bins(
+                    bins=bins, include_breakpoint=include_breakpoint
+                )
+            else:  # bin_count is not None
+                msg = "can only provide one of `bin_count` or `bins`"
+                raise ComputeError(msg)
+        else:
+            bin_count_ = (
+                10  # polars (v1.20) sets bin=10 if neither are provided.
+                if bin_count is None
+                else bin_count
+            )
 
-        return self._dataframe(
-            self._compliant_series.hist(
-                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
-            ),
-            level=self._level,
-        )
+            result = self._compliant_series._hist_from_bin_count(
+                bin_count=bin_count_, include_breakpoint=include_breakpoint
+            )
+
+        return self._dataframe(result, level=self._level)
 
     def log(self, base: float = math.e) -> Self:
         r"""Compute the logarithm to a given base.
