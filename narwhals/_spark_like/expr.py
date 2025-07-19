@@ -81,24 +81,29 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
-    @property
-    def window_function(self) -> SparkWindowFunction:
-        def default_window_func(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> list[Column]:
-            assert not window_inputs.order_by  # noqa: S101
-            return [
-                expr.over(self.partition_by(*window_inputs.partition_by))
-                for expr in self(df)
-            ]
-
-        return self._window_function or default_window_func
-
     def _function(self, name: str, *args: Column) -> Column:
         return getattr(self._F, name)(*args)
 
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
+
+    def _window_expression(
+        self,
+        expr: Column,
+        partition_by: Sequence[str | Column] = (),
+        order_by: Sequence[str | Column] = (),
+        rows_start: int | None = None,
+        rows_end: int | None = None,
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> Column:
+        window = self.partition_by(*partition_by).orderBy(
+            *self._sort(*order_by, descending=descending, nulls_last=nulls_last)
+        )
+        if rows_start is not None and rows_end is not None:
+            window = window.rowsBetween(rows_start, rows_end)
+        return expr.over(window)
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)

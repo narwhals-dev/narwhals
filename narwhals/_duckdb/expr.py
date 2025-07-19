@@ -78,24 +78,32 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
-    @property
-    def window_function(self) -> DuckDBWindowFunction:
-        def default_window_func(
-            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
-            assert not inputs.order_by  # noqa: S101
-            return [
-                window_expression(expr, inputs.partition_by, inputs.order_by)
-                for expr in self(df)
-            ]
-
-        return self._window_function or default_window_func
-
     def _function(self, name: str, *args: Expression) -> Expression:
         return F(name, *args)
 
     def _lit(self, value: Any) -> Expression:
         return lit(value)
+
+    def _window_expression(
+        self,
+        expr: Expression,
+        partition_by: Sequence[str | Expression] = (),
+        order_by: Sequence[str | Expression] = (),
+        rows_start: str = "",
+        rows_end: str = "",
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> Expression:
+        return window_expression(
+            expr,
+            partition_by,
+            order_by,
+            rows_start,
+            rows_end,
+            descending=descending,
+            nulls_last=nulls_last,
+        )
 
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)

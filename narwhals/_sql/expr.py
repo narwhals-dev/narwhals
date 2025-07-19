@@ -7,11 +7,12 @@ from narwhals._typing_compat import Protocol38
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
+    from narwhals._compliant.window import WindowInputs
 
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import WindowFunction
@@ -21,11 +22,34 @@ class SQLExpr(
     LazyExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
-    def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
-    def _lit(self, value: Any) -> NativeExprT: ...
+    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
     @property
-    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
+    def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]:
+        def default_window_func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            assert not inputs.order_by  # noqa: S101
+            return [
+                self._window_expression(expr, inputs.partition_by, inputs.order_by)
+                for expr in self(df)
+            ]
+
+        return self._window_function or default_window_func
+
+    def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
+    def _lit(self, value: Any) -> NativeExprT: ...
+    def _window_expression(
+        self,
+        expr: NativeExprT,
+        partition_by: Sequence[str | NativeExprT] = (),
+        order_by: Sequence[str | NativeExprT] = (),
+        rows_start: str = "",
+        rows_end: str = "",
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> NativeExprT: ...
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
