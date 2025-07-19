@@ -1019,7 +1019,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(result)
 
     def _hist_from_bins(
-        self, bins: list[float | int], *, include_breakpoint: bool
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
 
@@ -1072,7 +1072,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         arr = cast("pa.BooleanArray", is_null.combine_chunks())
         return arr.false_count == 0
 
-    def _bins_from_bin_count(self, bin_count: int) -> list[float | int]:
+    def _bins_from_bin_count(self, bin_count: int) -> list[float]:
         """Prepare bins for histogram calculation from bin_count."""
         from numpy import linspace  # ignore-banned-import
 

@@ -263,7 +263,7 @@ class CompliantSeries(
     def zip_with(self, mask: Any, other: Any) -> Self: ...
     @unstable
     def _hist_from_bins(
-        self, bins: list[float | int], *, include_breakpoint: bool
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     @unstable
     def _hist_from_bin_count(

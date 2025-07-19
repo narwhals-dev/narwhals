@@ -945,7 +945,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def _hist_from_bins(
-        self, bins: list[float | int], *, include_breakpoint: bool
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 

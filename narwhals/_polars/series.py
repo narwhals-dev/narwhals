@@ -472,7 +472,7 @@ class PolarsSeries:
     }
 
     def _hist_from_bins(
-        self, bins: list[float | int], *, include_breakpoint: bool
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
         if len(bins) <= 1:
             native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
@@ -538,11 +538,7 @@ class PolarsSeries:
         return pl.int_range(0, bin_count + 1, eager=True) * width + lower  # type: ignore[return-value]
 
     def _hist_from_data(
-        self,
-        bins: list[float | int] | None,
-        bin_count: int | None,
-        *,
-        include_breakpoint: bool,
+        self, bins: list[float] | None, bin_count: int | None, *, include_breakpoint: bool
     ) -> PolarsDataFrame:
         """Calculate histogram from non-empty data."""
         from narwhals._polars.dataframe import PolarsDataFrame
