@@ -66,6 +66,8 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
         pd_version = Implementation.PANDAS._backend_version()
         if pd_version >= (2, 2, 1):
             return methodcaller(name, skipna=False)
+        elif pd_version < (1, 1, 5):
+            return methodcaller(name)
         else:
             msg = f"Unsupported pandas version {pd_version!r}"
             raise NotImplementedError(msg)
