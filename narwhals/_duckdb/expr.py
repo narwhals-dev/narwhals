@@ -84,6 +84,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _lit(self, value: Any) -> Expression:
         return lit(value)
 
+    def _when(self, condition: Expression, value: Expression) -> Expression:
+        return when(condition, value)
+
     def _window_expression(
         self,
         expr: Expression,
@@ -114,59 +117,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(version=self._version)
-
-    def _rolling_window_func(
-        self,
-        func_name: Literal["sum", "mean", "std", "var"],
-        window_size: int,
-        min_samples: int,
-        ddof: int | None = None,
-        *,
-        center: bool,
-    ) -> DuckDBWindowFunction:
-        supported_funcs = ["sum", "mean", "std", "var"]
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = f"{half + remainder} preceding"
-            end = f"{half} following"
-        else:
-            start = f"{window_size - 1} preceding"
-            end = "current row"
-
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            if func_name in {"sum", "mean"}:
-                func_: str = func_name
-            elif func_name == "var" and ddof == 0:
-                func_ = "var_pop"
-            elif func_name in "var" and ddof == 1:
-                func_ = "var_samp"
-            elif func_name == "std" and ddof == 0:
-                func_ = "stddev_pop"
-            elif func_name == "std" and ddof == 1:
-                func_ = "stddev_samp"
-            elif func_name in {"var", "std"}:  # pragma: no cover
-                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                raise ValueError(msg)
-            else:  # pragma: no cover
-                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                raise ValueError(msg)
-            window_kwargs: WindowExpressionKwargs = {
-                "partition_by": inputs.partition_by,
-                "order_by": inputs.order_by,
-                "rows_start": start,
-                "rows_end": end,
-            }
-            return [
-                when(
-                    window_expression(F("count", expr), **window_kwargs)
-                    >= lit(min_samples),
-                    window_expression(F(func_, expr), **window_kwargs),
-                )
-                for expr in self(df)
-            ]
-
-        return func
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
@@ -535,38 +485,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             ]
 
         return self._with_window_function(func)
-
-    @requires.backend_version((1, 3))
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func("sum", window_size, min_samples, center=center)
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func("mean", window_size, min_samples, center=center)
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                "var", window_size, min_samples, ddof=ddof, center=center
-            )
-        )
-
-    @requires.backend_version((1, 3))
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                "std", window_size, min_samples, ddof=ddof, center=center
-            )
-        )
 
     def fill_null(
         self,

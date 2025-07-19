@@ -87,6 +87,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
+    def _when(self, condition: Column, value: Column) -> Column:
+        return self._F.when(condition, value)
+
     def _window_expression(
         self,
         expr: Column,
@@ -104,6 +107,10 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         if rows_start is not None and rows_end is not None:
             mapping = {
                 "unbounded preceding": self._Window.unboundedPreceding,
+                "1 preceding": -1,
+                "2 preceding": -2,
+                "1 following": 1,
+                "2 following": 2,
                 "unbounded following": self._Window.unboundedFollowing,
                 "current row": self._Window.currentRow,
             }
@@ -191,57 +198,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     @classmethod
     def _alias_native(cls, expr: Column, name: str) -> Column:
         return expr.alias(name)
-
-    def _rolling_window_func(
-        self,
-        *,
-        func_name: Literal["sum", "mean", "std", "var"],
-        center: bool,
-        window_size: int,
-        min_samples: int,
-        ddof: int | None = None,
-    ) -> SparkWindowFunction:
-        supported_funcs = ["sum", "mean", "std", "var"]
-        if center:
-            half = (window_size - 1) // 2
-            remainder = (window_size - 1) % 2
-            start = self._Window.currentRow - half - remainder
-            end = self._Window.currentRow + half
-        else:
-            start = self._Window.currentRow - window_size + 1
-            end = self._Window.currentRow
-
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = (
-                self.partition_by(*inputs.partition_by)
-                .orderBy(*self._sort(*inputs.order_by))
-                .rowsBetween(start, end)
-            )
-            if func_name in {"sum", "mean"}:
-                func_: str = func_name
-            elif func_name == "var" and ddof == 0:
-                func_ = "var_pop"
-            elif func_name in "var" and ddof == 1:
-                func_ = "var_samp"
-            elif func_name == "std" and ddof == 0:
-                func_ = "stddev_pop"
-            elif func_name == "std" and ddof == 1:
-                func_ = "stddev_samp"
-            elif func_name in {"var", "std"}:  # pragma: no cover
-                msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                raise ValueError(msg)
-            else:  # pragma: no cover
-                msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                raise ValueError(msg)
-            return [
-                self._F.when(
-                    self._F.count(expr).over(window) >= min_samples,
-                    getattr(self._F, func_)(expr).over(window),
-                )
-                for expr in self._call(df)
-            ]
-
-        return func
 
     @classmethod
     def from_column_names(
@@ -713,52 +669,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         return self._with_elementwise(_fill_constant, value=value)
-
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="sum",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="mean",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="var",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
-
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="std",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         func_name = self._REMAP_RANK_METHOD[method]
