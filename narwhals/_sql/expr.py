@@ -1,7 +1,7 @@
 # In here, we could make SQLExpr
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._compliant.typing import AliasNames, CompliantLazyFrameT, NativeExprT
 from narwhals._typing_compat import Protocol38
@@ -123,6 +123,3 @@ class SQLExpr(
 
     # namespaces
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
-
-
-SQLExprT = TypeVar("SQLExprT", bound=SQLExpr[Any, Any])

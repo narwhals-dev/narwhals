@@ -901,6 +901,8 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
@@ -909,8 +911,6 @@ class LazyExpr(  # type: ignore[misc]
             return [name]
 
         return self._with_alias_output_names(fn)
-
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @property
     def name(self) -> LazyExprNameNamespace[Self]:

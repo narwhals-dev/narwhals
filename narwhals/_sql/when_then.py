@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from narwhals._compliant.typing import CompliantLazyFrameT, NativeExprT
+from narwhals._compliant.when_then import CompliantWhen
+from narwhals._sql.typing import SQLExprT
 from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
@@ -12,9 +14,6 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import _LimitedContext
-
-from narwhals._compliant.when_then import CompliantWhen
-from narwhals._sql.expr import SQLExprT
 
 
 class SQLWhen(
