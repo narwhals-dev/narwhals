@@ -116,8 +116,17 @@ class SQLExpr(
     def max(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("max", expr))
 
+    def mean(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("mean", expr))
+
+    def median(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("median", expr))
+
     def min(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("min", expr))
+
+    def is_null(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("isnull", expr))
 
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()

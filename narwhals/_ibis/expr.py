@@ -288,12 +288,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
 
-    def mean(self) -> Self:
-        return self._with_callable(lambda expr: expr.mean())
-
-    def median(self) -> Self:
-        return self._with_callable(lambda expr: expr.median())
-
     def all(self) -> Self:
         return self._with_callable(lambda expr: expr.all().fill_null(lit(True)))  # noqa: FBT003
 
@@ -383,9 +377,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
             alias_output_names=self._alias_output_names,
             version=self._version,
         )
-
-    def is_null(self) -> Self:
-        return self._with_callable(lambda expr: expr.isnull())
 
     def is_nan(self) -> Self:
         def func(expr: ir.FloatingValue | Any) -> ir.Value:

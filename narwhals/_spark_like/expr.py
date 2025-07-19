@@ -490,9 +490,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def count(self) -> Self:
         return self._with_callable(self._F.count)
 
-    def mean(self) -> Self:
-        return self._with_callable(self._F.mean)
-
     def median(self) -> Self:
         def _median(expr: Column) -> Column:
             if self._implementation in {
@@ -661,9 +658,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version,
             implementation=self._implementation,
         )
-
-    def is_null(self) -> Self:
-        return self._with_elementwise(self._F.isnull)
 
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:

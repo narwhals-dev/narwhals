@@ -346,9 +346,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_elementwise(invert)
 
-    def mean(self) -> Self:
-        return self._with_callable(lambda expr: F("mean", expr))
-
     def skew(self) -> Self:
         def func(expr: Expression) -> Expression:
             count = F("count", expr)
@@ -368,9 +365,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
-
-    def median(self) -> Self:
-        return self._with_callable(lambda expr: F("median", expr))
 
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
@@ -510,9 +504,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             alias_output_names=self._alias_output_names,
             version=self._version,
         )
-
-    def is_null(self) -> Self:
-        return self._with_elementwise(lambda expr: expr.isnull())
 
     def is_nan(self) -> Self:
         return self._with_elementwise(lambda expr: F("isnan", expr))
