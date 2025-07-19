@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
 
 import polars as pl
 
@@ -18,11 +18,11 @@ from narwhals.dependencies import is_numpy_array_1d
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import TypeVar
+    from typing import Literal, TypeVar
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
 
     T = TypeVar("T")
+    IncludeBreakpoint: TypeAlias = Literal[False, True]
 
 
 # Series methods where PolarsSeries just defers to Polars.Series directly.
@@ -465,13 +466,16 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    # pub
+    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
+        True: ["breakpoint", "count"],
+        False: ["count"],
+    }
+
     def _hist_from_bins(
         self, bins: list[float | int], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
         if len(bins) <= 1:
-            schema = ["breakpoint", "count"] if include_breakpoint else ["count"]
-            native = pl.DataFrame(schema=schema)
+            native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
         elif self.native.is_empty():
             if include_breakpoint:
                 native = (
@@ -490,18 +494,16 @@ class PolarsSeries:
     def _hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PolarsDataFrame:
-        from narwhals._polars.dataframe import PolarsDataFrame
-
-        series = self.native
-        data: dict[str, list[float | int] | pl.Series]
-
         if bin_count == 0:
-            data = {"breakpoint": [], "count": []}
-        elif series.count() < 1:
-            data = {
-                "breakpoint": pl.int_range(1, bin_count + 1, eager=True) / bin_count,
-                "count": pl.zeros(n=bin_count, dtype=pl.Int64, eager=True),
-            }
+            native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
+        elif self.native.is_empty():
+            if include_breakpoint:
+                native = pl.select(
+                    breakpoint=pl.int_range(1, bin_count + 1) / bin_count,
+                    count=pl.lit(0, pl.Int64),
+                )
+            else:
+                native = pl.select(count=pl.zeros(bin_count, pl.Int64))
         else:
             count: int | None
             if BACKEND_VERSION < (1, 15):  # pragma: no cover
@@ -513,11 +515,7 @@ class PolarsSeries:
             return self._hist_from_data(
                 bins=bins, bin_count=count, include_breakpoint=include_breakpoint
             )
-
-        if not include_breakpoint:
-            del data["breakpoint"]
-
-        return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
+        return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
 
     def _bins_from_bin_count(self, bin_count: int) -> list[float]:  # pragma: no cover
         """Prepare bins based on backend version compatibility.
