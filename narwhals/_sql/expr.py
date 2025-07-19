@@ -1,4 +1,3 @@
-# In here, we could make SQLExpr
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
