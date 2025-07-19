@@ -513,11 +513,13 @@ class PolarsSeries:
                 count = bin_count
                 bins = None
             return self._hist_from_data(
-                bins=bins, bin_count=count, include_breakpoint=include_breakpoint
+                bins=bins,  # type: ignore[argument-type]
+                bin_count=count,
+                include_breakpoint=include_breakpoint,
             )
         return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
 
-    def _bins_from_bin_count(self, bin_count: int) -> list[float]:  # pragma: no cover
+    def _bins_from_bin_count(self, bin_count: int) -> pl.Series:  # pragma: no cover
         """Prepare bins based on backend version compatibility.
 
         polars <1.15 does not adjust the bins when they have equivalent min/max
@@ -535,7 +537,7 @@ class PolarsSeries:
             upper += 0.5
 
         width = (upper - lower) / bin_count
-        return pl.int_range(0, bin_count + 1, eager=True) * width + lower  # type: ignore[return-value]
+        return pl.int_range(0, bin_count + 1, eager=True) * width + lower
 
     def _hist_from_data(
         self, bins: list[float] | None, bin_count: int | None, *, include_breakpoint: bool

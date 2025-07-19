@@ -1086,25 +1086,21 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def _hist_data_from_bins(self, bins: list[float]) -> dict[str, Any]:
         """Calculate histogram from bins."""
-        import numpy as np  # ignore-banned-import
-
+        ser = self.native
         # Handle single bin case
         if len(bins) == 2:
-            counts = [
-                pc.sum(
-                    pc.and_(
-                        pc.greater_equal(self.native, pa.scalar(bins[0])),
-                        pc.less_equal(self.native, pa.scalar(bins[1])),
-                    ).cast(pa.uint8())
-                )
-            ]
-            return {"breakpoint": [bins[-1]], "count": counts}
+            is_between_bins = pc.and_(
+                pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
+            )
+            count = pc.sum(is_between_bins.cast(pa.uint8()))
+            return {"breakpoint": [bins[-1]], "count": [count]}
 
         # Handle multiple bins
-        bin_indices = np.searchsorted(bins, self.native, side="left")
-        bin_indices = pc.if_else(  # lowest bin is inclusive
-            pc.equal(self.native, pa.scalar(bins[0])), 1, bin_indices
-        )
+        import numpy as np  # ignore-banned-import
+
+        bin_indices = np.searchsorted(bins, ser, side="left")
+        # lowest bin is inclusive
+        bin_indices = pc.if_else(pc.equal(ser, lit(bins[0])), 1, bin_indices)
 
         # Align unique categories and counts appropriately
         obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
