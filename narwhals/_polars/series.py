@@ -507,7 +507,7 @@ class PolarsSeries:
             }
         else:
             count: int | None
-            if BACKEND_VERSION < (1, 15):
+            if BACKEND_VERSION < (1, 15):  # pragma: no cover
                 count = None
                 bins = self._bins_from_bin_count(bin_count=bin_count)
             else:

@@ -22,6 +22,7 @@ from narwhals._utils import (
     _StoresNative,
     is_compliant_series,
     is_sized_multi_index_selector,
+    unstable,
 )
 
 if TYPE_CHECKING:
@@ -260,9 +261,11 @@ class CompliantSeries(
     ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def var(self, *, ddof: int) -> float: ...
     def zip_with(self, mask: Any, other: Any) -> Self: ...
+    @unstable
     def _hist_from_bins(
         self, bins: list[float | int], *, include_breakpoint: bool
     ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
+    @unstable
     def _hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> CompliantDataFrame[Self, Any, Any, Any]: ...
