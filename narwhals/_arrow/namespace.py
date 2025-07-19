@@ -303,3 +303,4 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr):
     _depth: ClassVar = 0
     _scalar_kwargs: ClassVar = {}
+    _function_name: ClassVar = "whenthen"

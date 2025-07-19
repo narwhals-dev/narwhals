@@ -19,6 +19,7 @@ class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeri
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]
     _depth: ClassVar = 0
     _scalar_kwargs: ClassVar = {}
+    _function_name: ClassVar = "selector"
 
     def _to_expr(self) -> ArrowExpr:
         return ArrowExpr(

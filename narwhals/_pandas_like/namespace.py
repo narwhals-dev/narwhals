@@ -431,3 +431,4 @@ class PandasThen(
 ):
     _depth: ClassVar = 0
     _scalar_kwargs: ClassVar = {}
+    _function_name: ClassVar = "whenthen"

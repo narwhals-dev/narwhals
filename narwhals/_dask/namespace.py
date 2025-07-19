@@ -346,3 +346,4 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
 class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr):
     _depth: ClassVar = 0
     _scalar_kwargs: ClassVar = {}
+    _function_name: ClassVar = "whenthen"

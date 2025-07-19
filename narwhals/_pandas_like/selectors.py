@@ -23,6 +23,7 @@ class PandasSelector(  # type: ignore[misc]
 ):
     _depth: ClassVar = 0
     _scalar_kwargs: ClassVar = {}
+    _function_name: ClassVar = "selector"
 
     def _to_expr(self) -> PandasLikeExpr:
         return PandasLikeExpr(

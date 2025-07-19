@@ -88,7 +88,6 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         obj = cls.__new__(cls)
         obj._call = when
         obj._when_value = when
-        obj._function_name = "whenthen"
         obj._evaluate_output_names = getattr(
             then, "_evaluate_output_names", lambda _df: ["literal"]
         )
