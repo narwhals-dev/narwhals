@@ -53,7 +53,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
-        _AnyDArray,
         _SliceIndex,
     )
 
@@ -945,77 +944,84 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
-    def hist(  # noqa: C901, PLR0912
-        self,
-        bins: list[float | int] | None,
-        *,
-        bin_count: int | None,
-        include_breakpoint: bool,
+    def hist_from_bins(
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
-        from numpy import linspace, zeros
-
         from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
         ns = self.__native_namespace__()
-        data: dict[str, Sequence[int | float | str] | _AnyDArray]
+        data: dict[str, list[int | float] | _1DArray]
 
-        if bin_count == 0 or (bins is not None and len(bins) <= 1):
-            data = {}
-            if include_breakpoint:
-                data["breakpoint"] = []
-            data["count"] = []
-            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+        if len(bins) <= 1:
+            data = {"breakpoint": [], "count": []}
+        elif self.native.count() < 1:
+            data = {
+                "breakpoint": bins[1:],
+                "count": self._array_funcs.zeros(shape=len(bins) - 1),
+            }
+        else:
+            data = self._hist_data_from_bins(ns=ns, bins=bins)
 
-        if self.native.count() < 1:
-            if bins is not None:
-                data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
-            else:
-                count = cast("int", bin_count)
-                if bin_count == 1:
-                    data = {"breakpoint": [1.0], "count": [0]}
-                else:
-                    data = {
-                        "breakpoint": linspace(0, 1, count + 1)[1:],
-                        "count": zeros(shape=count),
-                    }
-            if not include_breakpoint:
-                del data["breakpoint"]
-            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+        if not include_breakpoint:
+            del data["breakpoint"]
 
-        if bin_count is not None:
-            # use Polars binning behavior
-            lower, upper = self.native.min(), self.native.max()
-            if lower == upper:
-                lower -= 0.5
-                upper += 0.5
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
-            if bin_count == 1:
-                data = {"breakpoint": [upper], "count": [self.native.count()]}
-                if not include_breakpoint:
-                    del data["breakpoint"]
-                return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+    def hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> PandasLikeDataFrame:
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
-            bins = linspace(lower, upper, bin_count + 1)
-            bin_count = None
+        ns = self.__native_namespace__()
+        data: dict[str, list[int | float] | _1DArray]
 
-        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
-        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
-        #   the bins were explicitly passed in.
+        if bin_count == 0:
+            data = {"breakpoint": [], "count": []}
+        elif self.native.count() < 1:
+            array_funcs = self._array_funcs
+
+            data = {
+                "breakpoint": array_funcs.linspace(0, 1, bin_count + 1)[1:],
+                "count": array_funcs.zeros(bin_count),
+            }
+
+        else:
+            bins = self._bins_from_bin_count(bin_count=bin_count)
+            data = self._hist_data_from_bins(ns=ns, bins=bins)
+
+        if not include_breakpoint:
+            del data["breakpoint"]
+
+        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+
+    def _bins_from_bin_count(self, bin_count: int) -> list[float]:
+        """Prepare bins for histogram calculation from bin_count."""
+        lower, upper = self.native.min(), self.native.max()
+        if lower == upper:
+            lower -= 0.5
+            upper += 0.5
+
+        return self._array_funcs.linspace(lower, upper, bin_count + 1)
+
+    def _hist_data_from_bins(
+        self, ns: ModuleType, bins: list[float]
+    ) -> dict[str, list[int | float] | _1DArray]:
+        """Calculate the actual histogram."""
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
+        #   happen since the bins were explicitly passed in.
         categories = ns.cut(
             self.native,
-            bins=bins if bin_count is None else bin_count,
+            bins=bins,
             include_lowest=True,  # Polars 1.27.0 always includes the lowest bin
         )
-        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
-        #   is necessary to restore these bins.
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations,
+        #   .reindex is necessary to restore these bins.
         result = categories.value_counts(dropna=True, sort=False).reindex(
             categories.cat.categories, fill_value=0
         )
-        data = {}
-        if include_breakpoint:
-            data["breakpoint"] = bins[1:] if bins is not None else result.index.right
-        data["count"] = result.reset_index(drop=True)
-        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
+        result.reset_index(drop=True, inplace=True)  # noqa: PD002
+
+        return {"breakpoint": bins[1:], "count": result}
 
     def log(self, base: float) -> Self:
         native = self.native

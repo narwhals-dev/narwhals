@@ -100,6 +100,10 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     return pa.nulls(n, series.native.type)
 
 
+def zeros(n: int, /) -> pa.Int64Array:
+    return pa.repeat(0, n)
+
+
 @lru_cache(maxsize=16)
 def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # noqa: C901, PLR0912
     dtypes = version.dtypes

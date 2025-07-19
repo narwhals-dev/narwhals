@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     )
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
+"""Static backend version for `polars`."""
 
 
 @overload
