@@ -6,15 +6,12 @@ from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import (
     CompliantExprAny,
     CompliantFrameAny,
-    CompliantLazyFrameT,
     CompliantSeriesOrNativeExprAny,
     EagerDataFrameT,
     EagerExprT,
     EagerSeriesT,
     LazyExprAny,
-    NativeExprT,
     NativeSeriesT,
-    WindowFunction,
 )
 from narwhals._typing_compat import Protocol38
 
@@ -23,13 +20,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import EvalSeries
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import NonNestedLiteral
 
 
-__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen", "LazyThen"]
+__all__ = ["CompliantThen", "CompliantWhen", "EagerWhen"]
 
 ExprT = TypeVar("ExprT", bound=CompliantExprAny)
 LazyExprT = TypeVar("LazyExprT", bound=LazyExprAny)
@@ -77,10 +74,8 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
     _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
     _function_name: str
-    _depth: int
     _implementation: Implementation
     _version: Version
-    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_when(
@@ -93,7 +88,6 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         obj = cls.__new__(cls)
         obj._call = when
         obj._when_value = when
-        obj._depth = 0
         obj._function_name = "whenthen"
         obj._evaluate_output_names = getattr(
             then, "_evaluate_output_names", lambda _df: ["literal"]
@@ -101,43 +95,12 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
         obj._alias_output_names = getattr(then, "_alias_output_names", None)
         obj._implementation = when._implementation
         obj._version = when._version
-        obj._scalar_kwargs = {}
         return obj
 
     def otherwise(self, otherwise: IntoExpr[SeriesT, ExprT], /) -> ExprT:
         self._when_value._otherwise_value = otherwise
         self._function_name = "whenotherwise"
         return cast("ExprT", self)
-
-
-class LazyThen(
-    CompliantThen[CompliantLazyFrameT, NativeExprT, LazyExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT, LazyExprT],
-):
-    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
-
-    @classmethod
-    def from_when(
-        cls,
-        when: CompliantWhen[CompliantLazyFrameT, NativeExprT, LazyExprT],
-        then: IntoExpr[NativeExprT, LazyExprT],
-        /,
-    ) -> Self:
-        when._then_value = then
-        obj = cls.__new__(cls)
-        obj._call = when
-        obj._window_function = when._window_function
-        obj._when_value = when
-        obj._depth = 0
-        obj._function_name = "whenthen"
-        obj._evaluate_output_names = getattr(
-            then, "_evaluate_output_names", lambda _df: ["literal"]
-        )
-        obj._alias_output_names = getattr(then, "_alias_output_names", None)
-        obj._implementation = when._implementation
-        obj._version = when._version
-        obj._scalar_kwargs = {}
-        return obj
 
 
 class EagerWhen(

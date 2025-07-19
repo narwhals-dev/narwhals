@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from narwhals._compliant.typing import CompliantLazyFrameT, NativeExprT
-from narwhals._compliant.when_then import CompliantWhen
+from narwhals._compliant.when_then import CompliantThen, CompliantWhen
 from narwhals._sql.typing import SQLExprT
 from narwhals._typing_compat import Protocol38
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import WindowFunction
+    from narwhals._compliant.when_then import IntoExpr
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import _LimitedContext
 
@@ -71,3 +73,30 @@ class SQLWhen(
             )
             result = self.when(condition, then).otherwise(other)  # type: ignore  # noqa: PGH003
         return [result]
+
+
+class SQLThen(
+    CompliantThen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    Protocol38[CompliantLazyFrameT, NativeExprT, SQLExprT],
+):
+    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
+
+    @classmethod
+    def from_when(
+        cls,
+        when: CompliantWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+        then: IntoExpr[NativeExprT, SQLExprT],
+        /,
+    ) -> Self:
+        when._then_value = then
+        obj = cls.__new__(cls)
+        obj._call = when
+        obj._window_function = when._window_function
+        obj._when_value = when
+        obj._evaluate_output_names = getattr(
+            then, "_evaluate_output_names", lambda _df: ["literal"]
+        )
+        obj._alias_output_names = getattr(then, "_alias_output_names", None)
+        obj._implementation = when._implementation
+        obj._version = when._version
+        return obj
