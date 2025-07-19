@@ -22,6 +22,7 @@ class SQLExpr(
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
     def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
+    def _lit(self, value: Any) -> NativeExprT: ...
 
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
@@ -127,6 +128,11 @@ class SQLExpr(
 
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
+
+    def round(self, decimals: int) -> Self:
+        return self._with_elementwise(
+            lambda expr: self._function("round", expr, self._lit(decimals))
+        )
 
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()

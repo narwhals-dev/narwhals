@@ -82,6 +82,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         expr = args[0]
         return getattr(expr, name)(*args[1:])
 
+    def _lit(self, value: Any) -> ir.Value:
+        return lit(value)
+
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
 
@@ -390,9 +393,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
-
-    def round(self, decimals: int) -> Self:
-        return self._with_callable(lambda expr: expr.round(decimals))
 
     def shift(self, n: int) -> Self:
         def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:

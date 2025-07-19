@@ -94,6 +94,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _function(self, name: str, *args: Expression) -> Expression:
         return F(name, *args)
 
+    def _lit(self, value: Any) -> Expression:
+        return lit(value)
+
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)
 
@@ -513,9 +516,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
-
-    def round(self, decimals: int) -> Self:
-        return self._with_elementwise(lambda expr: F("round", expr, lit(decimals)))
 
     @requires.backend_version((1, 3))
     def shift(self, n: int) -> Self:

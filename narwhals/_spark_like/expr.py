@@ -97,6 +97,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _function(self, name: str, *args: Column) -> Column:
         return getattr(self._F, name)(*args)
 
+    def _lit(self, value: Any) -> Column:
+        return self._F.lit(value)
+
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
         return self._call(df)
 
@@ -626,12 +629,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.count("*")
 
         return self._with_callable(_len)
-
-    def round(self, decimals: int) -> Self:
-        def _round(expr: Column) -> Column:
-            return self._F.round(expr, decimals)
-
-        return self._with_elementwise(_round)
 
     def skew(self) -> Self:
         return self._with_callable(self._F.skewness)
