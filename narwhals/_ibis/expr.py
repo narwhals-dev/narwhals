@@ -416,20 +416,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
 
-    def shift(self, n: int) -> Self:
-        def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            return [
-                expr.lag(n).over(  # type: ignore[attr-defined, unused-ignore]
-                    ibis.window(
-                        group_by=inputs.partition_by,
-                        order_by=self._sort(*inputs.order_by),
-                    )
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(_func)
-
     def is_first_distinct(self) -> Self:
         def func(
             df: IbisLazyFrame, inputs: IbisWindowInputs

@@ -207,6 +207,22 @@ class SQLExpr(
             self._cum_window_func("product", reverse=reverse)
         )
 
+    # Other window functions
+    def shift(self, n: int) -> Self:
+        def func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._function("lag", expr, self._lit(n)),
+                    inputs.partition_by,
+                    inputs.order_by,
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()
     arg_true: not_implemented = not_implemented()

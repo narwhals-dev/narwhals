@@ -650,15 +650,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_is_nan)
 
-    def shift(self, n: int) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = self.partition_by(*inputs.partition_by).orderBy(
-                *self._sort(*inputs.order_by)
-            )
-            return [self._F.lag(expr, n).over(window) for expr in self(df)]
-
-        return self._with_window_function(func)
-
     def is_first_distinct(self) -> Self:
         def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
             return [

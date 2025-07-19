@@ -507,18 +507,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     @requires.backend_version((1, 3))
-    def shift(self, n: int) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            return [
-                window_expression(
-                    F("lag", expr, lit(n)), inputs.partition_by, inputs.order_by
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    @requires.backend_version((1, 3))
     def is_first_distinct(self) -> Self:
         def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
             return [
