@@ -4,7 +4,7 @@ import operator
 import warnings
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
 from narwhals._expression_parsing import (
@@ -428,4 +428,6 @@ class PandasWhen(
 
 class PandasThen(
     CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr], PandasLikeExpr
-): ...
+):
+    _depth: ClassVar = 0
+    _scalar_kwargs: ClassVar = {}

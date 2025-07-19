@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -343,4 +343,6 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
 
-class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr): ...
+class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr):
+    _depth: ClassVar = 0
+    _scalar_kwargs: ClassVar = {}
