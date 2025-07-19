@@ -414,7 +414,9 @@ class PandasWhen(
     EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
 ):
     @property
-    def _then(self) -> type[PandasThen]:
+    # Signature of "_then" incompatible with supertype "CompliantWhen"
+    # ArrowWhen seems to follow the same pattern, but no mypy complaint there?
+    def _then(self) -> type[PandasThen]:  # type: ignore[override]
         return PandasThen
 
     def _if_then_else(

@@ -262,7 +262,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
         return self._with_callable(op, other=other)
 
-    def _with_elementwise(self, op: Callable[..., ir.Value]) -> Self:
+    def _with_elementwise(
+        self, op: Callable[..., ir.Value], /, **_expressifiable_args: Self | Any
+    ) -> Self:
         return self._with_callable(op)
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
