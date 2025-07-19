@@ -125,23 +125,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
         return IbisNamespace(version=self._version)
 
-    def _cum_window_func(
-        self, *, reverse: bool, func_name: Literal["sum", "max", "min", "count"]
-    ) -> IbisWindowFunction:
-        def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            window = ibis.window(
-                group_by=list(inputs.partition_by),
-                order_by=self._sort(
-                    *inputs.order_by, descending=[reverse], nulls_last=[reverse]
-                ),
-                preceding=None,  # unbounded
-                following=0,
-            )
-
-            return [getattr(expr, func_name)().over(window) for expr in self(df)]
-
-        return func
-
     def _rolling_window_func(
         self,
         *,
@@ -500,26 +483,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
             ]
 
         return self._with_window_function(_func)
-
-    def cum_sum(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="sum")
-        )
-
-    def cum_max(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="max")
-        )
-
-    def cum_min(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="min")
-        )
-
-    def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(
-            self._cum_window_func(reverse=reverse, func_name="count")
-        )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
