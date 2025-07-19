@@ -26,7 +26,7 @@ def query(
         )
         .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
         .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
-        .filter(nw.col("p_name").str.contains("green"))
+        .filter(nw.col("p_name").str.contains("green", literal=True))
         .select(
             nw.col("n_name").alias("nation"),
             nw.col("o_orderdate").dt.year().alias("o_year"),

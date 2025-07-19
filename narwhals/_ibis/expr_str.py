@@ -6,8 +6,8 @@ import ibis
 import ibis.expr.types as ir
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._ibis.utils import lit
 from narwhals._utils import _is_naive_format, not_implemented
 
@@ -108,7 +108,7 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
         def fn(expr: ir.StringColumn) -> ir.DateValue:
             return expr.as_date(format)
 
-        return self._compliant_expr._with_callable(fn)
+        return self.compliant._with_callable(fn)
 
     def zfill(self, width: int) -> IbisExpr:
         def func(expr: ir.StringColumn) -> ir.Value:

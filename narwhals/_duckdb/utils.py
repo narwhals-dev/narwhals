@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -13,10 +14,12 @@ if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
+
 
 UNITS_DICT = {
     "y": "year",
@@ -30,6 +33,14 @@ UNITS_DICT = {
     "us": "microsecond",
     "ns": "nanosecond",
 }
+UNIT_TO_TIMESTAMPS = {
+    "s": "TIMESTAMP_S",
+    "ms": "TIMESTAMP_MS",
+    "us": "TIMESTAMP",
+    "ns": "TIMESTAMP_NS",
+}
+DESCENDING_TO_ORDER = {True: "desc", False: "asc"}
+NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
 
 col = duckdb.ColumnExpression
 """Alias for `duckdb.ColumnExpression`."""
@@ -182,7 +193,10 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
         "float": dtypes.Float32(),
         "varchar": dtypes.String(),
         "date": dtypes.Date(),
+        "timestamp_s": dtypes.Datetime("s"),
+        "timestamp_ms": dtypes.Datetime("ms"),
         "timestamp": dtypes.Datetime(),
+        "timestamp_ns": dtypes.Datetime("ns"),
         "boolean": dtypes.Boolean(),
         "interval": dtypes.Duration(),
         "decimal": dtypes.Decimal(),
@@ -191,7 +205,9 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa: C901, PLR0912, PLR0915
+def narwhals_to_native_dtype(  # noqa: PLR0912,PLR0915,C901
+    dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
+) -> str:
     dtypes = version.dtypes
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
@@ -242,32 +258,40 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> str:  # noqa
         raise ValueError(msg)
 
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        _time_unit = dtype.time_unit
-        _time_zone = dtype.time_zone
-        msg = "todo"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Duration):  # pragma: no cover
-        _time_unit = dtype.time_unit
-        msg = "todo"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Date):  # pragma: no cover
+        tu = dtype.time_unit
+        tz = dtype.time_zone
+        if not tz:
+            return UNIT_TO_TIMESTAMPS[tu]
+        if tu != "us":
+            msg = f"Only microsecond precision is supported for timezone-aware `Datetime` in DuckDB, got {tu} precision"
+            raise ValueError(msg)
+        if tz != (rel_tz := deferred_time_zone.time_zone):  # pragma: no cover
+            msg = f"Only the connection time zone {rel_tz} is supported, got: {tz}."
+            raise ValueError(msg)
+        # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
+        return "TIMESTAMPTZ"  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Duration):
+        if (tu := dtype.time_unit) != "us":  # pragma: no cover
+            msg = f"Only microsecond-precision Duration is supported, got {tu} precision"
+        return "INTERVAL"
+    if isinstance_or_issubclass(dtype, dtypes.Date):
         return "DATE"
     if isinstance_or_issubclass(dtype, dtypes.List):
-        inner = narwhals_to_native_dtype(dtype.inner, version)
+        inner = narwhals_to_native_dtype(dtype.inner, version, deferred_time_zone)
         return f"{inner}[]"
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
         inner = ", ".join(
-            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version)}'
+            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)}'
             for field in dtype.fields
         )
         return f"STRUCT({inner})"
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Array):
         shape = dtype.shape
         duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
         inner_dtype: Any = dtype
         for _ in shape:
             inner_dtype = inner_dtype.inner
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version)
+        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version, deferred_time_zone)
         return f"{duckdb_inner}{duckdb_shape_fmt}"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
@@ -285,15 +309,14 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 
 def generate_order_by_sql(
-    *order_by: str | Expression, ascending: bool, nulls_first: bool
+    *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
     if not order_by:
         return ""
-    nulls = "nulls first" if nulls_first else "nulls last"
-    if ascending:
-        by_sql = ", ".join([f"{parse_into_expression(x)} asc {nulls}" for x in order_by])
-    else:
-        by_sql = ", ".join([f"{parse_into_expression(x)} desc {nulls}" for x in order_by])
+    by_sql = ",".join(
+        f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
+        for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
+    )
     return f"order by {by_sql}"
 
 
@@ -304,8 +327,8 @@ def window_expression(
     rows_start: str = "",
     rows_end: str = "",
     *,
-    descending: bool = False,
-    nulls_last: bool = False,
+    descending: Sequence[bool] | None = None,
+    nulls_last: Sequence[bool] | None = None,
     ignore_nulls: bool = False,
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
@@ -316,9 +339,9 @@ def window_expression(
         msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
         raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
-    ob = generate_order_by_sql(
-        *order_by, ascending=not descending, nulls_first=not nulls_last
-    )
+    descending = descending or [False] * len(order_by)
+    nulls_last = nulls_last or [False] * len(order_by)
+    ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
     if rows_start and rows_end:
         rows = f"rows between {rows_start} and {rows_end}"
@@ -329,3 +352,20 @@ def window_expression(
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
     return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+
+
+def catch_duckdb_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:
+    if isinstance(exception, duckdb.BinderException) and any(
+        msg in str(exception)
+        for msg in (
+            "not found in FROM clause",
+            "this column cannot be referenced before it is defined",
+        )
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception

@@ -4,7 +4,6 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
@@ -25,7 +24,6 @@ from narwhals._utils import (
     is_eager_allowed,
     is_sequence_but_not_str,
     issue_deprecation_warning,
-    parse_version,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -35,8 +33,9 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.series import Series
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -49,7 +48,6 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
-    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
@@ -563,19 +561,28 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import distributions
 
-    from narwhals import __version__
+    extra_names = ("narwhals", "numpy")
+    member_names = Implementation._member_names_
+    exclude = {"PYSPARK_CONNECT", "UNKNOWN"}
+    target_names = tuple(
+        name.lower() for name in (*extra_names, *member_names) if name not in exclude
+    )
+    result = dict.fromkeys(target_names, "")  # Initialize with empty strings
 
-    deps = ("pandas", "polars", "cudf", "modin", "pyarrow", "numpy")
-    deps_info = {"narwhals": __version__}
+    for dist in distributions():
+        dist_name, dist_version = dist.name.lower(), dist.version
 
-    for modname in deps:
-        try:
-            deps_info[modname] = version(modname)
-        except PackageNotFoundError:  # noqa: PERF203
-            deps_info[modname] = ""
-    return deps_info
+        if dist_name in result:  # exact match
+            result[dist_name] = dist_version
+        else:  # prefix match
+            for target in target_names:
+                if not result[target] and dist_name.startswith(target):
+                    result[target] = dist_version
+                    break
+
+    return result
 
 
 def show_versions() -> None:
@@ -780,7 +787,7 @@ def scan_csv(
             csv_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else csv_reader.options(**kwargs).load(source)
         )
@@ -978,7 +985,7 @@ def scan_parquet(
             pq_reader.load(source)
             if (
                 implementation is Implementation.SQLFRAME
-                and parse_version(version("sqlframe")) < (3, 27, 0)
+                and implementation._backend_version() < (3, 27, 0)
             )
             else pq_reader.options(**kwargs).load(source)
         )
@@ -1476,7 +1483,7 @@ class When:
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `then` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         return Then(
             lambda plx: apply_n_ary_operation(
@@ -1504,7 +1511,7 @@ class Then(Expr):
                 "If you pass a scalar-like predicate to `nw.when`, then "
                 "the `otherwise` value must also be scalar-like."
             )
-            raise ShapeError(msg)
+            raise InvalidOperationError(msg)
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
@@ -1847,4 +1854,70 @@ def concat_str(
         combine_metadata(
             *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
         ),
+    )
+
+
+def coalesce(
+    exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr | NonNestedLiteral
+) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+
+    Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> data = [
+    ...     (1, 5, None),
+    ...     (None, 6, None),
+    ...     (None, None, 9),
+    ...     (4, 8, 10),
+    ...     (None, None, None),
+    ... ]
+    >>> df = pl.DataFrame(data, schema=["a", "b", "c"], orient="row")
+    >>> nw.from_native(df).select(nw.coalesce("a", "b", "c", nw.lit(-1)))
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |  shape: (5, 1)   |
+    |  ┌─────┐         |
+    |  │ a   │         |
+    |  │ --- │         |
+    |  │ i64 │         |
+    |  ╞═════╡         |
+    |  │ 1   │         |
+    |  │ 6   │         |
+    |  │ 9   │         |
+    |  │ 4   │         |
+    |  │ -1  │         |
+    |  └─────┘         |
+    └──────────────────┘
+    """
+    flat_exprs = flatten([*flatten([exprs]), *more_exprs])
+
+    non_exprs = [expr for expr in flat_exprs if not isinstance(expr, (str, Expr, Series))]
+    if non_exprs:
+        msg = (
+            f"All arguments to `coalesce` must be of type {str!r}, {Expr!r}, or {Series!r}."
+            "\nGot the following invalid arguments (type, value):"
+            f"\n    {', '.join(repr((type(e), e)) for e in non_exprs)}"
+        )
+        raise TypeError(msg)
+
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
+        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )

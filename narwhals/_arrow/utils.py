@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._compliant.series import _SeriesNamespace
+from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import isinstance_or_issubclass
 
 if TYPE_CHECKING:
@@ -295,9 +295,8 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
-        # NOTE: `pyarrow==11.*` doesn't allow keywords in `Array.cast`
-        return pc.cast(arrow_array, pa.float64(), safe=False), pc.cast(
-            pa_object, pa.float64(), safe=False
+        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(
+            pa.float64(), safe=False
         )
 
     return arrow_array, pa_object
@@ -437,6 +436,4 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-class ArrowSeriesNamespace(_SeriesNamespace["ArrowSeries", "ChunkedArrayAny"]):
-    def __init__(self, series: ArrowSeries, /) -> None:
-        self._compliant_series = series
+class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...

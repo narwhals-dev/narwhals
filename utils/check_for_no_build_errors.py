@@ -8,10 +8,8 @@ This is just used in CI.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
-with open("output.txt") as fd:
-    content = fd.read()
-
-if "exited with errors" in content:
+if "exited with errors" in Path("output.txt").read_text("utf-8"):
     sys.exit(1)
 sys.exit(0)

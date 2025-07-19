@@ -43,6 +43,16 @@ class ColumnNotFoundError(FormattedKeyError, NarwhalsError):
         )
         return ColumnNotFoundError(message)
 
+    @classmethod
+    def from_available_column_names(
+        cls, available_columns: Collection[str]
+    ) -> ColumnNotFoundError:
+        message = (
+            "The selected columns were not found."
+            f"\n\nHint: Did you mean one of these columns: {list(available_columns)}?"
+        )
+        return ColumnNotFoundError(message)
+
 
 class ComputeError(NarwhalsError):
     """Exception raised when the underlying computation could not be evaluated."""
@@ -87,42 +97,12 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
         return InvalidIntoExprError(message)
 
 
-class AnonymousExprError(NarwhalsError):  # pragma: no cover
-    """Exception raised when trying to perform operations on anonymous expressions."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-    @classmethod
-    def from_expr_name(cls: type, expr_name: str) -> AnonymousExprError:
-        message = (
-            f"Anonymous expressions are not supported in `{expr_name}`.\n"
-            "Instead of `nw.all()`, try using a named expression, such as "
-            "`nw.col('a', 'b')`"
-        )
-        return AnonymousExprError(message)
-
-
-class OrderDependentExprError(NarwhalsError):
-    """Exception raised when trying to use an order-dependent expressions with LazyFrames."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-
-class LengthChangingExprError(NarwhalsError):
-    """Exception raised when trying to use an expression which changes length with LazyFrames."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        super().__init__(self.message)
-
-
 class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
 
 class NarwhalsUnstableWarning(UserWarning):
     """Warning issued when a method or function is considered unstable in the stable api."""
+
+
+class PerformanceWarning(Warning): ...

@@ -29,8 +29,7 @@ if TYPE_CHECKING:
 class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     _implementation: Implementation = Implementation.IBIS
 
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     @property
@@ -81,7 +80,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -148,7 +146,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             func,
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -160,9 +157,14 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
+
+    def coalesce(self, *exprs: IbisExpr) -> IbisExpr:
+        def func(cols: Iterable[ir.Value]) -> ir.Value:
+            return ibis.coalesce(*cols)
+
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class IbisWhen(LazyWhen["IbisLazyFrame", "ir.Value", IbisExpr]):

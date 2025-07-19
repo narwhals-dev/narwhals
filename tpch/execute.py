@@ -38,7 +38,9 @@ BACKEND_NAMESPACE_KWARGS_MAP = {
     "sqlframe": (sqlframe, {"session": DuckDBSession()}),
 }
 
-DUCKDB_SKIPS = ["q15"]
+DUCKDB_SKIPS = [
+    "q15"  # needs `filter` which works with window expressions
+]
 
 QUERY_DATA_PATH_MAP = {
     "q1": (LINEITEM_PATH,),

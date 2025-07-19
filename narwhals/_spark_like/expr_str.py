@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._utils import _is_naive_format, not_implemented
 
@@ -18,7 +18,7 @@ class SparkLikeExprStringNamespace(
     LazyExprNamespace["SparkLikeExpr"], StringNamespace["SparkLikeExpr"]
 ):
     def len_chars(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.char_length)
+        return self.compliant._with_elementwise(self.compliant._F.char_length)
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
@@ -31,7 +31,7 @@ class SparkLikeExprStringNamespace(
                 self.compliant._F.lit(value),  # pyright: ignore[reportArgumentType]
             )
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def strip_chars(self, characters: str | None) -> SparkLikeExpr:
         import string
@@ -40,15 +40,15 @@ class SparkLikeExprStringNamespace(
             to_remove = characters if characters is not None else string.whitespace
             return self.compliant._F.btrim(expr, self.compliant._F.lit(to_remove))
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def starts_with(self, prefix: str) -> SparkLikeExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: self.compliant._F.startswith(expr, self.compliant._F.lit(prefix))
         )
 
     def ends_with(self, suffix: str) -> SparkLikeExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: self.compliant._F.endswith(expr, self.compliant._F.lit(suffix))
         )
 
@@ -59,7 +59,7 @@ class SparkLikeExprStringNamespace(
             )
             return contains_func(expr, self.compliant._F.lit(pattern))
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def slice(self, offset: int, length: int | None) -> SparkLikeExpr:
         # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
@@ -75,18 +75,18 @@ class SparkLikeExprStringNamespace(
             _length = self.compliant._F.lit(length) if length is not None else col_length
             return expr.substr(_offset, _length)
 
-        return self.compliant._with_callable(func)
+        return self.compliant._with_elementwise(func)
 
     def split(self, by: str) -> SparkLikeExpr:
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: self.compliant._F.split(expr, by)
         )
 
     def to_uppercase(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.upper)
+        return self.compliant._with_elementwise(self.compliant._F.upper)
 
     def to_lowercase(self) -> SparkLikeExpr:
-        return self.compliant._with_callable(self.compliant._F.lower)
+        return self.compliant._with_elementwise(self.compliant._F.lower)
 
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
@@ -99,13 +99,13 @@ class SparkLikeExprStringNamespace(
         else:
             format = strptime_to_pyspark_format(format)
             function = partial(F.to_timestamp, format=format)
-        return self.compliant._with_callable(
+        return self.compliant._with_elementwise(
             lambda expr: function(F.replace(expr, F.lit("T"), F.lit(" ")))
         )
 
     def to_date(self, format: str | None) -> SparkLikeExpr:
-        F = self._compliant_expr._F  # noqa: N806
-        return self._compliant_expr._with_callable(
+        F = self.compliant._F  # noqa: N806
+        return self.compliant._with_elementwise(
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
@@ -134,6 +134,8 @@ class SparkLikeExprStringNamespace(
                 .otherwise(expr)
             )
 
+        # can't use `_with_elementwise` due to `when` operator.
+        # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
 
     replace = not_implemented()

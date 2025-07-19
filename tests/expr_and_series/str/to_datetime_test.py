@@ -12,7 +12,6 @@ from narwhals._arrow.utils import parse_datetime_format
 from narwhals._pandas_like.utils import get_dtype_backend
 from tests.utils import (
     PANDAS_VERSION,
-    PYARROW_VERSION,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
@@ -151,7 +150,7 @@ def test_to_datetime_series_infer_fmt(
 def test_to_datetime_infer_fmt_from_date(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     if "pyspark" in str(constructor):
@@ -205,9 +204,6 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 def test_to_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest, format: str | None
 ) -> None:
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
-        # bugged
-        pytest.skip()
     if is_pyarrow_windows_no_tzdata(constructor) or (
         "sqlframe" in str(constructor) and format is not None and is_windows()
     ):

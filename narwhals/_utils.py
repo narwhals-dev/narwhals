@@ -5,7 +5,7 @@ import re
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import lru_cache, wraps
+from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from secrets import token_hex
@@ -24,7 +24,7 @@ from typing import (
 from warnings import warn
 
 from narwhals._enum import NoAutoEnum
-from narwhals._typing_compat import deprecated
+from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cudf,
     get_dask_dataframe,
@@ -46,7 +46,12 @@ from narwhals.dependencies import (
     is_polars_series,
     is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    PerformanceWarning,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -121,33 +126,6 @@ if TYPE_CHECKING:
     class _SupportsGet(Protocol):  # noqa: PYI046
         def __get__(self, instance: Any, owner: Any | None = None, /) -> Any: ...
 
-    class _StoresImplementation(Protocol):
-        _implementation: Implementation
-        """Implementation of native object (pandas, Polars, PyArrow, ...)."""
-
-    class _StoresBackendVersion(Protocol):
-        _backend_version: tuple[int, ...]
-        """Version tuple for a native package."""
-
-    class _StoresVersion(Protocol):
-        _version: Version
-        """Narwhals API version (V1 or MAIN)."""
-
-    class _LimitedContext(_StoresBackendVersion, _StoresVersion, Protocol):
-        """Provides 2 attributes.
-
-        - `_backend_version`
-        - `_version`
-        """
-
-    class _FullContext(_StoresImplementation, _LimitedContext, Protocol):
-        """Provides 3 attributes.
-
-        - `_implementation`
-        - `_backend_version`
-        - `_version`
-        """
-
     class _StoresColumns(Protocol):
         @property
         def columns(self) -> Sequence[str]: ...
@@ -191,59 +169,105 @@ class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
         ...
 
 
+class _StoresBackendVersion(Protocol):
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        """Version tuple for a native package."""
+        ...
+
+
+class _StoresVersion(Protocol):
+    _version: Version
+    """Narwhals API version (V1 or MAIN)."""
+
+
+class _StoresImplementation(Protocol):
+    _implementation: Implementation
+    """Implementation of native object (pandas, Polars, PyArrow, ...)."""
+
+
+class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
+    """Provides 2 attributes.
+
+    - `_implementation`
+    - `_version`
+    """
+
+
+class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
+    """Provides 3 attributes.
+
+    - `_implementation`
+    - `_backend_version`
+    - `_version`
+    """
+
+
+class ValidateBackendVersion(_StoresImplementation, Protocol):
+    """Ensure the target `Implementation` is on a supported version."""
+
+    def _validate_backend_version(self) -> None:
+        """Raise if installed version below `nw._utils.MIN_VERSIONS`.
+
+        **Only use this when moving between backends.**
+        Otherwise, the validation will have taken place already.
+        """
+        _ = self._implementation._backend_version()
+
+
 class Version(Enum):
     V1 = auto()
     MAIN = auto()
 
     @property
     def namespace(self) -> type[Namespace[Any]]:
-        if self is Version.MAIN:
-            from narwhals._namespace import Namespace
+        if self is Version.V1:
+            from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
-            return Namespace
-        from narwhals.stable.v1._namespace import Namespace
+            return NamespaceV1
+        from narwhals._namespace import Namespace
 
         return Namespace
 
     @property
     def dtypes(self) -> DTypes:
-        if self is Version.MAIN:
-            from narwhals import dtypes
+        if self is Version.V1:
+            from narwhals.stable.v1 import dtypes as dtypes_v1
 
-            return dtypes
-        from narwhals.stable.v1 import dtypes as v1_dtypes
+            return dtypes_v1
+        from narwhals import dtypes
 
-        return v1_dtypes
+        return dtypes
 
     @property
     def dataframe(self) -> type[DataFrame[Any]]:
-        if self is Version.MAIN:
-            from narwhals.dataframe import DataFrame
+        if self is Version.V1:
+            from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrame
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
+            return DataFrameV1
+        from narwhals.dataframe import DataFrame
 
-        return DataFrameV1
+        return DataFrame
 
     @property
     def lazyframe(self) -> type[LazyFrame[Any]]:
-        if self is Version.MAIN:
-            from narwhals.dataframe import LazyFrame
+        if self is Version.V1:
+            from narwhals.stable.v1 import LazyFrame as LazyFrameV1
 
-            return LazyFrame
-        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+            return LazyFrameV1
+        from narwhals.dataframe import LazyFrame
 
-        return LazyFrameV1
+        return LazyFrame
 
     @property
     def series(self) -> type[Series[Any]]:
-        if self is Version.MAIN:
-            from narwhals.series import Series
+        if self is Version.V1:
+            from narwhals.stable.v1 import Series as SeriesV1
 
-            return Series
-        from narwhals.stable.v1 import Series as SeriesV1
+            return SeriesV1
+        from narwhals.series import Series
 
-        return SeriesV1
+        return Series
 
 
 class Implementation(NoAutoEnum):
@@ -351,8 +375,7 @@ class Implementation(NoAutoEnum):
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
 
-        validate_backend_version(self, self._backend_version())
-
+        self._backend_version()
         module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
         return _import_native_namespace(module_name)
 
@@ -569,42 +592,15 @@ class Implementation(NoAutoEnum):
         return self is Implementation.SQLFRAME  # pragma: no cover
 
     def _backend_version(self) -> tuple[int, ...]:
-        """Returns backend version.
-
-        As a biproduct of loading the native namespace, we also store it as an attribute
-        under the `_native_namespace` name.
-        """
-        if self is Implementation.UNKNOWN:  # pragma: no cover
-            msg = "Cannot return backend version from UNKNOWN Implementation"
-            raise AssertionError(msg)
-
-        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(self, self.value)
-        native_namespace = _import_native_namespace(module_name)
-
-        into_version: ModuleType | str
-        if self.is_sqlframe():
-            import sqlframe._version
-
-            into_version = sqlframe._version
-        elif self.is_pyspark() or self.is_pyspark_connect():  # pragma: no cover
-            import pyspark  # ignore-banned-import
-
-            into_version = pyspark
-        elif self.is_dask():
-            import dask  # ignore-banned-import
-
-            into_version = dask
-        else:
-            into_version = native_namespace
-
-        return parse_version(version=into_version)
+        """Returns backend version."""
+        return backend_version(self)
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (1, 1, 3),
     Implementation.MODIN: (0, 8, 2),
     Implementation.CUDF: (24, 10),
-    Implementation.PYARROW: (11,),
+    Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
@@ -623,19 +619,46 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
 """Stores non default mapping from Implementation to module name"""
 
 
-def validate_backend_version(
-    implementation: Implementation, backend_version: tuple[int, ...]
-) -> None:
-    if backend_version < (min_version := MIN_VERSIONS[implementation]):
-        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {backend_version}"
-        raise ValueError(msg)
-
-
 @lru_cache(maxsize=16)
 def _import_native_namespace(module_name: str) -> ModuleType:
     from importlib import import_module
 
     return import_module(module_name)
+
+
+# NOTE: We can safely use an unbounded cache, the size is constrained by `len(Implementation._member_names_)`
+# Faster than `lru_cache`
+# https://docs.python.org/3/library/functools.html#functools.cache
+@cache
+def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
+    if not isinstance(implementation, Implementation):
+        assert_never(implementation)
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
+        msg = "Cannot return backend version from UNKNOWN Implementation"
+        raise AssertionError(msg)
+    into_version: ModuleType | str
+    impl = implementation
+    module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
+    native_namespace = _import_native_namespace(module_name)
+    if impl.is_sqlframe():
+        import sqlframe._version
+
+        into_version = sqlframe._version
+    elif impl.is_pyspark() or impl.is_pyspark_connect():  # pragma: no cover
+        import pyspark  # ignore-banned-import
+
+        into_version = pyspark
+    elif impl.is_dask():
+        import dask  # ignore-banned-import
+
+        into_version = dask
+    else:
+        into_version = native_namespace
+    version = parse_version(into_version)
+    if version < (min_version := MIN_VERSIONS[impl]):
+        msg = f"Minimum version of {impl} supported by Narwhals is {min_version}, found: {version}"
+        raise ValueError(msg)
+    return version
 
 
 def flatten(args: Any) -> list[Any]:
@@ -1034,7 +1057,6 @@ def maybe_set_index(
             native_obj,
             keys,
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
-            backend_version=obj._compliant_series._backend_version,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
     else:
@@ -1441,6 +1463,15 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 
 
+def issue_performance_warning(message: str) -> None:
+    """Issue a performance warning.
+
+    Arguments:
+        message: The message associated with the warning.
+    """
+    warn(message=message, category=PerformanceWarning, stacklevel=find_stacklevel())
+
+
 def validate_strict_and_pass_though(
     strict: bool | None,  # noqa: FBT001
     pass_through: bool | None,  # noqa: FBT001
@@ -1716,7 +1747,7 @@ def _remap_full_join_keys(
     return dict(zip(right_on, right_keys_suffixed))
 
 
-def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Table:
+def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.Table:
     """Guards `ArrowDataFrame.from_arrow` w/ safer imports.
 
     Arguments:
@@ -1727,12 +1758,7 @@ def _into_arrow_table(data: IntoArrowTable, context: _FullContext, /) -> pa.Tabl
         A PyArrow Table.
     """
     if find_spec("pyarrow"):
-        import pyarrow as pa  # ignore-banned-import
-
-        from narwhals._arrow.namespace import ArrowNamespace
-
-        version = context._version
-        ns = ArrowNamespace(backend_version=parse_version(pa), version=version)
+        ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
     else:  # pragma: no cover
         msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."

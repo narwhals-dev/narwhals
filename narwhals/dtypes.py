@@ -126,7 +126,7 @@ class Int128(SignedIntegerType):
 
         >>> s.cast(nw.Int128).dtype
         Int128
-        >>> nw.from_native(rel).schema["a"]
+        >>> nw.from_native(rel).collect_schema()["a"]
         Int128
     """
 
@@ -192,7 +192,7 @@ class UInt128(UnsignedIntegerType):
         >>> import duckdb
         >>> df_native = pd.DataFrame({"a": [2, 1, 3, 7]})
         >>> rel = duckdb.sql(" SELECT CAST (a AS UINT128) AS a FROM df_native ")
-        >>> nw.from_native(rel).schema["a"]
+        >>> nw.from_native(rel).collect_schema()["a"]
         UInt128
     """
 
@@ -745,7 +745,7 @@ class Time(TemporalType):
        Time
        >>> nw.from_native(ser_pa, series_only=True).dtype
        Time
-       >>> nw.from_native(rel).schema["t"]
+       >>> nw.from_native(rel).collect_schema()["t"]
        Time
     """
 
@@ -769,6 +769,6 @@ class Binary(DType):
         Binary
         >>> nw.from_native(ser_pa, series_only=True).dtype
         Binary
-        >>> nw.from_native(rel).schema["t"]
+        >>> nw.from_native(rel).collect_schema()["t"]
         Binary
     """

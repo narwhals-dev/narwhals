@@ -64,16 +64,26 @@ class PandasLikeNamespace(
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
-    # --- not in spec ---
-    def __init__(
-        self,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
+    def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
+
+    def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
+            return [
+                reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
@@ -94,7 +104,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -110,7 +119,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -229,7 +237,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]
@@ -255,7 +262,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     ).native.max(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]

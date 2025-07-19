@@ -29,8 +29,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
-    requires,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -57,7 +55,7 @@ if TYPE_CHECKING:
         _AsPyType,
         _BasicDataType,
     )
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -116,20 +114,14 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
 
 
 class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
+    _implementation = Implementation.PYARROW
+
     def __init__(
-        self,
-        native_series: ChunkedArrayAny,
-        *,
-        name: str,
-        backend_version: tuple[int, ...],
-        version: Version,
+        self, native_series: ChunkedArrayAny, *, name: str, version: Version
     ) -> None:
         self._name = name
         self._native_series: ChunkedArrayAny = native_series
-        self._implementation = Implementation.PYARROW
-        self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
         self._broadcast = False
 
     @property
@@ -137,12 +129,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._native_series
 
     def _with_version(self, version: Version) -> Self:
-        return self.__class__(
-            self.native,
-            name=self._name,
-            backend_version=self._backend_version,
-            version=version,
-        )
+        return self.__class__(self.native, name=self._name, version=version)
 
     def _with_native(
         self, series: ArrayOrScalar, *, preserve_broadcast: bool = False
@@ -157,7 +144,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         cls,
         data: Iterable[Any],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self:
@@ -168,7 +155,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def _from_scalar(self, value: Any) -> Self:
-        if self._backend_version < (13,) and hasattr(value, "as_py"):
+        if hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
 
@@ -178,17 +165,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     @classmethod
     def from_native(
-        cls, data: ChunkedArrayAny, /, *, context: _FullContext, name: str = ""
+        cls, data: ChunkedArrayAny, /, *, context: _LimitedContext, name: str = ""
     ) -> Self:
-        return cls(
-            data,
-            backend_version=context._backend_version,
-            version=context._version,
-            name=name,
-        )
+        return cls(data, version=context._version, name=name)
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _FullContext) -> Self:
+    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )
@@ -215,9 +197,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._arrow.namespace import ArrowNamespace
 
-        return ArrowNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return ArrowNamespace(version=self._version)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         other = cast("PythonLiteral | ArrowSeries | None", other)
@@ -505,12 +485,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        result = self.__class__(
-            self.native,
-            name=name,
-            backend_version=self._backend_version,
-            version=self._version,
-        )
+        result = self.__class__(self.native, name=name, version=self._version)
         result._broadcast = self._broadcast
         return result
 
@@ -648,10 +623,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             val_count = val_count.sort_by([(value_name_, "descending")])
 
         return ArrowDataFrame(
-            val_count,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
+            val_count, version=self._version, validate_column_names=True
         )
 
     def zip_with(self, mask: Self, other: Self) -> Self:
@@ -723,12 +695,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         from narwhals._arrow.dataframe import ArrowDataFrame
 
         df = pa.Table.from_arrays([self.native], names=[self.name])
-        return ArrowDataFrame(
-            df,
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=False,
-        )
+        return ArrowDataFrame(df, version=self._version, validate_column_names=False)
 
     def to_pandas(self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
@@ -846,7 +813,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return ArrowDataFrame(
             pa.Table.from_arrays(columns, names=cols),
-            backend_version=self._backend_version,
             version=self._version,
             validate_column_names=True,
         ).simple_select(*output_order)
@@ -903,7 +869,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         dtypes = self._version.dtypes
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
-    @requires.backend_version((13,))
     def cum_min(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_min(self.native, skip_nulls=True)
@@ -912,7 +877,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def cum_max(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_max(self.native, skip_nulls=True)
@@ -921,7 +885,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def cum_prod(self, *, reverse: bool) -> Self:
         result = (
             pc.cumulative_prod(self.native, skip_nulls=True)
@@ -1060,7 +1023,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
-    @requires.backend_version((13,))
     def hist(  # noqa: C901, PLR0912, PLR0915
         self,
         bins: list[float | int] | None,
@@ -1155,10 +1117,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         data["count"] = counts
 
         return ArrowDataFrame(
-            pa.Table.from_pydict(data),
-            backend_version=self._backend_version,
-            version=self._version,
-            validate_column_names=True,
+            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
         )
 
     def __iter__(self) -> Iterator[Any]:

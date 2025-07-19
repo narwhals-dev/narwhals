@@ -27,9 +27,7 @@ from narwhals._utils import (
     exclude_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,
-    parse_version,
     scale_bytes,
-    validate_backend_version,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -48,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
-    from narwhals._utils import Version, _FullContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -102,20 +100,20 @@ class PandasLikeDataFrame(
         native_dataframe: Any,
         *,
         implementation: Implementation,
-        backend_version: tuple[int, ...],
         version: Version,
         validate_column_names: bool,
+        validate_backend_version: bool = False,
     ) -> None:
         self._native_frame = native_dataframe
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
-        validate_backend_version(self._implementation, self._backend_version)
         if validate_column_names:
             check_column_names_are_unique(native_dataframe.columns)
+        if validate_backend_version:
+            self._validate_backend_version()
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _FullContext) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         tbl = _into_arrow_table(data, context)
         if implementation.is_pandas():
@@ -139,7 +137,7 @@ class PandasLikeDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -174,11 +172,10 @@ class PandasLikeDataFrame(
         return is_pandas_like_dataframe(obj)  # pragma: no cover
 
     @classmethod
-    def from_native(cls, data: Any, /, *, context: _FullContext) -> Self:
+    def from_native(cls, data: Any, /, *, context: _LimitedContext) -> Self:
         return cls(
             data,
             implementation=context._implementation,
-            backend_version=context._backend_version,
             version=context._version,
             validate_column_names=True,
         )
@@ -189,7 +186,7 @@ class PandasLikeDataFrame(
         data: _2DArray,
         /,
         *,
-        context: _FullContext,
+        context: _LimitedContext,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
@@ -217,9 +214,7 @@ class PandasLikeDataFrame(
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
-        return PandasLikeNamespace(
-            self._implementation, self._backend_version, version=self._version
-        )
+        return PandasLikeNamespace(self._implementation, version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation in {
@@ -239,7 +234,6 @@ class PandasLikeDataFrame(
         return self.__class__(
             self.native,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=version,
             validate_column_names=False,
         )
@@ -248,7 +242,6 @@ class PandasLikeDataFrame(
         return self.__class__(
             df,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
             validate_column_names=validate_column_names,
         )
@@ -262,12 +255,7 @@ class PandasLikeDataFrame(
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)
         if other.native.index is not index:
-            return set_index(
-                other.native,
-                index,
-                implementation=other._implementation,
-                backend_version=other._backend_version,
-            )
+            return set_index(other.native, index, implementation=other._implementation)
         return other.native
 
     @property
@@ -390,12 +378,7 @@ class PandasLikeDataFrame(
     # --- reshape ---
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(
-            select_columns_by_name(
-                self.native,
-                list(column_names),
-                self._backend_version,
-                self._implementation,
-            ),
+            select_columns_by_name(self.native, list(column_names), self._implementation),
             validate_column_names=False,
         )
 
@@ -476,12 +459,7 @@ class PandasLikeDataFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(
-            rename(
-                self.native,
-                columns=mapping,
-                implementation=self._implementation,
-                backend_version=self._backend_version,
-            )
+            rename(self.native, columns=mapping, implementation=self._implementation)
         )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
@@ -511,43 +489,35 @@ class PandasLikeDataFrame(
             return PandasLikeDataFrame(
                 self.native,
                 implementation=self._implementation,
-                backend_version=self._backend_version,
                 version=self._version,
                 validate_column_names=False,
             )
 
         if backend is Implementation.PANDAS:
-            import pandas as pd  # ignore-banned-import
-
-            return PandasLikeDataFrame(
-                self.to_pandas(),
-                implementation=Implementation.PANDAS,
-                backend_version=parse_version(pd),
-                version=self._version,
-                validate_column_names=False,
-            )
+            kwds: dict[str, Any] = {
+                "implementation": Implementation.PANDAS,
+                "version": self._version,
+                "validate_column_names": False,
+            }
+            if backend is not self._implementation:
+                kwds.update(validate_backend_version=True)
+            return PandasLikeDataFrame(self.to_pandas(), **kwds)
 
         if backend is Implementation.PYARROW:
-            import pyarrow as pa  # ignore-banned-import
-
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 native_dataframe=self.to_arrow(),
-                backend_version=parse_version(pa),
+                validate_backend_version=True,
                 version=self._version,
                 validate_column_names=False,
             )
 
         if backend is Implementation.POLARS:
-            import polars as pl  # ignore-banned-import
-
             from narwhals._polars.dataframe import PolarsDataFrame
 
             return PolarsDataFrame(
-                df=self.to_polars(),
-                backend_version=parse_version(pl),
-                version=self._version,
+                df=self.to_polars(), validate_backend_version=True, version=self._version
             )
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
@@ -587,7 +557,10 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on)
             if right_key != left_key
         ]
-        return result_native.drop(columns=extra)
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=extra, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
@@ -614,17 +587,17 @@ class PandasLikeDataFrame(
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=(*self.columns, *other.columns)
             )
-            return (
-                self.native.assign(**{key_token: 0})
-                .merge(
-                    other.native.assign(**{key_token: 0}),
-                    how="inner",
-                    left_on=key_token,
-                    right_on=key_token,
-                    suffixes=("", suffix),
-                )
-                .drop(columns=key_token)
+            result_native = self.native.assign(**{key_token: 0}).merge(
+                other.native.assign(**{key_token: 0}),
+                how="inner",
+                left_on=key_token,
+                right_on=key_token,
+                suffixes=("", suffix),
             )
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
+            return result_native
         return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
@@ -658,18 +631,18 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return (
-            self.native.merge(
-                other_native,
-                # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
-                how="left" if implementation.is_pandas() else "outer",
-                indicator=indicator_token,
-                left_on=left_on,
-                right_on=left_on,
-            )
-            .loc[lambda t: t[indicator_token] == "left_only"]
-            .drop(columns=indicator_token)
-        )
+        result_native = self.native.merge(
+            other_native,
+            # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
+            how="left" if implementation.is_pandas() else "outer",
+            indicator=indicator_token,
+            left_on=left_on,
+            right_on=left_on,
+        ).loc[lambda t: t[indicator_token] == "left_only"]
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_filter_rename(
         self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]
@@ -681,18 +654,14 @@ class PandasLikeDataFrame(
         Notice that a native object is returned.
         """
         implementation = self._implementation
-        backend_version = self._backend_version
-
         return rename(
             select_columns_by_name(
                 other.native,
                 column_names=columns_to_select,
-                backend_version=backend_version,
                 implementation=implementation,
             ),
             columns=columns_mapping,
             implementation=implementation,
-            backend_version=backend_version,
         ).drop_duplicates()
 
     def join(
@@ -783,8 +752,6 @@ class PandasLikeDataFrame(
 
     # --- lazy-only ---
     def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
-        from narwhals.utils import parse_version
-
         pandas_df = self.to_pandas()
         if backend is None:
             return self
@@ -795,7 +762,7 @@ class PandasLikeDataFrame(
 
             return DuckDBLazyFrame(
                 df=duckdb.table("pandas_df"),
-                backend_version=parse_version(duckdb),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.POLARS:
@@ -805,18 +772,27 @@ class PandasLikeDataFrame(
 
             return PolarsLazyFrame(
                 df=pl.from_pandas(pandas_df).lazy(),
-                backend_version=parse_version(pl),
+                validate_backend_version=True,
                 version=self._version,
             )
         elif backend is Implementation.DASK:
-            import dask  # ignore-banned-import
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
 
             return DaskLazyFrame(
                 native_dataframe=dd.from_pandas(pandas_df),
-                backend_version=parse_version(dask),
+                validate_backend_version=True,
+                version=self._version,
+            )
+        elif backend.is_ibis():
+            import ibis  # ignore-banned-import
+
+            from narwhals._ibis.dataframe import IbisLazyFrame
+
+            return IbisLazyFrame(
+                ibis.memtable(pandas_df, columns=self.columns),
+                validate_backend_version=True,
                 version=self._version,
             )
         raise AssertionError  # pragma: no cover

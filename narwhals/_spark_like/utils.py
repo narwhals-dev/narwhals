@@ -6,7 +6,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, overload
 
 from narwhals._utils import Implementation, isinstance_or_issubclass
-from narwhals.exceptions import UnsupportedDTypeError
+from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from sqlframe.base.session import _BaseSession as Session
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._utils import Version
@@ -129,7 +130,7 @@ def fetch_session_time_zone(session: SparkSession) -> str:
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: IntoDType, version: Version, spark_types: ModuleType
+    dtype: IntoDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> _NativeDType:
     dtypes = version.dtypes
     if TYPE_CHECKING:
@@ -156,18 +157,20 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Date):
         return native.DateType()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
+        if (tu := dtype.time_unit) != "us":  # pragma: no cover
+            msg = f"Only microsecond precision is supported for PySpark, got: {tu}."
+            raise ValueError(msg)
         dt_time_zone = dtype.time_zone
         if dt_time_zone is None:
             return native.TimestampNTZType()
-        if dt_time_zone != "UTC":  # pragma: no cover
-            msg = f"Only UTC time zone is supported for PySpark, got: {dt_time_zone}"
+        if dt_time_zone != (tz := fetch_session_time_zone(session)):  # pragma: no cover
+            msg = f"Only {tz} time zone is supported, as that's the connection time zone, got: {dt_time_zone}"
             raise ValueError(msg)
-        return native.TimestampType()
+        # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
+        return native.TimestampType()  # pragma: no cover
     if isinstance_or_issubclass(dtype, (dtypes.List, dtypes.Array)):
         return native.ArrayType(
-            elementType=narwhals_to_native_dtype(
-                dtype.inner, version=version, spark_types=native
-            )
+            elementType=narwhals_to_native_dtype(dtype.inner, version, native, session)
         )
     if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
         return native.StructType(
@@ -175,7 +178,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
                 native.StructField(
                     name=field.name,
                     dataType=narwhals_to_native_dtype(
-                        field.dtype, version=version, spark_types=native
+                        field.dtype, version, native, session
                     ),
                 )
                 for field in dtype.fields
@@ -290,3 +293,31 @@ def true_divide(F: Any, left: Column, right: Column) -> Column:  # noqa: N803
     # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
     divide = getattr(F, "try_divide", operator.truediv)
     return divide(left, right)
+
+
+def catch_pyspark_sql_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception
+
+
+def catch_pyspark_connect_exception(
+    exception: Exception, /
+) -> ColumnNotFoundError | Exception:  # pragma: no cover
+    from pyspark.errors.exceptions.connect import AnalysisException
+
+    if isinstance(exception, AnalysisException) and str(exception).startswith(
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION]"
+    ):
+        return ColumnNotFoundError(str(exception))
+    # Just return exception as-is.
+    return exception

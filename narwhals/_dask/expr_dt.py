@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._compliant.expr import LazyExprNamespace
 from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
-    UNIT_DICT,
+    ALIAS_DICT,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
     native_to_narwhals_dtype,
@@ -154,9 +154,22 @@ class DaskExprDateTimeNamespace(
         )
 
     def truncate(self, every: str) -> DaskExpr:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        unit = interval.unit
         if unit in {"mo", "q", "y"}:
-            msg = f"Truncating to {unit} is not supported yet for dask."
+            msg = f"Truncating to {unit} is not yet supported for dask."
             raise NotImplementedError(msg)
-        freq = f"{multiple}{UNIT_DICT.get(unit, unit)}"
+        freq = f"{interval.multiple}{ALIAS_DICT.get(unit, unit)}"
         return self.compliant._with_callable(lambda expr: expr.dt.floor(freq), "truncate")
+
+    def offset_by(self, by: str) -> DaskExpr:
+        def func(s: dx.Series, by: str) -> dx.Series:
+            interval = Interval.parse_no_constraints(by)
+            unit = interval.unit
+            if unit in {"y", "q", "mo", "d", "ns"}:
+                msg = f"Offsetting by {unit} is not yet supported for dask."
+                raise NotImplementedError(msg)
+            offset = interval.to_timedelta()
+            return s.add(offset)
+
+        return self.compliant._with_callable(func, "offset_by", by=by)

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
@@ -25,14 +25,16 @@ if TYPE_CHECKING:
 
 
 class PolarsExpr:
-    def __init__(
-        self, expr: pl.Expr, version: Version, backend_version: tuple[int, ...]
-    ) -> None:
+    _implementation = Implementation.POLARS
+
+    def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
-        self._implementation = Implementation.POLARS
         self._version = version
-        self._backend_version = backend_version
         self._metadata: ExprMetadata | None = None
+
+    @property
+    def _backend_version(self) -> tuple[int, ...]:
+        return self._implementation._backend_version()
 
     @property
     def native(self) -> pl.Expr:
@@ -42,11 +44,11 @@ class PolarsExpr:
         return "PolarsExpr"
 
     def _with_native(self, expr: pl.Expr) -> Self:
-        return self.__class__(expr, self._version, self._backend_version)
+        return self.__class__(expr, self._version)
 
     @classmethod
     def _from_series(cls, series: Any) -> Self:
-        return cls(series.native, series._version, series._backend_version)
+        return cls(series.native, series._version)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
@@ -64,7 +66,7 @@ class PolarsExpr:
         return {name: min_samples}
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version, self._backend_version)
+        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
     def ewm_mean(
@@ -144,7 +146,7 @@ class PolarsExpr:
         self, function: Callable[[Any], Any], return_dtype: IntoDType | None
     ) -> Self:
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
         )
@@ -160,7 +162,7 @@ class PolarsExpr:
         return_dtype: IntoDType | None,
     ) -> Self:
         return_dtype_pl = (
-            narwhals_to_native_dtype(return_dtype, self._version, self._backend_version)
+            narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
         )
@@ -222,9 +224,7 @@ class PolarsExpr:
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         from narwhals._polars.namespace import PolarsNamespace
 
-        return PolarsNamespace(
-            backend_version=self._backend_version, version=self._version
-        )
+        return PolarsNamespace(version=self._version)
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
@@ -327,8 +327,13 @@ class PolarsExprNamespace:
 
 class PolarsExprDateTimeNamespace(PolarsExprNamespace):
     def truncate(self, every: str) -> PolarsExpr:
-        parse_interval_string(every)  # Ensure consistent error message is raised.
+        Interval.parse(every)  # Ensure consistent error message is raised.
         return self.compliant._with_native(self.native.dt.truncate(every))
+
+    def offset_by(self, by: str) -> PolarsExpr:
+        # Ensure consistent error message is raised.
+        Interval.parse_no_constraints(by)
+        return self.compliant._with_native(self.native.dt.offset_by(by))
 
     def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
         def func(*args: Any, **kwargs: Any) -> PolarsExpr:

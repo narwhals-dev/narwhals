@@ -18,7 +18,7 @@ from narwhals._constants import (
     US_PER_MINUTE,
     US_PER_SECOND,
 )
-from narwhals._duration import parse_interval_string
+from narwhals._duration import Interval
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -202,7 +202,26 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         return self.with_native(pc.multiply(self.native, factor).cast(pa.int64()))
 
     def truncate(self, every: str) -> ArrowSeries:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
         return self.with_native(
-            pc.floor_temporal(self.native, multiple=multiple, unit=UNITS_DICT[unit])
+            pc.floor_temporal(self.native, interval.multiple, UNITS_DICT[interval.unit])
         )
+
+    def offset_by(self, by: str) -> ArrowSeries:
+        interval = Interval.parse_no_constraints(by)
+        native = self.native
+        if interval.unit in {"y", "q", "mo"}:
+            msg = f"Offsetting by {interval.unit} is not yet supported for pyarrow."
+            raise NotImplementedError(msg)
+        dtype = self.compliant.dtype
+        datetime_dtype = self.version.dtypes.Datetime
+        if interval.unit == "d" and isinstance(dtype, datetime_dtype) and dtype.time_zone:
+            offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
+            native_naive = pc.local_timestamp(native)
+            result = pc.assume_timezone(pc.add(native_naive, offset), dtype.time_zone)
+            return self.with_native(result)
+        if interval.unit == "ns":  # pragma: no cover
+            offset = lit(interval.multiple, pa.duration("ns"))  # type: ignore[assignment]
+        else:
+            offset = lit(interval.to_timedelta())
+        return self.with_native(pc.add(native, offset))

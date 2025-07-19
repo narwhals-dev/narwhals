@@ -7,7 +7,6 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -22,12 +21,7 @@ expected = {"cum_prod": [1, 2, None, 6], "reverse_cum_prod": [6, 6, None, 3]}
 def test_cum_prod_expr(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
 ) -> None:
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_prod" if reverse else "cum_prod"
@@ -40,12 +34,7 @@ def test_cum_prod_expr(
 def test_cum_prod_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

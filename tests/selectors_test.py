@@ -7,7 +7,7 @@ from typing import Literal
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1.selectors as ncs
+import narwhals.selectors as ncs
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -85,7 +85,6 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "pyspark" in str(constructor)
         or "duckdb" in str(constructor)
         or "dask" in str(constructor)
-        or ("pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,))
         or ("pyarrow" in str(constructor) and is_windows())
         or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
         or "ibis" in str(constructor)
@@ -255,9 +254,6 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
         # bug in old polars
-        pytest.skip()
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (12,):
-        # bug in old pyarrow
         pytest.skip()
     if (
         "duckdb" in str(constructor)

@@ -4,11 +4,16 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
+from tests.utils import PANDAS_VERSION
 
 
-def test_repr() -> None:
+def test_repr(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
     import duckdb
+
+    if PANDAS_VERSION >= (3,):
+        # https://github.com/duckdb/duckdb/issues/18297
+        request.applymarker(pytest.mark.xfail)
 
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["fdaf", "fda", "cf"]})
     result = nw.from_native(df).__repr__()
