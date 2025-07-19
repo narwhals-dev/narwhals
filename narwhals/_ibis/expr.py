@@ -78,6 +78,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._window_function or default_window_func
 
+    def _function(self, name: str, *args: ir.Value) -> ir.Value:
+        expr = args[0]
+        return getattr(expr, name)(*args[1:])
+
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
 
@@ -255,6 +259,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
         return self._with_callable(op, other=other)
 
+    def _with_elementwise(self, op: Callable[..., ir.Value]) -> Self:
+        return self._with_callable(op)
+
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
             self._call,
@@ -280,9 +287,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
-
-    def abs(self) -> Self:
-        return self._with_callable(lambda expr: expr.abs())
 
     def mean(self) -> Self:
         return self._with_callable(lambda expr: expr.mean())

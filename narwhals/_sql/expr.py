@@ -21,6 +21,8 @@ class SQLExpr(
     LazyExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
+    def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
+
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
@@ -43,6 +45,7 @@ class SQLExpr(
         cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
     ) -> Self: ...
 
+    def _with_elementwise(self, op: Callable[..., NativeExprT]) -> Self: ...
     def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self: ...
 
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]
@@ -106,6 +109,9 @@ class SQLExpr(
 
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
+
+    def abs(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("abs", expr))
 
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()

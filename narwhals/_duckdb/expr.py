@@ -91,6 +91,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._window_function or default_window_func
 
+    def _function(self, name: str, *args: Expression) -> Expression:
+        return F(name, *args)
+
     def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
         return self._call(df)
 
@@ -342,9 +345,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def __invert__(self) -> Self:
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_elementwise(invert)
-
-    def abs(self) -> Self:
-        return self._with_elementwise(lambda expr: F("abs", expr))
 
     def mean(self) -> Self:
         return self._with_callable(lambda expr: F("mean", expr))
