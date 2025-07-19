@@ -93,22 +93,18 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         expr: ir.Value,
         partition_by: Sequence[str | ir.Value] = (),
         order_by: Sequence[str | ir.Column] = (),
-        rows_start: str | None = None,
-        rows_end: str | None = None,
+        rows_start: int | None = None,
+        rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
     ) -> ir.Value:
         if rows_start is not None and rows_end is not None:
-            mapping = {
-                "unbounded preceding": None,
-                "unbounded following": None,
-                "current row": 0,
-            }
-            rows_between = {
-                "preceding": mapping[rows_start],
-                "following": mapping[rows_end],
-            }
+            rows_between = {"preceding": -rows_start, "following": rows_end}
+        elif rows_end is not None:
+            rows_between = {"following": rows_end}
+        elif rows_start is not None:
+            rows_between = {"preceding": -rows_start}
         else:
             rows_between = {}
         window = ibis.window(
