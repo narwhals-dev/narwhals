@@ -634,7 +634,13 @@ XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
     [
         (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
         (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
-        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        pytest.param(
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            None,
+            id="pandas-pyarrow-na-order",
+        ),
         (
             ["a"],
             ["c"],
@@ -656,6 +662,13 @@ def test_group_by_agg_first(
             "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
+        )
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            "[pyarrow]" in request.node.name
+            and "pandas-pyarrow-na-order" in request.node.name,
+            reason="<NA> marker seems to not respect ordering",
         )
     )
     data = {
