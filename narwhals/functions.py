@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import platform
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from functools import partial
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
@@ -18,7 +19,6 @@ from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
-    _get_version,
     deprecate_native_namespace,
     flatten,
     is_compliant_expr,
@@ -549,6 +549,17 @@ def _get_sys_info() -> dict[str, str]:
     return dict(blob)
 
 
+def _get_dep_info(
+    target: str, dists: Iterable[tuple[str, str]]
+) -> Iterator[tuple[str, str]]:
+    def gen() -> Iterator[tuple[str, str]]:
+        for dist in dists:
+            if dist[0].startswith(target):
+                yield dist
+
+    yield next(gen(), (target, ""))
+
+
 def _get_deps_info() -> dict[str, str]:
     """Overview of the installed version of main dependencies.
 
@@ -562,20 +573,16 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from narwhals import __version__
+    from importlib.metadata import distributions
 
-    deps_info = {"narwhals": __version__}
-
-    for impl in Implementation:
-        if impl in {Implementation.UNKNOWN, Implementation.PYSPARK_CONNECT}:
-            continue
-
-        try:
-            deps_info[impl.name.lower()] = _get_version(impl)
-        except ModuleNotFoundError:
-            deps_info[impl.name.lower()] = ""
-
-    return deps_info
+    extra_names = ("narwhals", "numpy")
+    member_names = Implementation._member_names_
+    exclude = {"PYSPARK_CONNECT", "UNKNOWN"}
+    target_names = tuple(
+        name.lower() for name in (*extra_names, *member_names) if name not in exclude
+    )
+    dists = sorted([(d.name, d.version) for d in distributions()], key=lambda t: t[0])
+    return dict(chain.from_iterable(_get_dep_info(name, dists) for name in target_names))
 
 
 def show_versions() -> None:

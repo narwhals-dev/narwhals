@@ -595,7 +595,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (1, 1, 3),
     Implementation.MODIN: (0, 8, 2),
     Implementation.CUDF: (24, 10),
-    Implementation.PYARROW: (11,),
+    Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
     Implementation.POLARS: (0, 20, 4),
@@ -626,23 +626,15 @@ def _import_native_namespace(module_name: str) -> ModuleType:
 # https://docs.python.org/3/library/functools.html#functools.cache
 @cache
 def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
-    into_version = _get_version(implementation)
-    version = parse_version(into_version)
-    if version < (min_version := MIN_VERSIONS[implementation]):
-        msg = f"Minimum version of {implementation} supported by Narwhals is {min_version}, found: {version}"
-        raise ValueError(msg)
-    return version
-
-
-@cache
-def _get_version(implementation: Implementation) -> str:
     if not isinstance(implementation, Implementation):
         assert_never(implementation)
     if implementation is Implementation.UNKNOWN:  # pragma: no cover
         msg = "Cannot return backend version from UNKNOWN Implementation"
         raise AssertionError(msg)
-    into_version: ModuleType
+    into_version: ModuleType | str
     impl = implementation
+    module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
+    native_namespace = _import_native_namespace(module_name)
     if impl.is_sqlframe():
         import sqlframe._version
 
@@ -656,11 +648,12 @@ def _get_version(implementation: Implementation) -> str:
 
         into_version = dask
     else:
-        module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
-        native_namespace = _import_native_namespace(module_name)
         into_version = native_namespace
-
-    return into_version.__version__
+    version = parse_version(into_version)
+    if version < (min_version := MIN_VERSIONS[impl]):
+        msg = f"Minimum version of {impl} supported by Narwhals is {min_version}, found: {version}"
+        raise ValueError(msg)
+    return version
 
 
 def flatten(args: Any) -> list[Any]:
