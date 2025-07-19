@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._dask.expr import DaskExpr
@@ -18,6 +18,9 @@ class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"])
 
 
 class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # type: ignore[misc]
+    _depth: ClassVar = 0
+    _scalar_kwargs: ClassVar = {}
+
     def _to_expr(self) -> DaskExpr:
         return DaskExpr(
             self._call,

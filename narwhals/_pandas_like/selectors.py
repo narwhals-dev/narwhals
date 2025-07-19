@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
 from narwhals._pandas_like.expr import PandasLikeExpr
@@ -21,6 +21,9 @@ class PandasSelectorNamespace(
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
+    _depth: ClassVar = 0
+    _scalar_kwargs: ClassVar = {}
+
     def _to_expr(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,
