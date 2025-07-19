@@ -688,6 +688,6 @@ class DaskExpr(
     tail: not_implemented = not_implemented()
 
     # namespaces
-    list: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()
-    struct: not_implemented = not_implemented()
+    list: not_implemented = not_implemented()  # type: ignore[assignment]
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
+    struct: not_implemented = not_implemented()  # type: ignore[assignment]
