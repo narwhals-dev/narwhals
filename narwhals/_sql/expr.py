@@ -122,7 +122,7 @@ class SQLExpr(
             }
             return [
                 self._when(
-                    self._window_expression(
+                    self._window_expression(  # type: ignore[operator]
                         self._function("count", expr), **window_kwargs
                     )
                     >= self._lit(min_samples),
@@ -300,7 +300,7 @@ class SQLExpr(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                expr
+                expr  # type: ignore[operator]
                 - self._window_expression(
                     self._function("lag", expr), inputs.partition_by, inputs.order_by
                 )
