@@ -85,6 +85,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)
 
+    def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
+        return ibis.cases((condition, value))
+
     def _window_expression(
         self,
         expr: ir.Value,
@@ -127,12 +130,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
     def _rolling_window_func(
         self,
-        *,
         func_name: Literal["sum", "mean", "std", "var"],
-        center: bool,
         window_size: int,
         min_samples: int,
         ddof: int | None = None,
+        *,
+        center: bool,
     ) -> IbisWindowFunction:
         supported_funcs = ["sum", "mean", "std", "var"]
 
@@ -453,52 +456,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
             ]
 
         return self._with_window_function(func)
-
-    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="sum",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="mean",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-            )
-        )
-
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="var",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
-
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self:
-        return self._with_window_function(
-            self._rolling_window_func(
-                func_name="std",
-                center=center,
-                window_size=window_size,
-                min_samples=min_samples,
-                ddof=ddof,
-            )
-        )
 
     def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
