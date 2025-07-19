@@ -8,7 +8,7 @@ from narwhals._typing_compat import Protocol38
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
 
     from typing_extensions import Self, TypeIs
 
@@ -30,15 +30,6 @@ class SQLExpr(
         return hasattr(obj, "__narwhals_expr__")
 
     def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
-    def alias(self, name: str) -> Self:
-        def fn(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self._with_alias_output_names(fn)
-
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @property

@@ -167,15 +167,6 @@ class DaskExpr(
             scalar_kwargs=scalar_kwargs,
         )
 
-    def alias(self, name: str) -> Self:
-        def fn(names: Sequence[str]) -> Sequence[str]:
-            if len(names) != 1:
-                msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
-            return [name]
-
-        return self._with_alias_output_names(fn)
-
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
         return type(self)(
             call=self._call,
