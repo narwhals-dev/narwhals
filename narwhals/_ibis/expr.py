@@ -80,6 +80,18 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
     def _function(self, name: str, *args: ir.Value) -> ir.Value:
         expr = args[0]
+        if name == "var_pop":
+            assert not args  # noqa: S101
+            return cast("ir.NumericColumn", expr).var(how="pop")
+        if name == "var_samp":
+            assert not args  # noqa: S101
+            return cast("ir.NumericColumn", expr).var(how="sample")
+        if name == "std_pop":
+            assert not args  # noqa: S101
+            return cast("ir.NumericColumn", expr).std(how="pop")
+        if name == "std_sample":
+            assert not args  # noqa: S101
+            return cast("ir.NumericColumn", expr).std(how="sample")
         return getattr(expr, name)(*args[1:])
 
     def _lit(self, value: Any) -> ir.Value:
@@ -123,61 +135,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         from narwhals._ibis.namespace import IbisNamespace
 
         return IbisNamespace(version=self._version)
-
-    def _rolling_window_func(
-        self,
-        func_name: Literal["sum", "mean", "std", "var"],
-        window_size: int,
-        min_samples: int,
-        ddof: int | None = None,
-        *,
-        center: bool,
-    ) -> IbisWindowFunction:
-        supported_funcs = ["sum", "mean", "std", "var"]
-
-        if center:
-            preceding = window_size // 2
-            following = window_size - preceding - 1
-        else:
-            preceding = window_size - 1
-            following = 0
-
-        def func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            window = ibis.window(
-                group_by=list(inputs.partition_by),
-                order_by=self._sort(*inputs.order_by),
-                preceding=preceding,
-                following=following,
-            )
-
-            def inner_f(expr: ir.NumericColumn) -> ir.Value:
-                if func_name in {"sum", "mean"}:
-                    func_ = getattr(expr, func_name)()
-                elif func_name == "var" and ddof == 0:
-                    func_ = expr.var(how="pop")
-                elif func_name in "var" and ddof == 1:
-                    func_ = expr.var(how="sample")
-                elif func_name == "std" and ddof == 0:
-                    func_ = expr.std(how="pop")
-                elif func_name == "std" and ddof == 1:
-                    func_ = expr.std(how="sample")
-                elif func_name in {"var", "std"}:  # pragma: no cover
-                    msg = f"Only ddof=0 and ddof=1 are currently supported for rolling_{func_name}."
-                    raise ValueError(msg)
-                else:  # pragma: no cover
-                    msg = f"Only the following functions are supported: {supported_funcs}.\nGot: {func_name}."
-                    raise ValueError(msg)
-
-                rolling_calc = func_.over(window)
-                valid_count = expr.count().over(window)
-                return ibis.cases(
-                    (valid_count >= ibis.literal(min_samples), rolling_calc),
-                    else_=ibis.null(),
-                )
-
-            return [inner_f(cast("ir.NumericColumn", expr)) for expr in self(df)]
-
-        return func
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Ibis does its own broadcasting.
