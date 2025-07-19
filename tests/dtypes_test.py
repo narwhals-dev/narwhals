@@ -10,6 +10,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import PerformanceWarning
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -227,7 +228,7 @@ def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
 
     if POLARS_VERSION >= (1, 18):
-        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).schema
+        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).collect_schema()
         assert result["a"] == nw.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
@@ -237,14 +238,15 @@ def test_huge_int() -> None:
         select cast(a as int128) as a
         from df
                      """)
-    result = nw.from_native(rel).schema
+    with pytest.warns(PerformanceWarning):
+        result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
 
     rel = duckdb.sql("""
         select cast(a as uint128) as a
         from df
                      """)
-    result = nw.from_native(rel).schema
+    result = nw.from_native(rel).collect_schema()
     assert result["a"] == nw.UInt128
 
     # TODO(unassigned): once other libraries support Int128/UInt128,
@@ -266,11 +268,13 @@ def test_decimal() -> None:
         select *
         from df
                      """)
-    result = nw.from_native(rel).schema
+    result = nw.from_native(rel).collect_schema()
     assert result["a"] == nw.Decimal
-    result = nw.from_native(df.to_pandas(use_pyarrow_extension_array=True)).schema
+    result = nw.from_native(
+        df.to_pandas(use_pyarrow_extension_array=True)
+    ).collect_schema()
     assert result["a"] == nw.Decimal
-    result = nw.from_native(df.to_arrow()).schema
+    result = nw.from_native(df.to_arrow()).collect_schema()
     assert result["a"] == nw.Decimal
 
 
