@@ -149,7 +149,7 @@ class SparkLikeExpr(LazyExpr["SparkLikeLazyFrame", "Column"]):
         )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:
-        """Wraps `Window().paritionBy`, with default and `WindowInputs` handling."""
+        """Wraps `Window().partitionBy`, with default and `WindowInputs` handling."""
         return self._Window.partitionBy(*cols or [self._F.lit(1)])
 
     def __narwhals_expr__(self) -> None: ...
