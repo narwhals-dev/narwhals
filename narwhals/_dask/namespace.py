@@ -344,7 +344,7 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
         return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
 
 
-class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr):
+class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr, DaskWhen], DaskExpr):
     _depth: int = 0
     _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
     _function_name: str = "whenthen"

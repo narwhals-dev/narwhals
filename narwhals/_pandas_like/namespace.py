@@ -428,7 +428,8 @@ class PandasWhen(
 
 
 class PandasThen(
-    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr], PandasLikeExpr
+    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, PandasWhen],
+    PandasLikeExpr,
 ):
     _depth: int = 0
     _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012

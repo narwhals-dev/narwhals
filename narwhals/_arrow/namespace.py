@@ -301,7 +301,9 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
         return pc.if_else(when, then, otherwise)
 
 
-class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr):
+class ArrowThen(
+    CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr, ArrowWhen], ArrowExpr
+):
     _depth: int = 0
     _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
     _function_name: str = "whenthen"
