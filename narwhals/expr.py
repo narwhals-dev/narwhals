@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 from narwhals._expression_parsing import (
     ExprMetadata,
@@ -53,6 +53,8 @@ if TYPE_CHECKING:
 
 
 class Expr:
+    _accessors: ClassVar[set[str]] = {"cat", "dt", "list", "name", "str", "struct"}
+
     def __init__(self, to_compliant_expr: _ToCompliant, metadata: ExprMetadata) -> None:
         # callable from CompliantNamespace to CompliantExpr
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
