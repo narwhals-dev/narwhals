@@ -132,7 +132,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
             window = ibis.window(
                 group_by=list(inputs.partition_by),
                 order_by=self._sort(
-                    *inputs.order_by, descending=reverse, nulls_last=reverse
+                    *inputs.order_by, descending=[reverse], nulls_last=[reverse]
                 ),
                 preceding=None,  # unbounded
                 following=0,
@@ -202,16 +202,23 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         return self
 
     def _sort(
-        self, *cols: ir.Column | str, descending: bool = False, nulls_last: bool = False
+        self,
+        *cols: ir.Column | str,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[ir.Column]:
+        descending = descending or [False] * len(cols)
+        nulls_last = nulls_last or [False] * len(cols)
         mapping = {
             (False, False): partial(ibis.asc, nulls_first=True),
             (False, True): partial(ibis.asc, nulls_first=False),
             (True, False): partial(ibis.desc, nulls_first=True),
             (True, True): partial(ibis.desc, nulls_first=False),
         }
-        sort = mapping[(descending, nulls_last)]
-        yield from (cast("ir.Column", sort(col)) for col in cols)
+        yield from (
+            cast("ir.Column", mapping[(_desc, _nulls_last)](col))
+            for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
+        )
 
     @classmethod
     def from_column_names(
@@ -468,7 +475,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
                     ibis.window(
                         group_by=[*inputs.partition_by, expr],
                         order_by=self._sort(
-                            *inputs.order_by, descending=True, nulls_last=True
+                            *inputs.order_by, descending=[True], nulls_last=[True]
                         ),
                     )
                 )
@@ -590,7 +597,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         def _rank(expr: ir.Column) -> ir.Column:
-            order_by = next(self._sort(expr, descending=descending, nulls_last=True))
+            order_by = next(self._sort(expr, descending=[descending], nulls_last=[True]))
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
