@@ -641,13 +641,7 @@ XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
             {"descending": True},
             None,
         ),
-        (
-            ["a"],
-            ["c"],
-            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
-            None,
-            [XFAIL_PANDAS_SKIPNA],
-        ),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None, None),
         (
             ["a"],
             ["c"],
