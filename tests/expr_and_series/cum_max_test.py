@@ -7,7 +7,6 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -22,12 +21,7 @@ expected = {"cum_max": [1, 3, None, 3], "reverse_cum_max": [3, 3, None, 2]}
 def test_cum_max_expr(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
 ) -> None:
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_max" if reverse else "cum_max"
@@ -141,8 +135,6 @@ def test_lazy_cum_max_ungrouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
@@ -174,8 +166,6 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
@@ -200,12 +190,7 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
 def test_cum_max_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if PYARROW_VERSION < (13, 0, 0) and "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-
-    if (PANDAS_VERSION < (2, 1) or PYARROW_VERSION < (13,)) and "pandas_pyarrow" in str(
-        constructor_eager
-    ):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
