@@ -76,7 +76,12 @@ class SQLWhen(
 
 
 class SQLThen(
-    CompliantThen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    CompliantThen[
+        CompliantLazyFrameT,
+        NativeExprT,
+        SQLExprT,
+        SQLWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    ],
     Protocol38[CompliantLazyFrameT, NativeExprT, SQLExprT],
 ):
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None

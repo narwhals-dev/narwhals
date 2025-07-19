@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -301,6 +302,6 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
 
 
 class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr):
-    _depth: ClassVar = 0
-    _scalar_kwargs: ClassVar = {}
-    _function_name: ClassVar = "whenthen"
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "whenthen"

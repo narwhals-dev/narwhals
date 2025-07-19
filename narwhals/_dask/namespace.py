@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, ClassVar, cast
+from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
     import dask.dataframe.dask_expr as dx
 
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
@@ -344,6 +345,6 @@ class DaskWhen(CompliantWhen[DaskLazyFrame, "dx.Series", DaskExpr]):
 
 
 class DaskThen(CompliantThen[DaskLazyFrame, "dx.Series", DaskExpr], DaskExpr):
-    _depth: ClassVar = 0
-    _scalar_kwargs: ClassVar = {}
-    _function_name: ClassVar = "whenthen"
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "whenthen"

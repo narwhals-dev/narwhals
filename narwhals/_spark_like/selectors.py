@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from sqlframe.base.column import Column  # noqa: F401
 
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame  # noqa: F401
+    from narwhals._spark_like.expr import SparkWindowFunction
 
 
 class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Column"]):
@@ -18,7 +19,7 @@ class SparkLikeSelectorNamespace(LazySelectorNamespace["SparkLikeLazyFrame", "Co
 
 
 class SparkLikeSelector(CompliantSelector["SparkLikeLazyFrame", "Column"], SparkLikeExpr):  # type: ignore[misc]
-    _window_function: ClassVar = None
+    _window_function: SparkWindowFunction | None = None
 
     def _to_expr(self) -> SparkLikeExpr:
         return SparkLikeExpr(

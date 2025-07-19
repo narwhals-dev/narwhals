@@ -47,11 +47,11 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
     _version: Version
 
     @property
-    def _then(self) -> type[CompliantThen[FrameT, SeriesT, ExprT]]: ...
+    def _then(self) -> type[CompliantThen[FrameT, SeriesT, ExprT, Self]]: ...
     def __call__(self, compliant_frame: FrameT, /) -> Sequence[SeriesT]: ...
     def then(
         self, value: IntoExpr[SeriesT, ExprT], /
-    ) -> CompliantThen[FrameT, SeriesT, ExprT]:
+    ) -> CompliantThen[FrameT, SeriesT, ExprT, Self]:
         return self._then.from_when(self, value)
 
     @classmethod
@@ -65,20 +65,21 @@ class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
         return obj
 
 
-class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT]):
+WhenT_contra = TypeVar(
+    "WhenT_contra", bound=CompliantWhen[Any, Any, Any], contravariant=True
+)
+
+
+class CompliantThen(
+    CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT, WhenT_contra]
+):
     _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
-    _function_name: str
     _implementation: Implementation
     _version: Version
 
     @classmethod
-    def from_when(
-        cls,
-        when: CompliantWhen[FrameT, SeriesT, ExprT],
-        then: IntoExpr[SeriesT, ExprT],
-        /,
-    ) -> Self:
+    def from_when(cls, when: WhenT_contra, then: IntoExpr[SeriesT, ExprT], /) -> Self:
         when._then_value = then
         obj = cls.__new__(cls)
         obj._call = when
@@ -93,7 +94,6 @@ class CompliantThen(CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, 
 
     def otherwise(self, otherwise: IntoExpr[SeriesT, ExprT], /) -> ExprT:
         self._when_value._otherwise_value = otherwise
-        self._function_name = "whenotherwise"
         return cast("ExprT", self)
 
 

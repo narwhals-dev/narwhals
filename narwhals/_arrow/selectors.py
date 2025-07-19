@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
@@ -8,6 +8,7 @@ from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
 if TYPE_CHECKING:
     from narwhals._arrow.dataframe import ArrowDataFrame  # noqa: F401
     from narwhals._arrow.series import ArrowSeries  # noqa: F401
+    from narwhals._compliant.typing import ScalarKwargs
 
 
 class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeries"]):
@@ -17,9 +18,9 @@ class ArrowSelectorNamespace(EagerSelectorNamespace["ArrowDataFrame", "ArrowSeri
 
 
 class ArrowSelector(CompliantSelector["ArrowDataFrame", "ArrowSeries"], ArrowExpr):  # type: ignore[misc]
-    _depth: ClassVar = 0
-    _scalar_kwargs: ClassVar = {}
-    _function_name: ClassVar = "selector"
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "selector"
 
     def _to_expr(self) -> ArrowExpr:
         return ArrowExpr(
