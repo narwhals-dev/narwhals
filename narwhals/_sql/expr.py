@@ -208,6 +208,20 @@ class SQLExpr(
         )
 
     # Other window functions
+    def diff(self) -> Self:
+        def func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                expr
+                - self._window_expression(
+                    self._function("lag", expr), inputs.partition_by, inputs.order_by
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     def shift(self, n: int) -> Self:
         def func(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]

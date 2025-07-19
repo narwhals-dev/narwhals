@@ -680,15 +680,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_window_function(func)
 
-    def diff(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = self.partition_by(*inputs.partition_by).orderBy(
-                *self._sort(*inputs.order_by)
-            )
-            return [expr - self._F.lag(expr).over(window) for expr in self(df)]
-
-        return self._with_window_function(func)
-
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

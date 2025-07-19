@@ -537,17 +537,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_window_function(func)
 
     @requires.backend_version((1, 3))
-    def diff(self) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                expr
-                - window_expression(F("lag", expr), inputs.partition_by, inputs.order_by)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    @requires.backend_version((1, 3))
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
             self._rolling_window_func("sum", window_size, min_samples, center=center)

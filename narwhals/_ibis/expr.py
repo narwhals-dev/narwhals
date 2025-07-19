@@ -454,22 +454,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
         return self._with_window_function(func)
 
-    def diff(self) -> Self:
-        def _func(df: IbisLazyFrame, inputs: IbisWindowInputs) -> Sequence[ir.Value]:
-            return [
-                expr
-                - expr.lag().over(  # type: ignore[attr-defined, unused-ignore]
-                    ibis.window(
-                        following=0,
-                        group_by=inputs.partition_by,
-                        order_by=self._sort(*inputs.order_by),
-                    )
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(_func)
-
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._with_window_function(
             self._rolling_window_func(
