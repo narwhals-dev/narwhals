@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from random import Random
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -14,24 +14,18 @@ import narwhals as nw
 from narwhals.exceptions import ComputeError
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 rnd = Random(0)  # noqa: S311
 
-data: dict[str, list[int | float]] = {
+data: dict[str, Any] = {
     "int": [0, 1, 2, 3, 4, 5, 6],
     "float": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
     "int_shuffled": [1, 0, 2, 3, 6, 5, 4],
     "float_shuffled": [1.0, 0.0, 2.0, 3.0, 6.0, 5.0, 4.0],
 }
 
-bins_and_expected = [
-    {"bins": [-float("inf"), 2.5, 5.5, float("inf")], "expected": [3, 3, 1]},
-    {"bins": [1.0, 2.5, 5.5, float("inf")], "expected": [2, 3, 1]},
-    {"bins": [1.0, 2.5, 5.5], "expected": [2, 3]},
-    {"bins": [-10.0, -1.0, 2.5, 5.5], "expected": [0, 3, 3]},
-    {"bins": [1.0, 2.0625], "expected": [2]},
-    {"bins": [1], "expected": []},
-    {"bins": [0, 10], "expected": [7]},
-]
 counts_and_expected = [
     {
         "bin_count": 4,
@@ -47,51 +41,77 @@ counts_and_expected = [
     {"bin_count": 0, "expected_bins": [], "expected_count": []},
 ]
 
+param_include_breakpoint = pytest.mark.parametrize(
+    "include_breakpoint", [True, False], ids=["breakpoint-True", "breakpoint-False"]
+)
+param_library = pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
 
-@pytest.mark.parametrize("params", bins_and_expected)
-@pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+SHIFT_BINS_BY = 10
+"""shift bins property"""
+
+
+@param_include_breakpoint
+@pytest.mark.parametrize(
+    ("bins", "expected"),
+    [
+        ([-float("inf"), 2.5, 5.5, float("inf")], [3, 3, 1]),
+        ([1.0, 2.5, 5.5, float("inf")], [2, 3, 1]),
+        ([1.0, 2.5, 5.5], [2, 3]),
+        ([-10.0, -1.0, 2.5, 5.5], [0, 3, 3]),
+        ([1.0, 2.0625], [2]),
+        ([1], []),
+        ([0, 10], [7]),
+    ],
+    ids=str,
+)
+@param_library
 def test_hist_bin(
-    library: str, *, params: dict[str, Any], include_breakpoint: bool
+    library: str,
+    bins: list[float],
+    expected: Sequence[float],
+    *,
+    include_breakpoint: bool,
 ) -> None:
+    constructor_eager: ConstructorEager
+    pytest.importorskip(library)
     if library == "pandas":
-        constructor_eager: Any = pd.DataFrame
+        import pandas as pd
+
+        constructor_eager = pd.DataFrame
     elif library == "polars":
-        pl = pytest.importorskip("polars")
+        import polars as pl
+
         constructor_eager = pl.DataFrame
     else:
-        pa = pytest.importorskip("pyarrow")
+        import pyarrow as pa
+
         constructor_eager = pa.table
 
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
-    bins = params["bins"]
-
-    expected = {"breakpoint": bins[1:], "count": params["expected"]}
-    if not include_breakpoint:
-        del expected["breakpoint"]
-
+    expected_full = {"count": expected}
+    if include_breakpoint:
+        expected_full = {"breakpoint": bins[1:], **expected_full}
     # smoke tests
-    for col in df.columns:
-        result = df[col].hist(bins=bins, include_breakpoint=include_breakpoint)
-        assert_equal_data(result, expected)
+    for series in df.iter_columns():
+        result = series.hist(bins=bins, include_breakpoint=include_breakpoint)
+        assert_equal_data(result, expected_full)
 
         # result size property
         assert len(result) == max(len(bins) - 1, 0)
 
     # shift bins property
-    shift_by = 10
-    shifted_bins = [b + shift_by for b in bins]
-    expected = {"breakpoint": shifted_bins[1:], "count": params["expected"]}
-    if not include_breakpoint:
-        del expected["breakpoint"]
+    shifted_bins = [b + SHIFT_BINS_BY for b in bins]
+    expected_full = {"count": expected}
+    if include_breakpoint:
+        expected_full = {"breakpoint": shifted_bins[1:], **expected_full}
 
-    for col in df.columns:
-        result = (df[col] + shift_by).hist(
-            bins=shifted_bins, include_breakpoint=include_breakpoint
+    for series in df.iter_columns():
+        result = (series + SHIFT_BINS_BY).hist(
+            shifted_bins, include_breakpoint=include_breakpoint
         )
-        assert_equal_data(result, expected)
+        assert_equal_data(result, expected_full)
 
     # missing/nan results
     df = nw.from_native(
@@ -99,20 +119,17 @@ def test_hist_bin(
             {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
         )
     )
-    bins = params["bins"]
-    expected = {"breakpoint": bins[1:], "count": params["expected"]}
-    if not include_breakpoint:
-        del expected["breakpoint"]
-
-    for col in df.columns:
-        result = df[col].hist(bins=bins, include_breakpoint=include_breakpoint)
-
-        assert_equal_data(result, expected)
+    expected_full = {"count": expected}
+    if include_breakpoint:
+        expected_full = {"breakpoint": bins[1:], **expected_full}
+    for series in df.iter_columns():
+        result = series.hist(bins, include_breakpoint=include_breakpoint)
+        assert_equal_data(result, expected_full)
 
 
 @pytest.mark.parametrize("params", counts_and_expected)
-@pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_include_breakpoint
+@param_library
 def test_hist_count(
     library: str, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
@@ -164,7 +181,7 @@ def test_hist_count(
             )
 
 
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_library
 def test_hist_count_no_spread(library: str) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -202,8 +219,8 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
-@pytest.mark.parametrize("include_breakpoint", [True, False])
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_include_breakpoint
+@param_library
 def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -232,7 +249,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     assert result["count"].sum() == 0
 
 
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_library
 def test_hist_small_bins(library: str) -> None:
     if library == "pandas":
         constructor_eager: Any = pd.DataFrame
@@ -289,7 +306,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_library
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
@@ -338,7 +355,7 @@ def test_hist_bin_hypotheis(
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-@pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+@param_library
 @pytest.mark.slow
 def test_hist_count_hypothesis(
     library: str, data: list[float], bin_count: int, request: pytest.FixtureRequest
