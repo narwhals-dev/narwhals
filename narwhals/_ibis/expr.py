@@ -81,16 +81,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _function(self, name: str, *args: ir.Value) -> ir.Value:
         expr = args[0]
         if name == "var_pop":
-            assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).var(how="pop")
         if name == "var_samp":
-            assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).var(how="sample")
         if name == "stddev_pop":
-            assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).std(how="pop")
         if name == "stddev_samp":
-            assert not args  # noqa: S101
             return cast("ir.NumericColumn", expr).std(how="sample")
         return getattr(expr, name)(*args[1:])
 
