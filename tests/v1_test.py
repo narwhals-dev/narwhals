@@ -497,7 +497,7 @@ def test_dtypes() -> None:
     dtype = df.collect_schema()["b"]
     assert dtype in {nw_v1.Datetime}
     assert isinstance(dtype, nw_v1.Datetime)
-    dtype = df.collect_schema()["c"]
+    dtype = df.lazy().schema["c"]
     assert dtype in {nw_v1.Duration}
     assert isinstance(dtype, nw_v1.Duration)
 
