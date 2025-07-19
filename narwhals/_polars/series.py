@@ -465,30 +465,27 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
+    # pub
     def _hist_from_bins(
         self, bins: list[float | int], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
-        from narwhals._polars.dataframe import PolarsDataFrame
-
-        series = self.native
-        data: dict[str, list[float | int] | pl.Series]
-
         if len(bins) <= 1:
-            data = {"breakpoint": [], "count": []}
-        elif series.count() < 1:
-            data = {
-                "breakpoint": bins[1:],
-                "count": pl.zeros(n=len(bins) - 1, dtype=pl.Int64, eager=True),
-            }
+            schema = ["breakpoint", "count"] if include_breakpoint else ["count"]
+            native = pl.DataFrame(schema=schema)
+        elif self.native.is_empty():
+            if include_breakpoint:
+                native = (
+                    pl.Series(bins[1:])
+                    .to_frame("breakpoint")
+                    .with_columns(count=pl.lit(0, pl.Int64))
+                )
+            else:
+                native = pl.select(count=pl.zeros(len(bins) - 1, pl.Int64))
         else:
             return self._hist_from_data(
                 bins=bins, bin_count=None, include_breakpoint=include_breakpoint
             )
-
-        if not include_breakpoint:
-            del data["breakpoint"]
-
-        return PolarsDataFrame.from_native(pl.DataFrame(data), context=self)
+        return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
 
     def _hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
