@@ -85,6 +85,36 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)
 
+    def _window_expression(
+        self,
+        expr: ir.Value,
+        partition_by: Sequence[str | ir.Value] = (),
+        order_by: Sequence[str | ir.Column] = (),
+        rows_start: str | None = None,
+        rows_end: str | None = None,
+        *,
+        descending: Sequence[bool] | None = None,
+        nulls_last: Sequence[bool] | None = None,
+    ) -> ir.Value:
+        if rows_start is not None and rows_end is not None:
+            mapping = {
+                "unbounded preceding": None,
+                "unbounded following": None,
+                "current row": 0,
+            }
+            rows_between = {
+                "preceding": mapping[rows_start],
+                "following": mapping[rows_end],
+            }
+        else:
+            rows_between = {}
+        window = ibis.window(
+            group_by=partition_by,
+            order_by=self._sort(*order_by, descending=descending, nulls_last=nulls_last),
+            **rows_between,
+        )
+        return expr.over(window)
+
     def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
         return self._call(df)
 
