@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._duckdb.expr import DuckDBExpr
@@ -20,6 +20,8 @@ class DuckDBSelectorNamespace(LazySelectorNamespace["DuckDBLazyFrame", "Expressi
 class DuckDBSelector(  # type: ignore[misc]
     CompliantSelector["DuckDBLazyFrame", "Expression"], DuckDBExpr
 ):
+    _window_function: ClassVar = None
+
     def _to_expr(self) -> DuckDBExpr:
         return DuckDBExpr(
             self._call,

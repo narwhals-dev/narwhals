@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._ibis.expr import IbisExpr
@@ -20,6 +20,8 @@ class IbisSelectorNamespace(LazySelectorNamespace["IbisLazyFrame", "ir.Value"]):
 class IbisSelector(  # type: ignore[misc]
     CompliantSelector["IbisLazyFrame", "ir.Value"], IbisExpr
 ):
+    _window_function: ClassVar = None
+
     def _to_expr(self) -> IbisExpr:
         return IbisExpr(
             self._call,

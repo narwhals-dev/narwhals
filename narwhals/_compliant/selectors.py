@@ -218,7 +218,6 @@ class CompliantSelector(
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
-        obj._window_function = None
         obj._evaluate_output_names = evaluate_output_names
         obj._alias_output_names = None
         obj._implementation = context._implementation
