@@ -111,7 +111,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
             rows_between = {"preceding": -rows_start, "following": rows_end}
         elif rows_end is not None:
             rows_between = {"following": rows_end}
-        elif rows_start is not None:
+        elif rows_start is not None:  # pragma: no cover
             rows_between = {"preceding": -rows_start}
         else:
             rows_between = {}

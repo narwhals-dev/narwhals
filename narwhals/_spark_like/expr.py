@@ -110,7 +110,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             window = window.rowsBetween(rows_start, rows_end)
         elif rows_end is not None:
             window = window.rowsBetween(self._Window.unboundedPreceding, rows_end)
-        elif rows_start is not None:
+        elif rows_start is not None:  # pragma: no cover
             window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
