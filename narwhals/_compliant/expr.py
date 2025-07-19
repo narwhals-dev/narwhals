@@ -28,7 +28,7 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import Protocol38, deprecated
-from narwhals._utils import _StoresCompliant, not_implemented
+from narwhals._utils import _StoresCompliant
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
@@ -901,19 +901,6 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
-    arg_min: not_implemented = not_implemented()
-    arg_max: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @property

@@ -22,20 +22,6 @@ class SQLExpr(
     LazyExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
-    arg_min: not_implemented = not_implemented()
-    arg_max: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
-
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]: ...
 
@@ -130,6 +116,22 @@ class SQLExpr(
 
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
+
+    arg_max: not_implemented = not_implemented()
+    arg_min: not_implemented = not_implemented()
+    arg_true: not_implemented = not_implemented()
+    ewm_mean: not_implemented = not_implemented()
+    gather_every: not_implemented = not_implemented()
+    head: not_implemented = not_implemented()
+    map_batches: not_implemented = not_implemented()
+    mode: not_implemented = not_implemented()
+    replace_strict: not_implemented = not_implemented()
+    sort: not_implemented = not_implemented()
+    sample: not_implemented = not_implemented()
+    tail: not_implemented = not_implemented()
+
+    # namespaces
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 
 SQLExprT = TypeVar("SQLExprT", bound=SQLExpr[Any, Any])
