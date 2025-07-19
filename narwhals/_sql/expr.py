@@ -111,20 +111,22 @@ class SQLExpr(
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
-    def abs(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("abs", expr))
-
+    # Aggregations
     def max(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("max", expr))
+        return self._with_callable(lambda expr: self._function("max", expr))
 
     def mean(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("mean", expr))
+        return self._with_callable(lambda expr: self._function("mean", expr))
 
     def median(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("median", expr))
+        return self._with_callable(lambda expr: self._function("median", expr))
 
     def min(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("min", expr))
+        return self._with_callable(lambda expr: self._function("min", expr))
+
+    # Elementwise
+    def abs(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("abs", expr))
 
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
