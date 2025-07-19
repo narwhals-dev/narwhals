@@ -32,7 +32,7 @@ TimedeltaKwd: TypeAlias = Literal[
 ]
 
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
-    r"^(?P<multiple>\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)\Z"
+    r"^(?P<multiple>-?\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)\Z"
 )
 MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
 QUARTER_MULTIPLES = frozenset([1, 2, 4])

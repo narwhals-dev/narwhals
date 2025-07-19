@@ -12,7 +12,7 @@ import narwhals as nw
 from tests.utils import DASK_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.typing import IntoFrame
 
 
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])

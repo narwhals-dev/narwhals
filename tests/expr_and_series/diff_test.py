@@ -6,7 +6,6 @@ import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
-    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -16,9 +15,6 @@ data = {"i": [0, 1, 2, 3, 4], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
 
 
 def test_diff(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        # pc.pairwisediff is available since pyarrow 13.0.0
-        pytest.skip()
     df = nw.from_native(constructor_eager(data))
     result = df.with_columns(c_diff=nw.col("c").diff()).filter(nw.col("i") > 0)
     expected = {
@@ -32,9 +28,6 @@ def test_diff(constructor_eager: ConstructorEager) -> None:
 
 def test_diff_lazy(constructor: Constructor) -> None:
     data = {"i": [None, 1, 2, 3, 4], "b": [1, 2, 3, 5, 3], "c": [5, 4, 3, 2, 1]}
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
-        # pc.pairwisediff is available since pyarrow 13.0.0
-        pytest.skip()
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
@@ -55,9 +48,6 @@ def test_diff_lazy(constructor: Constructor) -> None:
 def test_diff_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < (13,):
-        # pc.pairwisediff is available since pyarrow 13.0.0
-        pytest.skip()
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
@@ -83,12 +73,7 @@ def test_diff_lazy_grouped(
     assert_equal_data(result, expected)
 
 
-def test_diff_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION < (13,):
-        # pc.pairwisediff is available since pyarrow 13.0.0
-        request.applymarker(pytest.mark.xfail)
+def test_diff_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {
         "i": [1, 2, 3, 4],

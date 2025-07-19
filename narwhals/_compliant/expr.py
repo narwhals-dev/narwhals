@@ -458,7 +458,7 @@ class EagerExpr(
         self,
         series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
         method_name: str,
-        **kwargs: Any,
+        **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
 
@@ -468,13 +468,22 @@ class EagerExpr(
         Arguments:
             series_namespace: The Series namespace.
             method_name: name of method, within `series_namespace`.
-            kwargs: keyword arguments to pass to function.
+            expressifiable_args: keyword arguments to pass to function, which may
+                be expressifiable (e.g. `nw.col('a').str.replace('abc', nw.col('b')))`).
         """
-        return self._from_callable(
-            lambda df: [
+
+        def inner(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            kwargs = {
+                name: df._evaluate_expr(value) if self._is_expr(value) else value
+                for name, value in expressifiable_args.items()
+            }
+            return [
                 getattr(getattr(series, series_namespace), method_name)(**kwargs)
                 for series in self(df)
-            ],
+            ]
+
+        return self._from_callable(
+            inner,
             depth=self._depth + 1,
             function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,

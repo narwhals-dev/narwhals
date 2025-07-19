@@ -914,28 +914,36 @@ class PandasLikeSeries(EagerSeries[Any]):
         if (
             self._implementation is Implementation.PANDAS
             and self._backend_version < (3,)
+            and get_dtype_backend(self.native.dtype, self._implementation)
+            == "numpy_nullable"
             and self.dtype.is_integer()
-            and (null_mask := self.native.isna()).any()
+            and (null_mask := self.is_null()).any()
         ):
             # crazy workaround for the case of `na_option="keep"` and nullable
             # integer dtypes. This should be supported in pandas > 3.0
             # https://github.com/pandas-dev/pandas/issues/56976
-            ranked_series = (
-                self.native.to_frame()
-                .assign(**{f"{name}_is_null": null_mask})
-                .groupby(f"{name}_is_null")
+            mask_name = f"{name}_is_null"
+            plx = self.__narwhals_namespace__()
+            df = (
+                self.to_frame()
+                .with_columns(plx._expr._from_series(null_mask).alias(mask_name))
+                .native
+            )
+            return self._with_native(
+                df.groupby(mask_name)
                 .rank(
                     method=pd_method,
                     na_option="keep",
                     ascending=not descending,
                     pct=False,
-                )[name]
-            )
-        else:
-            ranked_series = self.native.rank(
+                )
+                .iloc[:, 0]
+            ).alias(self.name)
+        return self._with_native(
+            self.native.rank(
                 method=pd_method, na_option="keep", ascending=not descending, pct=False
             )
-        return self._with_native(ranked_series)
+        )
 
     def hist(  # noqa: C901, PLR0912
         self,

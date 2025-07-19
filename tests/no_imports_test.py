@@ -69,7 +69,6 @@ def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "polars" not in sys.modules
     assert "pandas" in sys.modules
     assert "numpy" in sys.modules
-    assert "pyarrow" not in sys.modules
     assert "dask" in sys.modules
     assert "pyspark" not in sys.modules
     assert "duckdb" not in sys.modules

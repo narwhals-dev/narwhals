@@ -5,6 +5,7 @@ on:
 
 env:
   PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
 
 jobs:
   tox:

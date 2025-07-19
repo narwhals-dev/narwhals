@@ -213,13 +213,14 @@ class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
         if interval.unit in {"y", "q", "mo"}:
             msg = f"Offsetting by {interval.unit} is not yet supported for pyarrow."
             raise NotImplementedError(msg)
-        if interval.unit == "d":
+        dtype = self.compliant.dtype
+        datetime_dtype = self.version.dtypes.Datetime
+        if interval.unit == "d" and isinstance(dtype, datetime_dtype) and dtype.time_zone:
             offset: pa.DurationScalar[Any] = lit(interval.to_timedelta())
-            if time_zone := native.type.tz:
-                native_naive = pc.local_timestamp(native)
-                result = pc.assume_timezone(pc.add(native_naive, offset), time_zone)
-                return self.with_native(result)
-        elif interval.unit == "ns":  # pragma: no cover
+            native_naive = pc.local_timestamp(native)
+            result = pc.assume_timezone(pc.add(native_naive, offset), dtype.time_zone)
+            return self.with_native(result)
+        if interval.unit == "ns":  # pragma: no cover
             offset = lit(interval.multiple, pa.duration("ns"))  # type: ignore[assignment]
         else:
             offset = lit(interval.to_timedelta())
