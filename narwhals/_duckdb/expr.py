@@ -115,28 +115,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return DuckDBNamespace(version=self._version)
 
-    def _cum_window_func(
-        self,
-        func_name: Literal["sum", "max", "min", "count", "product"],
-        *,
-        reverse: bool,
-    ) -> DuckDBWindowFunction:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                window_expression(
-                    F(func_name, expr),
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
-                    rows_start="unbounded preceding",
-                    rows_end="current row",
-                )
-                for expr in self(df)
-            ]
-
-        return func
-
     def _rolling_window_func(
         self,
         func_name: Literal["sum", "mean", "std", "var"],

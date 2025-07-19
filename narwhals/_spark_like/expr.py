@@ -92,8 +92,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         expr: Column,
         partition_by: Sequence[str | Column] = (),
         order_by: Sequence[str | Column] = (),
-        rows_start: int | None = None,
-        rows_end: int | None = None,
+        rows_start: str | None = None,
+        rows_end: str | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
@@ -102,7 +102,12 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             *self._sort(*order_by, descending=descending, nulls_last=nulls_last)
         )
         if rows_start is not None and rows_end is not None:
-            window = window.rowsBetween(rows_start, rows_end)
+            mapping = {
+                "unbounded preceding": self._Window.unboundedPreceding,
+                "unbounded following": self._Window.unboundedFollowing,
+                "current row": self._Window.currentRow,
+            }
+            window = window.rowsBetween(mapping[rows_start], mapping[rows_end])
         return expr.over(window)
 
     def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
@@ -186,28 +191,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     @classmethod
     def _alias_native(cls, expr: Column, name: str) -> Column:
         return expr.alias(name)
-
-    def _cum_window_func(
-        self,
-        *,
-        reverse: bool,
-        func_name: Literal["sum", "max", "min", "count", "product"],
-    ) -> SparkWindowFunction:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            window = (
-                self.partition_by(*inputs.partition_by)
-                .orderBy(
-                    *self._sort(
-                        *inputs.order_by, descending=[reverse], nulls_last=[reverse]
-                    )
-                )
-                .rowsBetween(self._Window.unboundedPreceding, 0)
-            )
-            return [
-                getattr(self._F, func_name)(expr).over(window) for expr in self._call(df)
-            ]
-
-        return func
 
     def _rolling_window_func(
         self,

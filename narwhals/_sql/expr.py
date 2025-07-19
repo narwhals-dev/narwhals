@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from narwhals._compliant.typing import AliasNames, CompliantLazyFrameT, NativeExprT
 from narwhals._typing_compat import Protocol38
@@ -50,6 +50,30 @@ class SQLExpr(
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
     ) -> NativeExprT: ...
+
+    def _cum_window_func(
+        self,
+        func_name: Literal["sum", "max", "min", "count", "product"],
+        *,
+        reverse: bool,
+    ) -> WindowFunction[CompliantLazyFrameT, NativeExprT]:
+        def func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._function(func_name, expr),
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[reverse] * len(inputs.order_by),
+                    nulls_last=[reverse] * len(inputs.order_by),
+                    rows_start="unbounded preceding",
+                    rows_end="current row",
+                )
+                for expr in self(df)
+            ]
+
+        return func
 
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
