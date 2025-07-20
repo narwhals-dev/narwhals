@@ -30,16 +30,10 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window, WindowSpec
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._compliant.typing import (
-        AliasNames,
-        EvalNames,
-        EvalSeries,
-        WindowFunction,
-    )
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._compliant.typing import EvalNames, WindowFunction
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -62,24 +56,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         "dense": "dense_rank",
         "ordinal": "row_number",
     }
-
-    def __init__(
-        self,
-        call: EvalSeries[SparkLikeLazyFrame, Column],
-        window_function: SparkWindowFunction | None = None,
-        *,
-        evaluate_output_names: EvalNames[SparkLikeLazyFrame],
-        alias_output_names: AliasNames | None,
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._call = call
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._version = version
-        self._implementation = implementation
-        self._metadata: ExprMetadata | None = None
-        self._window_function: SparkWindowFunction | None = window_function
 
     def _function(self, name: str, *args: Column) -> Column:
         return getattr(self._F, name)(*args)
@@ -182,16 +158,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             version=self._version, implementation=self._implementation
         )
 
-    def _with_window_function(self, window_function: SparkWindowFunction) -> Self:
-        return self.__class__(
-            self._call,
-            window_function,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
     @classmethod
     def _alias_native(cls, expr: Column, name: str) -> Column:
         return expr.alias(name)
@@ -253,92 +219,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             alias_output_names=combine_alias_output_names(*exprs),
             version=context._version,
             implementation=context._implementation,
-        )
-
-    def _callable_to_eval_series(
-        self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
-    ) -> EvalSeries[SparkLikeLazyFrame, Column]:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
-            native_series_list = self(df)
-            other_native_series = {
-                key: df._evaluate_expr(value)
-                if self._is_expr(value)
-                else self._F.lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
-        return func
-
-    def _push_down_window_function(
-        self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
-    ) -> SparkWindowFunction:
-        def window_f(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            # If a function `f` is elementwise, and `g` is another function, then
-            # - `f(g) over (window)`
-            # - `f(g over (window))
-            # are equivalent.
-            # Make sure to only use with if `call` is elementwise!
-            native_series_list = self.window_function(df, window_inputs)
-            other_native_series = {
-                key: df._evaluate_window_expr(value, window_inputs)
-                if self._is_expr(value)
-                else self._F.lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
-        return window_f
-
-    def _with_callable(
-        self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
-    ) -> Self:
-        return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
-    def _with_elementwise(
-        self, call: Callable[..., Column], /, **expressifiable_args: Self | Any
-    ) -> Self:
-        return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
-            self._push_down_window_function(call, **expressifiable_args),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
-    def _with_binary(self, op: Callable[..., Column], other: Self | Any) -> Self:
-        return self.__class__(
-            self._callable_to_eval_series(op, other=other),
-            self._push_down_window_function(op, other=other),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
-
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
-        return type(self)(
-            self._call,
-            self._window_function,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
-            version=self._version,
-            implementation=self._implementation,
         )
 
     def __truediv__(self, other: SparkLikeExpr) -> Self:

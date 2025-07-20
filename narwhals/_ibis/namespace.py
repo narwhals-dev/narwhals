@@ -82,6 +82,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
+            implementation=Implementation.IBIS,
         )
 
     def all_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
@@ -139,7 +140,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
         return IbisWhen.from_expr(predicate, context=self)
 
     def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
-        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+        def func(_df: IbisLazyFrame) -> Sequence[ir.Value]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
             return [lit(value, ibis_dtype)]
 
@@ -148,6 +149,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
+            implementation=Implementation.IBIS,
         )
 
     def len(self) -> IbisExpr:
@@ -159,6 +161,7 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
+            implementation=Implementation.IBIS,
         )
 
     def coalesce(self, *exprs: IbisExpr) -> IbisExpr:

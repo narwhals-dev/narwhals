@@ -34,17 +34,11 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import (
-        AliasNames,
-        EvalNames,
-        EvalSeries,
-        WindowFunction,
-    )
+    from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.typing import WindowExpressionKwargs
-    from narwhals._expression_parsing import ExprMetadata
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -61,22 +55,6 @@ if TYPE_CHECKING:
 
 class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
-
-    def __init__(
-        self,
-        call: EvalSeries[DuckDBLazyFrame, Expression],
-        window_function: DuckDBWindowFunction | None = None,
-        *,
-        evaluate_output_names: EvalNames[DuckDBLazyFrame],
-        alias_output_names: AliasNames | None,
-        version: Version,
-    ) -> None:
-        self._call = call
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._version = version
-        self._metadata: ExprMetadata | None = None
-        self._window_function: DuckDBWindowFunction | None = window_function
 
     def _function(self, name: str, *args: Expression) -> Expression:
         return F(name, *args)
@@ -142,6 +120,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,
+            implementation=Implementation.DUCKDB,
         )
 
     @classmethod
@@ -155,6 +134,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             version=context._version,
+            implementation=Implementation.DUCKDB,
         )
 
     @classmethod
@@ -180,6 +160,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=context._version,
+            implementation=Implementation.DUCKDB,
         )
 
     def _callable_to_eval_series(
@@ -220,62 +201,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             ]
 
         return window_f
-
-    def _with_callable(
-        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> Self:
-        """Create expression from callable.
-
-        Arguments:
-            call: Callable from compliant DataFrame to native Expression
-            expr_name: Expression name
-            expressifiable_args: arguments pass to expression which should be parsed
-                as expressions (e.g. in `nw.col('a').is_between('b', 'c')`)
-        """
-        return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
-
-    def _with_elementwise(
-        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> Self:
-        return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
-            self._push_down_window_function(call, **expressifiable_args),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
-
-    def _with_binary(self, op: Callable[..., Expression], other: Self | Any) -> Self:
-        return self.__class__(
-            self._callable_to_eval_series(op, other=other),
-            self._push_down_window_function(op, other=other),
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
-
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
-        return type(self)(
-            self._call,
-            self._window_function,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
-            version=self._version,
-        )
-
-    def _with_window_function(self, window_function: DuckDBWindowFunction) -> Self:
-        return self.__class__(
-            self._call,
-            window_function,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
 
     @classmethod
     def _alias_native(cls, expr: Expression, name: str) -> Expression:
@@ -442,6 +367,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
+            implementation=self._implementation,
         )
 
     def is_null(self) -> Self:
@@ -545,6 +471,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
+            implementation=self._implementation,
         )
 
     @requires.backend_version((1, 3))

@@ -13,16 +13,143 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._compliant.window import WindowInputs
+    from narwhals._expression_parsing import ExprMetadata
 
 from narwhals._compliant.expr import LazyExpr
-from narwhals._compliant.typing import WindowFunction
+from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
+from narwhals._utils import Implementation, Version
 
 
 class SQLExpr(
     LazyExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
+    _call: EvalSeries[CompliantLazyFrameT, NativeExprT]
+    _evaluate_output_names: EvalNames[CompliantLazyFrameT]
+    _alias_output_names: AliasNames | None
+    _version: Version
+    _implementation: Implementation
+    _metadata: ExprMetadata | None
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
+
+    def __init__(
+        self,
+        call: EvalSeries[CompliantLazyFrameT, NativeExprT],
+        window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None = None,
+        *,
+        evaluate_output_names: EvalNames[CompliantLazyFrameT],
+        alias_output_names: AliasNames | None,
+        version: Version,
+        implementation: Implementation,
+    ) -> None:
+        self._call = call
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
+        self._version = version
+        self._implementation = implementation
+        self._metadata: ExprMetadata | None = None
+        self._window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None = (
+            window_function
+        )
+
+    def _callable_to_eval_series(
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> EvalSeries[CompliantLazyFrameT, NativeExprT]:
+        def func(df: CompliantLazyFrameT) -> list[NativeExprT]:
+            native_series_list = self(df)
+            other_native_series = {
+                key: df._evaluate_expr(value)
+                if self._is_expr(value)
+                else self._lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return func
+
+    def _push_down_window_function(
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> WindowFunction[CompliantLazyFrameT, NativeExprT]:
+        def window_f(
+            df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            # If a function `f` is elementwise, and `g` is another function, then
+            # - `f(g) over (window)`
+            # - `f(g over (window))
+            # are equivalent.
+            # Make sure to only use with if `call` is elementwise!
+            native_series_list = self.window_function(df, window_inputs)
+            other_native_series = {
+                # TODO(marco): make SQLLazyFrame with `_evaluate_window_expr`
+                key: df._evaluate_window_expr(value, window_inputs)  # type: ignore[attr-defined]
+                if self._is_expr(value)
+                else self._lit(value)
+                for key, value in expressifiable_args.items()
+            }
+            return [
+                call(native_series, **other_native_series)
+                for native_series in native_series_list
+            ]
+
+        return window_f
+
+    def _with_window_function(
+        self, window_function: WindowFunction[CompliantLazyFrameT, NativeExprT]
+    ) -> Self:
+        return self.__class__(
+            self._call,
+            window_function,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def _with_callable(
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> Self:
+        return self.__class__(
+            self._callable_to_eval_series(call, **expressifiable_args),
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def _with_elementwise(
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> Self:
+        return self.__class__(
+            self._callable_to_eval_series(call, **expressifiable_args),
+            self._push_down_window_function(call, **expressifiable_args),
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self:
+        return self.__class__(
+            self._callable_to_eval_series(op, other=other),
+            self._push_down_window_function(op, other=other),
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        return type(self)(
+            self._call,
+            self._window_function,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=func,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     @property
     def window_function(self) -> WindowFunction[CompliantLazyFrameT, NativeExprT]:
@@ -135,17 +262,6 @@ class SQLExpr(
     @classmethod
     def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
         return hasattr(obj, "__narwhals_expr__")
-
-    def _with_callable(self, call: Callable[..., Any], /) -> Self: ...
-    def _with_elementwise(
-        self, op: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
-    ) -> Self: ...
-    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self: ...
-    def _with_window_function(
-        self, window_function: WindowFunction[CompliantLazyFrameT, NativeExprT]
-    ) -> Self: ...
-
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
