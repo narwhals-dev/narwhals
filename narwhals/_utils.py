@@ -46,7 +46,12 @@ from narwhals.dependencies import (
     is_polars_series,
     is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    PerformanceWarning,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -1456,6 +1461,15 @@ def issue_deprecation_warning(message: str, _version: str) -> None:
             bookkeeping.
     """
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+
+
+def issue_performance_warning(message: str) -> None:
+    """Issue a performance warning.
+
+    Arguments:
+        message: The message associated with the warning.
+    """
+    warn(message=message, category=PerformanceWarning, stacklevel=find_stacklevel())
 
 
 def validate_strict_and_pass_though(

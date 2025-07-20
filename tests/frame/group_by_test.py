@@ -141,6 +141,39 @@ def test_group_by_depth_1_agg(
 
 
 @pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        (
+            {"x": [True, True, True, False, False, False]},
+            {"all": [True, False, False], "any": [True, True, False]},
+        ),
+        (
+            {"x": [True, None, False, None, None, None]},
+            {"all": [True, False, True], "any": [True, False, False]},
+        ),
+    ],
+    ids=["not-nullable", "nullable"],
+)
+def test_group_by_depth_1_agg_bool_ops(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    values: dict[str, list[bool]],
+    expected: dict[str, list[bool]],
+) -> None:
+    if "dask-nullable" in request.node.callspec.id:
+        request.applymarker(pytest.mark.xfail(strict=True))
+
+    data = {"a": [1, 1, 2, 2, 3, 3], **values}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.col("x").all().alias("all"), nw.col("x").any().alias("any"))
+        .sort("a")
+    )
+    assert_equal_data(result, {"a": [1, 2, 3], **expected})
+
+
+@pytest.mark.parametrize(
     ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
 def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:

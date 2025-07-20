@@ -30,14 +30,7 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.utils import Version
-from tests.utils import (
-    DUCKDB_VERSION,
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from typing_extensions import assert_type
@@ -46,11 +39,12 @@ if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
 
-def test_toplevel(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        pytest.skip()
+def test_toplevel() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v1.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
+        pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, None, 9]})
     )
     result = df.select(
         min=nw_v1.min("a"),
@@ -92,10 +86,11 @@ def test_toplevel(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_when_then(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6], "c": [6, 7, 8]})
-    )
+def test_when_then() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": [6, 7, 8]}))
     result = df.select(nw_v1.when(nw_v1.col("a") > 1).then("b").otherwise("c"))
     expected = {"b": [6, 5, 6]}
     assert_equal_data(result, expected)
@@ -126,9 +121,12 @@ def test_constructors() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_join(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
-    result = df.join(df, how="inner", on="a").sort("a")  # type: ignore[arg-type]
+def test_join() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]})).lazy()
+    result = df.join(df, how="inner", on="a").sort("a")
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.LazyFrame)
@@ -137,8 +135,11 @@ def test_join(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result_eager, nw_v1.DataFrame)
 
 
-def test_by_name(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]})).lazy()
+def test_by_name() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]})).lazy()
     result = df.select(nw_v1.col("a").alias("b"), "a")
     expected = {"b": [1, 2, 3], "a": [1, 2, 3]}
     assert_equal_data(result, expected)
@@ -148,24 +149,33 @@ def test_by_name(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result_eager, nw_v1.DataFrame)
 
 
-def test_values_counts_v1(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_values_counts_v1() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
     result = df["a"].value_counts().sort("a")
     expected = {"a": [1, 2, 3], "count": [1, 1, 1]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
 
 
-def test_is_duplicated_unique(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_is_duplicated_unique() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
     assert df.is_duplicated().to_list() == [False, False, False]
     assert df.is_unique().to_list() == [True, True, True]
     assert isinstance(df.is_duplicated(), nw_v1.Series)
     assert isinstance(df.is_unique(), nw_v1.Series)
 
 
-def test_concat(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_concat() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     result = nw_v1.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
@@ -174,28 +184,31 @@ def test_concat(constructor_eager: ConstructorEager) -> None:
         assert_type(result, nw_v1.DataFrame[Any])
 
 
-@pytest.mark.filterwarnings(
-    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
-)
-def test_to_dict(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_to_dict() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     result = df.to_dict(as_series=False)
     expected = {"a": [1, 2, 3]}
     assert result == expected
 
 
-def test_tail(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).lazy()
+def test_tail() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True).lazy()
     result = df.tail(3)
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
 
 
-@pytest.mark.filterwarnings(
-    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
-)
-def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
-    df = nw_v1.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+def test_to_dict_as_series() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
     result = df.to_dict(as_series=True)
     expected = {"a": [1, 2, 3]}
     assert_equal_data(result, expected)
@@ -205,10 +218,11 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings(
     "ignore:`Series.hist` is being called from the stable API although considered an unstable feature."
 )
-def test_hist_v1(constructor_eager: ConstructorEager) -> None:
-    if "cudf" in str(constructor_eager):
-        pytest.skip()
-    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2]}), eager_only=True)
+def test_hist_v1() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table({"a": [1, 1, 2]}), eager_only=True)
     result = df["a"].hist(bins=[-1, 1, 2])
     expected = {"breakpoint": [1, 2], "count": [2, 1]}
     assert_equal_data(result, expected)
@@ -415,9 +429,9 @@ def test_with_row_index(constructor: Constructor) -> None:
         assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
+def test_renamed_taxicab_norm() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
     # Suppose we need to rename `_l1_norm` to `_taxicab_norm`.
     # We need `narwhals.stable.v1` to stay stable. So, we
     # make the change in `narwhals`, and then add the new method
@@ -426,7 +440,7 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     # API will still be able to use it, without the main namespace
     # getting cluttered by the new name.
 
-    df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    df = nw.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))
     result = df.with_columns(b=nw.col("a")._taxicab_norm())
     expected = {"a": [1, 2, 3, -4, 5], "b": [15] * 5}
     assert_equal_data(result, expected)
@@ -434,7 +448,7 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     with pytest.raises(AttributeError):
         result = df.with_columns(b=nw.col("a")._l1_norm())  # type: ignore[attr-defined]
 
-    df_v1 = nw_v1.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
+    df_v1 = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))
     # The newer `_taxicab_norm` can still work in the old API, no issue.
     # It's new, so it couldn't be backwards-incompatible.
     result_v1 = df_v1.with_columns(b=nw_v1.col("a")._taxicab_norm())
@@ -446,21 +460,24 @@ def test_renamed_taxicab_norm(constructor: Constructor) -> None:
     assert_equal_data(result_v1, expected)
 
 
-def test_renamed_taxicab_norm_dataframe(constructor: Constructor) -> None:
+def test_renamed_taxicab_norm_dataframe() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api.
-    def func(df_any: Any) -> Any:
-        df = nw_v1.from_native(df_any)
-        df = df._l1_norm()
-        return df.to_native()
-
-    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))._l1_norm()
     expected = {"a": [15]}
+    assert_equal_data(result, expected)
+    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
     assert_equal_data(result, expected)
 
 
-def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> None:
+def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     # Suppose we have `DataFrame._l1_norm` in `stable.v1`, but remove it
     # in the main namespace. Here, we check that it's still usable from
     # the stable api when using `narwhalify`.
@@ -468,7 +485,7 @@ def test_renamed_taxicab_norm_dataframe_narwhalify(constructor: Constructor) -> 
     def func(df: Any) -> Any:
         return df._l1_norm()
 
-    result = nw_v1.from_native(func(constructor({"a": [1, 2, 3, -4, 5]})))
+    result = nw_v1.from_native(func(pa.table({"a": [1, 2, 3, -4, 5]})))
     expected = {"a": [15]}
     assert_equal_data(result, expected)
 
@@ -480,7 +497,7 @@ def test_dtypes() -> None:
     dtype = df.collect_schema()["b"]
     assert dtype in {nw_v1.Datetime}
     assert isinstance(dtype, nw_v1.Datetime)
-    dtype = df.collect_schema()["c"]
+    dtype = df.lazy().schema["c"]
     assert dtype in {nw_v1.Duration}
     assert isinstance(dtype, nw_v1.Duration)
 
@@ -825,8 +842,11 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
         df.select(nw.col("a").sample(n=2))
 
 
-def test_is_frame(constructor: Constructor) -> None:
-    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+def test_is_frame() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    lf = nw_v1.from_native(pa.table({"a": [1, 2]})).lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert nw_v1.dependencies.is_narwhals_lazyframe(lf)
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
