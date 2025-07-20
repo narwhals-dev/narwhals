@@ -44,6 +44,26 @@ def n_unique() -> dd.Aggregation:
     return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
+def _all() -> dd.Aggregation:
+    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s.all(skipna=True)
+
+    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s0.all(skipna=True)
+
+    return dd.Aggregation(name="all", chunk=chunk, agg=agg)
+
+
+def _any() -> dd.Aggregation:
+    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s.any(skipna=True)
+
+    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s0.any(skipna=True)
+
+    return dd.Aggregation(name="any", chunk=chunk, agg=agg)
+
+
 def var(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.var, ddof=ddof)
 
@@ -65,6 +85,8 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         "n_unique": n_unique,
         "count": "count",
         "quantile": "quantile",
+        "all": _all,
+        "any": _any,
     }
 
     def __init__(

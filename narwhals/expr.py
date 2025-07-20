@@ -1226,7 +1226,7 @@ class Expr:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
-            predicates: Conditions to filter by (which get ANDed together).
+            predicates: Conditions to filter by (which get AND-ed together).
 
         Returns:
             A new expression.
