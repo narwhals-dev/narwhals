@@ -160,7 +160,7 @@ def test_group_by_depth_1_agg_bool_ops(
     values: dict[str, list[bool]],
     expected: dict[str, list[bool]],
 ) -> None:
-    if "dask-nullable" in request.node.callspec.id:
+    if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
         request.applymarker(pytest.mark.xfail(strict=True))
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
