@@ -6,10 +6,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
-from narwhals._expression_parsing import (
-    combine_alias_output_names,
-    combine_evaluate_output_names,
-)
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
@@ -19,7 +15,7 @@ from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, not_implemented
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self
@@ -162,23 +158,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             func,
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
-            version=context._version,
-            implementation=Implementation.IBIS,
-        )
-
-    @classmethod
-    def _from_elementwise_horizontal_op(
-        cls, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: Self
-    ) -> Self:
-        def call(df: IbisLazyFrame) -> Sequence[ir.Value]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [func(cols)]
-
-        context = exprs[0]
-        return cls(
-            call=call,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
             version=context._version,
             implementation=Implementation.IBIS,
         )

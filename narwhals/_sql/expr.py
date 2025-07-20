@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from narwhals._compliant.typing import AliasNames, CompliantLazyFrameT, NativeExprT
+from narwhals._expression_parsing import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
 from narwhals._typing_compat import Protocol38
 from narwhals._utils import not_implemented
 
@@ -273,7 +277,28 @@ class SQLExpr(
     @classmethod
     def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
-    ) -> Self: ...
+    ) -> Self:
+        def call(df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+            cols = (col for _expr in exprs for col in _expr(df))
+            return [func(cols)]
+
+        def window_function(
+            df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            cols = (
+                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
+            )
+            return [func(cols)]
+
+        context = exprs[0]
+        return cls(
+            call=call,
+            window_function=window_function,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=context._version,
+            implementation=context._implementation,
+        )
 
     # Binary
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]

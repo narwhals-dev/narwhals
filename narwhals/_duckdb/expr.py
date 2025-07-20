@@ -19,22 +19,18 @@ from narwhals._duckdb.utils import (
     when,
     window_expression,
 )
-from narwhals._expression_parsing import (
-    ExprKind,
-    combine_alias_output_names,
-    combine_evaluate_output_names,
-)
+from narwhals._expression_parsing import ExprKind
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
 
     from duckdb import Expression
     from typing_extensions import Self
 
     from narwhals._compliant import WindowInputs
-    from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
+    from narwhals._compliant.typing import EvalNames, WindowFunction
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.typing import WindowExpressionKwargs
@@ -136,71 +132,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             version=context._version,
             implementation=Implementation.DUCKDB,
         )
-
-    @classmethod
-    def _from_elementwise_horizontal_op(
-        cls, func: Callable[[Iterable[Expression]], Expression], *exprs: Self
-    ) -> Self:
-        def call(df: DuckDBLazyFrame) -> list[Expression]:
-            cols = (col for _expr in exprs for col in _expr(df))
-            return [func(cols)]
-
-        def window_function(
-            df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-        ) -> list[Expression]:
-            cols = (
-                col for _expr in exprs for col in _expr.window_function(df, window_inputs)
-            )
-            return [func(cols)]
-
-        context = exprs[0]
-        return cls(
-            call=call,
-            window_function=window_function,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=context._version,
-            implementation=Implementation.DUCKDB,
-        )
-
-    def _callable_to_eval_series(
-        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> EvalSeries[DuckDBLazyFrame, Expression]:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            native_series_list = self(df)
-            other_native_series = {
-                key: df._evaluate_expr(value) if self._is_expr(value) else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
-        return func
-
-    def _push_down_window_function(
-        self, call: Callable[..., Expression], /, **expressifiable_args: Self | Any
-    ) -> DuckDBWindowFunction:
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            # If a function `f` is elementwise, and `g` is another function, then
-            # - `f(g) over (window)`
-            # - `f(g over (window))
-            # are equivalent.
-            # Make sure to only use with if `call` is elementwise!
-            native_series_list = self.window_function(df, inputs)
-            other_native_series = {
-                key: df._evaluate_window_expr(value, inputs)
-                if self._is_expr(value)
-                else lit(value)
-                for key, value in expressifiable_args.items()
-            }
-            return [
-                call(native_series, **other_native_series)
-                for native_series in native_series_list
-            ]
-
-        return window_f
 
     @classmethod
     def _alias_native(cls, expr: Expression, name: str) -> Expression:
