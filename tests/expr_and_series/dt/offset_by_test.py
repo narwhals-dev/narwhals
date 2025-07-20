@@ -179,9 +179,6 @@ def test_offset_by_tz(
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
-    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
-        # cudf: https://github.com/rapidsai/cudf/issues/19363
-        request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):

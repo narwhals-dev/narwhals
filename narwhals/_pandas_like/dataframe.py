@@ -981,17 +981,9 @@ class PandasLikeDataFrame(
         ],
         /,
     ) -> Any:
-        categorical = self._version.dtypes.Categorical
-        kwds: dict[Any, Any] = {"observed": True}
-        if self._implementation is Implementation.CUDF:
-            kwds.pop("observed")
-            cols = set(chain(values, index, on))
-            schema = self.schema.items()
-            if any(
-                tp for name, tp in schema if name in cols and isinstance(tp, categorical)
-            ):
-                msg = "`pivot` with Categoricals is not implemented for cuDF backend"
-                raise NotImplementedError(msg)
+        kwds: dict[Any, Any] = (
+            {} if self._implementation is Implementation.CUDF else {"observed": True}
+        )
         return self.native.pivot_table(
             values=values,
             index=index,
