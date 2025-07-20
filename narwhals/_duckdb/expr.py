@@ -436,16 +436,6 @@ class DuckDBExpr(LazyExpr["DuckDBLazyFrame", "Expression"]):
             _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
-    @requires.backend_version((1, 3))
-    def first(self) -> Self:
-        def fn(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            return [
-                window_expression(F("first", expr), inputs.partition_by, inputs.order_by)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(fn)
-
     def sum(self) -> Self:
         def f(expr: Expression) -> Expression:
             return CoalesceOperator(F("sum", expr), lit(0))

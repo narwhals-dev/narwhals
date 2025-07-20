@@ -923,6 +923,7 @@ class LazyExpr(
     gather_every: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
+    first: not_implemented = not_implemented()
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
