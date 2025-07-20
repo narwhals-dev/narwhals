@@ -982,7 +982,7 @@ class PandasLikeDataFrame(
         /,
     ) -> Any:
         kwds: dict[Any, Any] = (
-            {"observed": True} if self._implementation is Implementation.CUDF else {}
+            {} if self._implementation is Implementation.CUDF else {"observed": True}
         )
         return self.native.pivot_table(
             values=values,
