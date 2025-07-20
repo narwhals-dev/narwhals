@@ -466,8 +466,7 @@ class SQLExpr(
         def func(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            # type checkers think the return type is `list[bool]` because of `==`
-            return [  # type: ignore[return-value]
+            return [
                 self._window_expression(
                     self._function("row_number"),
                     (*inputs.partition_by, expr),
@@ -483,8 +482,7 @@ class SQLExpr(
         def func(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            # type checkers think the return type is `list[bool]` because of `==`
-            return [  # type: ignore[return-value]
+            return [
                 self._window_expression(
                     self._function("row_number"),
                     (*inputs.partition_by, expr),
