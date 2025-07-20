@@ -41,8 +41,9 @@ if TYPE_CHECKING:
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
     IbisWindowInputs = WindowInputs[ir.Value]
 
-    # NOTE: Needed to avoid `ibis` metaclass shenanigans breaking `__or__`
+    # NOTE: Needed to avoid `ibis` metaclass shenanigans breaking `ir.bl.LegacyWindowBuilder.__or__`
     # > Expected class but received "UnionType` Pylance(reportGeneralTypeIssues)
+    # See https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217791263
     LegacyWindow: TypeAlias = Union[ir.bl.LegacyWindowBuilder, None]
 
 
