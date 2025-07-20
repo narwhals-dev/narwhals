@@ -407,3 +407,6 @@ class IbisLazyFrame(
     tail = not_implemented.deprecated(
         "`LazyFrame.tail` is deprecated and will be removed in a future version."
     )
+
+    # Intentionally not implemented, as Ibis does its own expression rewriting.
+    _evaluate_window_expr = not_implemented()
