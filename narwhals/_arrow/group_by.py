@@ -37,6 +37,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "all": "all",
+        "any": "any",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
@@ -89,6 +91,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":
                 option = pc.CountOptions(mode="only_valid")
+            elif function_name in {"all", "any"}:
+                option = pc.ScalarAggregateOptions(min_count=0)
             else:
                 option = None
 
