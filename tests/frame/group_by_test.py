@@ -383,7 +383,7 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf")):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
