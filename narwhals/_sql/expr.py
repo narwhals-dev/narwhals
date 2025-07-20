@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from narwhals._compliant.typing import AliasNames, CompliantLazyFrameT, NativeExprT
 from narwhals._expression_parsing import (
@@ -466,13 +466,17 @@ class SQLExpr(
         def func(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            # pyright checkers think the return type is `list[bool]` because of `==`
             return [
-                self._window_expression(
-                    self._function("row_number"),
-                    (*inputs.partition_by, expr),
-                    inputs.order_by,
+                cast(
+                    "NativeExprT",
+                    self._window_expression(
+                        self._function("row_number"),
+                        (*inputs.partition_by, expr),
+                        inputs.order_by,
+                    )
+                    == self._lit(1),
                 )
-                == self._lit(1)
                 for expr in self(df)
             ]
 
@@ -483,14 +487,17 @@ class SQLExpr(
             df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                self._window_expression(
-                    self._function("row_number"),
-                    (*inputs.partition_by, expr),
-                    inputs.order_by,
-                    descending=[True] * len(inputs.order_by),
-                    nulls_last=[True] * len(inputs.order_by),
+                cast(
+                    "NativeExprT",
+                    self._window_expression(
+                        self._function("row_number"),
+                        (*inputs.partition_by, expr),
+                        inputs.order_by,
+                        descending=[True] * len(inputs.order_by),
+                        nulls_last=[True] * len(inputs.order_by),
+                    )
+                    == self._lit(1),
                 )
-                == self._lit(1)
                 for expr in self(df)
             ]
 
@@ -527,8 +534,8 @@ class SQLExpr(
                     - self._lit(1)
                 )
             elif method == "average":
-                rank_expr = self._window_expression(func, **window_kwargs) + (  # type: ignore[operator]
-                    self._window_expression(count_expr, **count_window_kwargs)
+                rank_expr = self._window_expression(func, **window_kwargs) + (
+                    self._window_expression(count_expr, **count_window_kwargs)  # type: ignore[operator]
                     - self._lit(1)
                 ) / self._lit(2.0)
             else:
