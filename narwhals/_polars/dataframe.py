@@ -557,7 +557,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
     # CompliantLazyFrame
     _evaluate_expr: Any
-    _evaluate_window_expr: Any
     _evaluate_aliases: Any
 
     @staticmethod

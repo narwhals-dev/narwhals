@@ -397,3 +397,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     kurtosis = not_implemented()
 
     _star = not_implemented()
+
+    # Intentionally not implemented, as Ibis does its own expression rewriting.
+    _push_down_window_function = not_implemented()
