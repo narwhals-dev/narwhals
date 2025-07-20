@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._duckdb.expr import DuckDBExpr
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from duckdb import Expression  # noqa: F401
@@ -30,4 +31,5 @@ class DuckDBSelector(  # type: ignore[misc]
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
+            implementation=Implementation.DUCKDB,
         )

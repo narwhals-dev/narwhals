@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import CompliantSelector, LazySelectorNamespace
 from narwhals._ibis.expr import IbisExpr
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir  # noqa: F401
@@ -29,4 +30,5 @@ class IbisSelector(  # type: ignore[misc]
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
+            implementation=Implementation.IBIS,
         )

@@ -37,14 +37,14 @@ if TYPE_CHECKING:
     IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
 
     @property
     def window_function(self) -> IbisWindowFunction:
         def default_window_func(
             df: IbisLazyFrame, window_inputs: IbisWindowInputs
-        ) -> list[ir.Value]:
+        ) -> Sequence[ir.Value]:
             return [
                 expr.over(
                     ibis.window(
@@ -142,7 +142,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         *,
         context: _LimitedContext,
     ) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Column]:
+        def func(df: IbisLazyFrame) -> Sequence[ir.Column]:
             return [df.native[name] for name in evaluate_column_names(df)]
 
         return cls(
@@ -155,7 +155,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
 
     @classmethod
     def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.Column]:
+        def func(df: IbisLazyFrame) -> Sequence[ir.Column]:
             return [df.native[i] for i in column_indices]
 
         return cls(
@@ -170,7 +170,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
     def _from_elementwise_horizontal_op(
         cls, func: Callable[[Iterable[ir.Value]], ir.Value], *exprs: Self
     ) -> Self:
-        def call(df: IbisLazyFrame) -> list[ir.Value]:
+        def call(df: IbisLazyFrame) -> Sequence[ir.Value]:
             cols = (col for _expr in exprs for col in _expr(df))
             return [func(cols)]
 
@@ -237,7 +237,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Column"]):
         return self._with_callable(lambda expr: expr.count())
 
     def len(self) -> Self:
-        def func(df: IbisLazyFrame) -> list[ir.IntegerScalar]:
+        def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
             return [df.native.count()]
 
         return self.__class__(
