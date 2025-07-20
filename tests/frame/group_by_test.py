@@ -370,7 +370,7 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf")):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
@@ -643,7 +643,7 @@ def test_group_by_no_preserve_dtype(
         and POLARS_VERSION < (1, 21, 0)
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
-    if any(x in request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
+    if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
         request.applymarker(pytest.mark.xfail)
 
     data = {
