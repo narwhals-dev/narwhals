@@ -36,6 +36,17 @@ class SQLExpr(
     _metadata: ExprMetadata | None
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
+    def __init__(
+        self,
+        call: EvalSeries[CompliantLazyFrameT, NativeExprT],
+        window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None = None,
+        *,
+        evaluate_output_names: EvalNames[CompliantLazyFrameT],
+        alias_output_names: AliasNames | None,
+        version: Version,
+        implementation: Implementation = Implementation.DUCKDB,
+    ) -> None: ...
+
     def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
 
@@ -275,7 +286,7 @@ class SQLExpr(
 
         context = exprs[0]
         return cls(
-            call=call,
+            call,
             window_function=window_function,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
