@@ -562,11 +562,9 @@ class PolarsSeries:
         return self.native
 
     def first(self) -> PythonLiteral:
-        if self._backend_version >= (1, 10):
-            return self.native.first()
-        elif len(self):  # pragma: no cover
-            return self.native.item(0)  # type: ignore[no-any-return]
-        return None  # pragma: no cover
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(0) if len(self) else None
+        return self.native.first()
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
