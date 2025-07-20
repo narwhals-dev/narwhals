@@ -21,7 +21,7 @@ from narwhals._duckdb.utils import (
 )
 from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, requires
+from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -80,8 +80,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _lit(self, value: Any) -> Expression:
         return lit(value)
 
-    def _star(self) -> Expression:
-        return StarExpression()
+    def _count_star(self) -> Expression:
+        return F("count", StarExpression())
 
     def _when(self, condition: Expression, value: Expression) -> Expression:
         return when(condition, value)
@@ -377,26 +377,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
-        )
-
-    @requires.backend_version((1, 3))
-    def is_unique(self) -> Self:
-        def _is_unique(expr: Expression, *partition_by: str | Expression) -> Expression:
-            return window_expression(
-                F("count", StarExpression()), (expr, *partition_by)
-            ) == lit(1)
-
-        def _unpartitioned_is_unique(expr: Expression) -> Expression:
-            return _is_unique(expr)
-
-        def _partitioned_is_unique(
-            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
-        ) -> Sequence[Expression]:
-            assert not inputs.order_by  # noqa: S101
-            return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
-
-        return self._with_callable(_unpartitioned_is_unique)._with_window_function(
-            _partitioned_is_unique
         )
 
     def log(self, base: float) -> Self:
