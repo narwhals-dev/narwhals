@@ -76,6 +76,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._window_function or default_window_func
 
     def _function(self, name: str, *args: ir.Value) -> ir.Value:
+        if name == "row_number":
+            return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
         expr = args[0]
         if name == "var_pop":
             return cast("ir.NumericColumn", expr).var(how="pop")
@@ -286,44 +288,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
-
-    def is_first_distinct(self) -> Self:
-        def func(
-            df: IbisLazyFrame, inputs: IbisWindowInputs
-        ) -> Sequence[ir.BooleanValue]:
-            # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return [
-                ibis.row_number().over(
-                    ibis.window(
-                        group_by=[*inputs.partition_by, expr],
-                        order_by=self._sort(*inputs.order_by),
-                    )
-                )
-                == lit(0)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    def is_last_distinct(self) -> Self:
-        def func(
-            df: IbisLazyFrame, inputs: IbisWindowInputs
-        ) -> Sequence[ir.BooleanValue]:
-            # ibis row_number starts at 0, so need to compare with 0 instead of the usual `1`
-            return [
-                ibis.row_number().over(
-                    ibis.window(
-                        group_by=[*inputs.partition_by, expr],
-                        order_by=self._sort(
-                            *inputs.order_by, descending=[True], nulls_last=[True]
-                        ),
-                    )
-                )
-                == lit(0)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
 
     def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward

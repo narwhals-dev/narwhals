@@ -459,6 +459,42 @@ class SQLExpr(
 
         return self._with_window_function(func)
 
+    def is_first_distinct(self) -> Self:
+        def func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            # type checkers think the return type is `list[bool]` because of `==`
+            return [  # type: ignore[return-value]
+                self._window_expression(
+                    self._function("row_number"),
+                    (*inputs.partition_by, expr),
+                    inputs.order_by,
+                )
+                == self._lit(1)
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            # type checkers think the return type is `list[bool]` because of `==`
+            return [  # type: ignore[return-value]
+                self._window_expression(
+                    self._function("row_number"),
+                    (*inputs.partition_by, expr),
+                    inputs.order_by,
+                    descending=[True] * len(inputs.order_by),
+                    nulls_last=[True] * len(inputs.order_by),
+                )
+                == self._lit(1)
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     # Other
     def over(
         self, partition_by: Sequence[str | NativeExprT], order_by: Sequence[str]

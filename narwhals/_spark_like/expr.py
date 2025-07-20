@@ -461,36 +461,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_is_nan)
 
-    def is_first_distinct(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            return [
-                self._F.row_number().over(
-                    self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(*inputs.order_by)
-                    )
-                )
-                == 1
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    def is_last_distinct(self) -> Self:
-        def func(df: SparkLikeLazyFrame, inputs: SparkWindowInputs) -> Sequence[Column]:
-            return [
-                self._F.row_number().over(
-                    self.partition_by(*inputs.partition_by, expr).orderBy(
-                        *self._sort(
-                            *inputs.order_by, descending=[True], nulls_last=[True]
-                        )
-                    )
-                )
-                == 1
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

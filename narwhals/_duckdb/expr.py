@@ -315,36 +315,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
-    @requires.backend_version((1, 3))
-    def is_first_distinct(self) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            return [
-                window_expression(
-                    F("row_number"), (*inputs.partition_by, expr), inputs.order_by
-                )
-                == lit(1)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
-    @requires.backend_version((1, 3))
-    def is_last_distinct(self) -> Self:
-        def func(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> Sequence[Expression]:
-            return [
-                window_expression(
-                    F("row_number"),
-                    (*inputs.partition_by, expr),
-                    inputs.order_by,
-                    descending=[True] * len(inputs.order_by),
-                    nulls_last=[True] * len(inputs.order_by),
-                )
-                == lit(1)
-                for expr in self(df)
-            ]
-
-        return self._with_window_function(func)
-
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
