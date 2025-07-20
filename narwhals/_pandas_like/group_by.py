@@ -63,13 +63,18 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if name == "first":
+        # TODO @dangotbanned: `modin` support
+        # TODO @dangotbanned: `cuDF` support
+        # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
         pd_version = Implementation.PANDAS._backend_version()
         if pd_version >= (2, 2, 1):
             return methodcaller(name, skipna=False)
         elif pd_version < (1, 1, 5):
             return methodcaller(name)
         else:
-            msg = f"Unsupported pandas version {pd_version!r}"
+            # TODO @dangotbanned: Figure out if there is anything we can do for `pandas>=1.1.5;<2.2.1`
+            # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2085080744
+            msg = f"TODO: Unhandled pandas version {pd_version!r}"
             raise NotImplementedError(msg)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
