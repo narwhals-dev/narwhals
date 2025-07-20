@@ -150,11 +150,6 @@ def test_pivot_no_agg(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        # The first one fails, the second one passes. Let's just skip
-        # the test until they address their pivot shortcomings in the next
-        # release https://github.com/rapidsai/cudf/pull/17373.
-        return
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
