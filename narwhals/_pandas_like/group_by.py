@@ -156,6 +156,8 @@ class PandasLikeGroupBy(
         "n_unique": "nunique",
         "count": "count",
         "quantile": "quantile",
+        "all": "all",
+        "any": "any",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
