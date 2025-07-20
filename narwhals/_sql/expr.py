@@ -167,7 +167,7 @@ class SQLExpr(
 
     def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
-    def _star(self) -> NativeExprT: ...
+    def _count_star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
     def _window_expression(
         self,
@@ -520,7 +520,7 @@ class SQLExpr(
             descending: Sequence[bool],
             nulls_last: Sequence[bool],
         ) -> NativeExprT:
-            count_expr = self._function("count", self._star())
+            count_expr = self._count_star()
             window_kwargs: dict[str, Any] = {
                 "partition_by": partition_by,
                 "order_by": (expr, *order_by),
@@ -564,6 +564,29 @@ class SQLExpr(
 
         return self._with_callable(_unpartitioned_rank)._with_window_function(
             _partitioned_rank
+        )
+
+    def is_unique(self) -> Self:
+        def _is_unique(
+            expr: NativeExprT, *partition_by: str | NativeExprT
+        ) -> NativeExprT:
+            return cast(
+                "NativeExprT",
+                self._window_expression(self._count_star(), (expr, *partition_by))
+                == self._lit(1),
+            )
+
+        def _unpartitioned_is_unique(expr: NativeExprT) -> NativeExprT:
+            return _is_unique(expr)
+
+        def _partitioned_is_unique(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            assert not inputs.order_by  # noqa: S101
+            return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
+
+        return self._with_callable(_unpartitioned_is_unique)._with_window_function(
+            _partitioned_is_unique
         )
 
     # Other

@@ -82,8 +82,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
-    def _star(self) -> Column:
-        return self._F.col("*")
+    def _count_star(self) -> Column:
+        return self._F.count("*")
 
     def _when(self, condition: Column, value: Column) -> Column:
         return self._F.when(condition, value)
@@ -419,23 +419,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return expr.isin(values) if values else self._F.lit(False)  # noqa: FBT003
 
         return self._with_elementwise(_is_in)
-
-    def is_unique(self) -> Self:
-        def _is_unique(expr: Column, *partition_by: str | Column) -> Column:
-            return self._F.count("*").over(self.partition_by(expr, *partition_by)) == 1
-
-        def _unpartitioned_is_unique(expr: Column) -> Column:
-            return _is_unique(expr)
-
-        def _partitioned_is_unique(
-            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            assert not inputs.order_by  # noqa: S101
-            return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
-
-        return self._with_callable(_unpartitioned_is_unique)._with_window_function(
-            _partitioned_is_unique
-        )
 
     def len(self) -> Self:
         def _len(_expr: Column) -> Column:
