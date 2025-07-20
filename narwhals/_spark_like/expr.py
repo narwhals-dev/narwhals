@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._compliant import WindowInputs
 from narwhals._expression_parsing import (
     ExprKind,
     combine_alias_output_names,
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
     from sqlframe.base.window import Window, WindowSpec
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._compliant import WindowInputs
     from narwhals._compliant.typing import EvalNames, WindowFunction
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
@@ -464,18 +464,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             )
 
         return self._with_callable(_n_unique)
-
-    def over(self, partition_by: Sequence[str | Column], order_by: Sequence[str]) -> Self:
-        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            return self.window_function(df, WindowInputs(partition_by, order_by))
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
 
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:

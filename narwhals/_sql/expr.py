@@ -12,11 +12,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
-    from narwhals._compliant.window import WindowInputs
     from narwhals._expression_parsing import ExprMetadata
 
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
+from narwhals._compliant.window import WindowInputs
 from narwhals._utils import Implementation, Version
 
 
@@ -275,6 +275,7 @@ class SQLExpr(
         cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
     ) -> Self: ...
 
+    # Binary
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]
         return self._with_binary(lambda expr, other: expr.__eq__(other), other)
 
@@ -438,6 +439,21 @@ class SQLExpr(
             ]
 
         return self._with_window_function(func)
+
+    # Other
+    def over(
+        self, partition_by: Sequence[str | NativeExprT], order_by: Sequence[str]
+    ) -> Self:
+        def func(df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+            return self.window_function(df, WindowInputs(partition_by, order_by))
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()

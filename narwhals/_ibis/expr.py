@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
 
-from narwhals._compliant import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     import ibis.expr.types as ir
     from typing_extensions import Self
 
+    from narwhals._compliant import WindowInputs
     from narwhals._compliant.typing import EvalNames, WindowFunction
     from narwhals._expression_parsing import ExprKind
     from narwhals._ibis.dataframe import IbisLazyFrame
@@ -278,18 +278,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isnull().sum())
-
-    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
-        def func(df: IbisLazyFrame) -> Sequence[ir.Value]:
-            return self.window_function(df, WindowInputs(partition_by, order_by))
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=Implementation.IBIS,
-        )
 
     def is_nan(self) -> Self:
         def func(expr: ir.FloatingValue | Any) -> ir.Value:

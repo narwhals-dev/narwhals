@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 from duckdb import CoalesceOperator, StarExpression
 from duckdb.typing import DuckDBPyType
 
-from narwhals._compliant import WindowInputs
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
@@ -34,6 +33,7 @@ if TYPE_CHECKING:
     from duckdb import Expression
     from typing_extensions import Self
 
+    from narwhals._compliant import WindowInputs
     from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
@@ -354,21 +354,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
-
-    @requires.backend_version((1, 3))
-    def over(
-        self, partition_by: Sequence[str | Expression], order_by: Sequence[str]
-    ) -> Self:
-        def func(df: DuckDBLazyFrame) -> Sequence[Expression]:
-            return self.window_function(df, WindowInputs(partition_by, order_by))
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-            implementation=self._implementation,
-        )
 
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: expr.isnull())
