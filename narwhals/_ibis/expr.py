@@ -444,9 +444,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     # NOTE: https://github.com/ibis-project/ibis/issues/10542
     cum_prod = not_implemented()
-    drop_nulls = not_implemented()
 
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
     kurtosis = not_implemented()
-    unique = not_implemented()

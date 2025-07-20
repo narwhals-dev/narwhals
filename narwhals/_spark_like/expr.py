@@ -643,6 +643,4 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def struct(self) -> SparkLikeExprStructNamespace:
         return SparkLikeExprStructNamespace(self)
 
-    drop_nulls = not_implemented()
-    unique = not_implemented()
     quantile = not_implemented()

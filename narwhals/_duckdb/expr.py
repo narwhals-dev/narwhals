@@ -26,7 +26,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, not_implemented, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -596,6 +596,3 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     @property
     def struct(self) -> DuckDBExprStructNamespace:
         return DuckDBExprStructNamespace(self)
-
-    drop_nulls = not_implemented()
-    unique = not_implemented()
