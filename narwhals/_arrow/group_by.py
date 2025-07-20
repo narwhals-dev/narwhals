@@ -37,6 +37,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "all": "all",
+        "any": "any",
         "first": "first",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
@@ -50,6 +52,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
     _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("first",))
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
 
     def __init__(
         self,
@@ -77,6 +80,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             option = pc.CountOptions(mode="all")
         elif function_name in self._OPTION_COUNT_VALID:
             option = pc.CountOptions(mode="only_valid")
+        elif function_name in self._OPTION_SCALAR:
+            option = pc.ScalarAggregateOptions(min_count=0)
         elif function_name in self._OPTION_ORDERED:
             grouped, option = self._ordered_agg(grouped, function_name)
         return grouped, self._remap_expr_name(function_name), option

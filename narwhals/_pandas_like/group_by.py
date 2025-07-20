@@ -165,6 +165,8 @@ class PandasLikeGroupBy(
         "n_unique": "nunique",
         "count": "count",
         "quantile": "quantile",
+        "all": "all",
+        "any": "any",
         "first": "first",
     }
     _original_columns: tuple[str, ...]
