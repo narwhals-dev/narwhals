@@ -395,3 +395,5 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
     skew = not_implemented()
     kurtosis = not_implemented()
+
+    _star = not_implemented()

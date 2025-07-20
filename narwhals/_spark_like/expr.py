@@ -82,6 +82,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
+    def _star(self) -> Column:
+        return self._F.col("*")
+
     def _when(self, condition: Column, value: Column) -> Column:
         return self._F.when(condition, value)
 
@@ -494,62 +497,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         return self._with_elementwise(_fill_constant, value=value)
-
-    def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        func_name = self._REMAP_RANK_METHOD[method]
-
-        def _rank(
-            expr: Column,
-            partition_by: Sequence[str | Column] = (),
-            order_by: Sequence[str | Column] = (),
-            *,
-            descending: Sequence[bool],
-            nulls_last: Sequence[bool],
-        ) -> Column:
-            _order_by = self._sort(
-                expr, *order_by, descending=descending, nulls_last=nulls_last
-            )
-            window = self.partition_by(*partition_by).orderBy(*_order_by)
-            count_window = self.partition_by(*partition_by, expr)
-            if method == "max":
-                rank_expr = (
-                    getattr(self._F, func_name)().over(window)
-                    + self._F.count(expr).over(count_window)
-                    - self._F.lit(1)
-                )
-
-            elif method == "average":
-                rank_expr = getattr(self._F, func_name)().over(window) + (
-                    self._F.count(expr).over(count_window) - self._F.lit(1)
-                ) / self._F.lit(2)
-
-            else:
-                rank_expr = getattr(self._F, func_name)().over(window)
-
-            return self._F.when(expr.isNotNull(), rank_expr)
-
-        def _unpartitioned_rank(expr: Column) -> Column:
-            return _rank(expr, descending=[descending], nulls_last=[True])
-
-        def _partitioned_rank(
-            df: SparkLikeLazyFrame, inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
-            # https://github.com/narwhals-dev/narwhals/issues/2790
-            return [
-                _rank(
-                    expr,
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[descending] + [False] * len(inputs.order_by),
-                    nulls_last=[True] + [False] * len(inputs.order_by),
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(_unpartitioned_rank)._with_window_function(
-            _partitioned_rank
-        )
 
     def log(self, base: float) -> Self:
         def _log(expr: Column) -> Column:

@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals.typing import RankMethod
+
 
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import EvalNames, EvalSeries, WindowFunction
@@ -164,6 +166,7 @@ class SQLExpr(
 
     def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
+    def _star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
     def _window_expression(
         self,
@@ -494,6 +497,68 @@ class SQLExpr(
             ]
 
         return self._with_window_function(func)
+
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
+        if method in {"min", "max", "average"}:
+            func = self._function("rank")
+        elif method == "dense":
+            func = self._function("dense_rank")
+        else:  # method == "ordinal"
+            func = self._function("row_number")
+
+        def _rank(
+            expr: NativeExprT,
+            partition_by: Sequence[str | NativeExprT] = (),
+            order_by: Sequence[str | NativeExprT] = (),
+            *,
+            descending: Sequence[bool],
+            nulls_last: Sequence[bool],
+        ) -> NativeExprT:
+            count_expr = self._function("count", self._star())
+            window_kwargs: dict[str, Any] = {
+                "partition_by": partition_by,
+                "order_by": (expr, *order_by),
+                "descending": descending,
+                "nulls_last": nulls_last,
+            }
+            count_window_kwargs: dict[str, Any] = {"partition_by": (*partition_by, expr)}
+            if method == "max":
+                rank_expr = (
+                    self._window_expression(func, **window_kwargs)  # type: ignore[operator]
+                    + self._window_expression(count_expr, **count_window_kwargs)
+                    - self._lit(1)
+                )
+            elif method == "average":
+                rank_expr = self._window_expression(func, **window_kwargs) + (  # type: ignore[operator]
+                    self._window_expression(count_expr, **count_window_kwargs)
+                    - self._lit(1)
+                ) / self._lit(2.0)
+            else:
+                rank_expr = self._window_expression(func, **window_kwargs)
+            return self._when(~self._function("isnull", expr), rank_expr)  # type: ignore[operator]
+
+        def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
+            return _rank(expr, descending=[descending], nulls_last=[True])
+
+        def _partitioned_rank(
+            df: CompliantLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
+            # https://github.com/narwhals-dev/narwhals/issues/2790
+            return [
+                _rank(
+                    expr,
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[descending] + [False] * len(inputs.order_by),
+                    nulls_last=[True] + [False] * len(inputs.order_by),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(_unpartitioned_rank)._with_window_function(
+            _partitioned_rank
+        )
 
     # Other
     def over(

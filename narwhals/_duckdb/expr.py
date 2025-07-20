@@ -38,14 +38,12 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
-    from narwhals._duckdb.typing import WindowExpressionKwargs
     from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
-        RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
     )
@@ -75,10 +73,15 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._window_function: DuckDBWindowFunction | None = window_function
 
     def _function(self, name: str, *args: Expression) -> Expression:
+        if name == "isnull":
+            return args[0].isnull()
         return F(name, *args)
 
     def _lit(self, value: Any) -> Expression:
         return lit(value)
+
+    def _star(self) -> Expression:
+        return StarExpression()
 
     def _when(self, condition: Expression, value: Expression) -> Expression:
         return when(condition, value)
@@ -394,70 +397,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(_unpartitioned_is_unique)._with_window_function(
             _partitioned_is_unique
-        )
-
-    @requires.backend_version((1, 3))
-    def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        if method in {"min", "max", "average"}:
-            func = F("rank")
-        elif method == "dense":
-            func = F("dense_rank")
-        else:  # method == "ordinal"
-            func = F("row_number")
-
-        def _rank(
-            expr: Expression,
-            partition_by: Sequence[str | Expression] = (),
-            order_by: Sequence[str | Expression] = (),
-            *,
-            descending: Sequence[bool],
-            nulls_last: Sequence[bool],
-        ) -> Expression:
-            count_expr = F("count", StarExpression())
-            window_kwargs: WindowExpressionKwargs = {
-                "partition_by": partition_by,
-                "order_by": (expr, *order_by),
-                "descending": descending,
-                "nulls_last": nulls_last,
-            }
-            count_window_kwargs: WindowExpressionKwargs = {
-                "partition_by": (*partition_by, expr)
-            }
-            if method == "max":
-                rank_expr = (
-                    window_expression(func, **window_kwargs)
-                    + window_expression(count_expr, **count_window_kwargs)
-                    - lit(1)
-                )
-            elif method == "average":
-                rank_expr = window_expression(func, **window_kwargs) + (
-                    window_expression(count_expr, **count_window_kwargs) - lit(1)
-                ) / lit(2.0)
-            else:
-                rank_expr = window_expression(func, **window_kwargs)
-            return when(expr.isnotnull(), rank_expr)
-
-        def _unpartitioned_rank(expr: Expression) -> Expression:
-            return _rank(expr, descending=[descending], nulls_last=[True])
-
-        def _partitioned_rank(
-            df: DuckDBLazyFrame, inputs: DuckDBWindowInputs
-        ) -> Sequence[Expression]:
-            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
-            # https://github.com/narwhals-dev/narwhals/issues/2790
-            return [
-                _rank(
-                    expr,
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[descending] + [False] * len(inputs.order_by),
-                    nulls_last=[True] + [False] * len(inputs.order_by),
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(_unpartitioned_rank)._with_window_function(
-            _partitioned_rank
         )
 
     def log(self, base: float) -> Self:
