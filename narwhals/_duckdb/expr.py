@@ -82,9 +82,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
-        return self._call(df)
-
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover

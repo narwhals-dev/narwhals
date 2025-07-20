@@ -97,9 +97,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
         return expr.over(window)
 
-    def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
-        return self._call(df)
-
     def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover

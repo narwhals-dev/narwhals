@@ -56,6 +56,9 @@ class SQLExpr(
             window_function
         )
 
+    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+        return self._call(df)
+
     def _callable_to_eval_series(
         self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
     ) -> EvalSeries[CompliantLazyFrameT, NativeExprT]:
@@ -491,6 +494,7 @@ class SQLExpr(
     mode: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     sort: not_implemented = not_implemented()
+    tail: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     unique: not_implemented = not_implemented()
 
