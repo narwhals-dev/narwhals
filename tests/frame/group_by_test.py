@@ -625,7 +625,10 @@ def test_group_by_len_1_column(
     ],
 )
 def test_group_by_no_preserve_dtype(
-    constructor_eager: ConstructorEager, low: NonNestedLiteral, high: NonNestedLiteral
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    low: NonNestedLiteral,
+    high: NonNestedLiteral,
 ) -> None:
     """Minimal repro for [`px.sunburst` failure].
 
@@ -640,6 +643,9 @@ def test_group_by_no_preserve_dtype(
         and POLARS_VERSION < (1, 21, 0)
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
+    if any(x in request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
         "col_b": [low, low, high, high, None, None, None],
