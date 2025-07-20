@@ -95,7 +95,6 @@ class DuckDBNamespace(
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
-            implementation=Implementation.DUCKDB,
         )
 
     def all_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
@@ -163,7 +162,6 @@ class DuckDBNamespace(
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
-            implementation=Implementation.DUCKDB,
         )
 
     def len(self) -> DuckDBExpr:
@@ -175,7 +173,6 @@ class DuckDBNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
-            implementation=Implementation.DUCKDB,
         )
 
     def coalesce(self, *exprs: DuckDBExpr) -> DuckDBExpr:

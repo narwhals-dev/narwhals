@@ -36,26 +36,6 @@ class SQLExpr(
     _metadata: ExprMetadata | None
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
-    def __init__(
-        self,
-        call: EvalSeries[CompliantLazyFrameT, NativeExprT],
-        window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None = None,
-        *,
-        evaluate_output_names: EvalNames[CompliantLazyFrameT],
-        alias_output_names: AliasNames | None,
-        version: Version,
-        implementation: Implementation,
-    ) -> None:
-        self._call = call
-        self._evaluate_output_names = evaluate_output_names
-        self._alias_output_names = alias_output_names
-        self._version = version
-        self._implementation = implementation
-        self._metadata: ExprMetadata | None = None
-        self._window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None = (
-            window_function
-        )
-
     def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
 

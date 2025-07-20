@@ -14,7 +14,7 @@ from narwhals._constants import (
 )
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
 from narwhals._duration import Interval
-from narwhals._utils import Implementation, not_implemented
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -142,7 +142,6 @@ class DuckDBExprDateTimeNamespace(
             evaluate_output_names=self.compliant._evaluate_output_names,
             alias_output_names=self.compliant._alias_output_names,
             version=self.compliant._version,
-            implementation=Implementation.DUCKDB,
         )
 
     def convert_time_zone(self, time_zone: str) -> DuckDBExpr:

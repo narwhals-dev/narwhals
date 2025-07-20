@@ -82,7 +82,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
-            implementation=Implementation.IBIS,
         )
 
     def all_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
@@ -149,7 +148,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
-            implementation=Implementation.IBIS,
         )
 
     def len(self) -> IbisExpr:
@@ -161,7 +159,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
-            implementation=Implementation.IBIS,
         )
 
     def coalesce(self, *exprs: IbisExpr) -> IbisExpr:

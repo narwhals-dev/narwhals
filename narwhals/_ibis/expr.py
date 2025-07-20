@@ -12,7 +12,7 @@ from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, not_implemented
+from narwhals._utils import Implementation, Version, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -21,8 +21,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import WindowInputs
-    from narwhals._compliant.typing import EvalNames, WindowFunction
-    from narwhals._expression_parsing import ExprKind
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        WindowFunction,
+    )
+    from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
@@ -35,6 +40,23 @@ if TYPE_CHECKING:
 
 class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
+
+    def __init__(
+        self,
+        call: EvalSeries[IbisLazyFrame, ir.Value],
+        window_function: IbisWindowFunction | None = None,
+        *,
+        evaluate_output_names: EvalNames[IbisLazyFrame],
+        alias_output_names: AliasNames | None,
+        version: Version,
+        implementation: Implementation = Implementation.IBIS,
+    ) -> None:
+        self._call = call
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
+        self._version = version
+        self._metadata: ExprMetadata | None = None
+        self._window_function: IbisWindowFunction | None = window_function
 
     @property
     def window_function(self) -> IbisWindowFunction:
@@ -143,7 +165,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,
-            implementation=Implementation.IBIS,
         )
 
     @classmethod
@@ -156,7 +177,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             evaluate_output_names=cls._eval_names_indices(column_indices),
             alias_output_names=None,
             version=context._version,
-            implementation=Implementation.IBIS,
         )
 
     def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
@@ -221,7 +241,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
-            implementation=Implementation.IBIS,
         )
 
     def std(self, ddof: int) -> Self:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._expression_parsing import ExprKind
+from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -16,7 +16,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, not_implemented
+from narwhals._utils import Implementation, Version, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -26,7 +26,12 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant import WindowInputs
-    from narwhals._compliant.typing import EvalNames, WindowFunction
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        WindowFunction,
+    )
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
@@ -45,6 +50,24 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
+    def __init__(
+        self,
+        call: EvalSeries[SparkLikeLazyFrame, Column],
+        window_function: SparkWindowFunction | None = None,
+        *,
+        evaluate_output_names: EvalNames[SparkLikeLazyFrame],
+        alias_output_names: AliasNames | None,
+        version: Version,
+        implementation: Implementation,
+    ) -> None:
+        self._call = call
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
+        self._version = version
+        self._implementation = implementation
+        self._metadata: ExprMetadata | None = None
+        self._window_function: SparkWindowFunction | None = window_function
+
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
         "min": "rank",
         "max": "rank",
