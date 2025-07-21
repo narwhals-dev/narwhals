@@ -361,11 +361,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._with_callable(_log)
 
-    def exp(self) -> Self:
-        def _exp(expr: ir.NumericColumn) -> ir.Value:
-            return expr.exp()
+    # def exp(self) -> Self:
+    #     def _exp(expr: ir.NumericColumn) -> ir.Value:
+    #         return expr.exp()
 
-        return self._with_callable(_exp)
+    #     return self._with_callable(_exp)
 
     def sqrt(self) -> Self:
         def _sqrt(expr: ir.NumericColumn) -> ir.Value:

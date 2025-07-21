@@ -491,9 +491,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_log)
 
-    def exp(self) -> Self:
-        def _exp(expr: Column) -> Column:
-            return self._F.exp(expr)
+    # def exp(self) -> Self:
+    #     def _exp(expr: Column) -> Column:
+    #         return self._F.exp(expr)
 
         return self._with_elementwise(_exp)
 
