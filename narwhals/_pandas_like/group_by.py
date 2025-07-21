@@ -79,7 +79,7 @@ def _native_agg(
         if pd_version >= (2, 2, 1):
             return methodcaller(name, skipna=False)
         # NOTE: Before 1.1.5, `first` worked without arguments
-        if pd_version >= (1, 1, 5):
+        if pd_version >= (1, 1, 5):  # pragma: no cover
             # NOTE: https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
             # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
             return methodcaller("nth", n=0)

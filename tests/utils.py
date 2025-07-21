@@ -190,8 +190,3 @@ def maybe_collect(df: Frame) -> Frame:
     if isinstance(df, nw.LazyFrame):
         return df.collect()
     return df  # pragma: no cover
-
-
-def is_pandas_like(constructor: Constructor) -> bool:
-    """Return `True` when `constructor` produces a native pandas-like object."""
-    return any(x in str(constructor) for x in ("pandas", "modin", "cudf"))
