@@ -71,6 +71,10 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
             return methodcaller(name, skipna=False)
         elif pd_version < (1, 1, 5):
             return methodcaller(name)
+        elif pd_version < (2, 0, 0):
+            # NOTE: https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
+            # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
+            return methodcaller("nth", n=0)
         else:
             # TODO @dangotbanned: Figure out if there is anything we can do for `pandas>=1.1.5;<2.2.1`
             # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2085080744
