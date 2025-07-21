@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         TemporalLiteral,
     )
@@ -76,7 +77,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         "ordinal": "row_number",
     }
 
-    def _function(self, name: str, *args: Column) -> Column:
+    def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
         return getattr(self._F, name)(*args)
 
     def _lit(self, value: Any) -> Column:
