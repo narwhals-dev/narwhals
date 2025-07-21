@@ -259,7 +259,7 @@ class PandasLikeDataFrame(
         return other.native
 
     @property
-    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+    def _array_funcs(self) -> ModuleType:
         if TYPE_CHECKING:
             import numpy as np
 

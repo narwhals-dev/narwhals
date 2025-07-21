@@ -518,9 +518,9 @@ class ArrowDataFrame(
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import

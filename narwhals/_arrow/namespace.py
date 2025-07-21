@@ -85,7 +85,7 @@ class ArrowNamespace(
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
             it = (
-                (s.fill_null(True, None, None) for s in series)  # noqa: FBT003
+                (s.fill_null(value=True, strategy=None, limit=None) for s in series)
                 if ignore_nulls
                 else series
             )
@@ -105,7 +105,7 @@ class ArrowNamespace(
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
             it = (
-                (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
+                (s.fill_null(value=False, strategy=None, limit=None) for s in series)
                 if ignore_nulls
                 else series
             )

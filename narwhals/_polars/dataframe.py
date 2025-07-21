@@ -455,9 +455,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
             # NOTE: (F841) is a false positive
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
         elif backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import

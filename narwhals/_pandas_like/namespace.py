@@ -157,7 +157,9 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
+                    s
+                    if is_non_nullable_boolean(s)
+                    else s.fill_null(value=True, strategy=None, limit=None)
                     for s in series
                 )
                 if ignore_nulls
@@ -190,7 +192,9 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
+                    s
+                    if is_non_nullable_boolean(s)
+                    else s.fill_null(value=False, strategy=None, limit=None)
                     for s in series
                 )
                 if ignore_nulls

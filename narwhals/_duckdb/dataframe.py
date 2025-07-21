@@ -473,11 +473,11 @@ class DuckDBLazyFrame(
             raise NotImplementedError(msg)
 
         unpivot_on = ", ".join(str(col(name)) for name in on_)
-        rel = self.native  # noqa: F841
+        _rel = self.native
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
         query = f"""
-            unpivot rel
+            unpivot _rel
             on {unpivot_on}
             into
                 name "{variable_name}"
