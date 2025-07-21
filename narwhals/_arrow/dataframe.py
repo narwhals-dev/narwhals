@@ -591,7 +591,7 @@ class ArrowDataFrame(
         raise AssertionError(msg)  # pragma: no cover
 
     def clone(self) -> Self:
-        return self._with_native(self.native, validate_column_names=False)
+        return self._with_native(pa.table(self.native), validate_column_names=False)
 
     def item(self, row: int | None, column: int | str | None) -> Any:
         from narwhals._arrow.series import maybe_extract_py_scalar
