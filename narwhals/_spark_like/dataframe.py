@@ -28,6 +28,8 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pyarrow as pa
@@ -549,6 +551,9 @@ class SparkLikeLazyFrame(
             - 1
         ).alias(name)
         return self._with_native(self.native.select(row_index_expr, *self.columns))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        self.native.write.parquet(file)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

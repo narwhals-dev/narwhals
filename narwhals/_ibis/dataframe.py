@@ -19,6 +19,8 @@ from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pandas as pd
@@ -400,6 +402,9 @@ class IbisLazyFrame(
             ibis.selectors.all(),
         ]
         return self._with_native(self.native.select(*to_select))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        self.native.to_parquet(file)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
