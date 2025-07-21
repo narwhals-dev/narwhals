@@ -4,7 +4,7 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyNamespace, LazyThen, LazyWhen
+from narwhals._compliant import LazyNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -18,6 +18,7 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
     true_divide,
 )
+from narwhals._sql.when_then import SQLThen, SQLWhen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -243,7 +244,7 @@ class SparkLikeNamespace(
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
-class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
+class SparkLikeWhen(SQLWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
     @property
     def _then(self) -> type[SparkLikeThen]:
         return SparkLikeThen
@@ -262,5 +263,5 @@ class SparkLikeWhen(LazyWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
 
 
 class SparkLikeThen(
-    LazyThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
+    SQLThen[SparkLikeLazyFrame, "Column", SparkLikeExpr], SparkLikeExpr
 ): ...

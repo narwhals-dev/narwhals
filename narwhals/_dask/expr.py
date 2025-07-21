@@ -664,10 +664,21 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
-    list = not_implemented()  # type: ignore[assignment]
-    struct = not_implemented()  # type: ignore[assignment]
-    rank = not_implemented()  # pyright: ignore[reportAssignmentType]
-    _alias_native = not_implemented()
-    window_function = not_implemented()  # pyright: ignore[reportAssignmentType]
-    _from_elementwise_horizontal_op = not_implemented()
-    _with_binary = not_implemented()
+    arg_max: not_implemented = not_implemented()
+    arg_min: not_implemented = not_implemented()
+    arg_true: not_implemented = not_implemented()
+    ewm_mean: not_implemented = not_implemented()
+    gather_every: not_implemented = not_implemented()
+    head: not_implemented = not_implemented()
+    map_batches: not_implemented = not_implemented()
+    mode: not_implemented = not_implemented()
+    sample: not_implemented = not_implemented()
+    rank: not_implemented = not_implemented()
+    replace_strict: not_implemented = not_implemented()
+    sort: not_implemented = not_implemented()
+    tail: not_implemented = not_implemented()
+
+    # namespaces
+    list: not_implemented = not_implemented()  # type: ignore[assignment]
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
+    struct: not_implemented = not_implemented()  # type: ignore[assignment]
