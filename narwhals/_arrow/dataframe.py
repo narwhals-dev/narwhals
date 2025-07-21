@@ -594,7 +594,7 @@ class ArrowDataFrame(
         native = self.native
         if self._backend_version < (14, 0, 0):
             cloned_table = pa.table(
-                {col: pa.array(native.column(col)) for col in native.column_names}
+                {col: native.column(col).combine_chunks() for col in native.column_names}
             )
         else:
             cloned_table = pa.table(native)
