@@ -150,6 +150,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
     def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
@@ -875,6 +876,9 @@ class EagerExpr(
     def first(self) -> Self:
         return self._reuse_series("first", returns_scalar=True)
 
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -905,7 +909,9 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol38[CompliantLazyFrameT, NativeExprT],
 ):
+    # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2526#issuecomment-3019303816
     first: not_implemented = not_implemented()
+    last: not_implemented = not_implemented()
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:

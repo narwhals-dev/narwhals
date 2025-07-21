@@ -834,6 +834,25 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.first()
 
+    def last(self) -> PythonLiteral:
+        """Get the last element of the Series.
+
+        Returns:
+            A scalar value or `None` if the Series is empty.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, 3]])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.last()
+            3
+            >>> s_nw.filter(s_nw > 5).last() is None
+            True
+        """
+        return self._compliant_series.last()
+
     def is_in(self, other: Any) -> Self:
         """Check if the elements of this Series are in the other sequence.
 

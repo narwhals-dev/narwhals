@@ -1984,6 +1984,16 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).first()
         )
 
+    def last(self) -> Self:
+        """Get the last value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).last()
+        )
+
     def mode(self) -> Self:
         r"""Compute the most occurring value(s).
 

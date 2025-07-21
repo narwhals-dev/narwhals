@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import pandas as pd
     from pandas.api.extensions import ExtensionDtype
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias, Unpack
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -27,14 +27,13 @@ if TYPE_CHECKING:
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
+OrderedAggregation: TypeAlias = Literal["first", "last"]
 NativeAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
-    "first",
     "idxmax",
     "idxmin",
-    "last",
     "max",
     "mean",
     "median",
@@ -47,6 +46,7 @@ NativeAggregation: TypeAlias = Literal[
     "std",
     "sum",
     "var",
+    OrderedAggregation,
     InefficientNativeAggregation,
 ]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
@@ -57,6 +57,16 @@ _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
 
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
+
+_REMAP_ORDERED_INDEX: Mapping[OrderedAggregation, Literal[0, -1]] = {
+    "first": 0,
+    "last": -1,
+}
+_ORDERED_AGG = frozenset[OrderedAggregation](("first", "last"))
+
+
+def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
+    return obj in _ORDERED_AGG
 
 
 @lru_cache(maxsize=32)
@@ -69,33 +79,40 @@ def _native_agg(
 ) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
-    if name == "first":
+    if _is_ordered_agg(name):
         # TODO @dangotbanned: `modin` support
         # TODO @dangotbanned: `cuDF` support
         # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
         pd_version = Implementation.PANDAS._backend_version()
         if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < (2, 2, 1)):
-            return first_compat
+            return _ordered_compat(name)
         if pd_version >= (2, 2, 1):
             return methodcaller(name, skipna=False)
         # NOTE: Before 1.1.5, `first` worked without arguments
         if pd_version >= (1, 1, 5):  # pragma: no cover
             # NOTE: https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
             # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
-            return methodcaller("nth", n=0)
+            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
 
 
-def first_compat(dgb: NativeGroupBy, /) -> pd.DataFrame:
+def _ordered_compat(
+    name: OrderedAggregation, /
+) -> Callable[[NativeGroupBy], pd.DataFrame]:
     """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
 
     - Theoretically could be slow
     - but works in all cases for `string[pyarrow]`
     - and `>=2.0.0; <2.2.1`
     """
-    return dgb.apply(lambda group: group.iloc[0])
+    index = _REMAP_ORDERED_INDEX[name]
+
+    def fn(dgb: NativeGroupBy, /) -> pd.DataFrame:
+        return dgb.apply(lambda group: group.iloc[index])
+
+    return fn
 
 
 def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:

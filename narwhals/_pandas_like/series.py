@@ -381,6 +381,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def first(self) -> PythonLiteral:
         return self.native.iloc[0] if len(self.native) else None
 
+    def last(self) -> PythonLiteral:
+        return self.native.iloc[-1] if len(self.native) else None
+
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)
         return self._with_native(ser == other).alias(self.name)

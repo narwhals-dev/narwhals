@@ -320,6 +320,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = self.native[0] if len(self.native) else None
         return maybe_extract_py_scalar(result, _return_py_scalar)
 
+    def last(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
+        ca = self.native
+        result = ca[height - 1] if (height := len(ca)) else None
+        return maybe_extract_py_scalar(result, _return_py_scalar)
+
     def mean(self, *, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
 

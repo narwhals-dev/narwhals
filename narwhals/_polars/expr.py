@@ -279,6 +279,7 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     first: Method[Self]
+    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_finite: Method[Self]

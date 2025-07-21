@@ -40,6 +40,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "all": "all",
         "any": "any",
         "first": "first",
+        "last": "last",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
@@ -50,7 +51,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         ("len", "n_unique")
     )
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
-    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("first",))
+    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("first", "last")
+    )
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
     _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
 
