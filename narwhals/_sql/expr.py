@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals.typing import RankMethod
+    from narwhals.typing import PythonLiteral, RankMethod
 
 
 class SQLExpr(
@@ -165,7 +165,7 @@ class SQLExpr(
 
         return self._window_function or default_window_func
 
-    def _function(self, name: str, *args: NativeExprT) -> NativeExprT: ...
+    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
     def _count_star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
@@ -454,9 +454,7 @@ class SQLExpr(
         ) -> Sequence[NativeExprT]:
             return [
                 self._window_expression(
-                    self._function("lag", expr, self._lit(n)),
-                    inputs.partition_by,
-                    inputs.order_by,
+                    self._function("lag", expr, n), inputs.partition_by, inputs.order_by
                 )
                 for expr in self(df)
             ]
