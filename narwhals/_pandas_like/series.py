@@ -231,7 +231,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     @property
-    def _array_funcs(self) -> ModuleType:
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             import numpy as np
 
