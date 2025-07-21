@@ -660,14 +660,6 @@ def test_group_by_no_preserve_dtype(
     assert_equal_data(result, expected)
 
 
-# NOTE: Resolving this in the current `PandasLikeGroupBy` might be too complex
-XFAIL_PANDAS_SKIPNA = pytest.mark.xfail(
-    PANDAS_VERSION >= (1, 1, 5),
-    reason="Requires `skipna=False`, which was introduced in `2.2.1`.\n"
-    "https://github.com/pandas-dev/pandas/issues/57019\n",
-)
-
-
 @pytest.mark.parametrize(
     ("keys", "aggs", "expected", "pre_sort"),
     [
@@ -701,13 +693,6 @@ def test_group_by_agg_first(
             "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
-        )
-    )
-    request.applymarker(
-        pytest.mark.xfail(
-            "[pyarrow]" in request.node.name
-            and "pandas-pyarrow-na-order" in request.node.name,
-            reason="<NA> marker seems to not respect ordering",
         )
     )
     data = {

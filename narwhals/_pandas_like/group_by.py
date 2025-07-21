@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     import pandas as pd
+    from pandas.api.extensions import ExtensionDtype
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
     from typing_extensions import TypeAlias, Unpack
 
@@ -59,7 +60,13 @@ NonStrHashable: TypeAlias = Any
 
 
 @lru_cache(maxsize=32)
-def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
+def _native_agg(
+    name: NativeAggregation,
+    /,
+    *,
+    has_pyarrow_string: bool | None = None,
+    **kwds: Unpack[ScalarKwargs],
+) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if name == "first":
@@ -67,22 +74,32 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
         # TODO @dangotbanned: `cuDF` support
         # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
         pd_version = Implementation.PANDAS._backend_version()
+        if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < (2, 2, 1)):
+            return first_compat
         if pd_version >= (2, 2, 1):
             return methodcaller(name, skipna=False)
-        elif pd_version < (1, 1, 5):
-            return methodcaller(name)
-        elif pd_version < (2, 0, 0):
+        # NOTE: Before 1.1.5, `first` worked without arguments
+        if pd_version >= (1, 1, 5):
             # NOTE: https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
             # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
             return methodcaller("nth", n=0)
-        else:
-            # TODO @dangotbanned: Figure out if there is anything we can do for `pandas>=1.1.5;<2.2.1`
-            # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2085080744
-            msg = f"TODO: Unhandled pandas version {pd_version!r}"
-            raise NotImplementedError(msg)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
+
+
+def first_compat(dgb: NativeGroupBy, /) -> pd.DataFrame:
+    """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
+
+    - Theoretically could be slow
+    - but works in all cases for `string[pyarrow]`
+    - and `>=2.0.0; <2.2.1`
+    """
+    return dgb.apply(lambda group: group.iloc[0])
+
+
+def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:
+    return dtype.name == "string[pyarrow]"
 
 
 class AggExpr:
@@ -128,7 +145,7 @@ class AggExpr:
             result = group_by._grouped.size()
         else:
             select = names[0] if len(names) == 1 else list(names)
-            result = self.native_agg()(group_by._grouped[select])
+            result = self.native_agg(group_by)(group_by._grouped[select])
         if is_pandas_like_dataframe(result):
             result.columns = list(self.aliases)
         else:
@@ -141,6 +158,10 @@ class AggExpr:
     def is_anonymous(self) -> bool:
         return self.expr._depth == 0
 
+    def is_ordered(self) -> bool:
+        """`string[pyarrow]` needs special treatment with nulls."""
+        return self.leaf_name in {"first", "last"}
+
     @property
     def kwargs(self) -> ScalarKwargs:
         return self.expr._scalar_kwargs
@@ -152,11 +173,17 @@ class AggExpr:
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
 
-    def native_agg(self) -> _NativeAgg:
+    def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
-        return _native_agg(
-            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **self.kwargs
-        )
+        native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
+        if self.is_ordered():
+            dtypes: pd.Series = group_by.compliant.native.dtypes
+            targets = dtypes[list(self.output_names)]
+            has_pyarrow_string = targets.transform(_is_pyarrow_string).any().item()
+            return _native_agg(
+                native_name, has_pyarrow_string=has_pyarrow_string, **self.kwargs
+            )
+        return _native_agg(native_name, **self.kwargs)
 
 
 class PandasLikeGroupBy(
