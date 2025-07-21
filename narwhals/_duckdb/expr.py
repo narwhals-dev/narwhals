@@ -72,7 +72,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
-    def _function(self, name: str, *args: Expression) -> Expression:
+    def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         if name == "isnull":
             return args[0].isnull()
         return F(name, *args)
