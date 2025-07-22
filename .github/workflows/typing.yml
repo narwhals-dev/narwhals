@@ -37,14 +37,10 @@ jobs:
         run: |
           source .venv/bin/activate
           uv pip freeze
-      - name: Run mypy
+      - name: Run mypy and pyright
         run: |
           source .venv/bin/activate
           make typing
-      - name: Run pyright
-        run: |
-          source .venv/bin/activate
-          pyright
       - name: Run pyright type completeness
         run: |
           source .venv/bin/activate
