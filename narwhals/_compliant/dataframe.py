@@ -487,3 +487,6 @@ class EagerDataFrame(
                 assert_never(rows)
 
         return compliant
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        return self.write_parquet(file)
