@@ -18,8 +18,5 @@ data = {"a": [1, 2, 3]}
 def test_sink_parquet(constructor: Constructor, tmpdir: pytest.TempdirFactory) -> None:
     path = tmpdir / "foo.parquet"  # type: ignore[operator]
     df = nw.from_native(constructor(data))
-    if any(x in str(constructor) for x in ("pandas", "pyarrow")):
-        df.write_parquet(str(path))
-    else:
-        df.lazy().sink_parquet(str(path))
+    df.lazy().sink_parquet(str(path))
     assert path.exists()

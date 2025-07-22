@@ -488,5 +488,5 @@ class EagerDataFrame(
 
         return compliant
 
-    def sink_parquet(self, file: str | Path | BytesIO) -> None:  # pragma: no cover
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
         return self.write_parquet(file)
