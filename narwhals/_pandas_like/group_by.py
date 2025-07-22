@@ -221,6 +221,7 @@ class PandasLikeGroupBy(
         "all": "all",
         "any": "any",
         "first": "first",
+        "last": "last",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
