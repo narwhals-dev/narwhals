@@ -306,9 +306,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
 
-    def is_null(self) -> Self:
-        return self._with_elementwise(lambda expr: expr.isnull())
-
     def is_nan(self) -> Self:
         return self._with_elementwise(lambda expr: F("isnan", expr))
 

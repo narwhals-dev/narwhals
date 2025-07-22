@@ -111,6 +111,11 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
+- Since Narwhals 1.49:
+
+    - `nw.Expr.arg_max` and `nw.Expr.arg_min` are deprecated from the main Narwhals namespace.
+      Note that the `Series` methods (`Series.arg_max`, `Series.arg_min`) will remain available.
+
 - Since Narwhals 1.45:
 
     - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
