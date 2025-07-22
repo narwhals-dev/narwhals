@@ -21,8 +21,12 @@ data: dict[str, list[PythonLiteral]] = {
     "idx": [0, 1, 2, 3],
 }
 
+single_cases = pytest.mark.parametrize(
+    ("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)]
+)
 
-@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+
+@single_cases
 def test_first_series(
     constructor_eager: ConstructorEager, col: str, expected: PythonLiteral
 ) -> None:
@@ -38,7 +42,7 @@ def test_first_series_empty(constructor_eager: ConstructorEager) -> None:
     assert result is None
 
 
-@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+@single_cases
 def test_first_expr_select(
     constructor_eager: ConstructorEager, col: str, expected: PythonLiteral
 ) -> None:
@@ -48,7 +52,7 @@ def test_first_expr_select(
     assert_equal_data(result, {col: [expected]})
 
 
-@pytest.mark.parametrize(("col", "expected"), [("a", 8), ("b", 58), ("c", 2.5)])
+@single_cases
 def test_first_expr_with_columns(
     constructor_eager: ConstructorEager,
     col: str,
