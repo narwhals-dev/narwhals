@@ -390,12 +390,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_elementwise(_log)
 
-    def exp(self) -> Self:
-        def _exp(expr: Expression) -> Expression:
-            return F("exp", expr)
-
-        return self._with_elementwise(_exp)
-
     def sqrt(self) -> Self:
         def _sqrt(expr: Expression) -> Expression:
             return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))

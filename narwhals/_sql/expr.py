@@ -386,6 +386,9 @@ class SQLExpr(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
 
+    def exp(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("exp", expr))
+
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
         return self._with_window_function(self._cum_window_func("sum", reverse=reverse))
