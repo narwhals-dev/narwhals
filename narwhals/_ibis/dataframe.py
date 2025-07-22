@@ -404,7 +404,7 @@ class IbisLazyFrame(
         return self._with_native(self.native.select(*to_select))
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
-        if isinstance(file, BytesIO):
+        if isinstance(file, BytesIO):  # pragma: no cover
             msg = "Writing to BytesIO is not supported for Ibis backend."
             raise NotImplementedError(msg)
         self.native.to_parquet(file)
