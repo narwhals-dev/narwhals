@@ -80,7 +80,6 @@ def _native_agg(
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if _is_ordered_agg(name):
-        # TODO @dangotbanned: `modin` support
         # TODO @dangotbanned: `cuDF` support
         # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
         pd_version = Implementation.PANDAS._backend_version()
