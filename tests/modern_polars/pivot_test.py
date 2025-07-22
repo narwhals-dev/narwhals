@@ -5,9 +5,10 @@ from datetime import date
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 
+@pytest.mark.skipif(POLARS_VERSION < (1, 0), reason="requires polars 1.0+")
 def test_pivot(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
