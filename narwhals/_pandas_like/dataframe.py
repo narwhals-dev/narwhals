@@ -159,12 +159,20 @@ class PandasLikeDataFrame(
             else:
                 aligned_data[name] = series
 
-        native = DataFrame.from_dict(aligned_data)
         if schema:
-            it: Iterable[DTypeBackend] = (
-                get_dtype_backend(dtype, implementation) for dtype in native.dtypes
-            )
-            native = native.astype(Schema(schema).to_pandas(it))
+            if aligned_data:
+                native = DataFrame.from_dict(aligned_data)
+                it: Iterable[DTypeBackend] = (
+                    get_dtype_backend(dtype, implementation) for dtype in native.dtypes
+                )
+                native = native.astype(Schema(schema).to_pandas(it))
+            else:
+                pd_schema = Schema(schema).to_pandas()
+                native = DataFrame.from_dict(
+                    {col_name: [] for col_name in pd_schema}
+                ).astype(pd_schema)
+        else:
+            native = DataFrame.from_dict(aligned_data)
         return cls.from_native(native, context=context)
 
     @staticmethod
