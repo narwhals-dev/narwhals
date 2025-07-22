@@ -12,6 +12,7 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
+    iter_dtype_backends,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -158,21 +159,15 @@ class PandasLikeDataFrame(
                     aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
             else:
                 aligned_data[name] = series
-
-        if schema:
-            if aligned_data:
-                native = DataFrame.from_dict(aligned_data)
-                it: Iterable[DTypeBackend] = (
-                    get_dtype_backend(dtype, implementation) for dtype in native.dtypes
-                )
-                native = native.astype(Schema(schema).to_pandas(it))
-            else:
-                pd_schema = Schema(schema).to_pandas()
-                native = DataFrame.from_dict(
-                    {col_name: [] for col_name in pd_schema}
-                ).astype(pd_schema)
-        else:
+        if aligned_data or not schema:
             native = DataFrame.from_dict(aligned_data)
+        else:
+            native = DataFrame.from_dict({col: [] for col in schema})
+        if schema:
+            backend: Iterable[DTypeBackend] | None = None
+            if aligned_data:
+                backend = iter_dtype_backends(native.dtypes, implementation)
+            native = native.astype(Schema(schema).to_pandas(backend))
         return cls.from_native(native, context=context)
 
     @staticmethod
