@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from datetime import date
+
+import pytest
+
+import narwhals as nw
+from tests.utils import ConstructorEager, assert_equal_data
+
+
+def test_pivot(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "date": [
+            *[date(2020, 1, 2)] * 4,
+            *[date(2020, 1, 1)] * 4,
+            *[date(2020, 1, 3)] * 4,
+        ],
+        "ticker": [*["AAPL", "TSLA", "MSFT", "NFLX"] * 3],
+        "price": [100, 200, 300, 400, 110, 220, 330, 420, 105, 210, 315, 440],
+    }
+    df = nw.from_native(constructor_eager(data), eager_only=True).sort("date")
+
+    pivoted = df.pivot(index="date", values="price", on="ticker")
+
+    expected = {
+        "date": [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
+        "AAPL": [110, 100, 105],
+        "TSLA": [220, 200, 210],
+        "MSFT": [330, 300, 315],
+        "NFLX": [420, 400, 440],
+    }
+
+    assert_equal_data(pivoted, expected)
