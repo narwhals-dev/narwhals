@@ -1979,6 +1979,29 @@ class Expr:
 
         Returns:
             A new expression.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> df_native = pd.DataFrame(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().first())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a    b     |
+            |    0  1  foo     |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").first())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a     b    |
+            |    0  1   foo    |
+            |    1  2  None    |
+            └──────────────────┘
         """
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).first()
@@ -1989,6 +2012,36 @@ class Expr:
 
         Returns:
             A new expression.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": ["foo", None, None, "baz"]}
+            >>> df_native = pa.table(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().last())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  a: int64        |
+            |  b: string       |
+            |  ----            |
+            |  a: [[2]]        |
+            |  b: [["baz"]]    |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").last())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |a: int64          |
+            |b: string         |
+            |----              |
+            |a: [[1,2]]        |
+            |b: [[null,"baz"]] |
+            └──────────────────┘
         """
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).last()
