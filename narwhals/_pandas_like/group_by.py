@@ -404,7 +404,7 @@ def warn_ordered_apply(name: OrderedAggregation, /, *, has_pyarrow_string: bool)
             "Please see: "
             "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
         )
-    else:
+    else:  # pragma: no cover
         found = requires._unparse_version(Implementation.PANDAS._backend_version())
         minimum = requires._unparse_version(_MINIMUM_SKIPNA)
         msg = (
