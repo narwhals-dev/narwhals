@@ -467,9 +467,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         # - Missing `replacements` type
         # - Missing return type
         pc_replace_with_mask: Incomplete = pc.replace_with_mask
-        return self._with_native(
-            pc_replace_with_mask(self.native, mask, values_native.take(indices_native))
-        )
+        return self._with_native(pc_replace_with_mask(self.native, mask, values_native))
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()

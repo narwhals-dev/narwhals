@@ -22,6 +22,7 @@
         - rename
         - schema
         - select
+        - sink_parquet
         - sort
         - tail
         - to_native

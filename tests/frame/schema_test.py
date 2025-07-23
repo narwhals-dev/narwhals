@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import PerformanceWarning
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -248,7 +249,7 @@ def test_nested_dtypes() -> None:
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_pandas(use_pyarrow_extension_array=True)
     nwdf: nw.DataFrame[Any] | nw.LazyFrame[Any] = nw.from_native(df_pd)
-    assert nwdf.schema == {
+    assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
@@ -258,7 +259,7 @@ def test_nested_dtypes() -> None:
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     )
     nwdf = nw.from_native(df_pl)
-    assert nwdf.schema == {
+    assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),
@@ -269,14 +270,14 @@ def test_nested_dtypes() -> None:
         schema_overrides={"b": pl.Array(pl.Int64, 2)},
     ).to_arrow()
     nwdf = nw.from_native(df_pa)
-    assert nwdf.schema == {
+    assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
     rel = duckdb.sql("select * from df_pa")
     nwdf = nw.from_native(rel)
-    assert nwdf.schema == {
+    assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
@@ -296,7 +297,10 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     )
     tbl = ibis.memtable(df[["a", "c"]])
     nwdf = nw.from_native(tbl)
-    assert nwdf.schema == {"a": nw.List(nw.Int64), "c": nw.Struct({"a": nw.Int64})}
+    assert nwdf.collect_schema() == {
+        "a": nw.List(nw.Int64),
+        "c": nw.Struct({"a": nw.Int64}),
+    }
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
@@ -314,7 +318,9 @@ def test_nested_dtypes_dask() -> None:
         ).to_pandas(use_pyarrow_extension_array=True)
     )
     nwdf = nw.from_native(df)
-    assert nwdf.schema == {
+    with pytest.warns(PerformanceWarning):
+        result = nwdf.schema
+    assert result == {
         "a": nw.List(nw.Int64),
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64}),

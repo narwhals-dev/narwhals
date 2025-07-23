@@ -22,6 +22,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import (
     Implementation,
+    Version,
     find_stacklevel,
     flatten,
     generate_repr,
@@ -32,6 +33,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     issue_deprecation_warning,
+    issue_performance_warning,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import get_polars, is_numpy_array
@@ -2479,9 +2481,15 @@ class LazyFrame(BaseFrame[FrameT]):
             >>> import duckdb
             >>> import narwhals as nw
             >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
-            >>> nw.from_native(lf_native).schema
+            >>> nw.from_native(lf_native).schema  # doctest:+SKIP
             Schema({'a': Int32, 'b': Decimal})
         """
+        if self._compliant_frame._version is not Version.V1:
+            msg = (
+                "Resolving the schema of a LazyFrame is a potentially expensive operation. "
+                "Use `LazyFrame.collect_schema()` to get the schema without this warning."
+            )
+            issue_performance_warning(msg)
         return super().schema
 
     def collect_schema(self) -> Schema:
@@ -2837,6 +2845,27 @@ class LazyFrame(BaseFrame[FrameT]):
             raise TypeError(msg)
 
         return super().filter(*predicates, **constraints)
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        """Write LazyFrame to Parquet file.
+
+        This may allow larger-than-RAM datasets to be written to disk.
+
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written.
+
+        Returns:
+            None.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.LazyFrame({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.sink_parquet("out.parquet")  # doctest:+SKIP
+        """
+        self._compliant_frame.sink_parquet(file)
 
     @overload
     def group_by(

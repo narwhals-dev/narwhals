@@ -4,7 +4,6 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._expression_parsing import (
@@ -562,19 +561,28 @@ def _get_deps_info() -> dict[str, str]:
     Returns:
         Mapping from dependency to version.
     """
-    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import distributions
 
-    from narwhals import __version__
+    extra_names = ("narwhals", "numpy")
+    member_names = Implementation._member_names_
+    exclude = {"PYSPARK_CONNECT", "UNKNOWN"}
+    target_names = tuple(
+        name.lower() for name in (*extra_names, *member_names) if name not in exclude
+    )
+    result = dict.fromkeys(target_names, "")  # Initialize with empty strings
 
-    deps = ("pandas", "polars", "cudf", "modin", "pyarrow", "numpy")
-    deps_info = {"narwhals": __version__}
+    for dist in distributions():
+        dist_name, dist_version = dist.name.lower(), dist.version
 
-    for modname in deps:
-        try:
-            deps_info[modname] = version(modname)
-        except PackageNotFoundError:  # noqa: PERF203
-            deps_info[modname] = ""
-    return deps_info
+        if dist_name in result:  # exact match
+            result[dist_name] = dist_version
+        else:  # prefix match
+            for target in target_names:
+                if not result[target] and dist_name.startswith(target):
+                    result[target] = dist_version
+                    break
+
+    return result
 
 
 def show_versions() -> None:
