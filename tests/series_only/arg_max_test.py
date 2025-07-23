@@ -9,7 +9,7 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "i": [3, 1, 5]}
 
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 1), ("b", 2), ("z", 2)])
-def test_expr_arg_max_series(
+def test_arg_max_series(
     constructor_eager: ConstructorEager,
     col: str,
     expected: float,
