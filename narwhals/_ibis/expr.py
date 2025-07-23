@@ -372,11 +372,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._with_callable(_exp)
 
-    def sqrt(self) -> Self:
-        def _sqrt(expr: ir.NumericColumn) -> ir.Value:
-            return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
+    # def sqrt(self) -> Self:
+    #     def _sqrt(expr: ir.NumericColumn) -> ir.Value:
+    #         return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
 
-        return self._with_callable(_sqrt)
+    #     return self._with_callable(_sqrt)
 
     @property
     def str(self) -> IbisExprStringNamespace:
