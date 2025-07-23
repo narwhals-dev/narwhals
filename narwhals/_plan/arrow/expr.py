@@ -10,9 +10,15 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.functions import lit
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.arrow.typing import NativeScalar, StoresNativeT_co
-from narwhals._plan.common import ExprIR, into_dtype
+from narwhals._plan.common import ExprIR, NamedIR, into_dtype
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
-from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    _StoresNative,
+    generate_temporary_column_name,
+    not_implemented,
+)
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -326,7 +332,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     # TODO @dangotbanned: top-level, complex-ish nodes
     # - [ ] `over`/`_ordered` (with partitions) requires `group_by`, `join`
-    # - [ ] `over_ordered` alone should be possible w/ the current API
+    # - [x] `over_ordered` alone should be possible w/ the current API
     # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
     # - [ ] `rolling_expr` has 4 variants
 
@@ -336,7 +342,24 @@ class ArrowExpr(  # type: ignore[misc]
     def over_ordered(
         self, node: OrderedWindowExpr, frame: ArrowDataFrame, name: str
     ) -> Self:
-        raise NotImplementedError
+        if node.partition_by:
+            msg = f"Need to implement `group_by`, `join` for:\n{node!r}"
+            raise NotImplementedError(msg)
+
+        # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
+        sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
+        options = node.sort_options.to_multiple(len(node.order_by))
+
+        idx_name = generate_temporary_column_name(8, frame.columns)
+        sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
+        height = len(sorted_context)
+
+        evaluated = self._dispatch(node.expr, sorted_context.drop([idx_name]), name)
+
+        # NOTE: Might be able to skip this if ^^^ returned a scalar, since len == 1 is already sorted
+        indices = pc.sort_indices(sorted_context.get_column(idx_name).native)
+        result = evaluated.broadcast(height).native.take(indices)
+        return self._with_native(result, name)
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
     def map_batches(self, node: AnonymousExpr, frame: ArrowDataFrame, name: str) -> Self:

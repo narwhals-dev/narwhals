@@ -158,6 +158,15 @@ class SortOptions(Immutable):
             null_placement=("at_end" if self.nulls_last else "at_start"),
         )
 
+    def to_multiple(self, n_repeat: int = 1, /) -> SortMultipleOptions:
+        if n_repeat == 1:
+            desc: Seq[bool] = (self.descending,)
+            nulls: Seq[bool] = (self.nulls_last,)
+        else:
+            desc = tuple(repeat(self.descending, n_repeat))
+            nulls = tuple(repeat(self.nulls_last))
+        return SortMultipleOptions(descending=desc, nulls_last=nulls)
+
 
 class SortMultipleOptions(Immutable):
     __slots__ = ("descending", "nulls_last")
@@ -181,12 +190,10 @@ class SortMultipleOptions(Immutable):
     def to_arrow(self, by: Sequence[str]) -> pc.SortOptions:
         import pyarrow.compute as pc
 
-        if len(self.nulls_last) != 1:
+        first = self.nulls_last[0]
+        if len(self.nulls_last) != 1 and any(x != first for x in self.nulls_last[1:]):
             msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"
             raise NotImplementedError(msg)
-        placement: Literal["at_start", "at_end"] = (
-            "at_end" if self.nulls_last[0] else "at_start"
-        )
         if len(self.descending) == 1:
             descending: Iterable[bool] = repeat(self.descending[0], len(by))
         else:
@@ -195,6 +202,7 @@ class SortMultipleOptions(Immutable):
             (key, "descending" if desc else "ascending")
             for key, desc in zip(by, descending)
         ]
+        placement: Literal["at_start", "at_end"] = "at_end" if first else "at_start"
         return pc.SortOptions(sort_keys=sorting, null_placement=placement)
 
 

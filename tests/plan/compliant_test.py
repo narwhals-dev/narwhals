@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._plan.dummy import DummyExpr
+    from narwhals.typing import PythonLiteral
 
 
 @pytest.fixture
@@ -50,6 +51,18 @@ def data_smaller(data_small: dict[str, Any]) -> dict[str, Any]:
     """Use only columns `"a"-"f"`."""
     keep = {"a", "b", "c", "d", "e", "f"}
     return {k: v for k, v in data_small.items() if k in keep}
+
+
+@pytest.fixture
+def data_indexed() -> dict[str, Any]:
+    """Used in https://github.com/narwhals-dev/narwhals/pull/2528."""
+    return {
+        "a": [8, 2, 1, None],
+        "b": [58, 5, 6, 12],
+        "c": [2.5, 1.0, 3.0, 0.9],
+        "d": [2, 1, 4, 3],
+        "idx": [0, 1, 2, 3],
+    }
 
 
 def _ids_ir(expr: DummyExpr | Any) -> str:
@@ -473,6 +486,37 @@ def test_with_columns(
     df = DummyDataFrame.from_native(frame)
     result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
+
+
+def first(*names: str) -> DummyExpr:
+    return nwd.col(*names).first()
+
+
+def last(*names: str) -> DummyExpr:
+    return nwd.col(*names).last()
+
+
+@pytest.mark.parametrize(
+    ("agg", "expected"),
+    [
+        (first("a"), 8),
+        (first("b"), 58),
+        (first("c"), 2.5),
+        (last("a"), None),
+        (last("b"), 12),
+        (last("c"), 0.9),
+    ],
+)
+def test_first_last_expr_with_columns(
+    data_indexed: dict[str, Any], agg: DummyExpr, expected: PythonLiteral
+) -> None:
+    """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
+    height = len(next(iter(data_indexed.values())))
+    expected_broadcast = height * [expected]
+    frame = DummyDataFrame.from_native(pa.table(data_indexed))
+    expr = agg.over(order_by="idx").alias("result")
+    result = frame.with_columns(expr).select("result").to_dict(as_series=False)
+    assert_equal_data(result, {"result": expected_broadcast})
 
 
 if TYPE_CHECKING:

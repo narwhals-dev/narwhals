@@ -6,13 +6,14 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
 from narwhals._plan.protocols import DummyEagerDataFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
 
     from typing_extensions import Self
 
@@ -97,3 +98,14 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         df_by = self.select(by)
         indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
         return self._with_native(self.native.take(indices))
+
+    def with_row_index(self, name: str) -> Self:
+        return self._with_native(self.native.add_column(0, name, fn.int_range(len(self))))
+
+    def get_column(self, name: str) -> ArrowSeries:
+        chunked = self.native.column(name)
+        return ArrowSeries.from_native(chunked, name, version=self.version)
+
+    def drop(self, columns: Sequence[str]) -> Self:
+        to_drop = list(columns)
+        return self._with_native(self.native.drop(to_drop))

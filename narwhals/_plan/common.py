@@ -320,6 +320,15 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         return NamedIR(expr=col(name), name=name)
 
+    @staticmethod
+    def from_ir(expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
+        """Construct from an already expanded `ExprIR`.
+
+        Should be cheap to get the output name from cache, but will raise if used
+        without care.
+        """
+        return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
+
     def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
         return self.with_expr(function(self.expr.map_ir(function)))
