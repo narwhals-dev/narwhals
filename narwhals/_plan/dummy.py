@@ -888,7 +888,7 @@ class DummyFrame(Generic[NativeFrameT]):
         named_irs, schema_projected = self._project(
             exprs, named_exprs, ExprContext.SELECT
         )
-        return self._from_compliant(self._compliant.select(named_irs, schema_projected))
+        return self._from_compliant(self._compliant.select(named_irs))
 
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any
@@ -896,9 +896,7 @@ class DummyFrame(Generic[NativeFrameT]):
         named_irs, schema_projected = self._project(
             exprs, named_exprs, ExprContext.WITH_COLUMNS
         )
-        return self._from_compliant(
-            self._compliant.with_columns(named_irs, schema_projected)
-        )
+        return self._from_compliant(self._compliant.with_columns(named_irs))
 
     def sort(
         self,
@@ -914,7 +912,7 @@ class DummyFrame(Generic[NativeFrameT]):
             sort, self.schema
         )
         named_irs = expr_expansion.into_named_irs(irs, output_names)
-        return self._from_compliant(self._compliant.sort(named_irs, opts, schema_frozen))
+        return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
 class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):

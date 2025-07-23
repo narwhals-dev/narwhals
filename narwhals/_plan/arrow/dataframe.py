@@ -21,7 +21,6 @@ if t.TYPE_CHECKING:
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummyDataFrame
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
@@ -94,9 +93,7 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
 
     # NOTE: Not handling actual expressions yet
     # `DummyFrame` is typed for just `str` names
-    def sort(
-        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
-    ) -> Self:
-        df_by = self.select(by, projected)
+    def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
+        df_by = self.select(by)
         indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
         return self._with_native(self.native.take(indices))

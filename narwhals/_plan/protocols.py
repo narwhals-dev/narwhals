@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
-    from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -692,11 +691,9 @@ class DummyCompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...
-    def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self: ...
-    def with_columns(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self: ...
-    def sort(
-        self, by: Seq[NamedIR], options: SortMultipleOptions, projected: FrozenSchema
-    ) -> Self: ...
+    def select(self, irs: Seq[NamedIR]) -> Self: ...
+    def with_columns(self, irs: Seq[NamedIR]) -> Self: ...
+    def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self: ...
 
 
 class DummyCompliantDataFrame(
@@ -735,11 +732,11 @@ class DummyEagerDataFrame(
     Protocol[SeriesT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
-    def select(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
+    def select(self, irs: Seq[NamedIR]) -> Self:
         ns = self.__narwhals_namespace__()
         return ns._concat_horizontal(self._evaluate_irs(irs))
 
-    def with_columns(self, irs: Seq[NamedIR], projected: FrozenSchema) -> Self:
+    def with_columns(self, irs: Seq[NamedIR]) -> Self:
         ns = self.__narwhals_namespace__()
         return ns._concat_horizontal(self._evaluate_irs(irs))
 
