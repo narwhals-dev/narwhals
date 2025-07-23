@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation, find_stacklevel
+from narwhals._utils import Implementation, find_stacklevel, requires
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -62,6 +62,8 @@ _REMAP_ORDERED_INDEX: Mapping[OrderedAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
 }
+_PYARROW_STRING_NAME = "string[pyarrow]"
+_MINIMUM_SKIPNA = (2, 2, 1)
 
 
 @lru_cache(maxsize=32)
@@ -75,7 +77,10 @@ def _native_agg(
     return methodcaller(name, **kwds)
 
 
-@lru_cache(maxsize=8)
+# NOTE: Caching disabled to avoid using an `apply` warning either:
+# - Once per unique args
+# - Once per column in a multi-output expression
+# *Least bad* option is to warn once per expression
 def _native_ordered_agg(
     name: OrderedAggregation, *, has_pyarrow_string: bool
 ) -> _NativeAgg:
@@ -86,13 +91,13 @@ def _native_ordered_agg(
     # TODO @dangotbanned: `cuDF` support
     # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
     pd_version = Implementation.PANDAS._backend_version()
-    if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < (2, 2, 1)):
+    if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < _MINIMUM_SKIPNA):
         # NOTE: `>=2.0.0; <2.2.1` breaks the `nth` workaround
         # ATOW (`2.3.1`), `string[pyarrow]` has always required `apply`
         # https://github.com/pandas-dev/pandas/issues/13666
         # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
-        return _apply_ordered_agg(name)
-    if pd_version >= (2, 2, 1):
+        return _apply_ordered_agg(name, has_pyarrow_string=has_pyarrow_string)
+    if pd_version >= _MINIMUM_SKIPNA:
         # NOTE: Introduces option to disable default null skipping
         # https://github.com/pandas-dev/pandas/pull/57102
         return methodcaller(name, skipna=False)
@@ -106,7 +111,7 @@ def _native_ordered_agg(
 
 
 def _apply_ordered_agg(
-    name: OrderedAggregation, /
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool
 ) -> Callable[[NativeGroupBy], pd.DataFrame]:
     """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
 
@@ -114,6 +119,7 @@ def _apply_ordered_agg(
     - but works in all cases for `string[pyarrow]`
     - and `>=2.0.0; <2.2.1`
     """
+    warn_ordered_apply(name, has_pyarrow_string=has_pyarrow_string)
     index = _REMAP_ORDERED_INDEX[name]
 
     def fn(dgb: NativeGroupBy, /) -> pd.DataFrame:
@@ -128,7 +134,7 @@ def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
 
 
 def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:
-    return dtype.name == "string[pyarrow]"
+    return dtype.name == _PYARROW_STRING_NAME
 
 
 class AggExpr:
@@ -386,6 +392,29 @@ def warn_complex_group_by() -> None:
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
         "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        UserWarning,
+        stacklevel=find_stacklevel(),
+    )
+
+
+def warn_ordered_apply(name: OrderedAggregation, /, *, has_pyarrow_string: bool) -> None:
+    if has_pyarrow_string:
+        msg = (
+            f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
+            "Please see: "
+            "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
+        )
+    else:
+        found = requires._unparse_version(Implementation.PANDAS._backend_version())
+        minimum = requires._unparse_version(_MINIMUM_SKIPNA)
+        msg = (
+            f"If you can, please upgrade to 'pandas>={minimum}', found version {found!r}.\n\n"
+            "Please see: "
+            "https://github.com/pandas-dev/pandas/issues/57019"
+        )
+    warnings.warn(
+        f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
+        f"safely with the pandas API.\n{msg}",
         UserWarning,
         stacklevel=find_stacklevel(),
     )
