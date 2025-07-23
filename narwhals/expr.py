@@ -784,19 +784,6 @@ class Expr:
 
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_min().name.suffix("_arg_min"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_min  b_arg_min|
-            |0          0          1|
-            └───────────────────────┘
         """
         msg = (
             "`Expr.arg_min` is deprecated and will be removed in a future version.\n\n"
