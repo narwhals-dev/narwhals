@@ -243,7 +243,7 @@ class ArrowNamespace(
         )
 
     def _concat_horizontal(
-        self, items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries]
+        self, items: Iterable[ArrowDataFrame | ArrowSeries]
     ) -> ArrowDataFrame:
         def gen(
             objs: Iterable[ArrowDataFrame | ArrowSeries],
