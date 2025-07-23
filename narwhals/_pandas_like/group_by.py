@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
 OrderedAggregation: TypeAlias = Literal["first", "last"]
-NativeAggregation: TypeAlias = Literal[
+UnorderedAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
@@ -46,9 +46,9 @@ NativeAggregation: TypeAlias = Literal[
     "std",
     "sum",
     "var",
-    OrderedAggregation,
     InefficientNativeAggregation,
 ]
+NativeAggregation: TypeAlias = Literal[UnorderedAggregation, OrderedAggregation]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
 _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
@@ -62,42 +62,50 @@ _REMAP_ORDERED_INDEX: Mapping[OrderedAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
 }
-_ORDERED_AGG = frozenset[OrderedAggregation](("first", "last"))
-
-
-def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
-    return obj in _ORDERED_AGG
 
 
 @lru_cache(maxsize=32)
 def _native_agg(
-    name: NativeAggregation,
-    /,
-    *,
-    has_pyarrow_string: bool | None = None,
-    **kwds: Unpack[ScalarKwargs],
+    name: UnorderedAggregation, /, **kwds: Unpack[ScalarKwargs]
 ) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
-    if _is_ordered_agg(name):
-        # TODO @dangotbanned: `cuDF` support
-        # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
-        pd_version = Implementation.PANDAS._backend_version()
-        if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < (2, 2, 1)):
-            return _ordered_compat(name)
-        if pd_version >= (2, 2, 1):
-            return methodcaller(name, skipna=False)
-        # NOTE: Before 1.1.5, `first` worked without arguments
-        if pd_version >= (1, 1, 5):  # pragma: no cover
-            # NOTE: https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
-            # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
-            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
 
 
-def _ordered_compat(
+@lru_cache(maxsize=8)
+def _native_ordered_agg(
+    name: OrderedAggregation, *, has_pyarrow_string: bool
+) -> _NativeAgg:
+    """Best effort alignment of `first`, `last` across versions.
+
+    The way `polars` works **by default**, is a constantly moving target in `pandas` 😫
+    """
+    # TODO @dangotbanned: `cuDF` support
+    # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
+    pd_version = Implementation.PANDAS._backend_version()
+    if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < (2, 2, 1)):
+        # NOTE: `>=2.0.0; <2.2.1` breaks the `nth` workaround
+        # ATOW (`2.3.1`), `string[pyarrow]` has always required `apply`
+        # https://github.com/pandas-dev/pandas/issues/13666
+        # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
+        return _apply_ordered_agg(name)
+    if pd_version >= (2, 2, 1):
+        # NOTE: Introduces option to disable default null skipping
+        # https://github.com/pandas-dev/pandas/pull/57102
+        return methodcaller(name, skipna=False)
+    if pd_version >= (1, 1, 5):  # pragma: no cover
+        # NOTE: `>=1.1.5; <2.0.0`, `nth` could be used as a non-skipping aggregation
+        # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
+        return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
+    # NOTE: `<1.1.5`, nulls weren't skipped by default
+    # https://github.com/pandas-dev/pandas/issues/38286
+    return methodcaller(name)  # pragma: no cover
+
+
+def _apply_ordered_agg(
     name: OrderedAggregation, /
 ) -> Callable[[NativeGroupBy], pd.DataFrame]:
     """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
@@ -112,6 +120,11 @@ def _ordered_compat(
         return dgb.apply(lambda group: group.iloc[index])
 
     return fn
+
+
+def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
+    """`string[pyarrow]` needs special treatment with nulls in `first`, `last`."""
+    return obj in _REMAP_ORDERED_INDEX
 
 
 def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:
@@ -174,10 +187,6 @@ class AggExpr:
     def is_anonymous(self) -> bool:
         return self.expr._depth == 0
 
-    def is_ordered(self) -> bool:
-        """`string[pyarrow]` needs special treatment with nulls."""
-        return self.leaf_name in {"first", "last"}
-
     @property
     def kwargs(self) -> ScalarKwargs:
         return self.expr._scalar_kwargs
@@ -192,13 +201,11 @@ class AggExpr:
     def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
-        if self.is_ordered():
+        if _is_ordered_agg(native_name):
             dtypes: pd.Series = group_by.compliant.native.dtypes
             targets = dtypes[list(self.output_names)]
             has_pyarrow_string = targets.transform(_is_pyarrow_string).any().item()
-            return _native_agg(
-                native_name, has_pyarrow_string=has_pyarrow_string, **self.kwargs
-            )
+            return _native_ordered_agg(native_name, has_pyarrow_string=has_pyarrow_string)
         return _native_agg(native_name, **self.kwargs)
 
 
