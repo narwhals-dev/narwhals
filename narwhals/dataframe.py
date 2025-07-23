@@ -2847,9 +2847,9 @@ class LazyFrame(BaseFrame[FrameT]):
         return super().filter(*predicates, **constraints)
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
-        """Evaluate the query in streaming mode and write to a Parquet file.
+        """Write LazyFrame to Parquet file.
 
-        This allows streaming results that are larger than RAM to be written to disk.
+        This may allow larger-than-RAM datasets to be written to disk.
 
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
