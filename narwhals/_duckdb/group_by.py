@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyGroupBy
+from narwhals._sql.group_by import SQLGroupBy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
 
 
-class DuckDBGroupBy(LazyGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
+class DuckDBGroupBy(SQLGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
     def __init__(
         self,
         df: DuckDBLazyFrame,

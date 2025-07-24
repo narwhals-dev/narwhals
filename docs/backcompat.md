@@ -111,6 +111,17 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v1`
 
+- Since Narwhals 1.49:
+
+    - `nw.Expr.arg_max` and `nw.Expr.arg_min` are deprecated from the main Narwhals namespace.
+      Note that the `Series` methods (`Series.arg_max`, `Series.arg_min`) will remain available.
+
+- Since Narwhals 1.45:
+
+    - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
+      it defaults to `False`, but in Narwhals 2.0 it will become a required argument in the main namespace.
+    - `LazyFrame.with_row_index` requires `order_by` to be specified as it is an order-dependent operation, in the main Narwhals namespace.
+
 - Since Narwhals 1.43:
 
     - `nw.get_level` is deprecated in the main Narwhals namespace.

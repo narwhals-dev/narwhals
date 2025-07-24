@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
 from importlib.util import find_spec
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
@@ -33,8 +31,8 @@ def test_from_dict(backend: Implementation | str) -> None:
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
 def test_from_dict_schema(backend: Implementation | str) -> None:
-    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
-    result = nw_v1.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
+    schema = {"c": nw.Int16(), "d": nw.Float32()}
+    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
 
 
@@ -76,17 +74,6 @@ def test_from_dict_both_backend_and_namespace(constructor: Constructor) -> None:
         )
 
 
-def test_from_dict_both_backend_and_namespace_v1(constructor: Constructor) -> None:
-    df = nw_v1.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw_v1.get_native_namespace(df)
-    with pytest.raises(ValueError, match="Can't pass both"):
-        nw_v1.from_dict(
-            {"c": [1, 2], "d": [5, 6]},
-            backend="pandas",
-            native_namespace=native_namespace,
-        )
-
-
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Implementation | str
@@ -104,19 +91,16 @@ def test_from_dict_one_native_one_narwhals(
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_v1(backend: Implementation | str) -> None:
-    result = nw_v1.from_dict(
-        {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}, backend=backend
-    )
-    expected = {"c": [1, 2], "d": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}
-    assert_equal_data(result, expected)
-    assert isinstance(result, nw_v1.DataFrame)
-    assert isinstance(result.schema["d"], nw_v1.dtypes.Datetime)
+def test_from_dict_empty(backend: Implementation | str) -> None:
+    result = nw.from_dict({}, backend=backend)
+    assert result.shape == (0, 0)
 
 
-def test_from_dict_empty() -> None:
-    with pytest.raises(ValueError, match="empty"):
-        nw.from_dict({})
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_empty_with_schema(backend: Implementation | str) -> None:
+    schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
+    result = nw.from_dict({}, schema, backend=backend)
+    assert result.schema == schema
 
 
 def test_alignment() -> None:

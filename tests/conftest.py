@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.typing import NativeFrame, NativeLazyFrame
-    from tests.utils import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"
 
@@ -45,7 +45,7 @@ else:
     )
 
 
-def pytest_addoption(parser: Any) -> None:
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
@@ -246,7 +246,7 @@ EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, Constructor] = {
+LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,

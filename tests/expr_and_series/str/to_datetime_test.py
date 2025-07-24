@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
+from narwhals._pandas_like.utils import get_dtype_backend
 from tests.utils import (
-    PYARROW_VERSION,
+    PANDAS_VERSION,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
@@ -149,7 +150,7 @@ def test_to_datetime_series_infer_fmt(
 def test_to_datetime_infer_fmt_from_date(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
     if "pyspark" in str(constructor):
@@ -203,9 +204,6 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 def test_to_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest, format: str | None
 ) -> None:
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13,):
-        # bugged
-        pytest.skip()
     if is_pyarrow_windows_no_tzdata(constructor) or (
         "sqlframe" in str(constructor) and format is not None and is_windows()
     ):
@@ -231,3 +229,25 @@ def test_to_datetime_tz_aware(
             "b": [datetime(2020, 1, 1, 0, 2, 3, tzinfo=timezone.utc)],
         }
         assert_equal_data(result, expected)
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
+def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
+    # Remark that pandas doesn't have a numpy-nullable datetime dtype, so
+    # `.convert_dtypes(dtype_backend="numpy_nullable")` is a no-op in `_to_datetime(...)`
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    dtype_backend: Literal["pyarrow", "numpy_nullable"] = "pyarrow"
+
+    df = nw.from_native(
+        pd.DataFrame({"a": ["2020-01-01T12:34:56", None]}).convert_dtypes(
+            dtype_backend=dtype_backend
+        )
+    )
+    result = df.with_columns(b=nw.col("a").str.to_datetime()).to_native()
+    result_dtype = get_dtype_backend(
+        result["b"].dtype, df._compliant_frame._implementation
+    )
+    assert result_dtype == dtype_backend

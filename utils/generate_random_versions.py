@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 PANDAS_AND_NUMPY_VERSION = [
     ("1.1.5", "1.19.5"),
@@ -13,7 +14,6 @@ PANDAS_AND_NUMPY_VERSION = [
     ("2.2.2", "1.26.4"),
 ]
 POLARS_VERSION = [
-    "0.20.3",
     "0.20.4",
     "0.20.5",
     "0.20.6",
@@ -39,9 +39,6 @@ POLARS_VERSION = [
     "1.1.0",
 ]
 PYARROW_VERSION = [
-    "11.0.0",
-    "12.0.0",
-    "12.0.1",
     "13.0.0",
     "14.0.0",
     "14.0.1",
@@ -51,21 +48,19 @@ PYARROW_VERSION = [
     "15.0.2",
     "16.0.0",
     "16.1.0",
+    "17.0.0",
+    "18.0.0",
+    "18.1.0",
 ]
 
 pandas_version, numpy_version = random.choice(PANDAS_AND_NUMPY_VERSION)
 polars_version = random.choice(POLARS_VERSION)
 pyarrow_version = random.choice(PYARROW_VERSION)
 
-content = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
-with open("random-requirements.txt", "w") as fd:
-    fd.write(content)
-
-with open("pyproject.toml") as fd:
-    content = fd.read()
-content = content.replace(
-    'filterwarnings = [\n  "error",\n]',
-    "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]",
-)
-with open("pyproject.toml", "w") as fd:
-    fd.write(content)
+reqs = f"pandas=={pandas_version}\nnumpy=={numpy_version}\npolars=={polars_version}\npyarrow=={pyarrow_version}\n"
+Path("random-requirements.txt").write_text(reqs, "utf-8")
+old_warnings = 'filterwarnings = [\n  "error",\n]'
+new_warnings = "filterwarnings = [\n  \"error\",\n  'ignore:distutils Version classes are deprecated:DeprecationWarning',\n]"
+pyproject = Path("pyproject.toml")
+content = pyproject.read_text("utf-8").replace(old_warnings, new_warnings)
+pyproject.write_text(content, "utf-8")

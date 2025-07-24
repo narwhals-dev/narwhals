@@ -7,6 +7,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
+from narwhals._typing_compat import Protocol38
 from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     dtype_matches_time_unit_and_time_zone,
@@ -30,9 +31,8 @@ if TYPE_CHECKING:
         CompliantSeriesOrNativeExprAny,
         EvalNames,
         EvalSeries,
-        ScalarKwargs,
     )
-    from narwhals._utils import Implementation, Version, _FullContext
+    from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
@@ -57,14 +57,12 @@ SelectorOrExpr: TypeAlias = (
 
 class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
 
     @classmethod
-    def from_namespace(cls, context: _FullContext, /) -> Self:
+    def from_namespace(cls, context: _LimitedContext, /) -> Self:
         obj = cls.__new__(cls)
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
         return obj
 
@@ -199,16 +197,12 @@ class LazySelectorNamespace(
 
 
 class CompliantSelector(
-    CompliantExpr[FrameT, SeriesOrExprT], Protocol[FrameT, SeriesOrExprT]
+    CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
-    _window_function: None
     _function_name: str
-    _depth: int
     _implementation: Implementation
-    _backend_version: tuple[int, ...]
     _version: Version
-    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_callables(
@@ -216,19 +210,14 @@ class CompliantSelector(
         call: EvalSeries[FrameT, SeriesOrExprT],
         evaluate_output_names: EvalNames[FrameT],
         *,
-        context: _FullContext,
+        context: _LimitedContext,
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
-        obj._window_function = None
-        obj._depth = 0
-        obj._function_name = "selector"
         obj._evaluate_output_names = evaluate_output_names
         obj._alias_output_names = None
         obj._implementation = context._implementation
-        obj._backend_version = context._backend_version
         obj._version = context._version
-        obj._scalar_kwargs = {}
         return obj
 
     @property

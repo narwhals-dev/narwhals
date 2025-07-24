@@ -3,18 +3,30 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._duration import parse_interval_string
+from narwhals._constants import (
+    EPOCH_YEAR,
+    MS_PER_SECOND,
+    NS_PER_SECOND,
+    SECONDS_PER_DAY,
+    US_PER_SECOND,
+)
+from narwhals._duration import Interval
 from narwhals._pandas_like.utils import (
-    UNIT_DICT,
+    ALIAS_DICT,
+    UNITS_DICT,
     PandasLikeSeriesNamespace,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
     get_dtype_backend,
     int_dtype_mapper,
-    is_pyarrow_dtype_backend,
+    is_dtype_pyarrow,
 )
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
+    import pandas as pd
+
     from narwhals._pandas_like.series import PandasLikeSeries
     from narwhals.typing import TimeUnit
 
@@ -80,7 +92,7 @@ class PandasLikeSeriesDateTimeNamespace(
         year_start = self.native.dt.year
         result = (
             self.native.to_numpy().astype("datetime64[D]")
-            - (year_start.to_numpy() - 1970).astype("datetime64[Y]")
+            - (year_start.to_numpy() - EPOCH_YEAR).astype("datetime64[Y]")
         ).astype("int32") + 1
         dtype = "Int64[pyarrow]" if self._is_pyarrow() else "int32"
         return self.with_native(
@@ -92,17 +104,17 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(self.native.dt.weekday) + 1
 
     def _is_pyarrow(self) -> bool:
-        return is_pyarrow_dtype_backend(self.native.dtype, self.implementation)
+        return is_dtype_pyarrow(self.native.dtype)
 
     def _get_total_seconds(self) -> Any:
         if hasattr(self.native.dt, "total_seconds"):
             return self.native.dt.total_seconds()
         else:  # pragma: no cover
             return (
-                self.native.dt.days * 86400
+                self.native.dt.days * SECONDS_PER_DAY
                 + self.native.dt.seconds
-                + (self.native.dt.microseconds / 1e6)
-                + (self.native.dt.nanoseconds / 1e9)
+                + (self.native.dt.microseconds / US_PER_SECOND)
+                + (self.native.dt.nanoseconds / NS_PER_SECOND)
             )
 
     def total_minutes(self) -> PandasLikeSeries:
@@ -124,7 +136,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_milliseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e3
+        s = self._get_total_seconds() * MS_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
@@ -133,7 +145,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_microseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e6
+        s = self._get_total_seconds() * US_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
@@ -142,7 +154,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(s_abs * s_sign)
 
     def total_nanoseconds(self) -> PandasLikeSeries:
-        s = self._get_total_seconds() * 1e9
+        s = self._get_total_seconds() * NS_PER_SECOND
         # this calculates the sign of each series element
         s_sign = 2 * (s > 0).astype(int_dtype_mapper(s.dtype)) - 1
         s_abs = s.abs() // 1
@@ -196,13 +208,14 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.with_native(result)
 
     def truncate(self, every: str) -> PandasLikeSeries:
-        multiple, unit = parse_interval_string(every)
+        interval = Interval.parse(every)
+        multiple, unit = interval.multiple, interval.unit
         native = self.native
         if self.implementation.is_cudf():
             if multiple != 1:
                 msg = f"Only multiple `1` is supported for cuDF, got: {multiple}."
                 raise NotImplementedError(msg)
-            return self.with_native(self.native.dt.floor(UNIT_DICT.get(unit, unit)))
+            return self.with_native(self.native.dt.floor(ALIAS_DICT.get(unit, unit)))
         dtype_backend = get_dtype_backend(native.dtype, self.compliant._implementation)
         if unit in {"mo", "q", "y"}:
             if self.implementation.is_cudf():
@@ -210,8 +223,6 @@ class PandasLikeSeriesDateTimeNamespace(
                 raise NotImplementedError(msg)
             if dtype_backend == "pyarrow":
                 import pyarrow.compute as pc  # ignore-banned-import
-
-                from narwhals._arrow.utils import UNITS_DICT
 
                 ca = native.array._pa_array
                 result_arr = pc.floor_temporal(ca, multiple, UNITS_DICT[unit])
@@ -223,15 +234,58 @@ class PandasLikeSeriesDateTimeNamespace(
                     np_unit = "M"
                 else:
                     np_unit = "Y"
-                arr = native.values
+                arr = native.values  # noqa: PD011
                 arr_dtype = arr.dtype
                 result_arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(
                     arr_dtype
                 )
-            result_native = native.__class__(
+            result_native = type(native)(
                 result_arr, dtype=native.dtype, index=native.index, name=native.name
             )
             return self.with_native(result_native)
         return self.with_native(
-            self.native.dt.floor(f"{multiple}{UNIT_DICT.get(unit, unit)}")
+            self.native.dt.floor(f"{multiple}{ALIAS_DICT.get(unit, unit)}")
         )
+
+    def offset_by(self, by: str) -> PandasLikeSeries:
+        native = self.native
+        pdx = self.compliant.__native_namespace__()
+        if self._is_pyarrow():
+            import pyarrow as pa  # ignore-banned-import
+
+            compliant = self.compliant
+            ca = pa.chunked_array([compliant.to_arrow()])  # type: ignore[arg-type]
+            result = (
+                compliant._version.namespace.from_backend("pyarrow")
+                .compliant.from_native(ca)
+                .dt.offset_by(by)
+                .native
+            )
+            result_pd = native.__class__(
+                result, dtype=native.dtype, index=native.index, name=native.name
+            )
+        else:
+            interval = Interval.parse_no_constraints(by)
+            multiple, unit = interval.multiple, interval.unit
+            if unit == "q":
+                multiple *= 3
+                unit = "mo"
+            offset: pd.DateOffset | timedelta
+            if unit == "y":
+                offset = pdx.DateOffset(years=multiple)
+            elif unit == "mo":
+                offset = pdx.DateOffset(months=multiple)
+            elif unit == "ns":
+                offset = pdx.Timedelta(multiple, unit=UNITS_DICT[unit])
+            else:
+                offset = interval.to_timedelta()
+            dtype = self.compliant.dtype
+            datetime_dtype = self.version.dtypes.Datetime
+            if unit == "d" and isinstance(dtype, datetime_dtype) and dtype.time_zone:
+                native_without_timezone = native.dt.tz_localize(None)
+                result_pd = native_without_timezone + offset
+                result_pd = result_pd.dt.tz_localize(dtype.time_zone)
+            else:
+                result_pd = native + offset
+
+        return self.with_native(result_pd)

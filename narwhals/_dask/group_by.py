@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.group_by import NarwhalsAggregation
+    from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
 
@@ -44,6 +44,26 @@ def n_unique() -> dd.Aggregation:
     return dd.Aggregation(name="nunique", chunk=chunk, agg=agg)
 
 
+def _all() -> dd.Aggregation:
+    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s.all(skipna=True)
+
+    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s0.all(skipna=True)
+
+    return dd.Aggregation(name="all", chunk=chunk, agg=agg)
+
+
+def _any() -> dd.Aggregation:
+    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s.any(skipna=True)
+
+    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
+        return s0.any(skipna=True)
+
+    return dd.Aggregation(name="any", chunk=chunk, agg=agg)
+
+
 def var(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.var, ddof=ddof)
 
@@ -64,6 +84,9 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         "len": "size",
         "n_unique": n_unique,
         "count": "count",
+        "quantile": "quantile",
+        "all": _all,
+        "any": _any,
     }
 
     def __init__(
@@ -119,6 +142,5 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             )
         return DaskLazyFrame(
             self._grouped.agg(**simple_aggregations).reset_index(),
-            backend_version=self.compliant._backend_version,
             version=self.compliant._version,
         ).rename(dict(zip(self._keys, self._output_key_names)))

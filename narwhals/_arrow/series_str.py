@@ -57,6 +57,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         timestamp_array = pc.strptime(self.native, format=format, unit="us")
         return self.with_native(timestamp_array)
 
+    def to_date(self, format: str | None) -> ArrowSeries:
+        return self.to_datetime(format=format).dt.date()
+
     def to_uppercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_upper(self.native))
 
@@ -67,7 +70,10 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
-        first_char, remaining_chars = self.slice(0, 1).native, self.slice(1, None).native
+        first_char, remaining_chars = (
+            self.slice(0, 1).native,
+            self.slice(1, None).native,
+        )
 
         # Conditions
         less_than_width = pc.less(pc.utf8_length(native), lit(width))

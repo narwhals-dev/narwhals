@@ -6,7 +6,7 @@ from warnings import warn
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
-from narwhals._typing_compat import TypeVar
+from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
@@ -257,6 +257,26 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
             self._compliant_frame.gather_every(n=n, offset=offset)
         )
 
+    def with_row_index(
+        self, name: str = "index", *, order_by: str | Sequence[str] | None = None
+    ) -> Self:
+        """Insert column which enumerates rows.
+
+        Arguments:
+            name: The name of the column as a string. The default is "index".
+            order_by: Column(s) to order by when computing the row index.
+
+        Returns:
+            The original object with the column added.
+        """
+        order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        return self._with_compliant(
+            self._compliant_frame.with_row_index(
+                name=name,
+                order_by=order_by_,  # type: ignore[arg-type]
+            )
+        )
+
 
 class Series(NwSeries[IntoSeriesT]):
     @inherit_doc(NwSeries)
@@ -385,10 +405,30 @@ class Expr(NwExpr):
         Returns:
             A new expression.
         """
-        return self._with_unorderable_window(
+        return self._with_window(
             lambda plx: self._to_compliant_expr(plx).sort(
                 descending=descending, nulls_last=nulls_last
             )
+        )
+
+    def arg_max(self) -> Self:
+        """Returns the index of the maximum value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_max()
+        )
+
+    def arg_min(self) -> Self:
+        """Returns the index of the minimum value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_min()
         )
 
     def arg_true(self) -> Self:
@@ -462,8 +502,7 @@ def _stableify(
         return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
     if isinstance(obj, NwExpr):
         return Expr(obj._to_compliant_expr, obj._metadata)
-    msg = f"Expected DataFrame, LazyFrame, Series, or Expr, got: {type(obj)}"  # pragma: no cover
-    raise AssertionError(msg)
+    assert_never(obj)
 
 
 @overload
@@ -1016,22 +1055,11 @@ def to_native(
         Object of class that user started with.
     """
     from narwhals._utils import validate_strict_and_pass_though
-    from narwhals.dataframe import BaseFrame
-    from narwhals.series import Series
 
     pass_through = validate_strict_and_pass_though(
         strict, pass_through, pass_through_default=False, emit_deprecation_warning=False
     )
-
-    if isinstance(narwhals_object, BaseFrame):
-        return narwhals_object._compliant_frame._native_frame
-    if isinstance(narwhals_object, Series):
-        return narwhals_object._compliant_series.native
-
-    if not pass_through:
-        msg = f"Expected Narwhals object, got {type(narwhals_object)}."
-        raise TypeError(msg)
-    return narwhals_object
+    return nw.to_native(narwhals_object, pass_through=pass_through)
 
 
 def narwhalify(
@@ -1315,38 +1343,46 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.sum_horizontal(*exprs))
 
 
-def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def all_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
-
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `True`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.all_horizontal(*exprs))
+    return _stableify(nw.all_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
-def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
+def any_horizontal(
+    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool = False
+) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
-    [Kleene Logic](https://en.wikipedia.org/wiki/Three-valued_logic)
-    is followed, except for pandas' classical NumPy types which can't hold null
-    values, see [Boolean columns](../concepts/boolean.md).
-
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
+        ignore_nulls: Whether to ignore nulls:
+
+            - If `True`, null values are ignored. If there are no elements, the result
+              is `False`.
+            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+              pandas with classical NumPy dtypes when null values are present.
 
     Returns:
         A new expression.
     """
-    return _stableify(nw.any_horizontal(*exprs))
+    return _stableify(nw.any_horizontal(*exprs, ignore_nulls=ignore_nulls))
 
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1419,6 +1455,25 @@ def concat_str(
     return _stableify(
         nw.concat_str(exprs, *more_exprs, separator=separator, ignore_nulls=ignore_nulls)
     )
+
+
+def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
+    """Folds the columns from left to right, keeping the first non-null value.
+
+    Arguments:
+        exprs: Columns to coalesce, must be a str, nw.Expr, or nw.Series
+            where strings are parsed as column names and both nw.Expr/nw.Series
+            are passed through as-is. Scalar values must be wrapped in `nw.lit`.
+
+        *more_exprs: Additional columns to coalesce, specified as positional arguments.
+
+    Raises:
+        TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
+
+    Returns:
+        A new expression.
+    """
+    return _stableify(nw.coalesce(exprs, *more_exprs))
 
 
 def get_level(
@@ -1847,6 +1902,7 @@ __all__ = [
     "all",
     "all_horizontal",
     "any_horizontal",
+    "coalesce",
     "col",
     "concat",
     "concat_str",

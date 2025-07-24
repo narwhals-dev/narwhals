@@ -7,6 +7,7 @@ on:
 
 env:
   PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
 
 jobs:
   pytest-39:
@@ -24,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pytest-39-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests --system
@@ -48,7 +49,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
@@ -79,7 +80,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
@@ -110,7 +111,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[pandas, pyarrow]" --group tests --system

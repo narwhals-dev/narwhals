@@ -432,3 +432,57 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
     result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
     expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
     assert_equal_data(result, expected)
+
+
+def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
+        # cudf: https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
+
+    quantile_expr = nw.col("a").quantile(quantile=0.5, interpolation="linear")
+    native_frame = constructor(data)
+
+    if "dask" in str(constructor):
+        native_frame = native_frame.repartition(npartitions=1)  # type: ignore[union-attr]
+
+    result = (
+        nw.from_native(native_frame)
+        .with_columns(
+            quantile_over_b=quantile_expr.over("b"), quantile_global=quantile_expr
+        )
+        .sort("a")
+    )
+
+    expected = {
+        **data,
+        "quantile_over_b": [2, 2, 2, 5, 5, 5],
+        "quantile_global": [3.5] * 6,
+    }
+    assert_equal_data(result, expected)
+
+
+def test_over_ewm_mean(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+        # not implemented
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 2):
+        request.applymarker(pytest.mark.xfail(reason="too old, not implemented"))
+
+    data = {"a": [0.0, 1.0, 3.0, 5.0, 7.0, 7.5], "b": [1, 1, 1, 2, 2, 2]}
+
+    ewm_expr = nw.col("a").ewm_mean(com=1)
+    result = (
+        nw.from_native(constructor_eager(data))
+        .with_columns(ewm_over_b=ewm_expr.over("b"), ewm_global=ewm_expr)
+        .sort("a")
+    )
+    expected = {
+        **data,
+        "ewm_over_b": [0.0, 2 / 3, 2.0, 5.0, 6 + 1 / 3, 7.0],
+        "ewm_global": [0.0, 2 / 3, 2.0, 3.6, 5.354838709677419, 6.444444444444445],
+    }
+    assert_equal_data(result, expected)

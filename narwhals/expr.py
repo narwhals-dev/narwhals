@@ -63,7 +63,7 @@ class Expr:
         self._to_compliant_expr: _ToCompliant = func
         self._metadata = metadata
 
-    def _with_elementwise_op(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+    def _with_elementwise(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_elementwise_op())
 
     def _with_aggregation(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
@@ -79,8 +79,8 @@ class Expr:
     def _with_orderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_orderable_window())
 
-    def _with_unorderable_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
-        return self.__class__(to_compliant_expr, self._metadata.with_unorderable_window())
+    def _with_window(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
+        return self.__class__(to_compliant_expr, self._metadata.with_window())
 
     def _with_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(to_compliant_expr, self._metadata.with_filtration())
@@ -124,7 +124,7 @@ class Expr:
             |      1  15       |
             └──────────────────┘
         """
-        # Don't use `_with_elementwise_op` so that `_metadata.last_node` is preserved.
+        # Don't use `_with_elementwise` so that `_metadata.last_node` is preserved.
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).alias(name), self._metadata
         )
@@ -188,7 +188,7 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).cast(dtype)
         )
 
@@ -367,7 +367,7 @@ class Expr:
 
     # --- unary ---
     def __invert__(self) -> Self:
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).__invert__()
         )
 
@@ -777,22 +777,20 @@ class Expr:
     def arg_min(self) -> Self:
         """Returns the index of the minimum value.
 
+        Warning:
+            `Expr.arg_min` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_min().name.suffix("_arg_min"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_min  b_arg_min|
-            |0          0          1|
-            └───────────────────────┘
         """
+        msg = (
+            "`Expr.arg_min` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.49.0")
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_min()
         )
@@ -800,22 +798,20 @@ class Expr:
     def arg_max(self) -> Self:
         """Returns the index of the maximum value.
 
+        Warning:
+            `Expr.arg_max` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_max().name.suffix("_arg_max"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_max  b_arg_max|
-            |0          1          0|
-            └───────────────────────┘
         """
+        msg = (
+            "`Expr.arg_max` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.49.0")
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_max()
         )
@@ -903,7 +899,7 @@ class Expr:
             |1 -2  4      2      4|
             └─────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).abs())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).abs())
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
         """Return cumulative sum.
@@ -1089,7 +1085,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).replace_strict(
                 old, new, return_dtype=return_dtype
             )
@@ -1213,7 +1209,7 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
-            return self._with_elementwise_op(
+            return self._with_elementwise(
                 lambda plx: self._to_compliant_expr(plx).is_in(
                     to_native(other, pass_through=True)
                 )
@@ -1226,7 +1222,7 @@ class Expr:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
-            predicates: Conditions to filter by (which get ANDed together).
+            predicates: Conditions to filter by (which get AND-ed together).
 
         Returns:
             A new expression.
@@ -1303,9 +1299,7 @@ class Expr:
             |└───────┴────────┴───────────┴───────────┘|
             └──────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
-            lambda plx: self._to_compliant_expr(plx).is_null()
-        )
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).is_null())
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
@@ -1340,12 +1334,15 @@ class Expr:
             |└───────┴────────┴──────────┴──────────┘|
             └────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
-            lambda plx: self._to_compliant_expr(plx).is_nan()
-        )
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).is_nan())
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
+
+        Warning:
+            `Expr.arg_true` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
 
         Returns:
             A new expression.
@@ -1375,9 +1372,11 @@ class Expr:
             A new expression.
 
         Notes:
-            pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            - pandas handles null values differently from other libraries.
+              See [null_handling](../concepts/null_handling.md/)
+              for reference.
+            - For pandas Series of `object` dtype, `fill_null` will not automatically change the
+              Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
 
         Examples:
             >>> import polars as pl
@@ -1648,9 +1647,7 @@ class Expr:
             |3  1  c        False         True|
             └─────────────────────────────────┘
         """
-        return self._with_unorderable_window(
-            lambda plx: self._to_compliant_expr(plx).is_unique()
-        )
+        return self._with_window(lambda plx: self._to_compliant_expr(plx).is_unique())
 
     def null_count(self) -> Self:
         r"""Count null values.
@@ -1869,7 +1866,7 @@ class Expr:
             |2  3.901234        3.9|
             └──────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).round(decimals)
         )
 
@@ -2037,7 +2034,7 @@ class Expr:
             |└──────┴─────────────┘|
             └──────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).is_finite()
         )
 
@@ -2474,7 +2471,7 @@ class Expr:
             )
             raise ValueError(msg)
 
-        return self._with_unorderable_window(
+        return self._with_window(
             lambda plx: self._to_compliant_expr(plx).rank(
                 method=method, descending=descending
             )
@@ -2511,7 +2508,7 @@ class Expr:
             |log_2: [[0,1,2]]                                |
             └────────────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(
+        return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).log(base=base)
         )
 
@@ -2539,7 +2536,7 @@ class Expr:
             |exp: [[0.36787944117144233,1,2.718281828459045]]|
             └────────────────────────────────────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).exp())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).exp())
 
     def sqrt(self) -> Self:
         r"""Compute the square root.
@@ -2565,7 +2562,7 @@ class Expr:
             |sqrt: [[1,2,3]]   |
             └──────────────────┘
         """
-        return self._with_elementwise_op(lambda plx: self._to_compliant_expr(plx).sqrt())
+        return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).sqrt())
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

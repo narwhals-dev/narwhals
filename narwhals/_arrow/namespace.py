@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -31,6 +32,8 @@ if TYPE_CHECKING:
 class ArrowNamespace(
     EagerNamespace[ArrowDataFrame, ArrowSeries, ArrowExpr, pa.Table, "ChunkedArrayAny"]
 ):
+    _implementation = Implementation.PYARROW
+
     @property
     def _dataframe(self) -> type[ArrowDataFrame]:
         return ArrowDataFrame
@@ -43,10 +46,7 @@ class ArrowNamespace(
     def _series(self) -> type[ArrowSeries]:
         return ArrowSeries
 
-    # --- not in spec ---
-    def __init__(self, *, backend_version: tuple[int, ...], version: Version) -> None:
-        self._backend_version = backend_version
-        self._implementation = Implementation.PYARROW
+    def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def len(self) -> ArrowExpr:
@@ -59,7 +59,6 @@ class ArrowNamespace(
             function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -78,15 +77,19 @@ class ArrowNamespace(
             function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def all_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            return [reduce(operator.and_, align(*series))]
+            it = (
+                (s.fill_null(True, None, None) for s in series)  # noqa: FBT003
+                if ignore_nulls
+                else series
+            )
+            return [reduce(operator.and_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -97,11 +100,16 @@ class ArrowNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = chain.from_iterable(expr(df) for expr in exprs)
             align = self._series._align_full_broadcast
-            return [reduce(operator.or_, align(*series))]
+            it = (
+                (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
+                if ignore_nulls
+                else series
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -158,12 +166,7 @@ class ArrowNamespace(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -184,12 +187,7 @@ class ArrowNamespace(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
             return [
-                ArrowSeries(
-                    native_series,
-                    name=init_series.name,
-                    backend_version=self._backend_version,
-                    version=self._version,
-                )
+                ArrowSeries(native_series, name=init_series.name, version=self._version)
             ]
 
         return self._expr._from_callable(
@@ -252,7 +250,6 @@ class ArrowNamespace(
             compliant = self._series(
                 concat_str(*it, separator_scalar, null_handling=null_handling),
                 name=name,
-                backend_version=self._backend_version,
                 version=self._version,
             )
             return [compliant]
@@ -261,6 +258,27 @@ class ArrowNamespace(
             func=func,
             depth=max(x._depth for x in exprs) + 1,
             function_name="concat_str",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            align = self._series._align_full_broadcast
+            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            return [
+                ArrowSeries(
+                    pc.coalesce(init_series.native, *(s.native for s in series)),
+                    name=init_series.name,
+                    version=self._version,
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -283,4 +301,9 @@ class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayA
         return pc.if_else(when, then, otherwise)
 
 
-class ArrowThen(CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr], ArrowExpr): ...
+class ArrowThen(
+    CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr, ArrowWhen], ArrowExpr
+):
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "whenthen"

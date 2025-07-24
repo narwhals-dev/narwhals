@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -9,43 +9,31 @@ from narwhals._compliant.typing import (
     CompliantExprT_contra,
     CompliantFrameT_co,
     CompliantLazyFrameAny,
-    CompliantLazyFrameT_co,
     DepthTrackingExprAny,
     DepthTrackingExprT_contra,
     EagerExprT_contra,
-    LazyExprT_contra,
-    NativeExprT_co,
+    NarwhalsAggregation,
 )
+from narwhals._typing_compat import Protocol38
 from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
-
-    from typing_extensions import TypeAlias
+    from collections.abc import Iterator, Mapping, Sequence
 
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
 
-__all__ = [
-    "CompliantGroupBy",
-    "DepthTrackingGroupBy",
-    "EagerGroupBy",
-    "LazyGroupBy",
-    "NarwhalsAggregation",
-]
+__all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy"]
 
 NativeAggregationT_co = TypeVar(
     "NativeAggregationT_co", bound="str | Callable[..., Any]", covariant=True
 )
-NarwhalsAggregation: TypeAlias = Literal[
-    "sum", "mean", "median", "max", "min", "std", "var", "len", "n_unique", "count"
-]
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
-class CompliantGroupBy(Protocol[CompliantFrameT_co, CompliantExprT_contra]):
+class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
 
     @property
@@ -66,14 +54,14 @@ class CompliantGroupBy(Protocol[CompliantFrameT_co, CompliantExprT_contra]):
 
 class DataFrameGroupBy(
     CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
-    Protocol[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
 ):
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
 
 
 class ParseKeysGroupBy(
     CompliantGroupBy[CompliantFrameT_co, CompliantExprT_contra],
-    Protocol[CompliantFrameT_co, CompliantExprT_contra],
+    Protocol38[CompliantFrameT_co, CompliantExprT_contra],
 ):
     def _parse_keys(
         self,
@@ -130,7 +118,7 @@ class ParseKeysGroupBy(
 
 class DepthTrackingGroupBy(
     ParseKeysGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
-    Protocol[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
+    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -187,37 +175,5 @@ class EagerGroupBy(
         CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co
     ],
     DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
-    Protocol[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
+    Protocol38[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
 ): ...
-
-
-class LazyGroupBy(
-    ParseKeysGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
-    CompliantGroupBy[CompliantLazyFrameT_co, LazyExprT_contra],
-    Protocol[CompliantLazyFrameT_co, LazyExprT_contra, NativeExprT_co],
-):
-    _keys: list[str]
-    _output_key_names: list[str]
-
-    def _evaluate_expr(self, expr: LazyExprT_contra, /) -> Iterator[NativeExprT_co]:
-        output_names = expr._evaluate_output_names(self.compliant)
-        aliases = (
-            expr._alias_output_names(output_names)
-            if expr._alias_output_names
-            else output_names
-        )
-        native_exprs = expr(self.compliant)
-        if expr._is_multi_output_unnamed():
-            exclude = {*self._keys, *self._output_key_names}
-            for native_expr, name, alias in zip(native_exprs, output_names, aliases):
-                if name not in exclude:
-                    yield expr._alias_native(native_expr, alias)
-        else:
-            for native_expr, alias in zip(native_exprs, aliases):
-                yield expr._alias_native(native_expr, alias)
-
-    def _evaluate_exprs(
-        self, exprs: Iterable[LazyExprT_contra], /
-    ) -> Iterator[NativeExprT_co]:
-        for expr in exprs:
-            yield from self._evaluate_expr(expr)

@@ -16,12 +16,14 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
+from narwhals._pandas_like.utils import is_non_nullable_boolean
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -63,16 +65,26 @@ class PandasLikeNamespace(
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
-    # --- not in spec ---
-    def __init__(
-        self,
-        implementation: Implementation,
-        backend_version: tuple[int, ...],
-        version: Version,
-    ) -> None:
+    def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
-        self._backend_version = backend_version
         self._version = version
+
+    def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
+            return [
+                reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=max(x._depth for x in exprs) + 1,
+            function_name="coalesce",
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> PandasLikeExpr:
         def _lit_pandas_series(df: PandasLikeDataFrame) -> PandasLikeSeries:
@@ -93,7 +105,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -109,7 +120,6 @@ class PandasLikeNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
-            backend_version=self._backend_version,
             version=self._version,
         )
 
@@ -131,11 +141,29 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def all_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def all_horizontal(
+        self, *exprs: PandasLikeExpr, ignore_nulls: bool
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
-            return [reduce(operator.and_, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            if not ignore_nulls and any(
+                s.native.dtype == "object" and s.is_null().any() for s in series
+            ):
+                # classical NumPy boolean columns don't support missing values, so
+                # only do the full scan with `is_null` if we have `object` dtype.
+                msg = "Cannot use `ignore_nulls=False` in `all_horizontal` for non-nullable NumPy-backed pandas Series when nulls are present."
+                raise ValueError(msg)
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.and_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -146,11 +174,29 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def any_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+    def any_horizontal(
+        self, *exprs: PandasLikeExpr, ignore_nulls: bool
+    ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
-            return [reduce(operator.or_, series)]
+            series = [s for _expr in exprs for s in _expr(df)]
+            if not ignore_nulls and any(
+                s.native.dtype == "object" and s.is_null().any() for s in series
+            ):
+                # classical NumPy boolean columns don't support missing values, so
+                # only do the full scan with `is_null` if we have `object` dtype.
+                msg = "Cannot use `ignore_nulls=False` in `any_horizontal` for non-nullable NumPy-backed pandas Series when nulls are present."
+                raise ValueError(msg)
+            it = (
+                (
+                    # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
+                    for s in series
+                )
+                if ignore_nulls
+                else iter(series)
+            )
+            return [reduce(operator.or_, align(*it))]
 
         return self._expr._from_callable(
             func=func,
@@ -192,7 +238,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]
@@ -218,7 +263,6 @@ class PandasLikeNamespace(
                         (s.to_frame() for s in series), how="horizontal"
                     ).native.max(axis=1),
                     implementation=self._implementation,
-                    backend_version=self._backend_version,
                     version=self._version,
                 ).alias(series[0].name)
             ]
@@ -297,6 +341,9 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
+                # NOTE: Trying to help `mypy` later
+                # error: Cannot determine type of "values"  [has-type]
+                values: list[PandasLikeSeries]
                 init_value, *values = [
                     s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
                 ]
@@ -367,7 +414,9 @@ class PandasWhen(
     EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
 ):
     @property
-    def _then(self) -> type[PandasThen]:
+    # Signature of "_then" incompatible with supertype "CompliantWhen"
+    # ArrowWhen seems to follow the same pattern, but no mypy complaint there?
+    def _then(self) -> type[PandasThen]:  # type: ignore[override]
         return PandasThen
 
     def _if_then_else(
@@ -381,5 +430,9 @@ class PandasWhen(
 
 
 class PandasThen(
-    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr], PandasLikeExpr
-): ...
+    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, PandasWhen],
+    PandasLikeExpr,
+):
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "whenthen"

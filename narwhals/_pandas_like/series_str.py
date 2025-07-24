@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._pandas_like.utils import (
-    PandasLikeSeriesNamespace,
-    is_pyarrow_dtype_backend,
-)
+from narwhals._pandas_like.utils import PandasLikeSeriesNamespace, is_dtype_pyarrow
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -46,9 +43,7 @@ class PandasLikeSeriesStringNamespace(
 
     def split(self, by: str) -> PandasLikeSeries:
         implementation = self.implementation
-        if not implementation.is_cudf() and not is_pyarrow_dtype_backend(
-            self.native.dtype, implementation
-        ):
+        if not implementation.is_cudf() and not is_dtype_pyarrow(self.native.dtype):
             msg = (
                 "This operation requires a pyarrow-backed series. "
                 "Please refer to https://narwhals-dev.github.io/narwhals/api-reference/narwhals/#narwhals.maybe_convert_dtypes "
@@ -68,9 +63,17 @@ class PandasLikeSeriesStringNamespace(
         return result
 
     def _to_datetime(self, format: str | None, *, utc: bool) -> Any:
-        return self.implementation.to_native_namespace().to_datetime(
+        result = self.implementation.to_native_namespace().to_datetime(
             self.native, format=format, utc=utc
         )
+        return (
+            result.convert_dtypes(dtype_backend="pyarrow")
+            if is_dtype_pyarrow(self.native.dtype)
+            else result
+        )
+
+    def to_date(self, format: str | None) -> PandasLikeSeries:
+        return self.to_datetime(format=format).dt.date()
 
     def to_uppercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.upper())
