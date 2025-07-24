@@ -10,6 +10,11 @@ from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 
 def test_unpivot(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "cudf" in str(constructor) or (
+        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13, 0, 0)
+    ):
+        request.applymarker(pytest.mark.xfail)
+
     context = (  # a. sqlframe is expected to be case-insensitive?, b. dask dates are in string-format
         pytest.raises(AssertionError)
         if ("sqlframe" in str(constructor) or "dask" in str(constructor))
@@ -17,11 +22,6 @@ def test_unpivot(constructor: Constructor, request: pytest.FixtureRequest) -> No
     )
 
     with context:
-        if "cudf" in str(constructor) or (
-            "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
-        ):
-            request.applymarker(pytest.mark.xfail)
-
         data = {
             "date": [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
             "AAPL": [110, 100, 105],
