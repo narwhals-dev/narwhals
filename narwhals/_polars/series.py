@@ -563,18 +563,22 @@ class PolarsSeries:
 
         # Handle column naming
         if not include_breakpoint:
-            df.columns = ["count"]
+            df = df.select(pl.nth(0).alias("count"))
         elif BACKEND_VERSION < (1, 0):  # pragma: no cover
             df = df.rename({"break_point": "breakpoint"})
 
-        # polars<1.15 implicitly adds -inf and inf to either end of bins
-        if BACKEND_VERSION < (1, 15) and bins is not None:  # pragma: no cover
-            r = pl.int_range(0, len(df))
-            df = df.filter((r > 0) & (r < len(df) - 1))
-
-        # polars<1.27 makes the lowest bin a left/right closed interval
-        if BACKEND_VERSION < (1, 27) and bins is not None:  # pragma: no cover
-            df[0, "count"] += (series == bins[0]).sum()
+        if bins is not None:  # pragma: no cover
+            # polars<1.6 implicitly adds -inf and inf to either end of bins
+            if BACKEND_VERSION < (1, 6):
+                r = pl.int_range(0, len(df))
+                df = df.filter((r > 0) & (r < len(df) - 1))
+            # polars<1.27 makes the lowest bin a left/right closed interval
+            if BACKEND_VERSION < (1, 27):
+                df = (
+                    df.slice(0, 1)
+                    .with_columns(pl.col("count") + ((pl.lit(series) == bins[0]).sum()))
+                    .vstack(df.slice(1))
+                )
 
         return PolarsDataFrame.from_native(df, context=self)
 

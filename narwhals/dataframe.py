@@ -2846,6 +2846,27 @@ class LazyFrame(BaseFrame[FrameT]):
 
         return super().filter(*predicates, **constraints)
 
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        """Write LazyFrame to Parquet file.
+
+        This may allow larger-than-RAM datasets to be written to disk.
+
+        Arguments:
+            file: String, path object or file-like object to which the dataframe will be
+                written.
+
+        Returns:
+            None.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.LazyFrame({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.sink_parquet("out.parquet")  # doctest:+SKIP
+        """
+        self._compliant_frame.sink_parquet(file)
+
     @overload
     def group_by(
         self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
