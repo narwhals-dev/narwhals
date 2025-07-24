@@ -7,11 +7,12 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
+    import pandas as pd
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries
@@ -224,6 +225,33 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
 
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def to_pandas_types_mapper(
+    dtype: pa.DataType, /
+) -> pd.api.extensions.ExtensionDtype | None:
+    """Default overrides `pyarrow` -> `pandas` dtype conversion.
+
+    Should be passed as `types_mapper` in [`Table.to_pandas`] and [`ChunkedArray.to_pandas`].
+
+    Notes:
+    - May need to branch on `pandas` version
+    - `pa.ListType` probably needs this as well
+
+    [`Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
+    [`ChunkedArray.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray.to_pandas
+    """
+    import pandas as pd
+
+    if Implementation.PANDAS._backend_version() < (1, 5):
+        # `pd.ArrowDType` added https://github.com/pandas-dev/pandas/pull/46774
+        return None
+    # NOTE: 2.2.0 added the accessors, but probably usable earlier than that?
+    # `.struct` added https://github.com/pandas-dev/pandas/pull/54977
+    # `.list` added https://github.com/pandas-dev/pandas/pull/55777
+    if pa.types.is_struct(dtype):
+        return pd.ArrowDtype(dtype)
+    return None
 
 
 def extract_native(
