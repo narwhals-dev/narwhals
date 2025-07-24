@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
-from narwhals._compliant import EagerSeries
+from narwhals._compliant import EagerSeries, _EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -34,9 +34,10 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._compliant.series import _HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
@@ -55,8 +56,6 @@ if TYPE_CHECKING:
         _1DArray,
         _SliceIndex,
     )
-
-    _HistData: TypeAlias = dict[str, list[float] | _1DArray | pd.Series[int]]
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -1053,31 +1052,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeSeriesStructNamespace(self)
 
 
-class _PandasHist:
-    """Experimenting with an API all could share.
-
-    - Most of the public parts will work for all backends
-    - Some private things could be implemented on `Compliant(Expr|Series|Namespace)`
-    - Very little here *needs* to be exclusive to `hist`
-    """
-
+class _PandasHist(_EagerSeriesHist["pd.Series[Any]"]):
     _series: PandasLikeSeries
-    _breakpoint: bool
-    _data: _HistData
-
-    @property
-    def native(self) -> pd.Series[Any]:
-        return self._series.native
-
-    @classmethod
-    def from_series(
-        cls, series: PandasLikeSeries, *, include_breakpoint: bool
-    ) -> _PandasHist:
-        obj = cls.__new__(cls)
-        obj._series = series
-        obj._breakpoint = include_breakpoint
-        obj._data = {}
-        return obj
 
     def to_frame(self) -> PandasLikeDataFrame:
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native
@@ -1088,35 +1064,13 @@ class _PandasHist:
     def is_empty_series(self) -> bool:
         return self._series.count() < 1
 
-    # NOTE: **Should** be handled at narwhals-level
-    def data_empty(self) -> _HistData:
-        return {"breakpoint": [], "count": []} if self._breakpoint else {"count": []}
-
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
     # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
-    def series_empty(self, arg: int | list[float], /) -> _HistData:
+    def series_empty(self, arg: int | list[float], /) -> _HistData[pd.Series[Any]]:
         count = self._zeros(arg)
         if self._breakpoint:
             return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
         return {"count": count}
-
-    def with_bins(self, bins: list[float], /) -> Self:
-        if len(bins) <= 1:
-            self._data = self.data_empty()
-        elif self.is_empty_series():
-            self._data = self.series_empty(bins)
-        else:
-            self._data = self._calculate_hist(bins)
-        return self
-
-    def with_bin_count(self, bin_count: int, /) -> Self:
-        if bin_count == 0:
-            self._data = self.data_empty()
-        elif self.is_empty_series():
-            self._data = self.series_empty(bin_count)
-        else:
-            self._data = self._calculate_hist(self._calculate_bins(bin_count))
-        return self
 
     def _zeros(self, arg: int | list[float], /) -> _1DArray:
         zeros = self._series._array_funcs.zeros
@@ -1140,23 +1094,6 @@ class _PandasHist:
             include_lowest=True,
         )
 
-    # NOTE: Roughly `pl.linear_space`, but missing the `pd.Series` wrapping
-    def _linear_space(
-        self,
-        start: float,
-        end: float,
-        num_samples: int,
-        *,
-        closed: Literal["both", "none"] = "both",
-    ) -> _1DArray:
-        return self._series._array_funcs.linspace(
-            start, end, num_samples, endpoint=closed == "both"
-        )
-
-    def _calculate_breakpoint(self, arg: int | list[float], /) -> list[float] | _1DArray:
-        bins = self._linear_space(0, 1, arg + 1) if isinstance(arg, int) else arg
-        return bins[1:]
-
     def _calculate_bins(self, bin_count: int) -> _1DArray:
         """Prepare bins for histogram calculation from bin_count."""
         lower, upper = self.native.min(), self.native.max()
@@ -1165,7 +1102,7 @@ class _PandasHist:
             upper += 0.5
         return self._linear_space(lower, upper, bin_count + 1)
 
-    def _calculate_hist(self, bins: list[float] | _1DArray) -> _HistData:
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> _HistData[pd.Series[Any]]:
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
         #   happen since the bins were explicitly passed in.
         categories = self._cut(bins)

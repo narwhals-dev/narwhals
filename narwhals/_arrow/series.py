@@ -22,7 +22,7 @@ from narwhals._arrow.utils import (
     pad_series,
     zeros,
 )
-from narwhals._compliant import EagerSeries
+from narwhals._compliant import EagerSeries, _EagerSeriesHist
 from narwhals._expression_parsing import ExprKind
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
-        ArrayOrChunkedArray,
+        ArrayOrChunkedArray,  # type: ignore[attr-defined]
         ArrayOrScalar,
         ChunkedArrayAny,
         Incomplete,
@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         _AsPyType,
         _BasicDataType,
     )
+    from narwhals._compliant.series import _HistData
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -1019,94 +1020,20 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
-        from narwhals._arrow.dataframe import ArrowDataFrame
-
-        data: dict[str, Any]
-        if len(bins) <= 1:
-            data = {"breakpoint": [], "count": []}
-        elif self._is_empty_series():
-            data = {"breakpoint": bins[1:], "count": zeros(len(bins) - 1)}
-        else:
-            data = self._hist_data_from_bins(bins=bins)
-
-        if not include_breakpoint:
-            del data["breakpoint"]
-
-        return ArrowDataFrame(
-            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
+        return (
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bins(bins)
+            .to_frame()
         )
 
     def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
-        from narwhals._arrow.dataframe import ArrowDataFrame
-
-        data: dict[str, Any]
-        if bin_count == 0:
-            data = {"breakpoint": [], "count": []}
-        elif self._is_empty_series():
-            from numpy import linspace  # ignore-banned-import
-
-            data = {
-                "breakpoint": linspace(0, 1, bin_count + 1)[1:],
-                "count": zeros(bin_count),
-            }
-        else:
-            bins = self._bins_from_bin_count(bin_count=bin_count)
-            data = self._hist_data_from_bins(bins=bins)
-
-        if not include_breakpoint:
-            del data["breakpoint"]
-
-        return ArrowDataFrame(
-            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
+        return (
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bin_count(bin_count)
+            .to_frame()
         )
-
-    def _is_empty_series(self) -> bool:
-        # NOTE: `ChunkedArray.combine_chunks` returns the concrete array type
-        # Stubs say `Array[pa.BooleanScalar]`, which is missing properties
-        # https://github.com/zen-xu/pyarrow-stubs/blob/6bedee748bc74feb8513b24bf43d64b24c7fddc8/pyarrow-stubs/__lib_pxi/array.pyi#L2395-L2399
-        is_null = self.native.is_null(nan_is_null=True)
-        arr = cast("pa.BooleanArray", is_null.combine_chunks())
-        return arr.false_count == 0
-
-    def _bins_from_bin_count(self, bin_count: int) -> list[float]:
-        """Prepare bins for histogram calculation from bin_count."""
-        from numpy import linspace  # ignore-banned-import
-
-        d = pc.min_max(self.native)
-        lower, upper = d["min"].as_py(), d["max"].as_py()
-        if lower == upper:
-            lower -= 0.5
-            upper += 0.5
-
-        return linspace(lower, upper, bin_count + 1)
-
-    def _hist_data_from_bins(self, bins: list[float]) -> dict[str, Any]:
-        """Calculate histogram from bins."""
-        ser = self.native
-        # Handle single bin case
-        if len(bins) == 2:
-            is_between_bins = pc.and_(
-                pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
-            )
-            count = pc.sum(is_between_bins.cast(pa.uint8()))
-            return {"breakpoint": [bins[-1]], "count": [count]}
-
-        # Handle multiple bins
-        import numpy as np  # ignore-banned-import
-
-        bin_indices = np.searchsorted(bins, ser, side="left")
-        # lowest bin is inclusive
-        bin_indices = pc.if_else(pc.equal(ser, lit(bins[0])), 1, bin_indices)
-
-        # Align unique categories and counts appropriately
-        obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
-        obj_cats = np.arange(1, len(bins))
-        counts = np.zeros_like(obj_cats)
-        counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
-
-        return {"breakpoint": bins[1:], "count": counts}
 
     def __iter__(self) -> Iterator[Any]:
         for x in self.native:
@@ -1158,3 +1085,70 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStructNamespace(self)
 
     ewm_mean = not_implemented()
+
+
+class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
+    _series: ArrowSeries
+
+    def to_frame(self) -> ArrowDataFrame:
+        from_native = self._series.__narwhals_namespace__()._dataframe.from_native
+        table_cls = self._series.__native_namespace__().table
+        return from_native(table_cls(self._data), context=self._series)
+
+    # NOTE: *Could* be handled at narwhals-level
+    def is_empty_series(self) -> bool:
+        # NOTE: `ChunkedArray.combine_chunks` returns the concrete array type
+        # Stubs say `Array[pa.BooleanScalar]`, which is missing properties
+        # https://github.com/zen-xu/pyarrow-stubs/blob/6bedee748bc74feb8513b24bf43d64b24c7fddc8/pyarrow-stubs/__lib_pxi/array.pyi#L2395-L2399
+        is_null = self.native.is_null(nan_is_null=True)
+        arr = cast("pa.BooleanArray", is_null.combine_chunks())  # type: ignore[arg-type, union-type]
+        return arr.false_count == 0
+
+    # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
+    # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
+    def series_empty(self, arg: int | list[float], /) -> _HistData[ChunkedArrayAny]:
+        count = self._zeros(arg)
+        if self._breakpoint:
+            return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
+        return {"count": count}
+
+    def _zeros(self, arg: int | list[float], /) -> ChunkedArrayAny:
+        return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+
+    def _calculate_bins(self, bin_count: int) -> _1DArray:
+        """Prepare bins for histogram calculation from bin_count."""
+        d = pc.min_max(self.native)
+        lower, upper = d["min"].as_py(), d["max"].as_py()
+        if lower == upper:
+            lower -= 0.5
+            upper += 0.5
+        return self._linear_space(lower, upper, bin_count + 1)
+
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> _HistData[ChunkedArrayAny]:
+        ser = self.native
+        # Handle single bin case
+        if len(bins) == 2:
+            is_between_bins = pc.and_(
+                pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
+            )
+            count = pc.sum(is_between_bins.cast(pa.uint8()))
+            if self._breakpoint:
+                return {"breakpoint": [bins[-1]], "count": [count]}
+            return {"count": [count]}
+
+        # Handle multiple bins
+        import numpy as np  # ignore-banned-import
+
+        bin_indices = np.searchsorted(bins, ser, side="left")
+        # lowest bin is inclusive
+        bin_indices = pc.if_else(pc.equal(ser, lit(bins[0])), 1, bin_indices)
+
+        # Align unique categories and counts appropriately
+        obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
+        obj_cats = np.arange(1, len(bins))
+        counts = np.zeros_like(obj_cats)
+        counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+
+        if self._breakpoint:
+            return {"breakpoint": bins[1:], "count": counts}
+        return {"count": counts}
