@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -14,7 +14,6 @@ from narwhals._compliant.typing import (
     EagerExprT_contra,
     NarwhalsAggregation,
 )
-from narwhals._typing_compat import Protocol38
 from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
@@ -33,7 +32,7 @@ NativeAggregationT_co = TypeVar(
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
-class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
+class CompliantGroupBy(Protocol[CompliantFrameT_co, CompliantExprT_contra]):
     _compliant_frame: Any
 
     @property
@@ -54,14 +53,14 @@ class CompliantGroupBy(Protocol38[CompliantFrameT_co, CompliantExprT_contra]):
 
 class DataFrameGroupBy(
     CompliantGroupBy[CompliantDataFrameT_co, CompliantExprT_contra],
-    Protocol38[CompliantDataFrameT_co, CompliantExprT_contra],
+    Protocol[CompliantDataFrameT_co, CompliantExprT_contra],
 ):
     def __iter__(self) -> Iterator[tuple[Any, CompliantDataFrameT_co]]: ...
 
 
 class ParseKeysGroupBy(
     CompliantGroupBy[CompliantFrameT_co, CompliantExprT_contra],
-    Protocol38[CompliantFrameT_co, CompliantExprT_contra],
+    Protocol[CompliantFrameT_co, CompliantExprT_contra],
 ):
     def _parse_keys(
         self,
@@ -118,7 +117,7 @@ class ParseKeysGroupBy(
 
 class DepthTrackingGroupBy(
     ParseKeysGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
-    Protocol38[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
+    Protocol[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -175,5 +174,5 @@ class EagerGroupBy(
         CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co
     ],
     DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
-    Protocol38[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
+    Protocol[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
 ): ...
