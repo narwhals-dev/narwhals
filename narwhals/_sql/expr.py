@@ -400,13 +400,11 @@ class SQLExpr(
     
     # version which makes more sense to me, also wrong though:
     def my_sqrt(self) -> Self:
+        # I can see there must be a type error somewhere as we're passing a native function
         def simple_sqrt(self) -> Self:
             return self._with_elementwise(lambda expr: self._function("sqrt", expr))
     
         return self._when(self < self._lit(0), self._lit(float("nan")), simple_sqrt(self)) 
-
-
-
  
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
