@@ -377,6 +377,9 @@ class SQLExpr(
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: self._function("kurtosis", expr))
 
+    def skew(self) -> Self:
+        return self._with_callable(lambda expr: self._function("skewness", expr))
+
     # Elementwise
     def abs(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("abs", expr))
