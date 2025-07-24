@@ -385,30 +385,31 @@ class SQLExpr(
         return self._with_elementwise(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
+    
+    def sqrt_duckdb(self) -> Self:
+        def _sqrt(expr: Expression) -> Expression:
+            return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
 
-    def _sqrt(self) -> Self:
-        return self._with_elementwise(lambda expr: self._function("isnull", expr))
-
-    # Self: because we're giving it a column and return a column?
+        return self._with_elementwise(_sqrt)    
+    
     def sqrt(self) -> Self:
-        # Native.. type because we're passing it a native function?, my instinct was to pass 'self' too, but that didn't work either
         def _sqrt(expr: NativeExprT) -> NativeExprT:
-            # why _lit below? is it because they're fixed. I can see that 'self' is wrong, but didn't find how to fix
-            return self._when(
-                self < self._lit(0),
-                self._lit(float("nan")),
-                self._with_elementwise(lambda expr: self._function("sqrt", expr)),
-            )
-
-        return self
-
-    # version which makes more sense to me, also wrong though:
-    def my_sqrt(self) -> Self:
-        # I can see there must be a type error somewhere as we're passing a native function
-        def simple_sqrt(self) -> Self:
-            return self._with_elementwise(lambda expr: self._function("sqrt", expr))
-
-        return self._when(self < self._lit(0), self._lit(float("nan")), simple_sqrt(self))
+            return self._when(self._is_expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
+        
+        return self._with_elementwise(_sqrt)
+    
+    def sqrt(self) -> Self:
+        def _sqrt(expr: NativeExprT) -> NativeExprT:
+            return self._when(expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
+        
+        return self._with_elementwise(_sqrt)
+    
+    def sqrt(self) -> Self:
+        sqrt_expr = self._with_elementwise(lambda expr: self._function("sqrt", expr))
+        def _sqrt(expr: NativeExprT) -> NativeExprT:
+            return self._when(self._function(self.expr < _lit(0)), sqrt_expr)
+        
+        return self._with_elementwise(_sqrt)
 
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
