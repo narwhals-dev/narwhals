@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol, cast
 
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import (
@@ -16,7 +16,6 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.typing import SQLLazyFrameT
-from narwhals._typing_compat import Protocol38
 from narwhals._utils import Implementation, Version, not_implemented
 
 if TYPE_CHECKING:
@@ -29,9 +28,7 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral, RankMethod
 
 
-class SQLExpr(
-    LazyExpr[SQLLazyFrameT, NativeExprT], Protocol38[SQLLazyFrameT, NativeExprT]
-):
+class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
     _call: EvalSeries[SQLLazyFrameT, NativeExprT]
     _evaluate_output_names: EvalNames[SQLLazyFrameT]
     _alias_output_names: AliasNames | None

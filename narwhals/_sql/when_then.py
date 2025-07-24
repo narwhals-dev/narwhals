@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Protocol
 
 from narwhals._compliant.typing import CompliantLazyFrameT, NativeExprT
 from narwhals._compliant.when_then import CompliantThen, CompliantWhen
 from narwhals._sql.typing import SQLExprT
-from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
 
 class SQLWhen(
     CompliantWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT, SQLExprT],
 ):
     when: Callable[..., NativeExprT]
     lit: Callable[..., NativeExprT]
@@ -82,7 +81,7 @@ class SQLThen(
         SQLExprT,
         SQLWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
     ],
-    Protocol38[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT, SQLExprT],
 ):
     _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
 
