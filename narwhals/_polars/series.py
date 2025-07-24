@@ -562,7 +562,7 @@ class PolarsSeries:
         # Apply post-processing corrections
 
         # Handle column naming
-        if BACKEND_VERSION < (1, 0):  # pragma: no cover
+        if include_breakpoint and BACKEND_VERSION < (1, 0):  # pragma: no cover
             df = df.rename({"break_point": "breakpoint"})
 
         if bins is not None:  # pragma: no cover
