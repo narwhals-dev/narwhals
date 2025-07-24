@@ -82,6 +82,7 @@ INHERITED_METHODS = frozenset(
         "rows",
         "sample",
         "select",
+        "sink_parquet",
         "sort",
         "tail",
         "to_arrow",
@@ -556,6 +557,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
     # CompliantLazyFrame
+    sink_parquet: Method[None]
     _evaluate_expr: Any
     _evaluate_aliases: Any
 
