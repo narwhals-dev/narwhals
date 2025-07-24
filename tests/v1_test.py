@@ -920,8 +920,17 @@ def test_deprecated_expr_methods() -> None:
         d=nw_v1.col("a").sort().tail(2),
         e=(nw_v1.col("a") == 0).arg_true(),
         f=nw_v1.col("a").gather_every(2),
+        g=nw_v1.col("a").arg_min(),
+        h=nw_v1.col("a").arg_max(),
     )
-    expected = {"c": [-1, 0], "d": [0, 2], "e": [0, 1], "f": [0, 2]}
+    expected = {
+        "c": [-1, 0],
+        "d": [0, 2],
+        "e": [0, 1],
+        "f": [0, 2],
+        "g": [3, 3],
+        "h": [2, 2],
+    }
     assert_equal_data(result, expected)
 
     with pytest.deprecated_call():
@@ -930,6 +939,8 @@ def test_deprecated_expr_methods() -> None:
             d=nw.col("a").sort().tail(2),
             e=(nw.col("a") == 0).arg_true(),
             f=nw.col("a").gather_every(2),
+            g=nw.col("a").arg_min(),
+            h=nw.col("a").arg_max(),
         )
 
 

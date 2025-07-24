@@ -777,22 +777,20 @@ class Expr:
     def arg_min(self) -> Self:
         """Returns the index of the minimum value.
 
+        Warning:
+            `Expr.arg_min` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_min().name.suffix("_arg_min"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_min  b_arg_min|
-            |0          0          1|
-            └───────────────────────┘
         """
+        msg = (
+            "`Expr.arg_min` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.49.0")
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_min()
         )
@@ -800,22 +798,20 @@ class Expr:
     def arg_max(self) -> Self:
         """Returns the index of the maximum value.
 
+        Warning:
+            `Expr.arg_max` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
+
         Returns:
             A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_max().name.suffix("_arg_max"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_max  b_arg_max|
-            |0          1          0|
-            └───────────────────────┘
         """
+        msg = (
+            "`Expr.arg_max` is deprecated and will be removed in a future version.\n\n"
+            "Note: this will remain available in `narwhals.stable.v1`.\n"
+            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+        )
+        issue_deprecation_warning(msg, _version="1.49.0")
         return self._with_orderable_aggregation(
             lambda plx: self._to_compliant_expr(plx).arg_max()
         )
@@ -1342,6 +1338,11 @@ class Expr:
 
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
+
+        Warning:
+            `Expr.arg_true` is deprecated and will be removed in a future version.
+            Note: this will remain available in `narwhals.stable.v1`.
+            See [stable api](../backcompat.md/) for more information.
 
         Returns:
             A new expression.

@@ -119,7 +119,10 @@ class ArrowDataFrame(
         from narwhals.schema import Schema
 
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
-        native = pa.Table.from_pydict(data, schema=pa_schema)
+        if pa_schema and not data:
+            native = pa_schema.empty_table()
+        else:
+            native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, context=context)
 
     @staticmethod
