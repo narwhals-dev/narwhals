@@ -7,7 +7,6 @@ from functools import partial
 from typing import TYPE_CHECKING, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
-from narwhals._typing_compat import Protocol38
 from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     dtype_matches_time_unit_and_time_zone,
@@ -197,7 +196,7 @@ class LazySelectorNamespace(
 
 
 class CompliantSelector(
-    CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
+    CompliantExpr[FrameT, SeriesOrExprT], Protocol[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
     _function_name: str
