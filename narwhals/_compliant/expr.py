@@ -27,7 +27,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._typing_compat import Protocol38, deprecated
+from narwhals._typing_compat import deprecated
 from narwhals._utils import _StoresCompliant
 from narwhals.dependencies import get_numpy, is_numpy_array
 
@@ -66,7 +66,7 @@ class NativeExpr(Protocol):
     def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
 
-class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
+class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
     _version: Version
     _evaluate_output_names: EvalNames[CompliantFrameT]
@@ -264,7 +264,7 @@ class CompliantExpr(Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 
 class DepthTrackingExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
-    Protocol38[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
     _depth: int
     _function_name: str
@@ -302,7 +302,7 @@ class DepthTrackingExpr(
 
 class EagerExpr(
     DepthTrackingExpr[EagerDataFrameT, EagerSeriesT],
-    Protocol38[EagerDataFrameT, EagerSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
     _scalar_kwargs: ScalarKwargs
@@ -899,7 +899,7 @@ class EagerExpr(
 # mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
 class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
-    Protocol38[CompliantLazyFrameT, NativeExprT],
+    Protocol[CompliantLazyFrameT, NativeExprT],
 ):
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
