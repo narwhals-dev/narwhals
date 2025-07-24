@@ -17,6 +17,7 @@ from narwhals._duckdb.utils import (
     native_to_narwhals_dtype,
     window_expression,
 )
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -28,10 +29,11 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pandas as pd
@@ -53,7 +55,7 @@ if TYPE_CHECKING:
 
 
 class DuckDBLazyFrame(
-    CompliantLazyFrame[
+    SQLLazyFrame[
         "DuckDBExpr",
         "duckdb.DuckDBPyRelation",
         "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",
@@ -496,6 +498,15 @@ class DuckDBLazyFrame(
             name
         )
         return self._with_native(self.native.select(expr, StarExpression()))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        df = self.native  # noqa: F841
+        query = f"""
+            COPY (SELECT * FROM df)
+            TO '{file}'
+            (FORMAT parquet)
+            """  # noqa: S608
+        duckdb.sql(query)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

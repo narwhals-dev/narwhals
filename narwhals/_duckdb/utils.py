@@ -324,8 +324,8 @@ def window_expression(
     expr: Expression,
     partition_by: Sequence[str | Expression] = (),
     order_by: Sequence[str | Expression] = (),
-    rows_start: str = "",
-    rows_end: str = "",
+    rows_start: int | None = None,
+    rows_end: int | None = None,
     *,
     descending: Sequence[bool] | None = None,
     nulls_last: Sequence[bool] | None = None,
@@ -343,10 +343,12 @@ def window_expression(
     nulls_last = nulls_last or [False] * len(order_by)
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
-    if rows_start and rows_end:
-        rows = f"rows between {rows_start} and {rows_end}"
-    elif rows_start or rows_end:  # pragma: no cover
-        msg = "Either both `rows_start` and `rows_end` must be specified, or neither."
+    if rows_start is not None and rows_end is not None:
+        rows = f"rows between {-rows_start} preceding and {rows_end} following"
+    elif rows_end is not None:
+        rows = f"rows between unbounded preceding and {rows_end} following"
+    elif rows_start is not None:
+        rows = f"rows between {-rows_start} preceding and unbounded following"
     else:
         rows = ""
 

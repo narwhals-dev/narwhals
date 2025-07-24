@@ -769,52 +769,6 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).max())
 
-    def arg_min(self) -> Self:
-        """Returns the index of the minimum value.
-
-        Returns:
-            A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_min().name.suffix("_arg_min"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_min  b_arg_min|
-            |0          0          1|
-            └───────────────────────┘
-        """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()
-        )
-
-    def arg_max(self) -> Self:
-        """Returns the index of the maximum value.
-
-        Returns:
-            A new expression.
-
-        Examples:
-            >>> import pandas as pd
-            >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [10, 20], "b": [150, 100]})
-            >>> df = nw.from_native(df_native)
-            >>> df.select(nw.col("a", "b").arg_max().name.suffix("_arg_max"))
-            ┌───────────────────────┐
-            |  Narwhals DataFrame   |
-            |-----------------------|
-            |   a_arg_max  b_arg_max|
-            |0          1          0|
-            └───────────────────────┘
-        """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()
-        )
-
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
@@ -1191,7 +1145,7 @@ class Expr:
         """Filters elements based on a condition, returning a new expression.
 
         Arguments:
-            predicates: Conditions to filter by (which get ANDed together).
+            predicates: Conditions to filter by (which get AND-ed together).
 
         Returns:
             A new expression.

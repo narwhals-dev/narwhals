@@ -60,6 +60,8 @@ ret = 0
 NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
+    "arg_max",
+    "arg_min",
     "arg_true",
     "dtype",
     "gather_every",

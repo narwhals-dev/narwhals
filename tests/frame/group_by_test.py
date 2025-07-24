@@ -141,6 +141,39 @@ def test_group_by_depth_1_agg(
 
 
 @pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        (
+            {"x": [True, True, True, False, False, False]},
+            {"all": [True, False, False], "any": [True, True, False]},
+        ),
+        (
+            {"x": [True, None, False, None, None, None]},
+            {"all": [True, False, True], "any": [True, False, False]},
+        ),
+    ],
+    ids=["not-nullable", "nullable"],
+)
+def test_group_by_depth_1_agg_bool_ops(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    values: dict[str, list[bool]],
+    expected: dict[str, list[bool]],
+) -> None:
+    if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
+        request.applymarker(pytest.mark.xfail(strict=True))
+
+    data = {"a": [1, 1, 2, 2, 3, 3], **values}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(nw.col("x").all().alias("all"), nw.col("x").any().alias("any"))
+        .sort("a")
+    )
+    assert_equal_data(result, {"a": [1, 2, 3], **expected})
+
+
+@pytest.mark.parametrize(
     ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
 def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:
@@ -337,7 +370,7 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
 def test_double_same_aggregation(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf")):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
@@ -350,7 +383,7 @@ def test_double_same_aggregation(
 def test_all_kind_of_aggs(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "cudf")):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
@@ -592,7 +625,10 @@ def test_group_by_len_1_column(
     ],
 )
 def test_group_by_no_preserve_dtype(
-    constructor_eager: ConstructorEager, low: NonNestedLiteral, high: NonNestedLiteral
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    low: NonNestedLiteral,
+    high: NonNestedLiteral,
 ) -> None:
     """Minimal repro for [`px.sunburst` failure].
 
@@ -607,6 +643,9 @@ def test_group_by_no_preserve_dtype(
         and POLARS_VERSION < (1, 21, 0)
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
+    if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
+        request.applymarker(pytest.mark.xfail)
+
     data = {
         "col_a": ["A", "B", None, "A", "A", "B", None],
         "col_b": [low, low, high, high, None, None, None],

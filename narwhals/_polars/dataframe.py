@@ -82,6 +82,7 @@ INHERITED_METHODS = frozenset(
         "rows",
         "sample",
         "select",
+        "sink_parquet",
         "sort",
         "tail",
         "to_arrow",
@@ -177,10 +178,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
 
     @property
     def schema(self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema.items()
-        }
+        return self.collect_schema()
 
     def join(
         self,
@@ -559,8 +557,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
     # CompliantLazyFrame
+    sink_parquet: Method[None]
     _evaluate_expr: Any
-    _evaluate_window_expr: Any
     _evaluate_aliases: Any
 
     @staticmethod

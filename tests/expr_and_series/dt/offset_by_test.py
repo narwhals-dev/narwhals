@@ -142,9 +142,6 @@ def test_offset_by(
     if df.implementation.is_pyspark_connect():
         # missing feature upstream
         request.applymarker(pytest.mark.xfail())
-    if by == "2q" and "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/443
-        request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
@@ -181,9 +178,6 @@ def test_offset_by_tz(
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
-        request.applymarker(pytest.mark.xfail())
-    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
-        # cudf: https://github.com/rapidsai/cudf/issues/19363
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")

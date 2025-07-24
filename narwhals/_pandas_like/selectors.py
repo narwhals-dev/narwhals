@@ -6,6 +6,7 @@ from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
 from narwhals._pandas_like.expr import PandasLikeExpr
 
 if TYPE_CHECKING:
+    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame  # noqa: F401
     from narwhals._pandas_like.series import PandasLikeSeries  # noqa: F401
 
@@ -21,6 +22,10 @@ class PandasSelectorNamespace(
 class PandasSelector(  # type: ignore[misc]
     CompliantSelector["PandasLikeDataFrame", "PandasLikeSeries"], PandasLikeExpr
 ):
+    _depth: int = 0
+    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
+    _function_name: str = "selector"
+
     def _to_expr(self) -> PandasLikeExpr:
         return PandasLikeExpr(
             self._call,

@@ -15,6 +15,7 @@ from narwhals._spark_like.utils import (
     import_window,
     native_to_narwhals_dtype,
 )
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -24,10 +25,11 @@ from narwhals._utils import (
     parse_columns_to_drop,
 )
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pyarrow as pa
@@ -52,9 +54,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 
 
 class SparkLikeLazyFrame(
-    CompliantLazyFrame[
-        "SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"
-    ],
+    SQLLazyFrame["SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"],
     ValidateBackendVersion,
 ):
     def __init__(
@@ -551,6 +551,9 @@ class SparkLikeLazyFrame(
             - 1
         ).alias(name)
         return self._with_native(self.native.select(row_index_expr, *self.columns))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        self.native.write.parquet(file)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
