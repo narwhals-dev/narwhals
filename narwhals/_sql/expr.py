@@ -386,29 +386,17 @@ class SQLExpr(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
     
-    def sqrt_duckdb(self) -> Self:
-        def _sqrt(expr: Expression) -> Expression:
-            return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
+    ## model from duckdb:
+    # def sqrt_duckdb(self) -> Self:
+    #     def _sqrt(expr: Expression) -> Expression:
+    #         return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
 
-        return self._with_elementwise(_sqrt)    
+    #     return self._with_elementwise(_sqrt)    
     
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
-            return self._when(self._is_expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
-        
-        return self._with_elementwise(_sqrt)
-    
-    def sqrt(self) -> Self:
-        def _sqrt(expr: NativeExprT) -> NativeExprT:
-            return self._when(expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
-        
-        return self._with_elementwise(_sqrt)
-    
-    def sqrt(self) -> Self:
-        sqrt_expr = self._with_elementwise(lambda expr: self._function("sqrt", expr))
-        def _sqrt(expr: NativeExprT) -> NativeExprT:
-            return self._when(self._function(self.expr < _lit(0)), sqrt_expr)
-        
+            return self._when(expr < self._lit(0), self._lit(float("nan")), self._with_elementwise(lambda expr: self._function("sqrt", expr)))
+
         return self._with_elementwise(_sqrt)
 
     # Cumulative
