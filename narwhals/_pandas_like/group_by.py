@@ -82,21 +82,25 @@ def _native_agg(
 # - Once per column in a multi-output expression
 # *Least bad* option is to warn once per expression
 def _native_ordered_agg(
-    name: OrderedAggregation, *, has_pyarrow_string: bool
+    name: OrderedAggregation, *, has_pyarrow_string: bool, is_cudf: bool
 ) -> _NativeAgg:
     """Best effort alignment of `first`, `last` across versions.
 
     The way `polars` works **by default**, is a constantly moving target in `pandas` 😫
     """
-    # TODO @dangotbanned: `cuDF` support
-    # https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2217722493
     pd_version = Implementation.PANDAS._backend_version()
-    if has_pyarrow_string or (pd_version >= (2, 0, 0) and pd_version < _MINIMUM_SKIPNA):
+    if (
+        is_cudf
+        or has_pyarrow_string
+        or (pd_version >= (2, 0, 0) and pd_version < _MINIMUM_SKIPNA)
+    ):
         # NOTE: `>=2.0.0; <2.2.1` breaks the `nth` workaround
         # ATOW (`2.3.1`), `string[pyarrow]` has always required `apply`
         # https://github.com/pandas-dev/pandas/issues/13666
         # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
-        return _apply_ordered_agg(name, has_pyarrow_string=has_pyarrow_string)
+        return _apply_ordered_agg(
+            name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf
+        )
     if pd_version >= _MINIMUM_SKIPNA:
         # NOTE: Introduces option to disable default null skipping
         # https://github.com/pandas-dev/pandas/pull/57102
@@ -111,7 +115,7 @@ def _native_ordered_agg(
 
 
 def _apply_ordered_agg(
-    name: OrderedAggregation, /, *, has_pyarrow_string: bool
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
 ) -> Callable[[NativeGroupBy], pd.DataFrame]:
     """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
 
@@ -119,7 +123,7 @@ def _apply_ordered_agg(
     - but works in all cases for `string[pyarrow]`
     - and `>=2.0.0; <2.2.1`
     """
-    warn_ordered_apply(name, has_pyarrow_string=has_pyarrow_string)
+    warn_ordered_apply(name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf)
     index = _REMAP_ORDERED_INDEX[name]
 
     def fn(dgb: NativeGroupBy, /) -> pd.DataFrame:
@@ -204,6 +208,10 @@ class AggExpr:
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
 
+    @property
+    def implementation(self) -> Implementation:
+        return self.expr._implementation
+
     def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
@@ -211,7 +219,11 @@ class AggExpr:
             dtypes: pd.Series = group_by.compliant.native.dtypes
             targets = dtypes[list(self.output_names)]
             has_pyarrow_string = targets.transform(_is_pyarrow_string).any().item()
-            return _native_ordered_agg(native_name, has_pyarrow_string=has_pyarrow_string)
+            return _native_ordered_agg(
+                native_name,
+                has_pyarrow_string=has_pyarrow_string,
+                is_cudf=self.implementation.is_cudf(),
+            )
         return _native_agg(native_name, **self.kwargs)
 
 
@@ -397,8 +409,16 @@ def warn_complex_group_by() -> None:
     )
 
 
-def warn_ordered_apply(name: OrderedAggregation, /, *, has_pyarrow_string: bool) -> None:
-    if has_pyarrow_string:
+def warn_ordered_apply(
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
+) -> None:
+    if is_cudf:  # pragma: no cover
+        msg = (
+            f"cuDF does not support selecting the {name} value without skipping NA.\n\n"
+            "Please see: "
+            "https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/groupby/"
+        )
+    elif has_pyarrow_string:
         msg = (
             f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
             "Please see: "
