@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype, to_pandas_types_mapper
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -439,7 +439,7 @@ class ArrowDataFrame(
         )
 
     def to_pandas(self) -> pd.DataFrame:
-        return self.native.to_pandas()
+        return self.native.to_pandas(types_mapper=to_pandas_types_mapper)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
