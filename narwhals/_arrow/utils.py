@@ -241,7 +241,7 @@ def to_pandas_types_mapper(
     [`Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
     [`ChunkedArray.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray.to_pandas
     """
-    import pandas as pd
+    import pandas as pd  # ignore-banned-import
 
     if Implementation.PANDAS._backend_version() < (1, 5):
         # `pd.ArrowDType` added https://github.com/pandas-dev/pandas/pull/46774
