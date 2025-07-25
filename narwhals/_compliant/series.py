@@ -509,7 +509,7 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
     ) -> _1DArray:
         from numpy import linspace  # ignore-banned-import
 
-        return linspace(start=start, stop=end, num=num_samples, endpoint=closed == "both")
+        return linspace(start=start, stop=end, num=num_samples, endpoint=closed == "both")  # type: ignore[no-any-return]
 
     def _calculate_breakpoint(self, arg: int | list[float], /) -> list[float] | _1DArray:
         bins = self._linear_space(0, 1, arg + 1) if isinstance(arg, int) else arg
