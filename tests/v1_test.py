@@ -35,6 +35,7 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
+    from narwhals._namespace import EagerAllowed
     from narwhals.typing import IntoDataFrameT
     from tests.utils import Constructor, ConstructorEager
 
@@ -975,3 +976,13 @@ def test_dask_order_dependent_ops() -> None:
         "i": [True, True, True],
     }
     assert_equal_data(result, expected)
+
+
+def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    result = nw_v1.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
