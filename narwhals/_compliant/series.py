@@ -11,6 +11,7 @@ from narwhals._compliant.any_namespace import (
 )
 from narwhals._compliant.typing import (
     CompliantSeriesT_co,
+    EagerDataFrameAny,
     EagerSeriesT_co,
     NativeSeriesT,
     NativeSeriesT_co,
@@ -464,7 +465,7 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
         obj._breakpoint = include_breakpoint
         return obj
 
-    def to_frame(self) -> Any: ...  # TODO(FBruzzesi): Add annotation
+    def to_frame(self) -> EagerDataFrameAny: ...
 
     # NOTE: *Could* be handled at narwhals-level
     def is_empty_series(self) -> bool: ...
