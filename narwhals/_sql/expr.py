@@ -374,9 +374,6 @@ class SQLExpr(
     def min(self) -> Self:
         return self._with_callable(lambda expr: self._function("min", expr))
 
-    def skew(self) -> Self:
-        return self._with_callable(lambda expr: self._function("skewness", expr))
-
     def count(self) -> Self:
         return self._with_callable(lambda expr: self._function("count", expr))
 
