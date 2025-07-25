@@ -55,6 +55,9 @@ class DuckDBNamespace(
     @property
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
+    
+    def _coalesce(self, *exprs: Expression) -> Expression:
+        return CoalesceOperator(*exprs)
 
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod

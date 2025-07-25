@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.when_then import SQLThen, SQLWhen
+from narwhals._sql.namespace import SQLNamespace
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -32,7 +33,8 @@ if TYPE_CHECKING:
 
 
 class SparkLikeNamespace(
-    LazyNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame"]
+    # SQLNamespace[DuckDBLazyFrame, "Expression", duckdb.DuckDBPyRelation]
+    SQLNamespace[SparkLikeLazyFrame, "Column", "SQLFrameDataFrame"]
 ):
     def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
@@ -67,6 +69,9 @@ class SparkLikeNamespace(
             return types
         else:
             return import_native_dtypes(self._implementation)
+        
+    def _coalesce(self, *exprs: Column) -> Column:
+        return self._F.coalesce(*exprs)
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
         def _lit(df: SparkLikeLazyFrame) -> list[Column]:
@@ -237,11 +242,11 @@ class SparkLikeNamespace(
     def when(self, predicate: SparkLikeExpr) -> SparkLikeWhen:
         return SparkLikeWhen.from_expr(predicate, context=self)
 
-    def coalesce(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            return self._F.coalesce(*cols)
+    # def coalesce(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+    #     def func(cols: Iterable[Column]) -> Column:
+    #         return self._F.coalesce(*cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class SparkLikeWhen(SQLWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
