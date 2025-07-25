@@ -441,7 +441,7 @@ class EagerSeriesStructNamespace(  # type: ignore[misc]
 ): ...
 
 
-class _EagerSeriesHist(Generic[NativeSeriesT]):
+class _EagerSeriesHist(Protocol[NativeSeriesT]):
     _series: CompliantSeries[NativeSeriesT]
     _breakpoint: bool
     _data: _HistData[NativeSeriesT]
