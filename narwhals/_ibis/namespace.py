@@ -108,17 +108,6 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, "ir.Value", "ir.Table"]):
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            it = (
-                (col.fill_null(lit(True)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = list(cols)
