@@ -14,7 +14,6 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     col,
-    function,
     lit,
     narwhals_to_native_dtype,
     when,
@@ -71,20 +70,11 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
-    def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
-        return function(name, *args)
-
-    def _lit(self, value: Any) -> Expression:
-        return lit(value)
-
     def _count_star(self) -> Expression:
         return F("count", StarExpression())
 
     def _when(self, condition: Expression, value: Expression) -> Expression:
         return when(condition, value)
-
-    def _coalesce(self, *exprs: Expression) -> Expression:
-        return CoalesceOperator(*exprs)
 
     def _window_expression(
         self,

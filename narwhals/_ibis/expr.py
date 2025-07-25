@@ -10,7 +10,7 @@ from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
-from narwhals._ibis.utils import function, is_floating, lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, not_implemented
 
@@ -31,12 +31,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        IntoDType,
-        PythonLiteral,
-        RankMethod,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
@@ -80,17 +75,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._window_function or default_window_func
 
-    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
-        return function(name, *args)
-
-    def _lit(self, value: Any) -> ir.Value:
-        return lit(value)
-
     def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
         return ibis.cases((condition, value))
-
-    def _coalesce(self, *exprs: ir.Value) -> ir.Value:
-        return ibis.coalesce(*exprs)
 
     def _window_expression(
         self,
