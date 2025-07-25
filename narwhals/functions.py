@@ -309,9 +309,6 @@ def from_dict(
         |     1  2  4      |
         └──────────────────┘
     """
-    if not data:
-        msg = "from_dict cannot be called with empty dictionary"
-        raise ValueError(msg)
     if backend is None:
         data, backend = _from_dict_no_backend(data)
     implementation = Implementation.from_backend(backend)
