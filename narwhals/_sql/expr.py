@@ -410,6 +410,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def min(self) -> Self:
         return self._with_callable(lambda expr: self._function("min", expr))
 
+    def count(self) -> Self:
+        return self._with_callable(lambda expr: self._function("count", expr))
+
     def sum(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
             return self._coalesce(self._function("sum", expr), self._lit(0))

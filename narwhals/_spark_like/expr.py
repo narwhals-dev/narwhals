@@ -268,9 +268,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             implementation=self._implementation,
         )
 
-    def count(self) -> Self:
-        return self._with_callable(self._F.count)
-
     def median(self) -> Self:
         def _median(expr: Column) -> Column:
             if self._implementation in {

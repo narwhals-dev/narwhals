@@ -202,9 +202,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
-    def count(self) -> Self:
-        return self._with_callable(lambda expr: F("count", expr))
-
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 

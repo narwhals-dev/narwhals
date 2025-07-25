@@ -236,9 +236,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             lambda expr: expr.nunique() + expr.isnull().any().cast("int8")
         )
 
-    def count(self) -> Self:
-        return self._with_callable(lambda expr: expr.count())
-
     def len(self) -> Self:
         def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
             return [df.native.count()]
