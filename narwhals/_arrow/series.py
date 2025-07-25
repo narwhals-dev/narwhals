@@ -1134,6 +1134,11 @@ class _ArrowHist(
 
     def _calculate_hist(self, bins: list[float] | _1DArray) -> ArrowHistData:
         ser = self.native
+        # NOTE: `mypy` refuses to resolve `ndarray.__getitem__`
+        # Previously annotated as `list[float]`, but
+        # - wasn't accurate to how we implemented it
+        # - `pa.scalar` overloads fail to match on `float | np.float64` (but runtime is fine)
+        bins = cast("list[float]", bins)
         # Handle single bin case
         if len(bins) == 2:
             is_between_bins = pc.and_(
