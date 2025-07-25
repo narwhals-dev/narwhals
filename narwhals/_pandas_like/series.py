@@ -34,10 +34,10 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._compliant.series import _HistData
+    from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
@@ -1052,7 +1052,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeSeriesStructNamespace(self)
 
 
-class _PandasHist(_EagerSeriesHist["pd.Series[Any]"]):
+PandasHistData: TypeAlias = "HistData[pd.Series[Any], list[float]]"
+
+
+class _PandasHist(_EagerSeriesHist["pd.Series[Any]", "list[float]"]):
     _series: PandasLikeSeries
 
     def to_frame(self) -> PandasLikeDataFrame:
@@ -1066,7 +1069,7 @@ class _PandasHist(_EagerSeriesHist["pd.Series[Any]"]):
 
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
     # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
-    def series_empty(self, arg: int | list[float], /) -> _HistData[pd.Series[Any]]:
+    def series_empty(self, arg: int | list[float], /) -> PandasHistData:
         count = self._zeros(arg)
         if self._breakpoint:
             return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
@@ -1102,7 +1105,7 @@ class _PandasHist(_EagerSeriesHist["pd.Series[Any]"]):
             upper += 0.5
         return self._linear_space(lower, upper, bin_count + 1)
 
-    def _calculate_hist(self, bins: list[float] | _1DArray) -> _HistData[pd.Series[Any]]:
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> PandasHistData:
         # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
         #   happen since the bins were explicitly passed in.
         categories = self._cut(bins)

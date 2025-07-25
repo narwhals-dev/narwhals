@@ -16,7 +16,7 @@ from narwhals._compliant.typing import (
     NativeSeriesT_co,
 )
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
-from narwhals._typing_compat import assert_never
+from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     _StoresCompliant,
     _StoresNative,
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import NotRequired, Self, TypedDict
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
@@ -56,7 +56,12 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
 
-    _HistData: TypeAlias = dict[str, list[float] | _1DArray | NativeSeriesT]
+    class HistData(TypedDict, Generic[NativeSeriesT, "_CountsT_co"]):
+        breakpoint: NotRequired[list[float] | _1DArray | list[Any]]
+        count: NativeSeriesT | _1DArray | _CountsT_co | list[Any]
+
+
+_CountsT_co = TypeVar("_CountsT_co", bound="Iterable[Any]", covariant=True)
 
 __all__ = [
     "CompliantSeries",
@@ -441,10 +446,10 @@ class EagerSeriesStructNamespace(  # type: ignore[misc]
 ): ...
 
 
-class _EagerSeriesHist(Protocol[NativeSeriesT]):
+class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
     _series: CompliantSeries[NativeSeriesT]
     _breakpoint: bool
-    _data: _HistData[NativeSeriesT]
+    _data: HistData[NativeSeriesT, _CountsT_co]
 
     @property
     def native(self) -> NativeSeriesT:
@@ -457,7 +462,7 @@ class _EagerSeriesHist(Protocol[NativeSeriesT]):
         obj = cls.__new__(cls)
         obj._series = series
         obj._breakpoint = include_breakpoint
-        obj._data = {}
+        obj._data = {"count": []}
         return obj
 
     def to_frame(self) -> Any: ...  # TODO(FBruzzesi): Add annotation
@@ -466,12 +471,14 @@ class _EagerSeriesHist(Protocol[NativeSeriesT]):
     def is_empty_series(self) -> bool: ...
 
     # NOTE: **Should** be handled at narwhals-level
-    def data_empty(self) -> _HistData[NativeSeriesT]:
+    def data_empty(self) -> HistData[NativeSeriesT, _CountsT_co]:
         return {"breakpoint": [], "count": []} if self._breakpoint else {"count": []}
 
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
     # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
-    def series_empty(self, arg: int | list[float], /) -> _HistData[NativeSeriesT]: ...
+    def series_empty(
+        self, arg: int | list[float], /
+    ) -> HistData[NativeSeriesT, _CountsT_co]: ...
 
     def with_bins(self, bins: list[float], /) -> Self:
         if len(bins) <= 1:
@@ -511,4 +518,4 @@ class _EagerSeriesHist(Protocol[NativeSeriesT]):
     def _calculate_bins(self, bin_count: int) -> _1DArray: ...
     def _calculate_hist(
         self, bins: list[float] | _1DArray
-    ) -> _HistData[NativeSeriesT]: ...
+    ) -> HistData[NativeSeriesT, _CountsT_co]: ...

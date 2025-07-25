@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -52,11 +52,12 @@ if TYPE_CHECKING:
         Incomplete,
         NullPlacement,
         Order,
+        ScalarAny,
         TieBreaker,
         _AsPyType,
         _BasicDataType,
     )
-    from narwhals._compliant.series import _HistData
+    from narwhals._compliant.series import HistData
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -1087,7 +1088,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     ewm_mean = not_implemented()
 
 
-class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
+ArrowHistData: TypeAlias = (
+    "HistData[ChunkedArrayAny, list[ScalarAny] | pa.Int64Array | list[float]]"
+)
+
+
+class _ArrowHist(
+    _EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
+):
     _series: ArrowSeries
 
     def to_frame(self) -> ArrowDataFrame:
@@ -1106,7 +1114,7 @@ class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
 
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
     # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
-    def series_empty(self, arg: int | list[float], /) -> _HistData[ChunkedArrayAny]:
+    def series_empty(self, arg: int | list[float], /) -> ArrowHistData:
         count = self._zeros(arg)
         if self._breakpoint:
             return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
@@ -1124,7 +1132,7 @@ class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
             upper += 0.5
         return self._linear_space(lower, upper, bin_count + 1)
 
-    def _calculate_hist(self, bins: list[float] | _1DArray) -> _HistData[ChunkedArrayAny]:
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> ArrowHistData:
         ser = self.native
         # Handle single bin case
         if len(bins) == 2:
