@@ -528,6 +528,50 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         backend: ModuleType | Implementation | str,
     ) -> DataFrame[Any]:
+        """Construct a DataFrame from a NumPy ndarray.
+
+        Notes:
+            Only row orientation is currently supported.
+
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Arguments:
+            data: Two-dimensional data represented as a NumPy ndarray.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import numpy as np
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
+            >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+            >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="pyarrow")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  c: int16        |
+            |  d: float        |
+            |  e: int8         |
+            |  ----            |
+            |  c: [[5,1]]      |
+            |  d: [[2,4]]      |
+            |  e: [[1,3]]      |
+            └──────────────────┘
+        """
         if not is_numpy_array_2d(data):
             msg = "`from_numpy` only accepts 2D numpy arrays"
             raise ValueError(msg)
