@@ -7,7 +7,6 @@ from functools import partial
 from typing import TYPE_CHECKING, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
-from narwhals._typing_compat import Protocol38
 from narwhals._utils import (
     _parse_time_unit_and_time_zone,
     dtype_matches_time_unit_and_time_zone,
@@ -31,7 +30,6 @@ if TYPE_CHECKING:
         CompliantSeriesOrNativeExprAny,
         EvalNames,
         EvalSeries,
-        ScalarKwargs,
     )
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -198,15 +196,12 @@ class LazySelectorNamespace(
 
 
 class CompliantSelector(
-    CompliantExpr[FrameT, SeriesOrExprT], Protocol38[FrameT, SeriesOrExprT]
+    CompliantExpr[FrameT, SeriesOrExprT], Protocol[FrameT, SeriesOrExprT]
 ):
     _call: EvalSeries[FrameT, SeriesOrExprT]
-    _window_function: None
     _function_name: str
-    _depth: int
     _implementation: Implementation
     _version: Version
-    _scalar_kwargs: ScalarKwargs
 
     @classmethod
     def from_callables(
@@ -218,14 +213,10 @@ class CompliantSelector(
     ) -> Self:
         obj = cls.__new__(cls)
         obj._call = call
-        obj._window_function = None
-        obj._depth = 0
-        obj._function_name = "selector"
         obj._evaluate_output_names = evaluate_output_names
         obj._alias_output_names = None
         obj._implementation = context._implementation
         obj._version = context._version
-        obj._scalar_kwargs = {}
         return obj
 
     @property

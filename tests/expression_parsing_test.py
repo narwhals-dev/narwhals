@@ -58,7 +58,7 @@ def test_double_agg() -> None:
     with pytest.raises(InvalidOperationError):
         nw.col("a").mean().mean()
     with pytest.raises(InvalidOperationError):
-        nw.col("a").mean().arg_max()
+        nw.col("a").mean().sum()
 
 
 def test_filter_aggregation() -> None:

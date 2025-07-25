@@ -12,6 +12,7 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
+    iter_dtype_backends,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -158,13 +159,15 @@ class PandasLikeDataFrame(
                     aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
             else:
                 aligned_data[name] = series
-
-        native = DataFrame.from_dict(aligned_data)
+        if aligned_data or not schema:
+            native = DataFrame.from_dict(aligned_data)
+        else:
+            native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            it: Iterable[DTypeBackend] = (
-                get_dtype_backend(dtype, implementation) for dtype in native.dtypes
-            )
-            native = native.astype(Schema(schema).to_pandas(it))
+            backend: Iterable[DTypeBackend] | None = None
+            if aligned_data:
+                backend = iter_dtype_backends(native.dtypes, implementation)
+            native = native.astype(Schema(schema).to_pandas(backend))
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -981,17 +984,9 @@ class PandasLikeDataFrame(
         ],
         /,
     ) -> Any:
-        categorical = self._version.dtypes.Categorical
-        kwds: dict[Any, Any] = {"observed": True}
-        if self._implementation is Implementation.CUDF:
-            kwds.pop("observed")
-            cols = set(chain(values, index, on))
-            schema = self.schema.items()
-            if any(
-                tp for name, tp in schema if name in cols and isinstance(tp, categorical)
-            ):
-                msg = "`pivot` with Categoricals is not implemented for cuDF backend"
-                raise NotImplementedError(msg)
+        kwds: dict[Any, Any] = (
+            {} if self._implementation is Implementation.CUDF else {"observed": True}
+        )
         return self.native.pivot_table(
             values=values,
             index=index,

@@ -90,9 +90,17 @@ def test_from_dict_one_native_one_narwhals(
     assert_equal_data(result, expected)
 
 
-def test_from_dict_empty() -> None:
-    with pytest.raises(ValueError, match="empty"):
-        nw.from_dict({})
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_empty(backend: Implementation | str) -> None:
+    result = nw.from_dict({}, backend=backend)
+    assert result.shape == (0, 0)
+
+
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_empty_with_schema(backend: Implementation | str) -> None:
+    schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
+    result = nw.from_dict({}, schema, backend=backend)
+    assert result.schema == schema
 
 
 def test_alignment() -> None:

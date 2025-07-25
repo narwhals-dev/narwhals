@@ -300,7 +300,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
                 F.col("a.rating").cast(T.DoubleType()).alias("rating"),
             ),
         )
-        assert nw.from_native(native_ldf).schema == nw.Schema(
+        assert nw.from_native(native_ldf).collect_schema() == nw.Schema(
             {
                 "a": nw.Struct(
                     [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]

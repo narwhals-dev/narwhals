@@ -26,7 +26,7 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Iterator, Mapping
     from types import ModuleType
 
     from pandas._typing import Dtype as PandasDtype
@@ -392,6 +392,17 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     if is_dtype_pyarrow(dtype):
         return "pyarrow"
     return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
+
+
+# NOTE: Use this to avoid annotating inline
+def iter_dtype_backends(
+    dtypes: Iterable[Any], implementation: Implementation
+) -> Iterator[DTypeBackend]:
+    """Yield a `DTypeBackend` per-dtype.
+
+    Matches pandas' `dtype_backend` argument in `convert_dtypes`.
+    """
+    return (get_dtype_backend(dtype, implementation) for dtype in dtypes)
 
 
 @functools.lru_cache(maxsize=16)
