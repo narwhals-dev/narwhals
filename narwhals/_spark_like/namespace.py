@@ -31,7 +31,9 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
 
 
-class SparkLikeNamespace(SQLNamespace[SparkLikeLazyFrame, "Column", "SQLFrameDataFrame"]):
+class SparkLikeNamespace(
+    SQLNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame", "Column"]
+):
     def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation

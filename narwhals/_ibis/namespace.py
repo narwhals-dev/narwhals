@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(SQLNamespace[IbisLazyFrame, "ir.Value", "ir.Table"]):
+class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"]):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:

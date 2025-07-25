@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from narwhals._compliant import LazyNamespace
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals._utils import Version
-
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant.typing import NativeExprT, NativeFrameT
-from narwhals._sql.expr import SQLExpr
-from narwhals._sql.typing import SQLLazyFrameT
+from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
+from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -25,13 +22,11 @@ if TYPE_CHECKING:
 
 
 class SQLNamespace(
-    LazyNamespace[SQLLazyFrameT, SQLExpr[SQLLazyFrameT, NativeExprT], NativeFrameT]
+    LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT_co],
+    Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT_co, NativeExprT],
 ):
-    def __init__(self, *, version: Version) -> None:
-        self._version = version
-
     @property
-    def _expr(self) -> type[SQLExpr[SQLLazyFrameT, NativeExprT]]: ...
+    def _expr(self) -> type[SQLExprT]: ...
 
     @property
     def _lazyframe(self) -> type[SQLLazyFrameT]: ...
@@ -41,9 +36,7 @@ class SQLNamespace(
     def _coalesce(self, *exprs: NativeExprT) -> NativeExprT: ...
 
     # Horizontal functions
-    def any_horizontal(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT], ignore_nulls: bool
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             it = (
                 (self._coalesce(col, self._lit(False)) for col in cols)  # noqa: FBT003
@@ -54,9 +47,7 @@ class SQLNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def all_horizontal(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT], ignore_nulls: bool
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def all_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             it = (
                 (self._coalesce(col, self._lit(True)) for col in cols)  # noqa: FBT003
@@ -67,25 +58,19 @@ class SQLNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def max_horizontal(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def max_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._function("greatest", *cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def min_horizontal(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def min_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._function("least", *cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def sum_horizontal(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def sum_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return reduce(
                 operator.add, (self._coalesce(col, self._lit(0)) for col in cols)
@@ -94,9 +79,7 @@ class SQLNamespace(
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     # Other
-    def coalesce(
-        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]
-    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+    def coalesce(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._coalesce(*cols)
 

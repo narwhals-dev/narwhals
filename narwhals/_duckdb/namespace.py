@@ -5,7 +5,6 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
-import duckdb
 from duckdb import CoalesceOperator, Expression
 from duckdb.typing import BIGINT, VARCHAR
 
@@ -37,7 +36,7 @@ if TYPE_CHECKING:
 
 
 class DuckDBNamespace(
-    SQLNamespace[DuckDBLazyFrame, "Expression", duckdb.DuckDBPyRelation]
+    SQLNamespace[DuckDBLazyFrame, DuckDBExpr, "DuckDBPyRelation", Expression]
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
