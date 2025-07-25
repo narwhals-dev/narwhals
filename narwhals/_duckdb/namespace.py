@@ -9,7 +9,6 @@ import duckdb
 from duckdb import CoalesceOperator, Expression
 from duckdb.typing import BIGINT, VARCHAR
 
-from narwhals._compliant import LazyNamespace
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
@@ -25,6 +24,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation
 
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 
 class DuckDBNamespace(
-    LazyNamespace[DuckDBLazyFrame, DuckDBExpr, duckdb.DuckDBPyRelation]
+    SQLNamespace[DuckDBLazyFrame, "Expression", duckdb.DuckDBPyRelation]
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
@@ -175,11 +175,11 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def coalesce(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            return CoalesceOperator(*cols)
+    # def coalesce(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+    #     def func(cols: Iterable[Expression]) -> Expression:
+    #         return CoalesceOperator(*cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class DuckDBWhen(SQLWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
