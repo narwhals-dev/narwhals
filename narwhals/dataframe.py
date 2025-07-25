@@ -465,7 +465,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         schema: Mapping[str, DType] | Schema | None = None,
         *,
         backend: ModuleType | Implementation | str | None = None,
-    ) -> Self:
+    ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
         Indexes (if present, for pandas-like backends) are aligned following
