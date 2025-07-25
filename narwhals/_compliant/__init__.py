@@ -16,7 +16,6 @@ from narwhals._compliant.group_by import (
     CompliantGroupBy,
     DepthTrackingGroupBy,
     EagerGroupBy,
-    LazyGroupBy,
 )
 from narwhals._compliant.namespace import (
     CompliantNamespace,
@@ -53,13 +52,7 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT_co,
 )
-from narwhals._compliant.when_then import (
-    CompliantThen,
-    CompliantWhen,
-    EagerWhen,
-    LazyThen,
-    LazyWhen,
-)
+from narwhals._compliant.when_then import CompliantThen, CompliantWhen, EagerWhen
 from narwhals._compliant.window import WindowInputs
 
 __all__ = [
@@ -100,11 +93,8 @@ __all__ = [
     "IntoCompliantExpr",
     "LazyExpr",
     "LazyExprNamespace",
-    "LazyGroupBy",
     "LazyNamespace",
     "LazySelectorNamespace",
-    "LazyThen",
-    "LazyWhen",
     "NativeFrameT_co",
     "NativeSeriesT_co",
     "WindowInputs",

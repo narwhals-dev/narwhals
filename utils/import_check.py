@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import sys
+from pathlib import Path
 
 BANNED_IMPORTS = {
     "cudf",
@@ -41,14 +42,14 @@ class ImportPandasChecker(ast.NodeVisitor):
         else:
             self.allowed_imports = set()
 
-    def visit_If(self, node: ast.If) -> None:  # noqa: N802
+    def visit_If(self, node: ast.If) -> None:
         # Check if the condition is `if TYPE_CHECKING`
         if isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING":
             # Skip the body of this if statement
             return
         self.generic_visit(node)
 
-    def visit_Import(self, node: ast.Import) -> None:  # noqa: N802
+    def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             if (
                 alias.name in BANNED_IMPORTS
@@ -62,7 +63,7 @@ class ImportPandasChecker(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         if (
             node.module in BANNED_IMPORTS
             and "# ignore-banned-import" not in self.lines[node.lineno - 1]
@@ -76,8 +77,7 @@ class ImportPandasChecker(ast.NodeVisitor):
 
 
 def check_import_pandas(filename: str) -> bool:
-    with open(filename, encoding="utf-8") as file:
-        content = file.read()
+    content = Path(filename).read_text("utf-8")
     tree = ast.parse(content, filename=filename)
 
     checker = ImportPandasChecker(filename, content.splitlines())

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import Expr, Series, dtypes
+    from narwhals.stable.v1 import Expr, Series
 
     # All dataframes supported by Narwhals have a
     # `columns` property. Their similarities don't extend
@@ -167,32 +167,6 @@ Examples:
     ...     s = nw.from_native(s_native, series_only=True)
     ...     return s.abs().to_native()
 """
-
-
-class DTypes:
-    Int64: type[dtypes.Int64]
-    Int32: type[dtypes.Int32]
-    Int16: type[dtypes.Int16]
-    Int8: type[dtypes.Int8]
-    UInt64: type[dtypes.UInt64]
-    UInt32: type[dtypes.UInt32]
-    UInt16: type[dtypes.UInt16]
-    UInt8: type[dtypes.UInt8]
-    Float64: type[dtypes.Float64]
-    Float32: type[dtypes.Float32]
-    String: type[dtypes.String]
-    Boolean: type[dtypes.Boolean]
-    Object: type[dtypes.Object]
-    Categorical: type[dtypes.Categorical]
-    Enum: type[dtypes.Enum]
-    Datetime: type[dtypes.Datetime]
-    Duration: type[dtypes.Duration]
-    Date: type[dtypes.Date]
-    Field: type[dtypes.Field]
-    Struct: type[dtypes.Struct]
-    List: type[dtypes.List]
-    Array: type[dtypes.Array]
-    Unknown: type[dtypes.Unknown]
 
 
 __all__ = [

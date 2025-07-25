@@ -411,6 +411,26 @@ class Expr(NwExpr):
             )
         )
 
+    def arg_max(self) -> Self:
+        """Returns the index of the maximum value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_max()
+        )
+
+    def arg_min(self) -> Self:
+        """Returns the index of the minimum value.
+
+        Returns:
+            A new expression.
+        """
+        return self._with_orderable_aggregation(
+            lambda plx: self._to_compliant_expr(plx).arg_min()
+        )
+
     def arg_true(self) -> Self:
         """Find elements where boolean expression is True.
 

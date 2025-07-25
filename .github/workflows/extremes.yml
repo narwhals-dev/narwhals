@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+env:
+  PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
+  
 jobs:
   minimum_versions:
     strategy:
@@ -145,15 +149,15 @@ jobs:
       - name: install-pandas-nightly
         run: |
           uv pip uninstall pandas --system
-          pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple pandas
+          uv pip install pandas --pre --index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple --system -U
       - name: install pyarrow nightly
         run: |
           uv pip uninstall pyarrow --system
-          uv pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow --system
+          uv pip install pyarrow --pre --index https://pypi.fury.io/arrow-nightlies/ --system -U
       - name: install numpy nightly
         run: |
           uv pip uninstall numpy --system
-          uv pip install --pre --extra-index-url https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy --system
+          uv pip install numpy --pre --index https://pypi.anaconda.org/scientific-python-nightly-wheels/simple --system -U
       - name: install dask
         run: |
           uv pip uninstall dask dask-expr --system

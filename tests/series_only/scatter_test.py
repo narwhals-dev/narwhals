@@ -61,3 +61,19 @@ def test_scatter_unordered_indices(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     result = df["a"].scatter(indices, df["a"])
     assert_equal_data({"a": result}, {"a": [10, 12, 5, 6, 2, 9, 16]})
+
+
+def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"a": [1, 2, 3], "b": [142, 124, 132]}), eager_only=True
+    )
+    ser = df["a"]
+    result = ser.scatter(1, 999)
+    expected = {"a": [1, 999, 3]}
+    assert_equal_data({"a": result}, expected)
+    result = ser.scatter([0, 2], [999, 888])
+    expected = {"a": [999, 2, 888]}
+    assert_equal_data({"a": result}, expected)
+    result = ser.scatter([2, 0], [999, 888])
+    expected = {"a": [888, 2, 999]}
+    assert_equal_data({"a": result}, expected)

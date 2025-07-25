@@ -10,12 +10,14 @@ from duckdb import StarExpression
 from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
+    catch_duckdb_exception,
     col,
     evaluate_exprs,
     lit,
     native_to_narwhals_dtype,
     window_expression,
 )
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -27,10 +29,11 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pandas as pd
@@ -52,7 +55,7 @@ if TYPE_CHECKING:
 
 
 class DuckDBLazyFrame(
-    CompliantLazyFrame[
+    SQLLazyFrame[
         "DuckDBExpr",
         "duckdb.DuckDBPyRelation",
         "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",
@@ -167,11 +170,17 @@ class DuckDBLazyFrame(
 
     def aggregate(self, *exprs: DuckDBExpr) -> Self:
         selection = [val.alias(name) for name, val in evaluate_exprs(self, *exprs)]
-        return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
+        try:
+            return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
+        except Exception as e:  # noqa: BLE001
+            raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (val.alias(name) for name, val in evaluate_exprs(self, *exprs))
-        return self._with_native(self.native.select(*selection))
+        try:
+            return self._with_native(self.native.select(*selection))
+        except Exception as e:  # noqa: BLE001
+            raise catch_duckdb_exception(e, self) from None
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
@@ -197,12 +206,18 @@ class DuckDBLazyFrame(
             for name in self.columns
         ]
         result.extend(value.alias(name) for name, value in new_columns_map.items())
-        return self._with_native(self.native.select(*result))
+        try:
+            return self._with_native(self.native.select(*result))
+        except Exception as e:  # noqa: BLE001
+            raise catch_duckdb_exception(e, self) from None
 
     def filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
-        return self._with_native(self.native.filter(mask))
+        try:
+            return self._with_native(self.native.filter(mask))
+        except Exception as e:  # noqa: BLE001
+            raise catch_duckdb_exception(e, self) from None
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -483,6 +498,15 @@ class DuckDBLazyFrame(
             name
         )
         return self._with_native(self.native.select(expr, StarExpression()))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        df = self.native  # noqa: F841
+        query = f"""
+            COPY (SELECT * FROM df)
+            TO '{file}'
+            (FORMAT parquet)
+            """  # noqa: S608
+        duckdb.sql(query)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

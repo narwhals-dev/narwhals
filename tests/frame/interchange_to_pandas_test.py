@@ -22,6 +22,9 @@ def test_interchange_ibis_to_pandas(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     if PANDAS_VERSION < (1, 5, 0):
+        pytest.skip()
+    if PANDAS_VERSION >= (3,):
+        # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("ibis")
@@ -42,9 +45,13 @@ def test_interchange_ibis_to_pandas(
     assert df.to_pandas().equals(df_raw)
 
 
-def test_interchange_duckdb_to_pandas() -> None:
+def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
     import duckdb
+
+    if PANDAS_VERSION >= (3,):
+        # https://github.com/duckdb/duckdb/issues/18297
+        request.applymarker(pytest.mark.xfail)
 
     df_raw = pd.DataFrame(data)
     rel = duckdb.sql("select * from df_raw")

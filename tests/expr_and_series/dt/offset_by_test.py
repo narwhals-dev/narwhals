@@ -95,6 +95,41 @@ data_dst = {"a": [datetime(2020, 10, 25, tzinfo=timezone.utc)]}
                 datetime(2023, 1, 2, 2, 4, 14, 715123),
             ],
         ),
+        (
+            "-2us",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 49010),
+                datetime(2020, 1, 2, 2, 4, 14, 715121),
+            ],
+        ),
+        (
+            "-2000ns",
+            [
+                datetime(2021, 3, 1, 12, 34, 56, 49010),
+                datetime(2020, 1, 2, 2, 4, 14, 715121),
+            ],
+        ),
+        (
+            "-7h",
+            [
+                datetime(2021, 3, 1, 5, 34, 56, 49012),
+                datetime(2020, 1, 1, 19, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-13d",
+            [
+                datetime(2021, 2, 16, 12, 34, 56, 49012),
+                datetime(2019, 12, 20, 2, 4, 14, 715123),
+            ],
+        ),
+        (
+            "-3y",
+            [
+                datetime(2018, 3, 1, 12, 34, 56, 49012),
+                datetime(2017, 1, 2, 2, 4, 14, 715123),
+            ],
+        ),
     ],
 )
 def test_offset_by(
@@ -106,9 +141,6 @@ def test_offset_by(
     df = nw.from_native(constructor(data))
     if df.implementation.is_pyspark_connect():
         # missing feature upstream
-        request.applymarker(pytest.mark.xfail())
-    if by == "2q" and "sqlframe" in str(constructor):
-        # https://github.com/eakmanrq/sqlframe/issues/443
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")
@@ -146,9 +178,6 @@ def test_offset_by_tz(
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
-        request.applymarker(pytest.mark.xfail())
-    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
-        # cudf: https://github.com/rapidsai/cudf/issues/19363
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow", "ibis")

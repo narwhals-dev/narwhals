@@ -30,6 +30,7 @@ def test_get_deps_info() -> None:
     assert "modin" in deps_info
     assert "pyarrow" in deps_info
     assert "numpy" in deps_info
+    assert "pandas-stubs" not in deps_info
 
 
 def test_show_versions(capsys: Any) -> None:

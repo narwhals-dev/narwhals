@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -13,10 +14,12 @@ if TYPE_CHECKING:
     from duckdb import DuckDBPyRelation, Expression
     from duckdb.typing import DuckDBPyType
 
+    from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
+
 
 UNITS_DICT = {
     "y": "year",
@@ -321,8 +324,8 @@ def window_expression(
     expr: Expression,
     partition_by: Sequence[str | Expression] = (),
     order_by: Sequence[str | Expression] = (),
-    rows_start: str = "",
-    rows_end: str = "",
+    rows_start: int | None = None,
+    rows_end: int | None = None,
     *,
     descending: Sequence[bool] | None = None,
     nulls_last: Sequence[bool] | None = None,
@@ -340,12 +343,31 @@ def window_expression(
     nulls_last = nulls_last or [False] * len(order_by)
     ob = generate_order_by_sql(*order_by, descending=descending, nulls_last=nulls_last)
 
-    if rows_start and rows_end:
-        rows = f"rows between {rows_start} and {rows_end}"
-    elif rows_start or rows_end:  # pragma: no cover
-        msg = "Either both `rows_start` and `rows_end` must be specified, or neither."
+    if rows_start is not None and rows_end is not None:
+        rows = f"rows between {-rows_start} preceding and {rows_end} following"
+    elif rows_end is not None:
+        rows = f"rows between unbounded preceding and {rows_end} following"
+    elif rows_start is not None:
+        rows = f"rows between {-rows_start} preceding and unbounded following"
     else:
         rows = ""
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
     return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+
+
+def catch_duckdb_exception(
+    exception: Exception, frame: CompliantLazyFrameAny, /
+) -> ColumnNotFoundError | Exception:
+    if isinstance(exception, duckdb.BinderException) and any(
+        msg in str(exception)
+        for msg in (
+            "not found in FROM clause",
+            "this column cannot be referenced before it is defined",
+        )
+    ):
+        return ColumnNotFoundError.from_available_column_names(
+            available_columns=frame.columns
+        )
+    # Just return exception as-is.
+    return exception

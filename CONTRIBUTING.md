@@ -166,6 +166,15 @@ If you add code that should be tested, please add tests.
     which the pandas API just doesn't support, and even then, it's accompanied by a big warning.
   - Don't use inplace methods, unless you're creating a new object and are sure it's safe to modify
     it. In particular, you should never ever modify the user's input data.
+  - Please remember that `assign`, `drop`, `reset_index`, and `rename`, though seemingly harmless, make
+    full copies of the input data.
+
+    - Instead of `assign`, prefer using `with_columns` at the compliant level.
+    - For `drop` and `reset_index`, use `inplace=True`, so long as you're only modifying a new object which
+      you created. Again, you should never modify user input. This may need updating if/when it's
+      deprecated/removed, but please keep it for older pandas versions
+      https://github.com/pandas-dev/pandas/pull/51466/files.
+    - Instead of `rename`, prefer `alias` at the compliant level.
 
 - Polars:
 

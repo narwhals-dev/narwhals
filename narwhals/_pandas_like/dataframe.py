@@ -12,6 +12,7 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
+    iter_dtype_backends,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
     rename,
@@ -158,13 +159,15 @@ class PandasLikeDataFrame(
                     aligned_data[name] = align_and_extract_native(left_most, compliant)[1]
             else:
                 aligned_data[name] = series
-
-        native = DataFrame.from_dict(aligned_data)
+        if aligned_data or not schema:
+            native = DataFrame.from_dict(aligned_data)
+        else:
+            native = DataFrame.from_dict({col: [] for col in schema})
         if schema:
-            it: Iterable[DTypeBackend] = (
-                get_dtype_backend(dtype, implementation) for dtype in native.dtypes
-            )
-            native = native.astype(Schema(schema).to_pandas(it))
+            backend: Iterable[DTypeBackend] | None = None
+            if aligned_data:
+                backend = iter_dtype_backends(native.dtypes, implementation)
+            native = native.astype(Schema(schema).to_pandas(backend))
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -557,7 +560,10 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on)
             if right_key != left_key
         ]
-        return result_native.drop(columns=extra)
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=extra, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
@@ -584,17 +590,17 @@ class PandasLikeDataFrame(
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=(*self.columns, *other.columns)
             )
-            return (
-                self.native.assign(**{key_token: 0})
-                .merge(
-                    other.native.assign(**{key_token: 0}),
-                    how="inner",
-                    left_on=key_token,
-                    right_on=key_token,
-                    suffixes=("", suffix),
-                )
-                .drop(columns=key_token)
+            result_native = self.native.assign(**{key_token: 0}).merge(
+                other.native.assign(**{key_token: 0}),
+                how="inner",
+                left_on=key_token,
+                right_on=key_token,
+                suffixes=("", suffix),
             )
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
+            return result_native
         return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
@@ -628,18 +634,18 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on)),
         )
-        return (
-            self.native.merge(
-                other_native,
-                # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
-                how="left" if implementation.is_pandas() else "outer",
-                indicator=indicator_token,
-                left_on=left_on,
-                right_on=left_on,
-            )
-            .loc[lambda t: t[indicator_token] == "left_only"]
-            .drop(columns=indicator_token)
-        )
+        result_native = self.native.merge(
+            other_native,
+            # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
+            how="left" if implementation.is_pandas() else "outer",
+            indicator=indicator_token,
+            left_on=left_on,
+            right_on=left_on,
+        ).loc[lambda t: t[indicator_token] == "left_only"]
+        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
+        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002
+        return result_native
 
     def _join_filter_rename(
         self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]
@@ -978,17 +984,9 @@ class PandasLikeDataFrame(
         ],
         /,
     ) -> Any:
-        categorical = self._version.dtypes.Categorical
-        kwds: dict[Any, Any] = {"observed": True}
-        if self._implementation is Implementation.CUDF:
-            kwds.pop("observed")
-            cols = set(chain(values, index, on))
-            schema = self.schema.items()
-            if any(
-                tp for name, tp in schema if name in cols and isinstance(tp, categorical)
-            ):
-                msg = "`pivot` with Categoricals is not implemented for cuDF backend"
-                raise NotImplementedError(msg)
+        kwds: dict[Any, Any] = (
+            {} if self._implementation is Implementation.CUDF else {"observed": True}
+        )
         return self.native.pivot_table(
             values=values,
             index=index,

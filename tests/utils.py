@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
+    from narwhals.typing import DataFrameLike, Frame, NativeFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -42,6 +42,7 @@ CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
+ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -178,3 +179,14 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
         "pandas_pyarrow_constructor",
         "modin_pyarrow_constructor",
     }
+
+
+def maybe_collect(df: Frame) -> Frame:
+    """Collect the DataFrame if it is a LazyFrame.
+
+    Use this function to test specific behaviors during collection.
+    For example, Polars only errors when we call `collect` in the lazy case.
+    """
+    if isinstance(df, nw.LazyFrame):
+        return df.collect()
+    return df  # pragma: no cover
