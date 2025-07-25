@@ -77,6 +77,10 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
 
+    ArrowHistData: TypeAlias = (
+        "HistData[ChunkedArrayAny, list[ScalarAny] | pa.Int64Array | list[float]]"
+    )
+
 
 # TODO @dangotbanned: move into `_arrow.utils`
 # Lots of modules are importing inline
@@ -1086,11 +1090,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStructNamespace(self)
 
     ewm_mean = not_implemented()
-
-
-ArrowHistData: TypeAlias = (
-    "HistData[ChunkedArrayAny, list[ScalarAny] | pa.Int64Array | list[float]]"
-)
 
 
 class _ArrowHist(

@@ -462,7 +462,6 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
         obj = cls.__new__(cls)
         obj._series = series
         obj._breakpoint = include_breakpoint
-        obj._data = {"count": []}
         return obj
 
     def to_frame(self) -> Any: ...  # TODO(FBruzzesi): Add annotation

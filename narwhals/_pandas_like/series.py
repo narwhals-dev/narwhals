@@ -57,6 +57,9 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
 
+    PandasHistData: TypeAlias = "HistData[pd.Series[Any], list[float]]"
+
+
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
     "int64[pyarrow]": "int64",
@@ -1050,9 +1053,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             msg = "Series must be of PyArrow Struct type to support struct namespace."
             raise TypeError(msg)
         return PandasLikeSeriesStructNamespace(self)
-
-
-PandasHistData: TypeAlias = "HistData[pd.Series[Any], list[float]]"
 
 
 class _PandasHist(_EagerSeriesHist["pd.Series[Any]", "list[float]"]):
