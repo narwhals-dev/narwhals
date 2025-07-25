@@ -52,7 +52,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
 
-    def __narwhals_namespace__(self) -> SQLNamespace[SQLLazyFrameT, Self, Any, Any]: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
         self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
@@ -166,15 +168,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._window_function or default_window_func
 
     def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT:
-        return self.__narwhals_namespace__()._function(name, *args)  # type: ignore[no-any-return]
+        return self.__narwhals_namespace__()._function(name, *args)
 
     def _lit(self, value: Any) -> NativeExprT:
-        return self.__narwhals_namespace__()._lit(value)  # type: ignore[no-any-return]
+        return self.__narwhals_namespace__()._lit(value)
+
+    def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
+        return self.__narwhals_namespace__()._coalesce(*expr)
 
     def _count_star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
-    def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
-        return self.__narwhals_namespace__()._coalesce(*expr)  # type: ignore[no-any-return]
 
     def _window_expression(
         self,
