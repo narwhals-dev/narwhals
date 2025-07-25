@@ -15,7 +15,7 @@ from narwhals._expression_parsing import (
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
-from narwhals._ibis.utils import lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation, requires
@@ -45,23 +45,8 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def _lazyframe(self) -> type[IbisLazyFrame]:
         return IbisLazyFrame
 
-    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:  # noqa: PLR0911
-        if name == "row_number":
-            return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
-        if name == "least":
-            return ibis.least(*args)
-        if name == "greatest":
-            return ibis.greatest(*args)
-        expr = args[0]
-        if name == "var_pop":
-            return cast("ir.NumericColumn", expr).var(how="pop")
-        if name == "var_samp":
-            return cast("ir.NumericColumn", expr).var(how="sample")
-        if name == "stddev_pop":
-            return cast("ir.NumericColumn", expr).std(how="pop")
-        if name == "stddev_samp":
-            return cast("ir.NumericColumn", expr).std(how="sample")
-        return getattr(expr, name)(*args[1:])
+    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
+        return function(name, *args)
 
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)
