@@ -10,7 +10,7 @@ from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
-from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import function, is_floating, lit, narwhals_to_native_dtype
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, not_implemented
 
@@ -81,18 +81,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._window_function or default_window_func
 
     def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
-        if name == "row_number":
-            return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
-        expr = args[0]
-        if name == "var_pop":
-            return cast("ir.NumericColumn", expr).var(how="pop")
-        if name == "var_samp":
-            return cast("ir.NumericColumn", expr).var(how="sample")
-        if name == "stddev_pop":
-            return cast("ir.NumericColumn", expr).std(how="pop")
-        if name == "stddev_samp":
-            return cast("ir.NumericColumn", expr).std(how="sample")
-        return getattr(expr, name)(*args[1:])
+        return function(name, *args)
 
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)

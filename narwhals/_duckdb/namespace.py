@@ -15,6 +15,7 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     concat_str,
+    function,
     lit,
     narwhals_to_native_dtype,
     when,
@@ -29,6 +30,8 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+
+    from duckdb import DuckDBPyRelation  # noqa: F401
 
     from narwhals._duckdb.expr import DuckDBWindowInputs
     from narwhals._utils import Version
@@ -56,9 +59,7 @@ class DuckDBNamespace(
         return DuckDBLazyFrame
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
-        if name == "isnull":
-            return args[0].isnull()
-        return F(name, *args)
+        return function(name, *args)
 
     def _lit(self, value: Any) -> Expression:
         return lit(value)
