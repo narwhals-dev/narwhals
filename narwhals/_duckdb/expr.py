@@ -178,6 +178,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
+    def kurtosis(self) -> Self:
+        return self._with_callable(lambda expr: F("kurtosis_pop", expr))
+
     def all(self) -> Self:
         def f(expr: Expression) -> Expression:
             return CoalesceOperator(F("bool_and", expr), lit(True))  # noqa: FBT003
