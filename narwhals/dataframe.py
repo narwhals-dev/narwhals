@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ClassVar,
     Generic,
     Literal,
     NoReturn,
@@ -28,6 +29,7 @@ from narwhals._utils import (
     generate_repr,
     is_compliant_dataframe,
     is_compliant_lazyframe,
+    is_eager_allowed,
     is_index_selector,
     is_list_of,
     is_sequence_like,
@@ -38,12 +40,13 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import get_polars, is_numpy_array
 from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
+from narwhals.functions import _from_dict_no_backend
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -55,6 +58,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -409,6 +413,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
         from narwhals.series import Series
@@ -451,6 +457,29 @@ class DataFrame(BaseFrame[DataFrameT]):
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> Self:
+        if backend is None:
+            data, backend = _from_dict_no_backend(data)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
+            return cls(compliant, level="full")
+        # NOTE: (#2786) needs resolving for extensions
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
 
     @property
     def implementation(self) -> Implementation:
