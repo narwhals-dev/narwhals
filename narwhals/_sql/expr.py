@@ -377,6 +377,9 @@ class SQLExpr(
     def skew(self) -> Self:
         return self._with_callable(lambda expr: self._function("skewness", expr))
 
+    def count(self) -> Self:
+        return self._with_callable(lambda expr: self._function("count", expr))
+
     # Elementwise
     def abs(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("abs", expr))
