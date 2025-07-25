@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._compliant.typing import (
@@ -13,7 +13,6 @@ from narwhals._compliant.typing import (
     LazyExprAny,
     NativeSeriesT,
 )
-from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -39,7 +38,7 @@ IntoExpr: TypeAlias = "SeriesT | ExprT | NonNestedLiteral | Scalar"
 """Anything that is convertible into a `CompliantExpr`."""
 
 
-class CompliantWhen(Protocol38[FrameT, SeriesT, ExprT]):
+class CompliantWhen(Protocol[FrameT, SeriesT, ExprT]):
     _condition: ExprT
     _then_value: IntoExpr[SeriesT, ExprT]
     _otherwise_value: IntoExpr[SeriesT, ExprT] | None
@@ -71,7 +70,7 @@ WhenT_contra = TypeVar(
 
 
 class CompliantThen(
-    CompliantExpr[FrameT, SeriesT], Protocol38[FrameT, SeriesT, ExprT, WhenT_contra]
+    CompliantExpr[FrameT, SeriesT], Protocol[FrameT, SeriesT, ExprT, WhenT_contra]
 ):
     _call: EvalSeries[FrameT, SeriesT]
     _when_value: CompliantWhen[FrameT, SeriesT, ExprT]
@@ -99,7 +98,7 @@ class CompliantThen(
 
 class EagerWhen(
     CompliantWhen[EagerDataFrameT, EagerSeriesT, EagerExprT],
-    Protocol38[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
+    Protocol[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT],
 ):
     def _if_then_else(
         self,

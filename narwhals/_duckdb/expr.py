@@ -43,9 +43,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         NonNestedLiteral,
-        NumericLiteral,
         RollingInterpolationMethod,
-        TemporalLiteral,
     )
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
@@ -85,6 +83,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def _when(self, condition: Expression, value: Expression) -> Expression:
         return when(condition, value)
+
+    def _coalesce(self, *exprs: Expression) -> Expression:
+        return CoalesceOperator(*exprs)
 
     def _window_expression(
         self,
@@ -181,36 +182,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
 
-    def all(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("bool_and", expr), lit(True))  # noqa: FBT003
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("bool_and", expr), inputs.partition_by),
-                    lit(True),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
-    def any(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("bool_or", expr), lit(False))  # noqa: FBT003
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("bool_or", expr), inputs.partition_by),
-                    lit(False),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
@@ -221,44 +192,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             raise NotImplementedError(msg)
 
         return self._with_callable(func)
-
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        def _clip_lower(expr: Expression, lower_bound: Any) -> Expression:
-            return F("greatest", expr, lower_bound)
-
-        def _clip_upper(expr: Expression, upper_bound: Any) -> Expression:
-            return F("least", expr, upper_bound)
-
-        def _clip_both(
-            expr: Expression, lower_bound: Any, upper_bound: Any
-        ) -> Expression:
-            return F("greatest", F("least", expr, upper_bound), lower_bound)
-
-        if lower_bound is None:
-            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
-        if upper_bound is None:
-            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
-        return self._with_elementwise(
-            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
-        )
-
-    def sum(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("sum", expr), lit(0))
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("sum", expr), inputs.partition_by), lit(0)
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
 
     def n_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
@@ -302,9 +235,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))
-
-    def is_null(self) -> Self:
-        return self._with_elementwise(lambda expr: expr.isnull())
 
     def is_nan(self) -> Self:
         return self._with_elementwise(lambda expr: F("isnan", expr))
