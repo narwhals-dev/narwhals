@@ -83,6 +83,16 @@ class SQLNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
+    def sum_horizontal(
+        self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]
+    ) -> SQLExpr[SQLLazyFrameT, NativeExprT]:
+        def func(cols: Iterable[NativeExprT]) -> NativeExprT:
+            return reduce(
+                operator.add, (self._coalesce(col, self._lit(0)) for col in cols)
+            )
+
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
     # Other
     def coalesce(
         self, *exprs: SQLExpr[SQLLazyFrameT, NativeExprT]

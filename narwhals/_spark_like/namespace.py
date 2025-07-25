@@ -106,14 +106,6 @@ class SparkLikeNamespace(SQLNamespace[SparkLikeLazyFrame, "Column", "SQLFrameDat
             implementation=self._implementation,
         )
 
-    def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            return reduce(
-                operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
-            )
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
