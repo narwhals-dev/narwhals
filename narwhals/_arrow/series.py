@@ -1098,9 +1098,10 @@ class _ArrowHist(
     _series: ArrowSeries
 
     def to_frame(self) -> ArrowDataFrame:
+        # NOTE: Constructor typing is too strict for `TypedDict`
+        table: Incomplete = pa.Table.from_pydict
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native
-        table_cls = self._series.__native_namespace__().table
-        return from_native(table_cls(self._data), context=self._series)
+        return from_native(table(self._data), context=self._series)
 
     # NOTE: *Could* be handled at narwhals-level
     def is_empty_series(self) -> bool:
