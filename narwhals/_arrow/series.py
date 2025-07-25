@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -22,7 +22,7 @@ from narwhals._arrow.utils import (
     pad_series,
     zeros,
 )
-from narwhals._compliant import EagerSeries, _EagerSeriesHist
+from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._expression_parsing import ExprKind
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -1093,7 +1093,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
 
 class _ArrowHist(
-    _EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
+    EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
 ):
     _series: ArrowSeries
 
@@ -1122,6 +1122,18 @@ class _ArrowHist(
 
     def _zeros(self, arg: int | list[float], /) -> pa.Int64Array:
         return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+
+    def _linear_space(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: Literal["both", "none"] = "both",
+    ) -> _1DArray:
+        from numpy import linspace  # ignore-banned-import
+
+        return linspace(start=start, stop=end, num=num_samples, endpoint=closed == "both")
 
     def _calculate_bins(self, bin_count: int) -> _1DArray:
         """Prepare bins for histogram calculation from bin_count."""

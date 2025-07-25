@@ -69,11 +69,11 @@ __all__ = [
     "EagerSeries",
     "EagerSeriesCatNamespace",
     "EagerSeriesDateTimeNamespace",
+    "EagerSeriesHist",
     "EagerSeriesListNamespace",
     "EagerSeriesNamespace",
     "EagerSeriesStringNamespace",
     "EagerSeriesStructNamespace",
-    "_EagerSeriesHist",
 ]
 
 
@@ -447,7 +447,7 @@ class EagerSeriesStructNamespace(  # type: ignore[misc]
 ): ...
 
 
-class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
+class EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
     _series: EagerSeries[NativeSeriesT]
     _breakpoint: bool
     _data: HistData[NativeSeriesT, _CountsT_co]
@@ -466,6 +466,14 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
         return obj
 
     def to_frame(self) -> EagerDataFrameAny: ...
+    def _linear_space(  # NOTE: Roughly `pl.linear_space`
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: Literal["both", "none"] = "both",
+    ) -> _1DArray: ...
 
     # NOTE: *Could* be handled at narwhals-level
     def is_empty_series(self) -> bool: ...
@@ -497,19 +505,6 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
         else:
             self._data = self._calculate_hist(self._calculate_bins(bin_count))
         return self
-
-    # NOTE: Roughly `pl.linear_space`
-    def _linear_space(
-        self,
-        start: float,
-        end: float,
-        num_samples: int,
-        *,
-        closed: Literal["both", "none"] = "both",
-    ) -> _1DArray:
-        from numpy import linspace  # ignore-banned-import
-
-        return linspace(start=start, stop=end, num=num_samples, endpoint=closed == "both")  # type: ignore[no-any-return]
 
     def _calculate_breakpoint(self, arg: int | list[float], /) -> list[float] | _1DArray:
         bins = self._linear_space(0, 1, arg + 1) if isinstance(arg, int) else arg

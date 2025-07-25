@@ -34,11 +34,11 @@ from narwhals._compliant.series import (
     EagerSeries,
     EagerSeriesCatNamespace,
     EagerSeriesDateTimeNamespace,
+    EagerSeriesHist,
     EagerSeriesListNamespace,
     EagerSeriesNamespace,
     EagerSeriesStringNamespace,
     EagerSeriesStructNamespace,
-    _EagerSeriesHist,
 )
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -83,6 +83,7 @@ __all__ = [
     "EagerSeries",
     "EagerSeriesCatNamespace",
     "EagerSeriesDateTimeNamespace",
+    "EagerSeriesHist",
     "EagerSeriesListNamespace",
     "EagerSeriesNamespace",
     "EagerSeriesStringNamespace",
@@ -99,5 +100,4 @@ __all__ = [
     "NativeFrameT_co",
     "NativeSeriesT_co",
     "WindowInputs",
-    "_EagerSeriesHist",
 ]

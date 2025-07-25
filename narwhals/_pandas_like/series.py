@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
-from narwhals._compliant import EagerSeries, _EagerSeriesHist
+from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -1055,7 +1055,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeSeriesStructNamespace(self)
 
 
-class _PandasHist(_EagerSeriesHist["pd.Series[Any]", "list[float]"]):
+class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
     _series: PandasLikeSeries
 
     def to_frame(self) -> PandasLikeDataFrame:
@@ -1095,6 +1095,18 @@ class _PandasHist(_EagerSeriesHist["pd.Series[Any]", "list[float]"]):
             right=closed == "right",
             labels=labels,
             include_lowest=True,
+        )
+
+    def _linear_space(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: Literal["both", "none"] = "both",
+    ) -> _1DArray:
+        return self._series._array_funcs.linspace(
+            start=start, stop=end, num=num_samples, endpoint=closed == "both"
         )
 
     def _calculate_bins(self, bin_count: int) -> _1DArray:
