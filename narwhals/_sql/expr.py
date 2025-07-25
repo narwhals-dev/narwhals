@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals.typing import PythonLiteral, RankMethod
+    from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
 
 class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
@@ -166,6 +166,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _lit(self, value: Any) -> NativeExprT: ...
     def _count_star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
+    def _coalesce(self, *expr: NativeExprT) -> NativeExprT: ...
     def _window_expression(
         self,
         expr: NativeExprT,
@@ -359,6 +360,44 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
     # Aggregations
+    def all(self) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._coalesce(self._function("bool_and", expr), self._lit(True))  # noqa: FBT003
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._coalesce(
+                    self._window_expression(
+                        self._function("bool_and", expr), inputs.partition_by
+                    ),
+                    self._lit(True),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
+
+    def any(self) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._coalesce(self._function("bool_or", expr), self._lit(False))  # noqa: FBT003
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._coalesce(
+                    self._window_expression(
+                        self._function("bool_or", expr), inputs.partition_by
+                    ),
+                    self._lit(False),  # noqa: FBT003
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
+
     def max(self) -> Self:
         return self._with_callable(lambda expr: self._function("max", expr))
 
@@ -371,9 +410,54 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def min(self) -> Self:
         return self._with_callable(lambda expr: self._function("min", expr))
 
+    def sum(self) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            return self._coalesce(self._function("sum", expr), self._lit(0))
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._coalesce(
+                    self._window_expression(
+                        self._function("sum", expr), inputs.partition_by
+                    ),
+                    self._lit(0),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(f)._with_window_function(window_f)
+
     # Elementwise
     def abs(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("abs", expr))
+
+    def clip(
+        self,
+        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
+        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
+    ) -> Self:
+        def _clip_lower(expr: NativeExprT, lower_bound: Any) -> NativeExprT:
+            return self._function("greatest", expr, lower_bound)
+
+        def _clip_upper(expr: NativeExprT, upper_bound: Any) -> NativeExprT:
+            return self._function("least", expr, upper_bound)
+
+        def _clip_both(
+            expr: NativeExprT, lower_bound: Any, upper_bound: Any
+        ) -> NativeExprT:
+            return self._function(
+                "greatest", self._function("least", expr, upper_bound), lower_bound
+            )
+
+        if lower_bound is None:
+            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
+        if upper_bound is None:
+            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
+        return self._with_elementwise(
+            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
+        )
 
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
