@@ -117,6 +117,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         result = super().from_dict(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
 
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> DataFrame[Any]:
+        result = super().from_numpy(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
     @property
     def _series(self) -> type[Series[Any]]:
         return cast("type[Series[Any]]", Series)

@@ -38,9 +38,9 @@ from narwhals._utils import (
     issue_performance_warning,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import get_polars, is_numpy_array
+from narwhals.dependencies import get_polars, is_numpy_array, is_numpy_array_2d
 from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
-from narwhals.functions import _from_dict_no_backend
+from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
@@ -517,6 +517,35 @@ class DataFrame(BaseFrame[DataFrameT]):
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.DataFrame.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> DataFrame[Any]:
+        if not is_numpy_array_2d(data):
+            msg = "`from_numpy` only accepts 2D numpy arrays"
+            raise ValueError(msg)
+        if not _is_into_schema(schema):
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            return cls(ns.from_numpy(data, schema), level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
         )
         raise ValueError(msg)
 
