@@ -84,8 +84,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _when(self, condition: Expression, value: Expression) -> Expression:
         return when(condition, value)
 
-    @classmethod
-    def _coalesce(cls, *exprs: Expression) -> Expression:
+    def _coalesce(self, *exprs: Expression) -> Expression:
         return CoalesceOperator(*exprs)
 
     def _window_expression(
