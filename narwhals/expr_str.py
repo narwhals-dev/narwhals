@@ -87,7 +87,9 @@ class ExprStringNamespace(Generic[ExprT]):
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> ExprT:
+    def replace_all(
+        self, pattern: str, value: str | ExprT, *, literal: bool = False
+    ) -> ExprT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:

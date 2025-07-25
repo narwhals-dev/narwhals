@@ -11,7 +11,6 @@ from narwhals._pandas_like.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals import Expr
     from narwhals._pandas_like.series import PandasLikeSeries
 
 
@@ -22,7 +21,7 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.len())
 
     def replace(
-        self, pattern: str, value: str | Expr, *, literal: bool, n: int
+        self, pattern: str, value: str | PandasLikeSeries, *, literal: bool, n: int
     ) -> PandasLikeSeries:
         if isinstance(value, str):
             series = self.native.str.replace(

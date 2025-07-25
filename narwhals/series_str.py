@@ -34,7 +34,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | SeriesT, *, literal: bool = False, n: int = 1
     ) -> SeriesT:
         r"""Replace first matching regex/literal substring with a new string value.
 

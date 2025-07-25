@@ -675,25 +675,37 @@ class PolarsSeriesStringNamespace:
         return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
     def replace(
-        self, pattern: str, value: str | Series, *, literal: bool = False, n: int = 1
+        self,
+        pattern: str,
+        value: str | PolarsSeries,
+        *,
+        literal: bool = False,
+        n: int = 1,
     ) -> PolarsSeries:
         if isinstance(value, Series):
             value = value.to_native()
 
         return self._compliant_series._with_native(
             self._compliant_series.native.str.replace(
-                pattern, value, literal=literal, n=n
+                pattern,
+                value,  # type: ignore[arg-type]
+                literal=literal,
+                n=n,
             )
         )
 
     def replace_all(
-        self, pattern: str, value: str | Series, *, literal: bool = False
+        self, pattern: str, value: str | PolarsSeries, *, literal: bool = False
     ) -> PolarsSeries:
         if isinstance(value, Series):
             value = value.to_native()
 
         return self._compliant_series._with_native(
-            self._compliant_series.native.str.replace_all(pattern, value, literal=literal)
+            self._compliant_series.native.str.replace_all(
+                pattern,
+                value,  # type: ignore[arg-type]
+                literal=literal,
+            )
         )
 
     def __getattr__(self, attr: str) -> Any:

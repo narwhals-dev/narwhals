@@ -415,7 +415,7 @@ class EagerExpr(
         self,
         df: EagerDataFrameT,
         *,
-        method_name: tuple[str],
+        method_name: tuple[str, ...],
         returns_scalar: bool,
         scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
@@ -1110,7 +1110,9 @@ class EagerExprStringNamespace(
             "str", "replace", pattern=pattern, value=value, literal=literal, n=n
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> EagerExprT:
+    def replace_all(
+        self, pattern: str, value: str | EagerExprT, *, literal: bool
+    ) -> EagerExprT:
         return self.compliant._reuse_series(
             "str", "replace_all", pattern=pattern, value=value, literal=literal
         )
