@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._compliant import LazyNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -17,6 +16,7 @@ from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import lit, narwhals_to_native_dtype
+from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation, requires
 
@@ -24,10 +24,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType
+    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
+class IbisNamespace(SQLNamespace[IbisLazyFrame, "ir.Value", "ir.Table"]):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:
@@ -44,6 +44,30 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
     @property
     def _lazyframe(self) -> type[IbisLazyFrame]:
         return IbisLazyFrame
+
+    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:  # noqa: PLR0911
+        if name == "row_number":
+            return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+        if name == "least":
+            return ibis.least(*args)
+        if name == "greatest":
+            return ibis.greatest(*args)
+        expr = args[0]
+        if name == "var_pop":
+            return cast("ir.NumericColumn", expr).var(how="pop")
+        if name == "var_samp":
+            return cast("ir.NumericColumn", expr).var(how="sample")
+        if name == "stddev_pop":
+            return cast("ir.NumericColumn", expr).std(how="pop")
+        if name == "stddev_samp":
+            return cast("ir.NumericColumn", expr).std(how="sample")
+        return getattr(expr, name)(*args[1:])
+
+    def _lit(self, value: Any) -> ir.Value:
+        return lit(value)
+
+    def _coalesce(self, *exprs: ir.Value) -> ir.Value:
+        return ibis.coalesce(*exprs)
 
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
@@ -95,36 +119,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def any_horizontal(self, *exprs: IbisExpr, ignore_nulls: bool) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            it = (
-                (col.fill_null(lit(False)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.or_, it)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def max_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return ibis.greatest(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def min_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return ibis.least(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def sum_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            cols = (col.fill_null(lit(0)) for col in cols)
-            return reduce(operator.add, cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = list(cols)
@@ -160,12 +154,6 @@ class IbisNamespace(LazyNamespace[IbisLazyFrame, IbisExpr, "ir.Table"]):
             alias_output_names=None,
             version=self._version,
         )
-
-    def coalesce(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
-            return ibis.coalesce(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
