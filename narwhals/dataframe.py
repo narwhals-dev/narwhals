@@ -466,6 +466,45 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         backend: ModuleType | Implementation | str | None = None,
     ) -> Self:
+        """Instantiate DataFrame from dictionary.
+
+        Indexes (if present, for pandas-like backends) are aligned following
+        the [left-hand-rule](../concepts/pandas_index.md/).
+
+        Notes:
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Arguments:
+            data: Dictionary to create DataFrame from.
+            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+                specified, the schema will be inferred by the native library.
+            backend: specifies which eager backend instantiate to. Only
+                necessary if inputs are not Narwhals Series.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = {"c": [5, 2], "d": [1, 4]}
+            >>> nw.DataFrame.from_dict(data, backend="pandas")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        c  d      |
+            |     0  5  1      |
+            |     1  2  4      |
+            └──────────────────┘
+        """
         if backend is None:
             data, backend = _from_dict_no_backend(data)
         implementation = Implementation.from_backend(backend)
