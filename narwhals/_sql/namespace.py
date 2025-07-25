@@ -2,16 +2,9 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import LazyNamespace
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-
-from typing import TYPE_CHECKING, Any
-
 from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
