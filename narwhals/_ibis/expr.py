@@ -100,6 +100,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
         return ibis.cases((condition, value))
 
+    def _coalesce(self, *exprs: ir.Value) -> ir.Value:
+        return ibis.coalesce(*exprs)
+
     def _window_expression(
         self,
         expr: ir.Value,
@@ -228,16 +231,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             return self._with_callable(_clip, lower=lower_bound)
         return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
-    def sum(self) -> Self:
-        return self._with_callable(lambda expr: expr.sum().fill_null(lit(0)))
-
     def n_unique(self) -> Self:
         return self._with_callable(
             lambda expr: expr.nunique() + expr.isnull().any().cast("int8")
         )
-
-    def count(self) -> Self:
-        return self._with_callable(lambda expr: expr.count())
 
     def len(self) -> Self:
         def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
