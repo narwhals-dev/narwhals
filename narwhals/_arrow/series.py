@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
-        ArrayOrChunkedArray,  # type: ignore[attr-defined]
+        ArrayOrChunkedArray,
         ArrayOrScalar,
         ChunkedArrayAny,
         Incomplete,
@@ -1101,7 +1101,7 @@ class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
         # Stubs say `Array[pa.BooleanScalar]`, which is missing properties
         # https://github.com/zen-xu/pyarrow-stubs/blob/6bedee748bc74feb8513b24bf43d64b24c7fddc8/pyarrow-stubs/__lib_pxi/array.pyi#L2395-L2399
         is_null = self.native.is_null(nan_is_null=True)
-        arr = cast("pa.BooleanArray", is_null.combine_chunks())  # type: ignore[arg-type, union-type]
+        arr = cast("pa.BooleanArray", is_null.combine_chunks())
         return arr.false_count == 0
 
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
