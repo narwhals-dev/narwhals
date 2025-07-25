@@ -39,10 +39,8 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         RankMethod,
-        TemporalLiteral,
     )
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
@@ -88,6 +86,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def _when(self, condition: Column, value: Column) -> Column:
         return self._F.when(condition, value)
+
+    def _coalesce(self, *exprs: Column) -> Column:
+        return self._F.coalesce(*exprs)
 
     def _window_expression(
         self,
@@ -243,44 +244,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         invert = cast("Callable[..., Column]", operator.invert)
         return self._with_elementwise(invert)
 
-    def all(self) -> Self:
-        def f(expr: Column) -> Column:
-            return self._F.coalesce(self._F.bool_and(expr), self._F.lit(True))  # noqa: FBT003
-
-        def window_f(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            return [
-                self._F.coalesce(
-                    self._F.bool_and(expr).over(
-                        self.partition_by(*window_inputs.partition_by)
-                    ),
-                    self._F.lit(True),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
-    def any(self) -> Self:
-        def f(expr: Column) -> Column:
-            return self._F.coalesce(self._F.bool_or(expr), self._F.lit(False))  # noqa: FBT003
-
-        def window_f(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            return [
-                self._F.coalesce(
-                    self._F.bool_or(expr).over(
-                        self.partition_by(*window_inputs.partition_by)
-                    ),
-                    self._F.lit(False),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             spark_dtype = narwhals_to_native_dtype(
@@ -327,25 +290,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_null_count)
 
-    def sum(self) -> Self:
-        def f(expr: Column) -> Column:
-            return self._F.coalesce(self._F.sum(expr), self._F.lit(0))
-
-        def window_f(
-            df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-        ) -> Sequence[Column]:
-            return [
-                self._F.coalesce(
-                    self._F.sum(expr).over(
-                        self.partition_by(*window_inputs.partition_by)
-                    ),
-                    self._F.lit(0),
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
     def std(self, ddof: int) -> Self:
         F = self._F  # noqa: N806
         if ddof == 0:
@@ -371,34 +315,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return F.var_samp(expr) * (n_rows - 1) / (n_rows - ddof)
 
         return self._with_callable(func)
-
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None = None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None = None,
-    ) -> Self:
-        def _clip_lower(expr: Column, lower_bound: Column) -> Column:
-            result = expr
-            return self._F.when(result < lower_bound, lower_bound).otherwise(result)
-
-        def _clip_upper(expr: Column, upper_bound: Column) -> Column:
-            result = expr
-            return self._F.when(result > upper_bound, upper_bound).otherwise(result)
-
-        def _clip_both(expr: Column, lower_bound: Column, upper_bound: Column) -> Column:
-            return (
-                self._F.when(expr < lower_bound, lower_bound)
-                .when(expr > upper_bound, upper_bound)
-                .otherwise(expr)
-            )
-
-        if lower_bound is None:
-            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
-        if upper_bound is None:
-            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
-        return self._with_elementwise(
-            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
-        )
 
     def is_finite(self) -> Self:
         def _is_finite(expr: Column) -> Column:
