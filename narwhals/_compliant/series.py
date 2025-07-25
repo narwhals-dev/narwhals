@@ -447,7 +447,7 @@ class EagerSeriesStructNamespace(  # type: ignore[misc]
 
 
 class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
-    _series: CompliantSeries[NativeSeriesT]
+    _series: EagerSeries[NativeSeriesT]
     _breakpoint: bool
     _data: HistData[NativeSeriesT, _CountsT_co]
 
@@ -457,7 +457,7 @@ class _EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
 
     @classmethod
     def from_series(
-        cls, series: CompliantSeries[NativeSeriesT], *, include_breakpoint: bool
+        cls, series: EagerSeries[NativeSeriesT], *, include_breakpoint: bool
     ) -> Self:
         obj = cls.__new__(cls)
         obj._series = series
