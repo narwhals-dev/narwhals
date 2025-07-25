@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import CoalesceOperator, Expression
@@ -56,6 +56,8 @@ class DuckDBNamespace(
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
     
+    def _lit(self, value: Any) -> Expression:
+        return lit(value)
     def _coalesce(self, *exprs: Expression) -> Expression:
         return CoalesceOperator(*exprs)
 
@@ -100,16 +102,16 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            it = (
-                (CoalesceOperator(expr, lit(True)) for expr in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
+    # def all_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
+    #     def func(cols: Iterable[Expression]) -> Expression:
+    #         it = (
+    #             (CoalesceOperator(expr, lit(True)) for expr in cols)  # noqa: FBT003
+    #             if ignore_nulls
+    #             else cols
+    #         )
+    #         return reduce(operator.and_, it)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def any_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:

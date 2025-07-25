@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import LazyNamespace
 from narwhals._expression_parsing import (
@@ -70,6 +70,8 @@ class SparkLikeNamespace(
         else:
             return import_native_dtypes(self._implementation)
         
+    def _lit(self, value: Any) -> Column:
+        return self._F.lit(value)
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
 
@@ -104,16 +106,16 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            it = (
-                (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
+    # def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
+    #     def func(cols: Iterable[Column]) -> Column:
+    #         it = (
+    #             (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
+    #             if ignore_nulls
+    #             else cols
+    #         )
+    #         return reduce(operator.and_, it)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -242,11 +244,6 @@ class SparkLikeNamespace(
     def when(self, predicate: SparkLikeExpr) -> SparkLikeWhen:
         return SparkLikeWhen.from_expr(predicate, context=self)
 
-    # def coalesce(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-    #     def func(cols: Iterable[Column]) -> Column:
-    #         return self._F.coalesce(*cols)
-
-    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
 
 class SparkLikeWhen(SQLWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
