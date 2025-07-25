@@ -1112,7 +1112,7 @@ class _ArrowHist(_EagerSeriesHist["ChunkedArrayAny"]):
             return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
         return {"count": count}
 
-    def _zeros(self, arg: int | list[float], /) -> ChunkedArrayAny:
+    def _zeros(self, arg: int | list[float], /) -> pa.Int64Array:
         return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
 
     def _calculate_bins(self, bin_count: int) -> _1DArray:
