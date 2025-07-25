@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def test_from_dict(eager_backend: EagerAllowed) -> None:
-    result = nw.DataFrame.from_dict({"c": [1, 2], "d": [5, 6]}, backend=eager_backend)
+    result = nw.DataFrame.from_dict({"c": [1, 2], "d": [5, 6]}, backend=eager_backend)  # type: ignore[var-annotated]
     expected = {"c": [1, 2], "d": [5, 6]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
@@ -21,7 +21,7 @@ def test_from_dict(eager_backend: EagerAllowed) -> None:
 
 def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
-    result = nw.DataFrame.from_dict(
+    result = nw.DataFrame.from_dict(  # type: ignore[var-annotated]
         {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
     )
     assert result.collect_schema() == schema
@@ -38,7 +38,7 @@ def test_from_dict_without_backend(
         .lazy()
         .collect(backend=backend)
     )
-    result = nw.DataFrame.from_dict({"c": df["a"], "d": df["b"]})
+    result = nw.DataFrame.from_dict({"c": df["a"], "d": df["b"]})  # type: ignore[var-annotated]
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
@@ -65,19 +65,19 @@ def test_from_dict_one_native_one_narwhals(
         .lazy()
         .collect(backend=backend)
     )
-    result = nw.DataFrame.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})
+    result = nw.DataFrame.from_dict({"c": nw.to_native(df["a"]), "d": df["b"]})  # type: ignore[var-annotated]
     expected = {"c": [1, 2, 3], "d": [4, 5, 6]}
     assert_equal_data(result, expected)
 
 
 def test_from_dict_empty(eager_backend: EagerAllowed) -> None:
-    result = nw.DataFrame.from_dict({}, backend=eager_backend)
+    result = nw.DataFrame.from_dict({}, backend=eager_backend)  # type: ignore[var-annotated]
     assert result.shape == (0, 0)
 
 
 def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
-    result = nw.DataFrame.from_dict({}, schema, backend=eager_backend)
+    result = nw.DataFrame.from_dict({}, schema, backend=eager_backend)  # type: ignore[var-annotated]
     assert result.schema == schema
 
 
@@ -87,7 +87,7 @@ def test_alignment() -> None:
 
     # https://github.com/narwhals-dev/narwhals/issues/1474
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    result = nw.DataFrame.from_dict(
+    result = nw.DataFrame.from_dict(  # type: ignore[var-annotated]
         {"a": df["a"], "b": df["a"].sort_values(ascending=False)}, backend=pd
     ).to_native()
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]})
