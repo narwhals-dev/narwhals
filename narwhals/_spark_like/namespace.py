@@ -4,7 +4,6 @@ import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import LazyNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -18,8 +17,8 @@ from narwhals._spark_like.utils import (
     narwhals_to_native_dtype,
     true_divide,
 )
-from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._sql.when_then import SQLThen, SQLWhen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -29,13 +28,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._spark_like.expr import SparkWindowInputs
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
 
 
-class SparkLikeNamespace(
-    # SQLNamespace[DuckDBLazyFrame, "Expression", duckdb.DuckDBPyRelation]
-    SQLNamespace[SparkLikeLazyFrame, "Column", "SQLFrameDataFrame"]
-):
+class SparkLikeNamespace(SQLNamespace[SparkLikeLazyFrame, "Column", "SQLFrameDataFrame"]):
     def __init__(self, *, version: Version, implementation: Implementation) -> None:
         self._version = version
         self._implementation = implementation
@@ -69,9 +65,13 @@ class SparkLikeNamespace(
             return types
         else:
             return import_native_dtypes(self._implementation)
-        
+
+    def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
+        return getattr(self._F, name)(*args)
+
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
+
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
 
@@ -105,40 +105,6 @@ class SparkLikeNamespace(
             version=self._version,
             implementation=self._implementation,
         )
-
-    # def all_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
-    #     def func(cols: Iterable[Column]) -> Column:
-    #         it = (
-    #             (self._F.coalesce(col, self._F.lit(True)) for col in cols)  # noqa: FBT003
-    #             if ignore_nulls
-    #             else cols
-    #         )
-    #         return reduce(operator.and_, it)
-
-    #     return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def any_horizontal(self, *exprs: SparkLikeExpr, ignore_nulls: bool) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            it = (
-                (self._F.coalesce(col, self._F.lit(False)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.or_, it)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def max_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            return self._F.greatest(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def min_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
-        def func(cols: Iterable[Column]) -> Column:
-            return self._F.least(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def sum_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
@@ -243,7 +209,6 @@ class SparkLikeNamespace(
 
     def when(self, predicate: SparkLikeExpr) -> SparkLikeWhen:
         return SparkLikeWhen.from_expr(predicate, context=self)
-
 
 
 class SparkLikeWhen(SQLWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
