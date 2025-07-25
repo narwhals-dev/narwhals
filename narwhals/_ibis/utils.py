@@ -243,6 +243,10 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     if name == "row_number":
         return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+    if name == "least":
+        return ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
+    if name == "greatest":
+        return ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
     expr = args[0]
     if name == "var_pop":
         return cast("ir.NumericColumn", expr).var(how="pop")
