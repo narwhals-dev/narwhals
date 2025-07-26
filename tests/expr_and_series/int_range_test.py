@@ -92,13 +92,13 @@ def test_int_range_non_int_dtype(dtype: DType) -> None:
         (1, nw.col("foo", "bar").sum()),
     ],
 )
-def test_int_range_multi_named(start: int | nw.Expr, end: int | nw.Expr) -> None:
+def test_int_range_multi_named(start: int | nw.Expr, end: int | nw.Expr | None) -> None:
     prefix = "`start`" if isinstance(start, nw.Expr) else "`end`"
     msg = f"{prefix} must contain exactly one value, got expression returning multiple values"
     with pytest.raises(ComputeError, match=msg):
-        nw.int_range(start=start, end=end)  # type: ignore[arg-type]
+        nw.int_range(start=start, end=end)
 
 
 def test_int_range_eager_set_to_lazy_backend() -> None:
     with pytest.raises(ValueError, match="Cannot create a Series from a lazy backend"):
-        nw.int_range(123, eager=Implementation.DUCKDB)  # type: ignore[call-overload]
+        nw.int_range(123, eager=Implementation.DUCKDB)
