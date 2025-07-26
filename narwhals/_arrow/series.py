@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.series import HistData
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -157,6 +157,31 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
+        return cls.from_native(
+            chunked_array([data], dtype_pa), name=name, context=context
+        )
+
+    @classmethod
+    def _int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int,
+        dtype: IntegerType | type[IntegerType],
+        context: _LimitedContext,
+    ) -> Self:
+        version = context._version
+        dtype_pa = narwhals_to_native_dtype(dtype, version)
+        name = "literal"
+        if cls._implementation._backend_version() < (21, 0, 0):  # pragma: no cover
+            import numpy as np  # ignore-banned-import
+
+            data = np.arange(start=start, stop=end, step=step)
+        else:
+            data = pc.cast(
+                pa.arange(start=start, stop=end, step=step),  # type: ignore[attr-defined]
+                dtype_pa,
+            )
         return cls.from_native(
             chunked_array([data], dtype_pa), name=name, context=context
         )

@@ -22,13 +22,14 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
+    from polars.datatypes import IntegerType as PlIntegerType
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.series import Series
     from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
 
@@ -163,6 +164,17 @@ class PolarsSeries:
         # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
         native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
         return cls.from_native(native, context=context)
+
+    @classmethod
+    def _int_range(
+        cls, start: int, end: int, step: int, dtype: IntegerType, context: _LimitedContext
+    ) -> Self:
+        version = context._version
+        dtype_pl: PlIntegerType = narwhals_to_native_dtype(dtype, version)  # type: ignore[assignment]
+        return cls.from_native(
+            pl.int_range(start=start, end=end, step=step, dtype=dtype_pl, eager=True),
+            context=context,
+        )
 
     @staticmethod
     def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:

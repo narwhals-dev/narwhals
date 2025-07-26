@@ -4,7 +4,7 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -33,6 +33,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
+from narwhals.dtypes import Int64
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.series import Series
@@ -46,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
@@ -1918,3 +1919,66 @@ def coalesce(
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
+
+
+@overload
+def int_range(
+    start: int | IntoExpr,
+    end: int | IntoExpr | None = None,
+    step: int = 1,
+    *,
+    dtype: type[IntegerType] | IntegerType = Int64,
+    eager: None = None,
+) -> Expr: ...
+
+
+@overload
+def int_range(
+    start: int | IntoExpr,
+    end: int | IntoExpr | None = None,
+    step: int = 1,
+    *,
+    dtype: type[IntegerType] | IntegerType = Int64,
+    eager: ModuleType | Implementation | str,
+) -> Series[Any]: ...
+
+
+def int_range(
+    start: int | IntoExpr,
+    end: int | IntoExpr | None = None,
+    step: int = 1,
+    *,
+    dtype: type[IntegerType] | IntegerType = Int64,
+    eager: ModuleType | Implementation | str | None = None,
+) -> Expr | Series[Any]:
+    from narwhals._utils import isinstance_or_issubclass
+    from narwhals.dtypes import IntegerType
+
+    if not isinstance_or_issubclass(dtype, IntegerType):
+        from narwhals.exceptions import ComputeError
+
+        msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
+        raise ComputeError(msg)
+
+    if end is None:
+        end = start
+        start = 0
+
+    if not eager:
+        return Expr(
+            lambda plx: plx.int_range(start=start, end=end, step=step, dtype=dtype),
+            ExprMetadata.selector_single(),
+        )
+
+    impl = Implementation.from_backend(eager)
+    if is_eager_allowed(impl):
+        assert isinstance(start, int)  # noqa: S101, help mypy
+        assert isinstance(end, int)  # noqa: S101, help mypy
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        series = ns._series._int_range(
+            start=start, end=end, step=step, dtype=dtype, context=ns
+        )
+        return series.to_narwhals()
+
+    msg = f"Cannot create a Series from a lazy backend. Found: {impl}"
+    raise ValueError(msg)

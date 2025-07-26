@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -181,6 +181,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             if index is not None and len(index):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
+
+    @classmethod
+    def _int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int,
+        dtype: IntegerType | type[IntegerType],
+        context: _LimitedContext,
+    ) -> Self:
+        impl = context._implementation
+        array_funcs = import_array_module(impl)
+        data = array_funcs.arange(start, end, step)
+        return cls.from_iterable(data, context=context, name="literal", dtype=dtype)
 
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._utils import Implementation, Version, _LimitedContext
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.series import Series
     from narwhals.typing import (
         ClosedInterval,
@@ -121,6 +121,15 @@ class CompliantSeries(
         context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
+    ) -> Self: ...
+    @classmethod
+    def _int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int,
+        dtype: IntegerType | type[IntegerType],
+        context: _LimitedContext,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
