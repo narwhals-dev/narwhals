@@ -5,7 +5,7 @@ from collections import OrderedDict
 from collections.abc import Iterable, Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
