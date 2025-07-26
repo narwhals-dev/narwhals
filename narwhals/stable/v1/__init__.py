@@ -96,6 +96,8 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
+    _version = Version.V1
+
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V1  # noqa: S101
@@ -103,6 +105,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> DataFrame[Any]:
+        result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
 
     @property
     def _series(self) -> type[Series[Any]]:
