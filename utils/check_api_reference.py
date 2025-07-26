@@ -63,6 +63,7 @@ NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "dtype",
+    "from_numpy",
     "implementation",
     "is_empty",
     "is_sorted",
