@@ -107,6 +107,13 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @classmethod
+    def from_arrow(
+        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    ) -> DataFrame[Any]:
+        result = super().from_arrow(native_frame, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],
