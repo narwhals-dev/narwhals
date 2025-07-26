@@ -5,14 +5,15 @@ from collections import OrderedDict
 from collections.abc import Iterable, Mapping
 from datetime import timezone
 from itertools import starmap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
+    from typing import Any
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeIs
 
     from narwhals.typing import IntoDType, TimeUnit
 
@@ -23,6 +24,21 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
             f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
             "Hint: if you were trying to cast to a type, use e.g. nw.Int64 instead of 'int64'."
         )
+        raise TypeError(msg)
+
+
+def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
+    return isinstance(obj, DType) or (
+        isinstance(obj, type)
+        and issubclass(obj, DType)
+        and not issubclass(obj, NestedType)
+    )
+
+
+def _validate_into_dtype(dtype: Any) -> None:
+    if not _is_into_dtype(dtype):
+        # TODO @dangotbanned: add a nice hint
+        msg = f"Expected Narwhals dtype, got: {dtype!r}."
         raise TypeError(msg)
 
 

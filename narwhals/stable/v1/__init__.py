@@ -303,6 +303,8 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
+    _version = Version.V1
+
     @inherit_doc(NwSeries)
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -312,6 +314,18 @@ class Series(NwSeries[IntoSeriesT]):
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
+
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:

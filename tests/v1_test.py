@@ -619,7 +619,8 @@ def test_series_recursive_v1() -> None:
 
     pl_series = pl.Series(name="test", values=[1, 2, 3])
     nw_series = nw_v1.from_native(pl_series, series_only=True)
-    with pytest.raises(AttributeError):
+    # NOTE: (#2629) combined with passing in `nw_v1.Series` (w/ a `_version`) into itself changes the error
+    with pytest.raises(AssertionError):
         nw_v1.Series(nw_series, level="full")
 
     nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
