@@ -816,10 +816,14 @@ class PandasLikeSeries(EagerSeries[Any]):
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
         _, lower = (
-            align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
+            align_and_extract_native(self, lower_bound)
+            if lower_bound is not None
+            else (None, None)
         )
         _, upper = (
-            align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
+            align_and_extract_native(self, upper_bound)
+            if upper_bound is not None
+            else (None, None)
         )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._with_native(self.native.clip(lower, upper, **kwargs))

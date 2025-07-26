@@ -831,8 +831,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower = extract_native(self, lower_bound) if lower_bound else (None, None)
-        _, upper = extract_native(self, upper_bound) if upper_bound else (None, None)
+        _, lower = (
+            extract_native(self, lower_bound) if lower_bound is not None else (None, None)
+        )
+        _, upper = (
+            extract_native(self, upper_bound) if upper_bound is not None else (None, None)
+        )
 
         if lower is None:
             return self._with_native(pc.min_element_wise(self.native, upper))

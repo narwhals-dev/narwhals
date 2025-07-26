@@ -7,19 +7,22 @@ from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
-def test_clip_expr(constructor: Constructor) -> None:
+@pytest.mark.parametrize(
+    ("lower", "upper", "expected"),
+    [
+        (3, 4, [3, 3, 3, 3, 4]),
+        (0, 4, [1, 2, 3, 0, 4]),
+        (None, 4, [1, 2, 3, -4, 4]),
+        (-2, 0, [0, 0, 0, -2, 0]),
+        (-2, None, [1, 2, 3, -2, 5]),
+    ],
+)
+def test_clip_expr(
+    constructor: Constructor, lower: int | None, upper: int | None, expected: list[int]
+) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, -4, 5]}))
-    result = df.select(
-        lower_only=nw.col("a").clip(lower_bound=3),
-        upper_only=nw.col("a").clip(upper_bound=4),
-        both=nw.col("a").clip(3, 4),
-    )
-    expected = {
-        "lower_only": [3, 3, 3, 3, 5],
-        "upper_only": [1, 2, 3, -4, 4],
-        "both": [3, 3, 3, 3, 4],
-    }
-    assert_equal_data(result, expected)
+    result = df.select(result=nw.col("a").clip(lower_bound=lower, upper_bound=upper))
+    assert_equal_data(result, {"result": expected})
 
 
 def test_clip_expr_expressified(
@@ -38,20 +41,26 @@ def test_clip_expr_expressified(
     assert_equal_data(result, expected_dict)
 
 
-def test_clip_series(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("lower", "upper", "expected"),
+    [
+        (3, 4, [3, 3, 3, 3, 4]),
+        (0, 4, [1, 2, 3, 0, 4]),
+        (None, 4, [1, 2, 3, -4, 4]),
+        (-2, 0, [0, 0, 0, -2, 0]),
+        (-2, None, [1, 2, 3, -2, 5]),
+    ],
+)
+def test_clip_series(
+    constructor_eager: ConstructorEager,
+    lower: int | None,
+    upper: int | None,
+    expected: list[int],
+) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2, 3, -4, 5]}), eager_only=True)
-    result = {
-        "lower_only": df["a"].clip(lower_bound=3),
-        "upper_only": df["a"].clip(upper_bound=4),
-        "both": df["a"].clip(3, 4),
-    }
+    result = {"result": df["a"].clip(lower_bound=lower, upper_bound=upper)}
 
-    expected = {
-        "lower_only": [3, 3, 3, 3, 5],
-        "upper_only": [1, 2, 3, -4, 4],
-        "both": [3, 3, 3, 3, 4],
-    }
-    assert_equal_data(result, expected)
+    assert_equal_data(result, {"result": expected})
 
 
 def test_clip_series_expressified(
