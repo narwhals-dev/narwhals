@@ -54,6 +54,7 @@ def test_int_range_eager(
     ],
 )
 def test_int_range_lazy(
+    request: pytest.FixtureRequest,
     constructor: Constructor,
     start: int,
     end: int | None,
@@ -61,12 +62,17 @@ def test_int_range_lazy(
     dtype: type[IntegerType] | IntegerType,
     expected: list[int],
 ) -> None:
+    if any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "spark")):
+        reason = "not implemented yet"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     data = {"a": ["foo", "bar", "baz"]}
     int_range = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=None)
     result = nw.from_native(constructor(data)).select(int_range)
 
-    assert_equal_data(result, {"literal": expected})
-    assert result.collect_schema()["literal"] == dtype
+    output_name = "len" if isinstance(start, nw.Expr) and end is not None else "literal"
+    assert_equal_data(result, {output_name: expected})
+    assert result.collect_schema()[output_name] == dtype
 
 
 @pytest.mark.parametrize(

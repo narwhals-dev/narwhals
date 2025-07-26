@@ -169,10 +169,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         step: int,
         dtype: IntegerType | type[IntegerType],
         context: _LimitedContext,
+        name: str,
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version)
-        name = "literal"
         if cls._implementation._backend_version() < (21, 0, 0):  # pragma: no cover
             import numpy as np  # ignore-banned-import
 

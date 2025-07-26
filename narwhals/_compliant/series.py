@@ -130,6 +130,7 @@ class CompliantSeries(
         step: int,
         dtype: IntegerType | type[IntegerType],
         context: _LimitedContext,
+        name: str,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")

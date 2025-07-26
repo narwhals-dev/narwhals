@@ -173,13 +173,14 @@ class PolarsSeries:
         step: int,
         dtype: IntegerType | type[IntegerType],
         context: _LimitedContext,
+        name: str,
     ) -> Self:
         version = context._version
         dtype_pl: PlIntegerType = narwhals_to_native_dtype(dtype, version)  # type: ignore[assignment]
         return cls.from_native(
             pl.int_range(start=start, end=end, step=step, dtype=dtype_pl, eager=True),
             context=context,
-        )
+        ).alias(name)
 
     @staticmethod
     def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:

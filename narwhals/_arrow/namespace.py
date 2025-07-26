@@ -294,19 +294,36 @@ class ArrowNamespace(
         dtype: IntegerType | type[IntegerType],
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            start_value = start(df)[0].item() if isinstance(start, ArrowExpr) else start
+            if isinstance(start, ArrowExpr):
+                start_eval = start(df)[0]
+                name = start_eval.name
+                start_value = start_eval.item()
+            else:
+                name = "literal"
+                start_value = start
+
             end_value = end(df)[0].item() if isinstance(end, ArrowExpr) else end
             return [
                 ArrowSeries._int_range(
-                    start=start_value, end=end_value, step=step, dtype=dtype, context=self
+                    start=start_value,
+                    end=end_value,
+                    step=step,
+                    dtype=dtype,
+                    context=self,
+                    name=name,
                 )
             ]
 
+        evaluate_output_names = (
+            combine_evaluate_output_names(start)
+            if isinstance(start, ArrowExpr)
+            else lambda _df: ["literal"]
+        )
         return self._expr._from_callable(
             func=func,
             depth=0,
             function_name="int_range",
-            evaluate_output_names=lambda _df: ["literal"],
+            evaluate_output_names=evaluate_output_names,
             alias_output_names=None,
             context=self,
         )

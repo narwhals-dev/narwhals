@@ -1990,17 +1990,13 @@ def int_range(
             ExprMetadata.selector_single(),
         )
 
-        return Expr(
-            lambda plx: plx.int_range(start=start, end=end, step=step, dtype=dtype)
-        )
-
     impl = Implementation.from_backend(eager)
     if is_eager_allowed(impl):
         assert isinstance(start, int)  # noqa: S101, help mypy
         assert isinstance(end, int)  # noqa: S101, help mypy
         ns = Version.MAIN.namespace.from_backend(impl).compliant
         series = ns._series._int_range(
-            start=start, end=end, step=step, dtype=dtype, context=ns
+            start=start, end=end, step=step, dtype=dtype, context=ns, name="literal"
         )
         return series.to_narwhals()
 

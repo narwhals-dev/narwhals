@@ -190,11 +190,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         step: int,
         dtype: IntegerType | type[IntegerType],
         context: _LimitedContext,
+        name: str,
     ) -> Self:
         impl = context._implementation
         array_funcs = import_array_module(impl)
         data = array_funcs.arange(start, end, step)
-        return cls.from_iterable(data, context=context, name="literal", dtype=dtype)
+        return cls.from_iterable(data, context=context, name=name, dtype=dtype)
 
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
