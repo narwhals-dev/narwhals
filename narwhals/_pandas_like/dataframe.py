@@ -1137,3 +1137,14 @@ class PandasLikeDataFrame(
                 plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns],
                 validate_column_names=False,
             )
+
+    def clear(self, n: int) -> Self:
+        if n == 0:
+            return self.head(0)
+
+        ns = self.__native_namespace__()
+
+        native_dtypes = self.native.dtypes
+        schema = {col: native_dtypes[col] for col in self.native.columns}
+        result = ns.DataFrame(ns.NA, index=range(n), columns=self.columns).astype(schema)
+        return self._with_native(result)

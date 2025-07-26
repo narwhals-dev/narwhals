@@ -2158,6 +2158,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().explode(columns, *more_columns)
 
+    def clear(self, n: int = 0) -> Self:
+        if n < 0:
+            msg = f"`n` should be greater than or equal to 0, got {n}"
+            raise ValueError(msg)
+        return self._with_compliant(self._compliant_frame.clear(n=n))
+
 
 class LazyFrame(BaseFrame[FrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
