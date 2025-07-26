@@ -11,6 +11,7 @@ def test_clone(constructor_eager: ConstructorEager) -> None:
     df_clone = df.clone()
     assert df is not df_clone
     assert df._compliant_frame is not df_clone._compliant_frame
+    assert df.to_native() is not df_clone.to_native()
     assert_equal_data(df_clone, expected)
     df_clone_mod = df_clone.with_columns((nw.col("a") + nw.col("b")).alias("c"))
     assert_equal_data(df, expected)
