@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
 
@@ -50,6 +51,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
+
+    def __narwhals_namespace__(
+        self,
+    ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
         self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
@@ -162,13 +167,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._window_function or default_window_func
 
-    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
-    def _lit(self, value: Any) -> NativeExprT: ...
+    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT:
+        return self.__narwhals_namespace__()._function(name, *args)
+
+    def _lit(self, value: Any) -> NativeExprT:
+        return self.__narwhals_namespace__()._lit(value)
+
+    def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
+        return self.__narwhals_namespace__()._coalesce(*expr)
+
     def _count_star(self) -> NativeExprT: ...
     def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
-    def _coalesce(self, *expr: NativeExprT) -> NativeExprT: ...
     def __floordiv__(self, other: Any) -> Self: ...
     def __rfloordiv__(self, other: Any) -> Self: ...
+
     def _window_expression(
         self,
         expr: NativeExprT,
@@ -362,7 +374,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                self._coalesce(
                     self._window_expression(
                         self._function("bool_and", expr), inputs.partition_by
                     ),
