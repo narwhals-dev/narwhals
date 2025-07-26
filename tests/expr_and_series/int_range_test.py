@@ -34,6 +34,7 @@ def test_int_range_eager(
     dtype: type[IntegerType] | IntegerType,
     impl: nw.Implementation,
 ) -> None:
+    pytest.importorskip(impl.value)
     series = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=impl)
 
     assert series.dtype == dtype
