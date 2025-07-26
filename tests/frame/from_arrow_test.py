@@ -41,7 +41,7 @@ def is_native(native: Any, backend: EagerAllowed) -> bool:
     raise TypeError(msg)  # pragma: no cover
 
 
-def test_from_arrow_table(
+def test_dataframe_from_arrow_table(
     eager_backend: EagerAllowed, table: pa.Table, data: dict[str, Any]
 ) -> None:
     # NOTE: PyCapsule support requires `pyarrow>=14`, but this path should work in all cases
@@ -51,7 +51,7 @@ def test_from_arrow_table(
 
 
 @pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
-def test_from_arrow_pycapsule(
+def test_dataframe_from_arrow_pycapsule(
     eager_backend: EagerAllowed, table: pa.Table, data: dict[str, Any]
 ) -> None:
     result = nw.DataFrame.from_arrow(table, backend=eager_backend)
@@ -61,7 +61,7 @@ def test_from_arrow_pycapsule(
     assert is_native(result.to_native(), eager_backend)
 
 
-def test_from_arrow_to_polars_no_pandas(
+def test_dataframe_from_arrow_to_polars_no_pandas(
     monkeypatch: pytest.MonkeyPatch, table: pa.Table, data: dict[str, Any]
 ) -> None:
     pytest.importorskip("polars")
@@ -76,6 +76,6 @@ def test_from_arrow_to_polars_no_pandas(
     assert "pandas" not in sys.modules
 
 
-def test_from_arrow_invalid() -> None:
+def test_dataframe_from_arrow_invalid() -> None:
     with pytest.raises(TypeError, match="PyCapsule"):
         nw.DataFrame.from_arrow({"a": [1]}, backend=pa)  # type: ignore[arg-type]
