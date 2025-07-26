@@ -987,3 +987,4 @@ def test_get_column() -> None:
     col = nw_v1.from_native(pd_df, eager_only=True).get_column("col")
     # check this doesn't raise type-checking errors
     minimal_function(col)
+    assert isinstance(col, nw_v1.Series)
