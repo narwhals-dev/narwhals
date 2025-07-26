@@ -146,6 +146,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
 
+    def get_column(self, name: str) -> Series:
+        return _stableify(super().get_column(name))
+
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:

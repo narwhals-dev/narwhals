@@ -974,3 +974,16 @@ def test_dask_order_dependent_ops() -> None:
         "i": [True, True, True],
     }
     assert_equal_data(result, expected)
+
+
+def test_get_column() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    def minimal_function(data: nw_v1.Series[Any]) -> None:
+        data.is_null()
+
+    pd_df = pd.DataFrame({"col": [1, 2, None, 4]})
+    col = nw_v1.from_native(pd_df, eager_only=True).get_column("col")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
