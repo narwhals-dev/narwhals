@@ -13,6 +13,11 @@ from narwhals._utils import (
     maybe_reset_index,
     maybe_set_index,
 )
+from narwhals.api import (
+    register_dataframe_namespace,
+    register_expr_namespace,
+    register_lazyframe_namespace,
+)
 from narwhals.dataframe import DataFrame, LazyFrame
 from narwhals.dtypes import (
     Array,
@@ -163,6 +168,9 @@ __all__ = [
     "nth",
     "read_csv",
     "read_parquet",
+    "register_dataframe_namespace",
+    "register_expr_namespace",
+    "register_lazyframe_namespace",
     "scan_csv",
     "scan_parquet",
     "selectors",
