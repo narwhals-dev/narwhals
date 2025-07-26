@@ -73,9 +73,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _count_star(self) -> Expression:
         return F("count", StarExpression())
 
-    def _when(self, condition: Expression, value: Expression) -> Expression:
-        return when(condition, value)
-
     def _window_expression(
         self,
         expr: Expression,
