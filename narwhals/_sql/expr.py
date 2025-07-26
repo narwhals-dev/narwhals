@@ -374,6 +374,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
+                self._coalesce(
                     self._window_expression(
                         self._function("bool_and", expr), inputs.partition_by
                     ),
