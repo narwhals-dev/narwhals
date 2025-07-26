@@ -31,12 +31,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        IntoDType,
-        PythonLiteral,
-        RankMethod,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
     IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
@@ -79,29 +74,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             ]
 
         return self._window_function or default_window_func
-
-    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
-        if name == "row_number":
-            return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
-        expr = args[0]
-        if name == "var_pop":
-            return cast("ir.NumericColumn", expr).var(how="pop")
-        if name == "var_samp":
-            return cast("ir.NumericColumn", expr).var(how="sample")
-        if name == "stddev_pop":
-            return cast("ir.NumericColumn", expr).std(how="pop")
-        if name == "stddev_samp":
-            return cast("ir.NumericColumn", expr).std(how="sample")
-        return getattr(expr, name)(*args[1:])
-
-    def _lit(self, value: Any) -> ir.Value:
-        return lit(value)
-
-    def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
-        return ibis.cases((condition, value))
-
-    def _coalesce(self, *exprs: ir.Value) -> ir.Value:
-        return ibis.coalesce(*exprs)
 
     def _window_expression(
         self,
