@@ -36,7 +36,7 @@ class SQLWhen(
             result = when(condition, then)
         else:
             otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
-            result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
+            result = when(condition, then).otherwise(otherwise)
         return [result]
 
     @classmethod
@@ -70,7 +70,7 @@ class SQLWhen(
                 if is_expr(other_)
                 else lit(other_)
             )
-            result = when(condition, then).otherwise(other)  # type: ignore  # noqa: PGH003
+            result = when(condition, then).otherwise(other)
         return [result]
 
 
