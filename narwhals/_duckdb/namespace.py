@@ -29,11 +29,10 @@ from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
-    from narwhals._duckdb.expr import DuckDBWindowInputs
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
@@ -63,6 +62,9 @@ class DuckDBNamespace(
 
     def _lit(self, value: Any) -> Expression:
         return lit(value)
+
+    def _when(self, condition: Expression, value: Expression) -> Expression:
+        return when(condition, value)
 
     def _coalesce(self, *exprs: Expression) -> Expression:
         return CoalesceOperator(*exprs)
@@ -151,18 +153,6 @@ class DuckDBWhen(SQLWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
     @property
     def _then(self) -> type[DuckDBThen]:
         return DuckDBThen
-
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
-        self.when = when
-        self.lit = lit
-        return super().__call__(df)
-
-    def _window_function(
-        self, df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-    ) -> Sequence[Expression]:
-        self.when = when
-        self.lit = lit
-        return super()._window_function(df, window_inputs)
 
 
 class DuckDBThen(SQLThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...

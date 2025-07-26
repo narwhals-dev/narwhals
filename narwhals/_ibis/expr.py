@@ -75,9 +75,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._window_function or default_window_func
 
-    def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
-        return ibis.cases((condition, value))
-
     def _window_expression(
         self,
         expr: ir.Value,
