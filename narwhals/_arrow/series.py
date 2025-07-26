@@ -178,7 +178,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
             data = np.arange(start=start, stop=end, step=step)
         else:
-            data = pc.cast(
+            data = pc.cast(  # type: ignore[assignment]
                 pa.arange(start=start, stop=end, step=step),  # type: ignore[attr-defined]
                 dtype_pa,
             )

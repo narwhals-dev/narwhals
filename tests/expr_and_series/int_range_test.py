@@ -67,7 +67,7 @@ def test_int_range_lazy(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"a": ["foo", "bar", "baz"]}
-    int_range = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=None)
+    int_range = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=False)
     result = nw.from_native(constructor(data)).select(int_range)
 
     output_name = "len" if isinstance(start, nw.Expr) and end is not None else "literal"
@@ -100,4 +100,4 @@ def test_int_range_multi_named(start: int | nw.Expr, end: int | nw.Expr) -> None
 
 def test_int_range_eager_set_to_lazy_backend() -> None:
     with pytest.raises(ValueError, match="Cannot create a Series from a lazy backend"):
-        nw.int_range(start=123, eager=Implementation.DUCKDB)
+        nw.int_range(123, eager=Implementation.DUCKDB)  # type: ignore[call-overload]

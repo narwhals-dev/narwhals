@@ -1928,7 +1928,7 @@ def int_range(
     step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType],
-    eager: Literal[False] | None = False,
+    eager: Literal[False] = False,
 ) -> Expr: ...
 
 
@@ -1949,7 +1949,7 @@ def int_range(
     step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType] = Int64,
-    eager: ModuleType | Implementation | str | Literal[False] | None = False,
+    eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
 

@@ -19,6 +19,7 @@ from narwhals._compliant.typing import (
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
+    not_implemented,
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array_2d
@@ -146,6 +147,8 @@ class LazyNamespace(
         else:  # pragma: no cover
             msg = f"Unsupported type: {type(data).__name__!r}"
             raise TypeError(msg)
+
+    int_range: not_implemented = not_implemented()
 
 
 class EagerNamespace(
