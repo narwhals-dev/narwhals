@@ -615,24 +615,25 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import numpy as np
-            >>> import pyarrow as pa
+            >>> import polars as pl
             >>> import narwhals as nw
             >>>
             >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
             >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
-            >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="pyarrow")
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |  pyarrow.Table   |
-            |  c: int16        |
-            |  d: float        |
-            |  e: int8         |
-            |  ----            |
-            |  c: [[5,1]]      |
-            |  d: [[2,4]]      |
-            |  e: [[1,3]]      |
-            └──────────────────┘
+            >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="polars")
+            ┌───────────────────┐
+            |Narwhals DataFrame |
+            |-------------------|
+            |shape: (2, 3)      |
+            |┌─────┬─────┬─────┐|
+            |│ c   ┆ d   ┆ e   │|
+            |│ --- ┆ --- ┆ --- │|
+            |│ i16 ┆ f32 ┆ i8  │|
+            |╞═════╪═════╪═════╡|
+            |│ 5   ┆ 2.0 ┆ 1   │|
+            |│ 1   ┆ 4.0 ┆ 3   │|
+            |└─────┴─────┴─────┘|
+            └───────────────────┘
         """
         if not is_numpy_array_2d(data):
             msg = "`from_numpy` only accepts 2D numpy arrays"
