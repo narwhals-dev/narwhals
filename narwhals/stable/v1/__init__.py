@@ -107,6 +107,13 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # annotations are correct.
 
     @classmethod
+    def from_arrow(
+        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    ) -> DataFrame[Any]:
+        result = super().from_arrow(native_frame, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],
@@ -169,6 +176,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         ),
     ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
+
+    def get_column(self, name: str) -> Series:
+        # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
+        # However the return type actually is `nw.v1.stable.Series`, check `tests/v1_test.py`.
+        return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
@@ -336,7 +348,7 @@ class Series(NwSeries[IntoSeriesT]):
 
     def hist(
         self,
-        bins: list[float | int] | None = None,
+        bins: list[float] | None = None,
         *,
         bin_count: int | None = None,
         include_breakpoint: bool = True,

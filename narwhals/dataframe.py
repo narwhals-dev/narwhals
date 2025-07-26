@@ -38,7 +38,12 @@ from narwhals._utils import (
     issue_performance_warning,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import get_polars, is_numpy_array, is_numpy_array_2d
+from narwhals.dependencies import (
+    get_polars,
+    is_numpy_array,
+    is_numpy_array_2d,
+    is_pyarrow_table,
+)
 from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
 from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
@@ -58,6 +63,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
@@ -457,6 +463,62 @@ class DataFrame(BaseFrame[DataFrameT]):
         else:  # pragma: no cover
             msg = f"Expected an object which implements `__narwhals_dataframe__`, got: {type(df)}"
             raise AssertionError(msg)
+
+    @classmethod
+    def from_arrow(
+        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    ) -> DataFrame[Any]:
+        """Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            native_frame: Object which implements `__arrow_c_stream__`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
+            >>> nw.DataFrame.from_arrow(df_native, backend="polars")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬─────┐   |
+            |  │ a   ┆ b   │   |
+            |  │ --- ┆ --- │   |
+            |  │ i64 ┆ f64 │   |
+            |  ╞═════╪═════╡   |
+            |  │ 1   ┆ 4.2 │   |
+            |  │ 2   ┆ 5.1 │   |
+            |  └─────┴─────┘   |
+            └──────────────────┘
+        """
+        if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
+            msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_arrow(native_frame, context=ns)
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_arrow` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
 
     @classmethod
     def from_dict(

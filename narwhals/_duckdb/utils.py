@@ -371,3 +371,9 @@ def catch_duckdb_exception(
         )
     # Just return exception as-is.
     return exception
+
+
+def function(name: str, *args: Expression) -> Expression:
+    if name == "isnull":
+        return args[0].isnull()
+    return F(name, *args)
