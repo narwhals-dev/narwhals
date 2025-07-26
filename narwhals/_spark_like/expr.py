@@ -35,13 +35,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        FillNullStrategy,
-        IntoDType,
-        NonNestedLiteral,
-        PythonLiteral,
-        RankMethod,
-    )
+    from narwhals.typing import FillNullStrategy, IntoDType, NonNestedLiteral, RankMethod
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
@@ -75,20 +69,11 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         "ordinal": "row_number",
     }
 
-    def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
-        return getattr(self._F, name)(*args)
-
-    def _lit(self, value: Any) -> Column:
-        return self._F.lit(value)
-
     def _count_star(self) -> Column:
         return self._F.count("*")
 
     def _when(self, condition: Column, value: Column) -> Column:
         return self._F.when(condition, value)
-
-    def _coalesce(self, *exprs: Column) -> Column:
-        return self._F.coalesce(*exprs)
 
     def _window_expression(
         self,
