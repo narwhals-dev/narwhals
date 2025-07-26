@@ -463,6 +463,43 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_arrow(
         cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
     ) -> DataFrame[Any]:
+        """Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            native_frame: Object which implements `__arrow_c_stream__`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
+            >>> nw.DataFrame.from_arrow(df_native, backend="polars")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬─────┐   |
+            |  │ a   ┆ b   │   |
+            |  │ --- ┆ --- │   |
+            |  │ i64 ┆ f64 │   |
+            |  ╞═════╪═════╡   |
+            |  │ 1   ┆ 4.2 │   |
+            |  │ 2   ┆ 5.1 │   |
+            |  └─────┴─────┘   |
+            └──────────────────┘
+        """
         if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
             msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
             raise TypeError(msg)

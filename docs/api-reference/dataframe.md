@@ -14,6 +14,7 @@
         - estimated_size
         - explode
         - filter
+        - from_arrow
         - from_dict
         - gather_every
         - get_column
