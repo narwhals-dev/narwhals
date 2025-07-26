@@ -34,7 +34,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         )
 
     def replace(
-        self, pattern: str, value: str, *, literal: bool = False, n: int = 1
+        self, pattern: str, value: str | SeriesT, *, literal: bool = False, n: int = 1
     ) -> SeriesT:
         r"""Replace first matching regex/literal substring with a new string value.
 
@@ -63,7 +63,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> SeriesT:
+    def replace_all(
+        self, pattern: str, value: str | SeriesT, *, literal: bool = False
+    ) -> SeriesT:
         r"""Replace all matching regex/literal substring with a new string value.
 
         Arguments:

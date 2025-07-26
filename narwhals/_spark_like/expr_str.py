@@ -20,7 +20,15 @@ class SparkLikeExprStringNamespace(
     def len_chars(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.char_length)
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SparkLikeExpr:
+    def replace_all(
+        self, pattern: str, value: str | SparkLikeExpr, *, literal: bool
+    ) -> SparkLikeExpr:
+        from narwhals._spark_like.expr import SparkLikeExpr
+
+        if isinstance(value, SparkLikeExpr):
+            msg = "SQLFrame backed `Expr.str.replace_all` does not support Expr-like replacement values"
+            raise TypeError(msg)
+
         def func(expr: Column) -> Column:
             replace_all_func = (
                 self.compliant._F.replace if literal else self.compliant._F.regexp_replace
