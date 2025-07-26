@@ -139,6 +139,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
 
+    def get_column(self, name: str) -> Series:
+        # Type checkers complain that `nw.Series` is not assignable to `nw.v2.stable.Series`.
+        # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py`.
+        return super().get_column(name)  # type: ignore[return-value]
+
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
     ) -> LazyFrame[Any]:
