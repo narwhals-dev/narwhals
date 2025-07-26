@@ -11,6 +11,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
@@ -30,7 +31,13 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.utils import Version
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import assert_type
@@ -1000,3 +1007,33 @@ def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     assert result.collect_schema() == schema
     assert result._version is Version.V1
     assert isinstance(result, nw_v1.DataFrame)
+
+
+def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    is_pyarrow = eager_backend in {Implementation.PYARROW, "pyarrow"}
+    data: dict[str, Any] = {"ab": [1, 2, 3], "ba": ["four", "five", None]}
+    table = pa.table(data)
+    supports_arrow_c_stream = nw_v1.DataFrame.from_arrow(table, backend=eager_backend)
+    assert_equal_data(supports_arrow_c_stream, data)
+    assert isinstance(supports_arrow_c_stream, nw_v1.DataFrame)
+    assert supports_arrow_c_stream._version is Version.V1
+    if is_pyarrow:
+        assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    else:
+        assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    if PYARROW_VERSION < (14,):  # pragma: no cover
+        ...
+    else:
+        result = nw_v1.DataFrame.from_arrow(
+            supports_arrow_c_stream, backend=eager_backend
+        )
+        assert_equal_data(result, data)
+        assert result._version is Version.V1
+        assert isinstance(result, nw_v1.DataFrame)
+        if is_pyarrow:
+            assert isinstance(result.to_native(), pa.Table)
+        else:
+            assert not isinstance(result.to_native(), pa.Table)
