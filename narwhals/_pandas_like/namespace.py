@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
+    from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -367,6 +368,48 @@ class PandasLikeNamespace(
             function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def int_range(
+        self,
+        start: int | PandasLikeExpr,
+        end: int | PandasLikeExpr,
+        step: int,
+        *,
+        dtype: IntegerType | type[IntegerType],
+    ) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            if isinstance(start, PandasLikeExpr):
+                start_eval = start(df)[0]
+                name = start_eval.name
+                start_value = start_eval.item()
+            else:  # pragma: no cover
+                name = "literal"
+                start_value = start
+            end_value = end(df)[0].item() if isinstance(end, PandasLikeExpr) else end
+            return [
+                PandasLikeSeries._int_range(
+                    start=start_value,
+                    end=end_value,
+                    step=step,
+                    dtype=dtype,
+                    context=self,
+                    name=name,
+                )
+            ]
+
+        evaluate_output_names = (
+            combine_evaluate_output_names(start)
+            if isinstance(start, PandasLikeExpr)
+            else lambda _df: ["literal"]
+        )
+        return self._expr._from_callable(
+            func=func,
+            depth=0,
+            function_name="int_range",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
             context=self,
         )
 

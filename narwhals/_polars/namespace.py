@@ -16,10 +16,13 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
+    from polars.datatypes import IntegerType as PlIntegerType
+
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
+    from narwhals.dtypes import IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
 
@@ -198,6 +201,24 @@ class PolarsNamespace:
 
         return self._expr(
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
+            version=self._version,
+        )
+
+    def int_range(
+        self,
+        start: int | PolarsExpr,
+        end: int | PolarsExpr,
+        step: int,
+        *,
+        dtype: IntegerType | type[IntegerType],
+    ) -> PolarsExpr:
+        start_ = start if isinstance(start, int) else start.native
+        end_ = end if isinstance(end, int) else end.native
+        pl_dtype: PlIntegerType = narwhals_to_native_dtype(
+            dtype=dtype, version=self._version
+        )  # type: ignore[assignment]
+        return self._expr(
+            pl.int_range(start=start_, end=end_, step=step, dtype=pl_dtype, eager=False),
             version=self._version,
         )
 

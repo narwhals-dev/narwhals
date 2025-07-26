@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -182,6 +182,20 @@ class PandasLikeSeries(EagerSeries[Any]):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
 
+    @classmethod
+    def _int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int,
+        dtype: IntegerType | type[IntegerType],
+        context: _LimitedContext,
+        name: str,
+    ) -> Self:
+        array_funcs = import_array_module(context._implementation)
+        data = array_funcs.arange(start, end, step)
+        return cls.from_iterable(data, context=context, name=name, dtype=dtype)
+
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
         return is_pandas_like_series(obj)  # pragma: no cover
@@ -311,7 +325,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 
-    def item(self, index: int | None) -> Any:
+    def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:

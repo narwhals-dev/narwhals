@@ -19,6 +19,7 @@ from narwhals._compliant.typing import (
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
+    not_implemented,
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array_2d
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
@@ -92,6 +93,14 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def concat_str(
         self, *exprs: CompliantExprT, separator: str, ignore_nulls: bool
     ) -> CompliantExprT: ...
+    def int_range(
+        self,
+        start: int | CompliantExprT,
+        end: int | CompliantExprT,
+        step: int,
+        *,
+        dtype: IntegerType | type[IntegerType],
+    ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
     @property
@@ -138,6 +147,8 @@ class LazyNamespace(
         else:  # pragma: no cover
             msg = f"Unsupported type: {type(data).__name__!r}"
             raise TypeError(msg)
+
+    int_range: not_implemented = not_implemented()
 
 
 class EagerNamespace(
