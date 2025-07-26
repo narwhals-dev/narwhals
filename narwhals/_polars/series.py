@@ -167,7 +167,12 @@ class PolarsSeries:
 
     @classmethod
     def _int_range(
-        cls, start: int, end: int, step: int, dtype: IntegerType, context: _LimitedContext
+        cls,
+        start: int,
+        end: int,
+        step: int,
+        dtype: IntegerType | type[IntegerType],
+        context: _LimitedContext,
     ) -> Self:
         version = context._version
         dtype_pl: PlIntegerType = narwhals_to_native_dtype(dtype, version)  # type: ignore[assignment]

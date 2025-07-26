@@ -1923,40 +1923,39 @@ def coalesce(
 
 @overload
 def int_range(
-    start: int | IntoExpr,
-    end: int | IntoExpr | None = None,
+    start: int | Expr,
+    end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: type[IntegerType] | IntegerType = Int64,
+    dtype: IntegerType | type[IntegerType],
     eager: None = None,
 ) -> Expr: ...
 
 
 @overload
 def int_range(
-    start: int | IntoExpr,
-    end: int | IntoExpr | None = None,
+    start: int | Expr,
+    end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: type[IntegerType] | IntegerType = Int64,
+    dtype: IntegerType | type[IntegerType],
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
 
 def int_range(
-    start: int | IntoExpr,
-    end: int | IntoExpr | None = None,
+    start: int | Expr,
+    end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: type[IntegerType] | IntegerType = Int64,
+    dtype: IntegerType | type[IntegerType] = Int64,
     eager: ModuleType | Implementation | str | None = None,
 ) -> Expr | Series[Any]:
     from narwhals._utils import isinstance_or_issubclass
     from narwhals.dtypes import IntegerType
+    from narwhals.exceptions import ComputeError
 
     if not isinstance_or_issubclass(dtype, IntegerType):
-        from narwhals.exceptions import ComputeError
-
         msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
         raise ComputeError(msg)
 
@@ -1965,9 +1964,34 @@ def int_range(
         start = 0
 
     if not eager:
+        assert start is not None  # noqa: S101, help mypy
+        assert end is not None  # noqa: S101, help mypy
+
+        start = start if isinstance(start, Expr) else lit(start, dtype=dtype)
+        end = end if isinstance(end, Expr) else lit(end, dtype=dtype)
+
+        if start._metadata.expansion_kind.is_multi_output():
+            msg = "`start` must contain exactly one value, got multiple values"
+            raise ComputeError(msg)
+
+        if end._metadata.expansion_kind.is_multi_output():
+            msg = "`end` must contain exactly one value, got multiple values"
+            raise ComputeError(msg)
+
         return Expr(
-            lambda plx: plx.int_range(start=start, end=end, step=step, dtype=dtype),
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *args: plx.int_range(*args, dtype=dtype),
+                start,
+                end,
+                step,
+                str_as_lit=False,
+            ),
             ExprMetadata.selector_single(),
+        )
+
+        return Expr(
+            lambda plx: plx.int_range(start=start, end=end, step=step, dtype=dtype)
         )
 
     impl = Implementation.from_backend(eager)

@@ -6,17 +6,14 @@ import pytest
 
 import narwhals as nw
 from narwhals import Implementation
-from tests.utils import assert_equal_data
 from narwhals.exceptions import ComputeError
+from tests.utils import Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType, IntegerType
 
-EAGER_BACKENDS = (
-    Implementation.PANDAS,
-    Implementation.PYARROW,
-    Implementation.POLARS,
-)
+EAGER_BACKENDS = (Implementation.PANDAS, Implementation.PYARROW, Implementation.POLARS)
+
 
 @pytest.mark.parametrize("impl", EAGER_BACKENDS)
 @pytest.mark.parametrize(
@@ -46,9 +43,36 @@ def test_int_range_eager(
     assert_equal_data({"a": series}, {"a": list(range(start, end, step))})
 
 
-@pytest.mark.parametrize("dtype", [nw.List, nw.Float64(), nw.Float32, nw.Decimal, nw.String()])
-def test_int_range_non_int_dtype(dtype: DType) -> None:
+@pytest.mark.parametrize(
+    ("start", "end", "step", "dtype", "expected"),
+    [
+        (0, nw.len(), 1, nw.UInt8(), [0, 1, 2]),
+        (0, 3, 1, nw.UInt16, [0, 1, 2]),
+        (-3, nw.len() - 3, 1, nw.Int16(), [-3, -2, -1]),
+        (nw.len(), 0, -1, nw.Int64, [3, 2, 1]),
+        (nw.len(), None, 1, nw.UInt32, [0, 1, 2]),
+    ],
+)
+def test_int_range_lazy(
+    constructor: Constructor,
+    start: int,
+    end: int | None,
+    step: int,
+    dtype: type[IntegerType] | IntegerType,
+    expected: list[int],
+) -> None:
+    data = {"a": ["foo", "bar", "baz"]}
+    int_range = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=None)
+    result = nw.from_native(constructor(data)).select(int_range)
 
+    assert_equal_data(result, {"literal": expected})
+    assert result.collect_schema()["literal"] == dtype
+
+
+@pytest.mark.parametrize(
+    "dtype", [nw.List, nw.Float64(), nw.Float32, nw.Decimal, nw.String()]
+)
+def test_int_range_non_int_dtype(dtype: DType) -> None:
     msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
     with pytest.raises(ComputeError, match=msg):
         nw.int_range(start=0, end=3, dtype=dtype, eager=None)  # type: ignore[arg-type]

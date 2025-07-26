@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
+    from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
@@ -281,6 +282,32 @@ class ArrowNamespace(
             function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def int_range(
+        self,
+        start: int | ArrowExpr,
+        end: int | ArrowExpr,
+        step: int,
+        *,
+        dtype: IntegerType | type[IntegerType],
+    ) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            start_value = start(df)[0].item() if isinstance(start, ArrowExpr) else start
+            end_value = end(df)[0].item() if isinstance(end, ArrowExpr) else end
+            return [
+                ArrowSeries._int_range(
+                    start=start_value, end=end_value, step=step, dtype=dtype, context=self
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            depth=0,
+            function_name="int_range",
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
             context=self,
         )
 

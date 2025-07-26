@@ -325,7 +325,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 
-    def item(self, index: int | None) -> Any:
+    def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
         if index is None:
             if len(self) != 1:
