@@ -1011,6 +1011,7 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
             assert isinstance(result.to_native(), pa.Table)
         else:
             assert not isinstance(result.to_native(), pa.Table)
+    # pragma: no cover
 
 
 def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:

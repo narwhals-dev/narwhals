@@ -76,6 +76,9 @@ def test_dataframe_from_arrow_to_polars_no_pandas(
     assert "pandas" not in sys.modules
 
 
-def test_dataframe_from_arrow_invalid() -> None:
+def test_dataframe_from_arrow_invalid(table: pa.Table, data: dict[str, Any]) -> None:
     with pytest.raises(TypeError, match="PyCapsule"):
-        nw.DataFrame.from_arrow({"a": [1]}, backend=pa)  # type: ignore[arg-type]
+        nw.DataFrame.from_arrow(data, backend=pa)  # type: ignore[arg-type]
+    pytest.importorskip("sqlframe")
+    with pytest.raises(ValueError, match="lazy"):
+        nw.DataFrame.from_arrow(table, backend="sqlframe")
