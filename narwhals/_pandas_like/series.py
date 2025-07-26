@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
@@ -379,6 +380,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             other_native = predicate
         return self._with_native(self.native.loc[other_native]).alias(self.name)
+
+    def first(self) -> PythonLiteral:
+        return self.native.iloc[0] if len(self.native) else None
+
+    def last(self) -> PythonLiteral:
+        return self.native.iloc[-1] if len(self.native) else None
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
         ser, other = align_and_extract_native(self, other)

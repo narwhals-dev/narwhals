@@ -8,15 +8,16 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import find_stacklevel
+from narwhals._utils import Implementation, find_stacklevel, requires
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     import pandas as pd
+    from pandas.api.extensions import ExtensionDtype
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias, Unpack
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -26,14 +27,13 @@ if TYPE_CHECKING:
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
-NativeAggregation: TypeAlias = Literal[
+OrderedAggregation: TypeAlias = Literal["first", "last"]
+UnorderedAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
-    "first",
     "idxmax",
     "idxmin",
-    "last",
     "max",
     "mean",
     "median",
@@ -48,6 +48,7 @@ NativeAggregation: TypeAlias = Literal[
     "var",
     InefficientNativeAggregation,
 ]
+NativeAggregation: TypeAlias = Literal[UnorderedAggregation, OrderedAggregation]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
 _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
@@ -57,14 +58,87 @@ _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
 
+_REMAP_ORDERED_INDEX: Mapping[OrderedAggregation, Literal[0, -1]] = {
+    "first": 0,
+    "last": -1,
+}
+_PYARROW_STRING_NAME = "string[pyarrow]"
+_MINIMUM_SKIPNA = (2, 2, 1)
+
 
 @lru_cache(maxsize=32)
-def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
+def _native_agg(
+    name: UnorderedAggregation, /, **kwds: Unpack[ScalarKwargs]
+) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
+
+
+# NOTE: Caching disabled to avoid using an `apply` warning either:
+# - Once per unique args
+# - Once per column in a multi-output expression
+# *Least bad* option is to warn once per expression
+def _native_ordered_agg(
+    name: OrderedAggregation, *, has_pyarrow_string: bool, is_cudf: bool
+) -> _NativeAgg:
+    """Best effort alignment of `first`, `last` across versions.
+
+    The way `polars` works **by default**, is a constantly moving target in `pandas` 😫
+    """
+    pd_version = Implementation.PANDAS._backend_version()
+    if (
+        is_cudf
+        or has_pyarrow_string
+        or (pd_version >= (2, 0, 0) and pd_version < _MINIMUM_SKIPNA)
+    ):
+        # NOTE: `>=2.0.0; <2.2.1` breaks the `nth` workaround
+        # ATOW (`2.3.1`), `string[pyarrow]` has always required `apply`
+        # https://github.com/pandas-dev/pandas/issues/13666
+        # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
+        return _apply_ordered_agg(
+            name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf
+        )
+    if pd_version >= _MINIMUM_SKIPNA:
+        # NOTE: Introduces option to disable default null skipping
+        # https://github.com/pandas-dev/pandas/pull/57102
+        return methodcaller(name, skipna=False)
+    if pd_version >= (1, 1, 5):  # pragma: no cover
+        # NOTE: `>=1.1.5; <2.0.0`, `nth` could be used as a non-skipping aggregation
+        # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
+        return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
+    # NOTE: `<1.1.5`, nulls weren't skipped by default
+    # https://github.com/pandas-dev/pandas/issues/38286
+    return methodcaller(name)  # pragma: no cover
+
+
+def _apply_ordered_agg(
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
+) -> Callable[[NativeGroupBy], pd.DataFrame]:
+    """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
+
+    - Theoretically could be slow
+    - but works in all cases for `string[pyarrow]`
+    - and `>=2.0.0; <2.2.1`
+    """
+    warn_ordered_apply(name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf)
+    index = _REMAP_ORDERED_INDEX[name]
+
+    def fn(dgb: NativeGroupBy, /) -> pd.DataFrame:
+        return dgb.apply(lambda group: group.iloc[index])
+
+    return fn
+
+
+def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
+    """`string[pyarrow]` needs special treatment with nulls in `first`, `last`."""
+    return obj in _REMAP_ORDERED_INDEX
+
+
+def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:
+    return dtype.name == _PYARROW_STRING_NAME
 
 
 class AggExpr:
@@ -110,7 +184,7 @@ class AggExpr:
             result = group_by._grouped.size()
         else:
             select = names[0] if len(names) == 1 else list(names)
-            result = self.native_agg()(group_by._grouped[select])
+            result = self.native_agg(group_by)(group_by._grouped[select])
         if is_pandas_like_dataframe(result):
             result.columns = list(self.aliases)
         else:
@@ -134,11 +208,23 @@ class AggExpr:
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
 
-    def native_agg(self) -> _NativeAgg:
+    @property
+    def implementation(self) -> Implementation:
+        return self.expr._implementation
+
+    def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
-        return _native_agg(
-            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **self.kwargs
-        )
+        native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
+        if _is_ordered_agg(native_name):
+            dtypes: pd.Series = group_by.compliant.native.dtypes
+            targets = dtypes[list(self.output_names)]
+            has_pyarrow_string = targets.transform(_is_pyarrow_string).any().item()
+            return _native_ordered_agg(
+                native_name,
+                has_pyarrow_string=has_pyarrow_string,
+                is_cudf=self.implementation.is_cudf(),
+            )
+        return _native_agg(native_name, **self.kwargs)
 
 
 class PandasLikeGroupBy(
@@ -158,6 +244,8 @@ class PandasLikeGroupBy(
         "quantile": "quantile",
         "all": "all",
         "any": "any",
+        "first": "first",
+        "last": "last",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""
@@ -316,6 +404,37 @@ def warn_complex_group_by() -> None:
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
         "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        UserWarning,
+        stacklevel=find_stacklevel(),
+    )
+
+
+def warn_ordered_apply(
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
+) -> None:
+    if is_cudf:  # pragma: no cover
+        msg = (
+            f"cuDF does not support selecting the {name} value without skipping NA.\n\n"
+            "Please see: "
+            "https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/groupby/"
+        )
+    elif has_pyarrow_string:
+        msg = (
+            f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
+            "Please see: "
+            "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
+        )
+    else:  # pragma: no cover
+        found = requires._unparse_version(Implementation.PANDAS._backend_version())
+        minimum = requires._unparse_version(_MINIMUM_SKIPNA)
+        msg = (
+            f"If you can, please upgrade to 'pandas>={minimum}', found version {found!r}.\n\n"
+            "Please see: "
+            "https://github.com/pandas-dev/pandas/issues/57019"
+        )
+    warnings.warn(
+        f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
+        f"safely with the pandas API.\n{msg}",
         UserWarning,
         stacklevel=find_stacklevel(),
     )

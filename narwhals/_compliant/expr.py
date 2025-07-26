@@ -28,7 +28,7 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._typing_compat import deprecated
-from narwhals._utils import _StoresCompliant
+from narwhals._utils import _StoresCompliant, not_implemented
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
@@ -149,6 +149,8 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     def cum_prod(self, *, reverse: bool) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> Self: ...
+    def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
     def replace_strict(
         self,
@@ -871,6 +873,12 @@ class EagerExpr(
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -901,6 +909,10 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol[CompliantLazyFrameT, NativeExprT],
 ):
+    # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2526#issuecomment-3019303816
+    first: not_implemented = not_implemented()
+    last: not_implemented = not_implemented()
+
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
