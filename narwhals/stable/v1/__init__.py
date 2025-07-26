@@ -418,7 +418,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()
+            lambda plx: self._to_compliant_expr(plx).arg_max()  # type: ignore[attr-defined]
         )
 
     def arg_min(self) -> Self:
@@ -428,7 +428,7 @@ class Expr(NwExpr):
             A new expression.
         """
         return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()
+            lambda plx: self._to_compliant_expr(plx).arg_min()  # type: ignore[attr-defined]
         )
 
     def arg_true(self) -> Self:
