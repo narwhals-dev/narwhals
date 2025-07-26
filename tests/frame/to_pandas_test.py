@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+import datetime as dt
+from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 import pytest
@@ -27,3 +28,31 @@ def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
         expected = pd.DataFrame(data)
 
     pd.testing.assert_frame_equal(result, expected)
+
+
+@pytest.mark.skipif(PANDAS_VERSION < (1, 5, 0), reason="too old for pyarrow")
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        (
+            {"a": [1, 3, 8], "b": [4.1, 2.3, 3.0]},
+            nw.Struct({"a": nw.Int64, "b": nw.Float64}),
+        ),
+        (
+            {"a": [dt.datetime(2000, 1, 1), dt.datetime(2000, 1, 2)], "b": ["one", None]},
+            nw.Struct({"a": nw.Datetime(), "b": nw.String}),
+        ),
+    ],
+)
+def test_pyarrow_to_pandas_struct(data: dict[str, Any], expected: nw.Struct) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    expected_schema = nw.Schema({"c": expected})
+
+    struct_array = pa.table(data).to_struct_array()
+    struct_frame_pa = nw.from_native(struct_array, series_only=True).alias("c").to_frame()
+    struct_frame_pd = nw.from_native(struct_frame_pa.to_pandas())
+
+    assert struct_frame_pd.schema == expected_schema
+    assert struct_frame_pd.schema == struct_frame_pa.schema

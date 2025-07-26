@@ -20,6 +20,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    to_pandas_types_mapper,
 )
 from narwhals._compliant import EagerSeries
 from narwhals._expression_parsing import ExprKind
@@ -692,9 +693,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowDataFrame(df, version=self._version, validate_column_names=False)
 
     def to_pandas(self) -> pd.Series[Any]:
-        import pandas as pd  # ignore-banned-import()
-
-        return pd.Series(self.native, name=self.name)
+        series = self.native.to_pandas(types_mapper=to_pandas_types_mapper)
+        series.name = self.name
+        return series
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
