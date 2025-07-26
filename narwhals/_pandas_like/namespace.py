@@ -384,7 +384,7 @@ class PandasLikeNamespace(
                 start_eval = start(df)[0]
                 name = start_eval.name
                 start_value = start_eval.item()
-            else:
+            else:  # pragma: no cover
                 name = "literal"
                 start_value = start
             end_value = end(df)[0].item() if isinstance(end, PandasLikeExpr) else end

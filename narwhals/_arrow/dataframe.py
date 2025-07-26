@@ -472,16 +472,13 @@ class ArrowDataFrame(
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
-            import numpy as np  # ignore-banned-import
-
-            data = pa.array(np.arange(len(self), dtype=np.int64))
-            row_index = plx._expr._from_series(
-                plx._series.from_iterable(data, context=self, name=name)
+            row_index = plx.int_range(
+                start=0, end=len(self), step=1, dtype=self._version.dtypes.Int64()
             )
         else:
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
-            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
-        return self.select(row_index, plx.all())
+            row_index = rank.over(partition_by=[], order_by=order_by) - 1
+        return self.select(row_index.alias(name), plx.all())
 
     def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:
         if isinstance(predicate, list):

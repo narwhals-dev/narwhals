@@ -192,8 +192,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         context: _LimitedContext,
         name: str,
     ) -> Self:
-        impl = context._implementation
-        array_funcs = import_array_module(impl)
+        array_funcs = import_array_module(context._implementation)
         data = array_funcs.arange(start, end, step)
         return cls.from_iterable(data, context=context, name=name, dtype=dtype)
 

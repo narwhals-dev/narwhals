@@ -1037,3 +1037,15 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
             assert isinstance(result.to_native(), pa.Table)
         else:
             assert not isinstance(result.to_native(), pa.Table)
+
+
+def test_int_range() -> None:
+    pytest.importorskip("pandas")
+
+    def minimal_function(data: nw_v1.Series[Any]) -> None:
+        data.is_null()
+
+    col = nw_v1.int_range(0, 3, eager="pandas")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
+    assert isinstance(col, nw_v1.Series)

@@ -26,7 +26,7 @@ from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFram
 from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _int_range_impl, _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dependencies, dtypes, selectors
@@ -48,6 +48,7 @@ from narwhals.stable.v1.dtypes import (
     Int32,
     Int64,
     Int128,
+    IntegerType,
     List,
     Object,
     String,
@@ -1889,6 +1890,56 @@ def scan_parquet(
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
+@overload
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType],
+    eager: Literal[False] | None = False,
+) -> Expr: ...
+
+
+@overload
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType],
+    eager: ModuleType | Implementation | str,
+) -> Series[Any]: ...
+
+
+def int_range(
+    start: int | Expr,
+    end: int | Expr | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType] = Int64,
+    eager: ModuleType | Implementation | str | Literal[False] | None = False,
+) -> Expr | Series[Any]:
+    """Generate a range of integers.
+
+    Arguments:
+        start: Start of the range (inclusive). Defaults to 0.
+        end:  End of the range (exclusive). If set to `None` (default),
+            the value of `start` is used and `start` is set to `0`.
+        step: Step size of the range.
+        dtype: Data type of the range (must be an integer data type).
+        eager: If set to `False` (default) or `None`, then an expression is returned.
+            If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
+            a `Series` is returned.
+
+    Returns:
+        Expr or Series: Column of integer data type `dtype`.
+    """
+    return _stableify(
+        _int_range_impl(start=start, end=end, step=step, dtype=dtype, eager=eager)
+    )
+
+
 __all__ = [
     "Array",
     "Binary",
@@ -1942,6 +1993,7 @@ __all__ = [
     "generate_temporary_column_name",
     "get_level",
     "get_native_namespace",
+    "int_range",
     "is_ordered_categorical",
     "len",
     "lit",

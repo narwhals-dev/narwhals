@@ -1928,7 +1928,7 @@ def int_range(
     step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType],
-    eager: None = None,
+    eager: Literal[False] | None = False,
 ) -> Expr: ...
 
 
@@ -1949,7 +1949,71 @@ def int_range(
     step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType] = Int64,
-    eager: ModuleType | Implementation | str | None = None,
+    eager: ModuleType | Implementation | str | Literal[False] | None = False,
+) -> Expr | Series[Any]:
+    """Generate a range of integers.
+
+    Arguments:
+        start: Start of the range (inclusive). Defaults to 0.
+        end:  End of the range (exclusive). If set to `None` (default),
+            the value of `start` is used and `start` is set to `0`.
+        step: Step size of the range.
+        dtype: Data type of the range (must be an integer data type).
+        eager: If set to `False` (default) or `None`, then an expression is returned.
+            If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
+            a `Series` is returned.
+
+    Returns:
+        Expr or Series: Column of integer data type `dtype`.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> nw.int_range(0, 5, step=2, eager="pandas")
+        ┌───────────────────────────┐
+        |      Narwhals Series      |
+        |---------------------------|
+        |0    0                     |
+        |1    2                     |
+        |2    4                     |
+        |Name: literal, dtype: int64|
+        └───────────────────────────┘
+
+        `end` can be omitted for a shorter syntax.
+
+        >>> nw.int_range(5, step=2, eager="pandas")
+        ┌───────────────────────────┐
+        |      Narwhals Series      |
+        |---------------------------|
+        |0    0                     |
+        |1    2                     |
+        |2    4                     |
+        |Name: literal, dtype: int64|
+        └───────────────────────────┘
+
+        Generate an index column by using `int_range` in conjunction with :func:`len`.
+
+        >>> import pandas as pd
+        >>> df = nw.from_native(pd.DataFrame({"a": [1, 3, 5], "b": [2, 4, 6]}))
+        >>> df.select(nw.int_range(nw.len(), dtype=nw.UInt32).alias("index"), nw.all())
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |     index  a  b  |
+        |  0      0  1  2  |
+        |  1      1  3  4  |
+        |  2      2  5  6  |
+        └──────────────────┘
+    """
+    return _int_range_impl(start, end, step, dtype=dtype, eager=eager)
+
+
+def _int_range_impl(
+    start: int | Expr,
+    end: int | Expr | None,
+    step: int,
+    *,
+    dtype: IntegerType | type[IntegerType],
+    eager: ModuleType | Implementation | str | Literal[False] | None,
 ) -> Expr | Series[Any]:
     from narwhals._utils import isinstance_or_issubclass
     from narwhals.dtypes import IntegerType
@@ -1971,11 +2035,11 @@ def int_range(
         end = end if isinstance(end, Expr) else lit(end, dtype=dtype)
 
         if start._metadata.expansion_kind.is_multi_output():
-            msg = "`start` must contain exactly one value, got multiple values"
+            msg = "`start` must contain exactly one value, got expression returning multiple values"
             raise ComputeError(msg)
 
         if end._metadata.expansion_kind.is_multi_output():
-            msg = "`end` must contain exactly one value, got multiple values"
+            msg = "`end` must contain exactly one value, got expression returning multiple values"
             raise ComputeError(msg)
 
         return Expr(
