@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._compliant import LazyNamespace
 from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
-from narwhals._sql.when_then import SQLWhen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -73,6 +72,3 @@ class SQLNamespace(
             return self._coalesce(*cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def when(self, predicate: SQLExprT) -> SQLWhen[SQLLazyFrameT, NativeExprT, SQLExprT]:
-        return SQLWhen.from_expr(predicate, context=self)
