@@ -96,6 +96,8 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
+    _version = Version.V1
+
     @inherit_doc(NwDataFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V1  # noqa: S101
@@ -103,6 +105,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> DataFrame[Any]:
+        result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
 
     @property
     def _series(self) -> type[Series[Any]]:
@@ -145,6 +158,11 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         ),
     ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
+
+    def get_column(self, name: str) -> Series:
+        # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
+        # However the return type actually is `nw.v1.stable.Series`, check `tests/v1_test.py`.
+        return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
         self, backend: ModuleType | Implementation | str | None = None
@@ -312,7 +330,7 @@ class Series(NwSeries[IntoSeriesT]):
 
     def hist(
         self,
-        bins: list[float | int] | None = None,
+        bins: list[float] | None = None,
         *,
         bin_count: int | None = None,
         include_breakpoint: bool = True,

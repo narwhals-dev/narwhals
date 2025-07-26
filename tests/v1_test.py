@@ -35,6 +35,7 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
+    from narwhals._namespace import EagerAllowed
     from narwhals.typing import IntoDataFrameT
     from tests.utils import Constructor, ConstructorEager
 
@@ -570,7 +571,8 @@ def test_dataframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]})
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AttributeError):
+    # NOTE: (#2629) combined with passing in `nw_v1.DataFrame` (w/ a `_version`) into itself changes the error
+    with pytest.raises(AssertionError):
         nw_v1.DataFrame(nw_frame, level="full")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
@@ -974,3 +976,27 @@ def test_dask_order_dependent_ops() -> None:
         "i": [True, True, True],
     }
     assert_equal_data(result, expected)
+
+
+def test_get_column() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    def minimal_function(data: nw_v1.Series[Any]) -> None:
+        data.is_null()
+
+    pd_df = pd.DataFrame({"col": [1, 2, None, 4]})
+    col = nw_v1.from_native(pd_df, eager_only=True).get_column("col")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
+    assert isinstance(col, nw_v1.Series)
+
+
+def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    result = nw_v1.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
