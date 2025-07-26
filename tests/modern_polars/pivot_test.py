@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import datetime
 
 import pytest
 
@@ -17,9 +17,9 @@ def test_pivot(
 
     data = {
         "date": [
-            *[date(2020, 1, 2)] * 4,
-            *[date(2020, 1, 1)] * 4,
-            *[date(2020, 1, 3)] * 4,
+            *[datetime(2020, 1, 2)] * 4,
+            *[datetime(2020, 1, 1)] * 4,
+            *[datetime(2020, 1, 3)] * 4,
         ],
         "ticker": [*["AAPL", "TSLA", "MSFT", "NFLX"] * 3],
         "price": [100, 200, 300, 400, 110, 220, 330, 420, 105, 210, 315, 440],
@@ -29,7 +29,7 @@ def test_pivot(
     pivoted = df.pivot(index="date", values="price", on="ticker")
 
     expected = {
-        "date": [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
+        "date": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
         "AAPL": [110, 100, 105],
         "TSLA": [220, 200, 210],
         "MSFT": [330, 300, 315],
