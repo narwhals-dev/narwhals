@@ -111,6 +111,18 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return IbisNamespace(version=self._version)
 
+    def __floordiv__(self, other: Any) -> Self:
+        def func(expr: ir.IntegerColumn, other: ir.IntegerColumn) -> ir.Value:
+            return ibis.cases((other != lit(0), expr // other), else_=lit(None))
+
+        return self._with_binary(func, other=other)
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        def func(expr: ir.IntegerColumn, other: ir.IntegerColumn) -> ir.Value:
+            return ibis.cases((expr != lit(0), other // expr), else_=lit(None))
+
+        return self._with_binary(func, other=other).alias("literal")
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Ibis does its own broadcasting.
         return self
