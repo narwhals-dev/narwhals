@@ -43,9 +43,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         NonNestedLiteral,
-        NumericLiteral,
         RollingInterpolationMethod,
-        TemporalLiteral,
     )
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
@@ -71,14 +69,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._version = version
         self._metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
-
-    def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
-        if name == "isnull":
-            return args[0].isnull()
-        return F(name, *args)
-
-    def _lit(self, value: Any) -> Expression:
-        return lit(value)
 
     def _count_star(self) -> Expression:
         return F("count", StarExpression())
@@ -181,36 +171,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
 
-    def all(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("bool_and", expr), lit(True))  # noqa: FBT003
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("bool_and", expr), inputs.partition_by),
-                    lit(True),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
-    def any(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("bool_or", expr), lit(False))  # noqa: FBT003
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("bool_or", expr), inputs.partition_by),
-                    lit(False),  # noqa: FBT003
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
@@ -222,44 +182,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        def _clip_lower(expr: Expression, lower_bound: Any) -> Expression:
-            return F("greatest", expr, lower_bound)
-
-        def _clip_upper(expr: Expression, upper_bound: Any) -> Expression:
-            return F("least", expr, upper_bound)
-
-        def _clip_both(
-            expr: Expression, lower_bound: Any, upper_bound: Any
-        ) -> Expression:
-            return F("greatest", F("least", expr, upper_bound), lower_bound)
-
-        if lower_bound is None:
-            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
-        if upper_bound is None:
-            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
-        return self._with_elementwise(
-            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
-        )
-
-    def sum(self) -> Self:
-        def f(expr: Expression) -> Expression:
-            return CoalesceOperator(F("sum", expr), lit(0))
-
-        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            return [
-                CoalesceOperator(
-                    window_expression(F("sum", expr), inputs.partition_by), lit(0)
-                )
-                for expr in self(df)
-            ]
-
-        return self._with_callable(f)._with_window_function(window_f)
-
     def n_unique(self) -> Self:
         def func(expr: Expression) -> Expression:
             # https://stackoverflow.com/a/79338887/4451315
@@ -268,9 +190,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             )
 
         return self._with_callable(func)
-
-    def count(self) -> Self:
-        return self._with_callable(lambda expr: F("count", expr))
 
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
