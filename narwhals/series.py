@@ -101,6 +101,46 @@ class Series(Generic[IntoSeriesT]):
         *,
         backend: ModuleType | Implementation | str,
     ) -> Series[Any]:
+        """Construct a Series from a NumPy ndarray.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as a NumPy ndarray.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import numpy as np
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = np.arange(5, 10)
+            >>> nw.Series.from_numpy("arr", arr, dtype=nw.Int8, backend="polars")
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (5,)       |
+            |Series: 'arr' [i8]|
+            |[                 |
+            |        5         |
+            |        6         |
+            |        7         |
+            |        8         |
+            |        9         |
+            |]                 |
+            └──────────────────┘
+        """
         if not is_numpy_array_1d(values):
             msg = "`from_numpy` only accepts 1D numpy arrays"
             raise ValueError(msg)
@@ -111,7 +151,7 @@ class Series(Generic[IntoSeriesT]):
             ns = cls._version.namespace.from_backend(implementation).compliant
             compliant = ns.from_numpy(values).alias(name)
             if dtype:
-                cls(compliant.cast(dtype), level="full")
+                return cls(compliant.cast(dtype), level="full")
             return cls(compliant, level="full")
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
