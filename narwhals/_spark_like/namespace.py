@@ -21,12 +21,11 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
 
     from sqlframe.base.column import Column
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
-    from narwhals._spark_like.expr import SparkWindowInputs
     from narwhals._utils import Implementation, Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
 
@@ -73,6 +72,9 @@ class SparkLikeNamespace(
 
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
+
+    def _when(self, condition: Column, value: Column) -> Column:
+        return self._F.when(condition, value)
 
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
@@ -209,18 +211,6 @@ class SparkLikeWhen(SQLWhen[SparkLikeLazyFrame, "Column", SparkLikeExpr]):
     @property
     def _then(self) -> type[SparkLikeThen]:
         return SparkLikeThen
-
-    def __call__(self, df: SparkLikeLazyFrame) -> Sequence[Column]:
-        self.when = df._F.when
-        self.lit = df._F.lit
-        return super().__call__(df)
-
-    def _window_function(
-        self, df: SparkLikeLazyFrame, window_inputs: SparkWindowInputs
-    ) -> Sequence[Column]:
-        self.when = df._F.when
-        self.lit = df._F.lit
-        return super()._window_function(df, window_inputs)
 
 
 class SparkLikeThen(
