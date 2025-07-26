@@ -978,6 +978,20 @@ def test_dask_order_dependent_ops() -> None:
     assert_equal_data(result, expected)
 
 
+def test_get_column() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    def minimal_function(data: nw_v1.Series[Any]) -> None:
+        data.is_null()
+
+    pd_df = pd.DataFrame({"col": [1, 2, None, 4]})
+    col = nw_v1.from_native(pd_df, eager_only=True).get_column("col")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
+    assert isinstance(col, nw_v1.Series)
+
+
 def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
     result = nw_v1.DataFrame.from_dict(

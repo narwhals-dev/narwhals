@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from narwhals._compliant.typing import CompliantLazyFrameT, NativeExprT
+from narwhals._compliant.typing import NativeExprT
 from narwhals._compliant.when_then import CompliantThen, CompliantWhen
-from narwhals._sql.typing import SQLExprT
+from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -18,16 +18,16 @@ if TYPE_CHECKING:
 
 
 class SQLWhen(
-    CompliantWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
-    Protocol[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    CompliantWhen[SQLLazyFrameT, NativeExprT, SQLExprT],
+    Protocol[SQLLazyFrameT, NativeExprT, SQLExprT],
 ):
-    when: Callable[..., NativeExprT]
-    lit: Callable[..., NativeExprT]
+    @property
+    def _then(self) -> type[SQLThen[SQLLazyFrameT, NativeExprT, SQLExprT]]: ...
 
-    def __call__(self, df: CompliantLazyFrameT) -> Sequence[NativeExprT]:
+    def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeExprT]:
         is_expr = self._condition._is_expr
-        when = self.when
-        lit = self.lit
+        when = df.__narwhals_namespace__()._when
+        lit = df.__narwhals_namespace__()._lit
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
         then = df._evaluate_expr(then_) if is_expr(then_) else lit(then_)
@@ -36,7 +36,7 @@ class SQLWhen(
             result = when(condition, then)
         else:
             otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
-            result = when(condition, then).otherwise(otherwise)  # type: ignore  # noqa: PGH003
+            result = when(condition, then).otherwise(otherwise)
         return [result]
 
     @classmethod
@@ -50,45 +50,45 @@ class SQLWhen(
         return obj
 
     def _window_function(
-        self, df: CompliantLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+        self, df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
     ) -> Sequence[NativeExprT]:
+        when = df.__narwhals_namespace__()._when
+        lit = df.__narwhals_namespace__()._lit
         is_expr = self._condition._is_expr
         condition = self._condition.window_function(df, window_inputs)[0]
         then_ = self._then_value
         then = (
-            then_.window_function(df, window_inputs)[0]
-            if is_expr(then_)
-            else self.lit(then_)
+            then_.window_function(df, window_inputs)[0] if is_expr(then_) else lit(then_)
         )
 
         other_ = self._otherwise_value
         if other_ is None:
-            result = self.when(condition, then)
+            result = when(condition, then)
         else:
             other = (
                 other_.window_function(df, window_inputs)[0]
                 if is_expr(other_)
-                else self.lit(other_)
+                else lit(other_)
             )
-            result = self.when(condition, then).otherwise(other)  # type: ignore  # noqa: PGH003
+            result = when(condition, then).otherwise(other)
         return [result]
 
 
 class SQLThen(
     CompliantThen[
-        CompliantLazyFrameT,
+        SQLLazyFrameT,
         NativeExprT,
         SQLExprT,
-        SQLWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+        SQLWhen[SQLLazyFrameT, NativeExprT, SQLExprT],
     ],
-    Protocol[CompliantLazyFrameT, NativeExprT, SQLExprT],
+    Protocol[SQLLazyFrameT, NativeExprT, SQLExprT],
 ):
-    _window_function: WindowFunction[CompliantLazyFrameT, NativeExprT] | None
+    _window_function: WindowFunction[SQLLazyFrameT, NativeExprT] | None
 
     @classmethod
     def from_when(
         cls,
-        when: SQLWhen[CompliantLazyFrameT, NativeExprT, SQLExprT],
+        when: SQLWhen[SQLLazyFrameT, NativeExprT, SQLExprT],
         then: IntoExpr[NativeExprT, SQLExprT],
         /,
     ) -> Self:
