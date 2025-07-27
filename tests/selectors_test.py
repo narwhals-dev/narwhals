@@ -88,6 +88,8 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or ("pyarrow" in str(constructor) and is_windows())
         or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
         or "ibis" in str(constructor)
+        or POLARS_VERSION
+        == (1, 32, 0, 1)  # https://github.com/pola-rs/polars/issues/23767
     ):
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
