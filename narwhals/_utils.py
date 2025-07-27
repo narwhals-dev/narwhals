@@ -1276,14 +1276,14 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
     return result
 
 
+@deprecated(
+    "Use `generate_temporary_column_name` instead.\n"
+    "`generate_unique_token` is deprecated since **1.13.0** "
+    "and it will be removed in future versions."
+)
 def generate_unique_token(
     n_bytes: int, columns: Container[str]
 ) -> str:  # pragma: no cover
-    msg = (
-        "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
-        "deprecated and it will be removed in future versions"
-    )
-    issue_deprecation_warning(msg, _version="1.13.0")
     return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
 
 
@@ -1452,15 +1452,22 @@ def find_stacklevel() -> int:
     return n
 
 
-def issue_deprecation_warning(message: str, _version: str) -> None:
+def issue_deprecation_warning(
+    message: str,
+    /,
+    *,
+    _version: str,
+    category: type[DeprecationWarning] = DeprecationWarning,
+) -> None:
     """Issue a deprecation warning.
 
     Arguments:
         message: The message associated with the warning.
         _version: Narwhals version when the warning was introduced. Just used for internal
             bookkeeping.
+        category: The `DeprecationWarning` category subclass.
     """
-    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
+    warn(message=message, category=category, stacklevel=find_stacklevel())
 
 
 def issue_performance_warning(message: str) -> None:
@@ -1890,7 +1897,7 @@ class not_implemented:  # noqa: N801
         [descriptor]: https://docs.python.org/3/howto/descriptor.html
         """
         obj = cls()
-        return deprecated(message)(obj)
+        return deprecated(message, category=None)(obj)
 
 
 def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
