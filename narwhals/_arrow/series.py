@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -73,6 +73,7 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
         TemporalLiteral,
+        ToPandasArrowKwds,
         _1DArray,
         _2DArray,
         _SliceIndex,
@@ -697,7 +698,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         df = pa.Table.from_arrays([self.native], names=[self.name])
         return ArrowDataFrame(df, version=self._version, validate_column_names=False)
 
-    def to_pandas(self) -> pd.Series[Any]:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.Series[Any]:
         series = self.native.to_pandas(types_mapper=to_pandas_types_mapper)
         series.name = self.name
         return series

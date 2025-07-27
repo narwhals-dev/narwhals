@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._compliant.series import HistData
@@ -53,6 +53,7 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
         TemporalLiteral,
+        ToPandasArrowKwds,
         _1DArray,
         _SliceIndex,
     )
@@ -703,7 +704,12 @@ class PandasLikeSeries(EagerSeries[Any]):
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
         return s.to_numpy(dtype=dtype, **kwargs)
 
-    def to_pandas(self) -> pd.Series[Any]:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
             return self.native
         elif self._implementation is Implementation.CUDF:  # pragma: no cover

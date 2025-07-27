@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
+        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _1DArray,
         _2DArray,
@@ -441,7 +442,12 @@ class ArrowDataFrame(
             validate_column_names=False,
         )
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.DataFrame:
         return self.native.to_pandas(types_mapper=to_pandas_types_mapper)
 
     def to_polars(self) -> pl.DataFrame:

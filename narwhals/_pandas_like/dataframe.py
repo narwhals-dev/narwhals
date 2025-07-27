@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -58,6 +58,7 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
+        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _2DArray,
         _SliceIndex,
@@ -859,7 +860,12 @@ class PandasLikeDataFrame(
                 return arr
         return df.to_numpy(copy=copy)
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.DataFrame:
         if self._implementation is Implementation.PANDAS:
             return self.native
         elif self._implementation is Implementation.CUDF:
