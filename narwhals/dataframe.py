@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias, Unpack
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
+        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _2DArray,
     )
@@ -816,11 +817,27 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return self._compliant_frame._native_frame
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
+
+        Arguments:
+            use_pyarrow_extension_array: Use PyArrow-backed extension arrays instead of
+                NumPy arrays for the columns of the pandas DataFrame.
+                This allows zero copy operations and preservation of null values.
+                Subsequent operations on the resulting pandas DataFrame may trigger conversion to
+                NumPy if those operations are not supported by PyArrow compute functions.
+            **kwds: Additional keyword arguments to be passed to [`pyarrow.Table.to_pandas`]
 
         Returns:
             A pandas DataFrame.
+
+        Notes:
+            This operation always requires `pandas`, and requires `pyarrow` when any arguments are provided.
 
         Examples:
             >>> import polars as pl
@@ -834,8 +851,40 @@ class DataFrame(BaseFrame[DataFrameT]):
             0    1  6.0   a
             1    2  7.0   b
             2    3  8.0   c
+
+            Nested data types are not supported in pandas by default:
+
+            >>> df_nested = nw.from_native(df_native.to_struct("egg").to_frame())
+            >>> df_nested
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            | shape: (3, 1)    |
+            | ┌─────────────┐  |
+            | │ egg         │  |
+            | │ ---         │  |
+            | │ struct[3]   │  |
+            | ╞═════════════╡  |
+            | │ {1,6.0,"a"} │  |
+            | │ {2,7.0,"b"} │  |
+            | │ {3,8.0,"c"} │  |
+            | └─────────────┘  |
+            └──────────────────┘
+            >>> df_nested.to_pandas().dtypes
+            egg    object
+            dtype: object
+
+            Pass `use_pyarrow_extension_array=True` to preserve nested and/or nullable values:
+
+            >>> df_nested.to_pandas(use_pyarrow_extension_array=True).dtypes
+            egg    struct<foo: int64, bar: double, ham: large_str...
+            dtype: object
+
+        [`pyarrow.Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
         """
-        return self._compliant_frame.to_pandas()
+        return self._compliant_frame.to_pandas(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
 
     def to_polars(self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
