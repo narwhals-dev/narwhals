@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 
     from narwhals._namespace import EagerAllowed
     from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.typing import _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -1003,3 +1004,21 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
             assert isinstance(result.to_native(), pa.Table)
         else:
             assert not isinstance(result.to_native(), pa.Table)
+
+
+def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
+    schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    expected = {"c": [5, 1, 1], "d": [2, 4, 2], "e": [0, 7, 3], "f": [1, 8, 9]}
+    result = nw_v1.DataFrame.from_numpy(arr, backend=eager_backend, schema=schema)
+    result_schema = result.collect_schema()
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+    assert result_schema == schema
+    assert_equal_data(result, expected)
+
+    # NOTE: Existing bug, `schema` and `collect_schema` should be redefined for `v1`
+    with pytest.raises(AssertionError):
+        assert isinstance(result_schema, nw_v1.Schema)
+
+    assert isinstance(result_schema, nw.Schema)
