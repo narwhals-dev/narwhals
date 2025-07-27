@@ -54,7 +54,7 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
-from narwhals.stable.v1 import dependencies, dtypes, selectors
+from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
 
