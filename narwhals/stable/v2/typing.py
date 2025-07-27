@@ -26,9 +26,6 @@ if TYPE_CHECKING:
     class NativeSeries(Protocol):
         def __len__(self) -> int: ...
 
-    class DataFrameLike(Protocol):
-        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
-
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
 """Anything which can be converted to an expression.
@@ -40,7 +37,7 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
+IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -53,9 +50,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoFrame: TypeAlias = Union[
-    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
-]
+IntoFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "LazyFrame[Any]"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
