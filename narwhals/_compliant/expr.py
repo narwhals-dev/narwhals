@@ -1097,9 +1097,7 @@ class CompliantExprNameNamespace(  # type: ignore[misc]
 
         return fn
 
-    def _from_callable(
-        self, func: AliasName | None, /, *, alias: bool = True
-    ) -> CompliantExprT_co: ...
+    def _from_callable(self, func: AliasName | None, /) -> CompliantExprT_co: ...
 
 
 class EagerExprNameNamespace(
