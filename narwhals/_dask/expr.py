@@ -168,12 +168,20 @@ class DaskExpr(
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
+        alias_output_names = (
+            None
+            if func is None
+            else func
+            if current_alias_output_names is None
+            else lambda output_names: func(current_alias_output_names(output_names))
+        )
         return type(self)(
             call=self._call,
             depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
+            alias_output_names=alias_output_names,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
         )
