@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._duration import Interval
 from narwhals._polars.utils import (
+    PolarsAnyNamespace,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -311,7 +312,7 @@ class PolarsExpr:
     var: Method[Self]
 
 
-class PolarsExprNamespace:
+class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
@@ -325,6 +326,8 @@ class PolarsExprNamespace:
 
 
 class PolarsExprDateTimeNamespace(PolarsExprNamespace):
+    _accessor = "dt"
+
     def truncate(self, every: str) -> PolarsExpr:
         Interval.parse(every)  # Ensure consistent error message is raised.
         return self.compliant._with_native(self.native.dt.truncate(every))
@@ -333,15 +336,6 @@ class PolarsExprDateTimeNamespace(PolarsExprNamespace):
         # Ensure consistent error message is raised.
         Interval.parse_no_constraints(by)
         return self.compliant._with_native(self.native.dt.offset_by(by))
-
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.dt, attr)(*pos, **kwds)
-            )
-
-        return func
 
     to_string: Method[PolarsExpr]
     replace_time_zone: Method[PolarsExpr]
@@ -367,6 +361,8 @@ class PolarsExprDateTimeNamespace(PolarsExprNamespace):
 
 
 class PolarsExprStringNamespace(PolarsExprNamespace):
+    _accessor = "str"
+
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
@@ -395,15 +391,6 @@ class PolarsExprStringNamespace(PolarsExprNamespace):
 
         return self.compliant._with_native(native_result)
 
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.str, attr)(*pos, **kwds)
-            )
-
-        return func
-
     len_chars: Method[PolarsExpr]
     replace: Method[PolarsExpr]
     replace_all: Method[PolarsExpr]
@@ -420,28 +407,12 @@ class PolarsExprStringNamespace(PolarsExprNamespace):
 
 
 class PolarsExprCatNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.cat, attr)(*pos, **kwds)
-            )
-
-        return func
-
+    _accessor = "cat"
     get_categories: Method[PolarsExpr]
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.name, attr)(*pos, **kwds)
-            )
-
-        return func
-
+    _accessor = "name"
     keep: Method[PolarsExpr]
     map: Method[PolarsExpr]
     prefix: Method[PolarsExpr]
@@ -451,8 +422,10 @@ class PolarsExprNameNamespace(PolarsExprNamespace):
 
 
 class PolarsExprListNamespace(PolarsExprNamespace):
+    _accessor = "list"
+
     def len(self) -> PolarsExpr:
-        native_expr = self.compliant._native_expr
+        native_expr = self.native
         native_result = native_expr.list.len()
 
         if self.compliant._backend_version < (1, 16):  # pragma: no cover
@@ -464,25 +437,7 @@ class PolarsExprListNamespace(PolarsExprNamespace):
 
         return self.compliant._with_native(native_result)
 
-    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.list, attr)(*pos, **kwds)
-            )
-
-        return func
-
 
 class PolarsExprStructNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.struct, attr)(*pos, **kwds)
-            )
-
-        return func
-
+    _accessor = "struct"
     field: Method[PolarsExpr]
