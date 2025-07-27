@@ -82,7 +82,7 @@ def test_int_range_lazy(
 def test_int_range_non_int_dtype(dtype: DType) -> None:
     msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
     with pytest.raises(ComputeError, match=msg):
-        nw.int_range(start=0, end=3, dtype=dtype)  # type: ignore[arg-type]
+        nw.int_range(start=0, end=3, dtype=dtype)  # type: ignore[call-overload] # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize(

@@ -1045,7 +1045,7 @@ def test_int_range() -> None:
     def minimal_function(data: nw_v1.Series[Any]) -> None:
         data.is_null()
 
-    col = nw_v1.int_range(0, 3, eager="pandas")  # type: ignore[call-overload]
+    col = nw_v1.int_range(0, 3, eager="pandas")
     # check this doesn't raise type-checking errors
     minimal_function(col)
     assert isinstance(col, nw_v1.Series)

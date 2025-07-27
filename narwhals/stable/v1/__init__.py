@@ -1893,21 +1893,21 @@ def scan_parquet(
 @overload
 def int_range(
     start: int | Expr,
-    end: int | Expr | None,
-    step: int,
+    end: int | Expr | None = None,
+    step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType],
-    eager: Literal[False],
+    dtype: IntegerType | type[IntegerType] = Int64,
+    eager: Literal[False] = False,
 ) -> Expr: ...
 
 
 @overload
 def int_range(
     start: int | Expr,
-    end: int | Expr | None,
-    step: int,
+    end: int | Expr | None = None,
+    step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType],
+    dtype: IntegerType | type[IntegerType] = Int64,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
@@ -1915,8 +1915,8 @@ def int_range(
 @overload
 def int_range(
     start: int | Expr,
-    end: int | Expr | None,
-    step: int,
+    end: int | Expr | None = None,
+    step: int = 1,
     *,
     dtype: IntegerType | type[IntegerType] = Int64,
     eager: ModuleType | Implementation | str | Literal[False],
