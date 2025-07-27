@@ -363,6 +363,44 @@ class EagerExpr(
             version=series._version,
         )
 
+    def _with_alias_output_names(self, alias_name: AliasName | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
+        alias_output_names: AliasNames | None = (
+            None
+            if alias_name is None
+            else (
+                lambda output_names: [
+                    alias_name(x) for x in current_alias_output_names(output_names)
+                ]
+            )
+            if current_alias_output_names is not None
+            else (lambda output_names: [alias_name(x) for x in output_names])
+        )
+
+        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            if alias_output_names:
+                return [
+                    series.alias(name)
+                    for series, name in zip(
+                        self(df), alias_output_names(self._evaluate_output_names(df))
+                    )
+                ]
+            return [
+                series.alias(name)
+                for series, name in zip(self(df), self._evaluate_output_names(df))
+            ]
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
+            implementation=self._implementation,
+            version=self._version,
+            scalar_kwargs=self._scalar_kwargs,
+        )
+
     def _reuse_series(
         self,
         method_name: str,
@@ -1035,7 +1073,7 @@ class CompliantExprNameNamespace(  # type: ignore[misc]
     Protocol[CompliantExprT_co],
 ):
     def keep(self) -> CompliantExprT_co:
-        return self._from_callable(lambda name: name, alias=False)
+        return self._from_callable(None)
 
     def map(self, function: AliasName) -> CompliantExprT_co:
         return self._from_callable(function)
@@ -1059,9 +1097,7 @@ class CompliantExprNameNamespace(  # type: ignore[misc]
 
         return fn
 
-    def _from_callable(
-        self, func: AliasName, /, *, alias: bool = True
-    ) -> CompliantExprT_co: ...
+    def _from_callable(self, func: AliasName | None, /) -> CompliantExprT_co: ...
 
 
 class EagerExprNameNamespace(
@@ -1069,21 +1105,9 @@ class EagerExprNameNamespace(
     CompliantExprNameNamespace[EagerExprT],
     Generic[EagerExprT],
 ):
-    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
+    def _from_callable(self, func: AliasName | None) -> EagerExprT:
         expr = self.compliant
-        return type(expr)(
-            lambda df: [
-                series.alias(func(name))
-                for series, name in zip(expr(df), expr._evaluate_output_names(df))
-            ],
-            depth=expr._depth,
-            function_name=expr._function_name,
-            evaluate_output_names=expr._evaluate_output_names,
-            alias_output_names=self._alias_output_names(func) if alias else None,
-            implementation=expr._implementation,
-            version=expr._version,
-            scalar_kwargs=expr._scalar_kwargs,
-        )
+        return expr._with_alias_output_names(func)
 
 
 class LazyExprNameNamespace(
@@ -1091,9 +1115,9 @@ class LazyExprNameNamespace(
     CompliantExprNameNamespace[LazyExprT],
     Generic[LazyExprT],
 ):
-    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> LazyExprT:
+    def _from_callable(self, func: AliasName | None) -> LazyExprT:
         expr = self.compliant
-        output_names = self._alias_output_names(func) if alias else None
+        output_names = self._alias_output_names(func) if func else None
         return expr._with_alias_output_names(output_names)
 
 
