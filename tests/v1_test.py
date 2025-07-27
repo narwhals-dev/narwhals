@@ -40,10 +40,12 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import assert_type
 
     from narwhals._namespace import EagerAllowed
-    from narwhals.typing import IntoDataFrameT, _2DArray
+    from narwhals.typing import IntoDataFrameT, IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -1056,3 +1058,27 @@ def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
         assert isinstance(result_schema, nw_v1.Schema)
 
     assert isinstance(result_schema, nw.Schema)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v1.Int64, [5, 2, 0, 1]),
+        (nw_v1.Int16(), [5, 2, 0, 1]),
+        (nw_v1.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (nw_v1.Float32(), [5.0, 2.0, 0.0, 1.0]),
+    ],
+    ids=str,
+)
+def test_series_from_numpy(
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+) -> None:
+    arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
+    name = "abc"
+    result = nw_v1.Series.from_numpy(name, arr, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.Series)
+    if dtype:
+        assert result.dtype == dtype
+    assert_equal_data(result.to_frame(), {name: expected})
