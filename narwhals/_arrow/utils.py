@@ -12,7 +12,7 @@ from narwhals._utils import Implementation, isinstance_or_issubclass
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    import pandas as pd
+    from pandas.api.extensions import ExtensionDtype as PandasDType
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries
@@ -231,9 +231,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     raise AssertionError(msg)
 
 
-def to_pandas_types_mapper(
-    dtype: pa.DataType, /
-) -> pd.api.extensions.ExtensionDtype | None:
+def to_pandas_types_mapper(dtype: pa.DataType, /) -> PandasDType | None:
     """Default overrides `pyarrow` -> `pandas` dtype conversion.
 
     Should be passed as `types_mapper` in [`Table.to_pandas`] and [`ChunkedArray.to_pandas`].
@@ -253,9 +251,7 @@ def to_pandas_types_mapper(
     # NOTE: 2.2.0 added the accessors, but probably usable earlier than that?
     # `.struct` added https://github.com/pandas-dev/pandas/pull/54977
     # `.list` added https://github.com/pandas-dev/pandas/pull/55777
-    if pa.types.is_struct(dtype):
-        return pd.ArrowDtype(dtype)
-    return None
+    return pd.ArrowDtype(dtype)
 
 
 def extract_native(

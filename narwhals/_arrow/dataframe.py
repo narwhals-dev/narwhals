@@ -448,7 +448,10 @@ class ArrowDataFrame(
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> pd.DataFrame:
-        return self.native.to_pandas(types_mapper=to_pandas_types_mapper)
+        if use_pyarrow_extension_array:
+            types_mapper = kwds.pop("types_mapper", to_pandas_types_mapper)
+            kwds["types_mapper"] = types_mapper
+        return self.native.to_pandas(**kwds)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
