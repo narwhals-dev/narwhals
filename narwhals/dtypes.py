@@ -7,7 +7,11 @@ from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
 
-from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import (
+    _DeferredIterable,
+    isinstance_or_issubclass,
+    qualified_type_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -35,10 +39,23 @@ def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
     )
 
 
+def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
+    return isinstance(obj, type) and issubclass(obj, NestedType)
+
+
 def _validate_into_dtype(dtype: Any) -> None:
     if not _is_into_dtype(dtype):
-        # TODO @dangotbanned: add a nice hint
-        msg = f"Expected Narwhals dtype, got: {dtype!r}."
+        if _is_nested_type(dtype):
+            name = f"nw.{dtype.__name__}"
+            msg = (
+                f"{name!r} is not valid in this context.\n\n"
+                f"Hint: instead of:\n\n"
+                f"    {name}\n\n"
+                "use:\n\n"
+                f"    {name}(...)"
+            )
+        else:
+            msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
         raise TypeError(msg)
 
 

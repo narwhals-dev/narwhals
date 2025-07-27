@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._namespace import EagerAllowed
+    from narwhals.dtypes import NestedType
     from narwhals.typing import IntoDType, _1DArray
 
 
@@ -53,11 +54,22 @@ def test_series_from_numpy_dtype(
     assert_equal_series(result, expected, NAME)
 
 
-def test_series_from_numpy_not_init_dtype(eager_backend: EagerAllowed) -> None:
-    with pytest.raises(
-        TypeError, match=re.compile(r"expected.+dtype.+List", re.IGNORECASE)
-    ):
-        nw.Series.from_numpy(NAME, arr, nw.List, backend=eager_backend)  # type: ignore[arg-type]
+@pytest.mark.parametrize(
+    ("bad_dtype", "message"),
+    [
+        (nw.List, r"nw.List.+not.+valid.+hint"),
+        (nw.Struct, r"nw.Struct.+not.+valid.+hint"),
+        (nw.Array, r"nw.Array.+not.+valid.+hint"),
+        (np.floating, r"expected.+narwhals.+dtype.+floating"),
+        (list[int], r"expected.+narwhals.+dtype.+types.GenericAlias"),
+    ],
+    ids=str,
+)
+def test_series_from_numpy_not_init_dtype(
+    eager_backend: EagerAllowed, bad_dtype: type[NestedType] | object, message: str
+) -> None:
+    with pytest.raises(TypeError, match=re.compile(message, re.IGNORECASE | re.DOTALL)):
+        nw.Series.from_numpy(NAME, arr, bad_dtype, backend=eager_backend)  # type: ignore[arg-type]
 
 
 def test_series_from_numpy_not_eager() -> None:
