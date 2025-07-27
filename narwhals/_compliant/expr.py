@@ -939,7 +939,7 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol[CompliantLazyFrameT, NativeExprT],
 ):
-    def _with_alias_output_names(self, func: AliasNames, /) -> Self: ...
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
@@ -1073,7 +1073,7 @@ class CompliantExprNameNamespace(  # type: ignore[misc]
     Protocol[CompliantExprT_co],
 ):
     def keep(self) -> CompliantExprT_co:
-        return self._from_callable(lambda name: name, alias=False)
+        return self._from_callable(None)
 
     def map(self, function: AliasName) -> CompliantExprT_co:
         return self._from_callable(function)
@@ -1098,7 +1098,7 @@ class CompliantExprNameNamespace(  # type: ignore[misc]
         return fn
 
     def _from_callable(
-        self, func: AliasName, /, *, alias: bool = True
+        self, func: AliasName | None, /, *, alias: bool = True
     ) -> CompliantExprT_co: ...
 
 
@@ -1107,7 +1107,7 @@ class EagerExprNameNamespace(
     CompliantExprNameNamespace[EagerExprT],
     Generic[EagerExprT],
 ):
-    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
+    def _from_callable(self, func: AliasName) -> EagerExprT:
         expr = self.compliant
         return expr._with_alias_output_names(func)
 
@@ -1117,9 +1117,9 @@ class LazyExprNameNamespace(
     CompliantExprNameNamespace[LazyExprT],
     Generic[LazyExprT],
 ):
-    def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> LazyExprT:
+    def _from_callable(self, func: AliasName | None) -> LazyExprT:
         expr = self.compliant
-        output_names = self._alias_output_names(func) if alias else None
+        output_names = self._alias_output_names(func) if func else None
         return expr._with_alias_output_names(output_names)
 
 

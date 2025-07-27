@@ -16,7 +16,7 @@ def test_to_uppercase(constructor: Constructor) -> None:
 def test_to_uppercase_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.to_uppercase())
-    expected = {"FOO": [1, 2, 3]}
+    expected = {"ALIAS_FOR_FOO": [1, 2, 3]}
     assert_equal_data(result, expected)
 
 

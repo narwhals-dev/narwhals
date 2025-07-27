@@ -20,7 +20,7 @@ def test_map(constructor: Constructor) -> None:
 def test_map_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
-    expected = {"oof": data["foo"]}
+    expected = {"oof_rof_saila": data["foo"]}
     assert_equal_data(result, expected)
 
 

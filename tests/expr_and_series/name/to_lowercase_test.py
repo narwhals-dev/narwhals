@@ -16,7 +16,7 @@ def test_to_lowercase(constructor: Constructor) -> None:
 def test_to_lowercase_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("BAR")).alias("ALIAS_FOR_BAR").name.to_lowercase())
-    expected = {"bar": [4, 5, 6]}
+    expected = {"alias_for_bar": [4, 5, 6]}
     assert_equal_data(result, expected)
 
 

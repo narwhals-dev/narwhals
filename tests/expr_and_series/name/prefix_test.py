@@ -17,7 +17,7 @@ def test_prefix(constructor: Constructor) -> None:
 def test_suffix_after_alias(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.prefix(prefix))
-    expected = {"with_prefix_foo": [1, 2, 3]}
+    expected = {"with_prefix_alias_for_foo": [1, 2, 3]}
     assert_equal_data(result, expected)
 
 
