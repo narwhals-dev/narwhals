@@ -324,3 +324,7 @@ def test_get_column() -> None:
     # check this doesn't raise type-checking errors
     minimal_function(col)
     assert isinstance(col, nw_v2.Series)
+
+
+def test_imports() -> None:
+    pass

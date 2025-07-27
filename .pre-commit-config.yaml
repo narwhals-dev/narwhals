@@ -69,15 +69,15 @@ repos:
             from\ narwhals\ import\ dtypes|
             from\ narwhals.dtypes\ import\ [^D_]+|
             import\ narwhals.stable.v1.dtypes|
-            from\ narwhals.stable.v1\ import\ dtypes|
-            from\ narwhals.stable.v1.dtypes\ import
+            from\ narwhals.stable\.v.\ import\ dtypes|
+            from\ narwhals.stable\.v.\.dtypes\ import
       language: pygrep
       files: ^narwhals/
       exclude: |
         (?x)
           ^(
             narwhals/_utils\.py|
-            narwhals/stable/v1/_dtypes.py|
+            narwhals/stable/v./_?dtypes.py|
             narwhals/.*__init__.py|
             narwhals/.*typing\.py
           )

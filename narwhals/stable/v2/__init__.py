@@ -4,7 +4,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import narwhals as nw
-from narwhals import dependencies, dtypes, exceptions, functions as nw_f, selectors
+from narwhals import exceptions, functions as nw_f
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -54,6 +54,7 @@ from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
+from narwhals.stable.v1 import dependencies, dtypes, selectors
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 from narwhals.typing import IntoDataFrameT, IntoFrameT
 
