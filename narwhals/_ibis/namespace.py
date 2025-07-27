@@ -51,6 +51,9 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def _lit(self, value: Any) -> ir.Value:
         return lit(value)
 
+    def _when(self, condition: ir.Value, value: ir.Value) -> ir.Value:
+        return ibis.cases((condition, value))
+
     def _coalesce(self, *exprs: ir.Value) -> ir.Value:
         return ibis.coalesce(*exprs)
 

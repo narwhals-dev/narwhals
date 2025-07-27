@@ -22,15 +22,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
 
-    BaseSchema = OrderedDict[str, DType]
-else:
-    # Python 3.8 does not support generic OrderedDict at runtime
-    BaseSchema = OrderedDict
 
 __all__ = ["Schema"]
 
 
-class Schema(BaseSchema):
+class Schema(OrderedDict[str, "DType"]):
     """Ordered mapping of column names to their data type.
 
     Arguments:
