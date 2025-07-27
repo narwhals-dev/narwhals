@@ -363,6 +363,31 @@ class EagerExpr(
             version=series._version,
         )
 
+    def _with_alias_output_names(self, alias_name: AliasName) -> Self:
+        current_alias_output_names = self._alias_output_names
+        if current_alias_output_names is not None:
+
+            def alias_output_names(output_names: list[str]) -> list[str]:
+                return [alias_name(x) for x in current_alias_output_names(output_names)]
+        else:
+
+            def alias_output_names(output_names: list[str]) -> list[str]:
+                return [alias_name(x) for x in output_names]
+
+        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            return [series.alias(alias_name(series.name)) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth,
+            function_name=self._function_name,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
+            implementation=self._implementation,
+            version=self._version,
+            scalar_kwargs=self._scalar_kwargs,
+        )
+
     def _reuse_series(
         self,
         method_name: str,
@@ -1071,19 +1096,7 @@ class EagerExprNameNamespace(
 ):
     def _from_callable(self, func: AliasName, /, *, alias: bool = True) -> EagerExprT:
         expr = self.compliant
-        return type(expr)(
-            lambda df: [
-                series.alias(func(name))
-                for series, name in zip(expr(df), expr._evaluate_output_names(df))
-            ],
-            depth=expr._depth,
-            function_name=expr._function_name,
-            evaluate_output_names=expr._evaluate_output_names,
-            alias_output_names=self._alias_output_names(func) if alias else None,
-            implementation=expr._implementation,
-            version=expr._version,
-            scalar_kwargs=expr._scalar_kwargs,
-        )
+        return expr._with_alias_output_names(func)
 
 
 class LazyExprNameNamespace(
