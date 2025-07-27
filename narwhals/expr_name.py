@@ -19,9 +19,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pandas as pd
@@ -45,9 +43,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pandas as pd
@@ -72,9 +68,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import polars as pl
@@ -98,9 +92,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import polars as pl
@@ -121,9 +113,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -144,9 +134,7 @@ class ExprNameNamespace(Generic[ExprT]):
             A new expression.
 
         Notes:
-            This will undo any previous renaming operations on the expression.
-            Due to implementation constraints, this method can only be called as the last
-            expression in a chain. Only one name operation per expression will work.
+            For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
         Examples:
             >>> import pyarrow as pa
