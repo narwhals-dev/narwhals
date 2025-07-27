@@ -10,6 +10,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoDType
     from tests.utils import ConstructorEager
 
 
@@ -30,29 +31,50 @@ def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
+def schema_struct(a_dtype: IntoDType, b_dtype: IntoDType) -> nw.Schema:
+    return nw.Schema({"c": nw.Struct({"a": a_dtype, "b": b_dtype})})
+
+
+def schema_list(a_dtype: IntoDType, b_dtype: IntoDType) -> nw.Schema:
+    return nw.Schema({"a": nw.List(a_dtype), "b": nw.List(b_dtype)})
+
+
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5, 0), reason="too old for pyarrow")
 @pytest.mark.parametrize(
-    ("data", "expected"),
+    ("a", "a_dtype", "b", "b_dtype"),
     [
+        ([1, 3, 8], nw.Int64, [4.1, 2.3, 3.0], nw.Float64),
         (
-            {"a": [1, 3, 8], "b": [4.1, 2.3, 3.0]},
-            nw.Struct({"a": nw.Int64, "b": nw.Float64}),
-        ),
-        (
-            {"a": [dt.datetime(2000, 1, 1), dt.datetime(2000, 1, 2)], "b": ["one", None]},
-            nw.Struct({"a": nw.Datetime(), "b": nw.String}),
+            [dt.datetime(2000, 1, 1), dt.datetime(2000, 1, 2)],
+            nw.Datetime(),
+            ["one", None],
+            nw.String,
         ),
     ],
 )
-def test_pyarrow_to_pandas_struct(data: dict[str, Any], expected: nw.Struct) -> None:
+@pytest.mark.parametrize("nested_dtype", [nw.Struct, nw.List])
+def test_pyarrow_to_pandas_use_pyarrow(
+    a: list[Any],
+    a_dtype: IntoDType,
+    b: list[Any],
+    b_dtype: IntoDType,
+    nested_dtype: type[nw.Struct | nw.List],
+) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    expected_schema = nw.Schema({"c": expected})
-
-    struct_array = pa.table(data).to_struct_array()
-    struct_frame_pa = nw.from_native(struct_array, series_only=True).alias("c").to_frame()
-    struct_frame_pd = nw.from_native(struct_frame_pa.to_pandas())
-
-    assert struct_frame_pd.schema == expected_schema
-    assert struct_frame_pd.schema == struct_frame_pa.schema
+    if nested_dtype is nw.Struct:
+        expected_schema = schema_struct(a_dtype, b_dtype)
+        data: dict[str, Any] = {"a": a, "b": b}
+        df_pa = (
+            nw.from_native(pa.table(data).to_struct_array(), series_only=True)
+            .alias("c")
+            .to_frame()
+        )
+    else:
+        expected_schema = schema_list(a_dtype, b_dtype)
+        data = {"a": [pa.scalar(a)], "b": [pa.scalar(b)]}
+        df_pa = nw.from_native(pa.table(data))
+    df_pd = nw.from_native(df_pa.to_pandas(use_pyarrow_extension_array=True))
+    assert df_pd.schema == expected_schema
+    assert df_pd.schema == df_pa.schema
