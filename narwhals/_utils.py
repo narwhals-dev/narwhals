@@ -8,6 +8,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from operator import attrgetter
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -2075,3 +2076,14 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+@lru_cache(maxsize=64)
+def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
+    name = ".".join((attr, *nested)) if nested else attr
+    return attrgetter(name)
+
+
+def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
+    """Perform a nested attribute lookup on `obj`."""
+    return deep_attrgetter(name_1, *nested)(obj)
