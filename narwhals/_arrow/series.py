@@ -704,7 +704,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> pd.Series[Any]:
-        series = self.native.to_pandas(types_mapper=to_pandas_types_mapper)
+        if use_pyarrow_extension_array:
+            types_mapper = kwds.pop("types_mapper", to_pandas_types_mapper)
+            kwds["types_mapper"] = types_mapper
+        series = self.native.to_pandas(**kwds)
         series.name = self.name
         return series
 

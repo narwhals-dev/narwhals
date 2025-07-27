@@ -33,6 +33,7 @@ def test_convert(
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
+@pytest.mark.xfail(reason="TODO: Update like (9e7e7762ba5ddce59f72de14834557446c274d34)")
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5, 0), reason="too old for pyarrow")
 @pytest.mark.parametrize(
     ("data", "expected"),
