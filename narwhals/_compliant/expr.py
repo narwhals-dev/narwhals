@@ -1105,7 +1105,7 @@ class EagerExprNameNamespace(
     CompliantExprNameNamespace[EagerExprT],
     Generic[EagerExprT],
 ):
-    def _from_callable(self, func: AliasName) -> EagerExprT:
+    def _from_callable(self, func: AliasName | None) -> EagerExprT:
         expr = self.compliant
         return expr._with_alias_output_names(func)
 
