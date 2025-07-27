@@ -145,10 +145,13 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
         alias_output_names = (
-            func
-            if self._alias_output_names is None
-            else lambda output_names: func(self._alias_output_names(output_names))
+            None
+            if func is None
+            else func
+            if current_alias_output_names is None
+            else lambda output_names: func(current_alias_output_names(output_names))
         )
         return type(self)(
             self._call,

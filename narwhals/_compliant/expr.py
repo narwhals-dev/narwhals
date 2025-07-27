@@ -363,19 +363,32 @@ class EagerExpr(
             version=series._version,
         )
 
-    def _with_alias_output_names(self, alias_name: AliasName) -> Self:
+    def _with_alias_output_names(self, alias_name: AliasName | None, /) -> Self:
         current_alias_output_names = self._alias_output_names
-        if current_alias_output_names is not None:
-
-            def alias_output_names(output_names: list[str]) -> list[str]:
-                return [alias_name(x) for x in current_alias_output_names(output_names)]
-        else:
-
-            def alias_output_names(output_names: list[str]) -> list[str]:
-                return [alias_name(x) for x in output_names]
+        alias_output_names: AliasNames | None = (
+            None
+            if alias_name is None
+            else (
+                lambda output_names: [
+                    alias_name(x) for x in current_alias_output_names(output_names)
+                ]
+            )
+            if current_alias_output_names is not None
+            else (lambda output_names: [alias_name(x) for x in output_names])
+        )
 
         def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
-            return [series.alias(alias_name(series.name)) for series in self(df)]
+            if alias_output_names:
+                return [
+                    series.alias(name)
+                    for series, name in zip(
+                        self(df), alias_output_names(self._evaluate_output_names(df))
+                    )
+                ]
+            return [
+                series.alias(name)
+                for series, name in zip(self(df), self._evaluate_output_names(df))
+            ]
 
         return self.__class__(
             func,
@@ -926,7 +939,7 @@ class LazyExpr(  # type: ignore[misc]
     CompliantExpr[CompliantLazyFrameT, NativeExprT],
     Protocol[CompliantLazyFrameT, NativeExprT],
 ):
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
+    def _with_alias_output_names(self, func: AliasNames, /) -> Self: ...
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:

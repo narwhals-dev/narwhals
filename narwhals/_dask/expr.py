@@ -167,7 +167,7 @@ class DaskExpr(
             scalar_kwargs=scalar_kwargs,
         )
 
-    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+    def _with_alias_output_names(self, func: AliasNames, /) -> Self:
         return type(self)(
             call=self._call,
             depth=self._depth,
