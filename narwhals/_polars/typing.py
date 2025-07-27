@@ -7,7 +7,7 @@ from typing import (
 
 if TYPE_CHECKING:
     import sys
-    from typing import TypeVar
+    from typing import Literal, TypeVar
 
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
@@ -20,3 +20,6 @@ if TYPE_CHECKING:
 
     IntoPolarsExpr: TypeAlias = Union[PolarsExpr, PolarsSeries]
     FrameT = TypeVar("FrameT", PolarsDataFrame, PolarsLazyFrame)
+    NativeAccessor: TypeAlias = Literal[
+        "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
+    ]

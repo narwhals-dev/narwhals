@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
 
 import polars as pl
 
@@ -9,6 +9,9 @@ from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
+    _StoresCompliant,
+    _StoresNative,
+    deep_getattr,
     isinstance_or_issubclass,
 )
 from narwhals.exceptions import (
@@ -21,11 +24,13 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from typing_extensions import TypeIs
 
-    from narwhals._utils import _StoresNative
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
@@ -33,6 +38,9 @@ if TYPE_CHECKING:
     NativeT = TypeVar(
         "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
     )
+
+NativeT_co = TypeVar("NativeT_co", "pl.Series", "pl.Expr", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", "PolarsSeries", "PolarsExpr", covariant=True)
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
@@ -240,3 +248,19 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception
+
+
+class PolarsAnyNamespace(
+    _StoresCompliant[CompliantT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantT_co, NativeT_co],
+):
+    _accessor: ClassVar[NativeAccessor]
+
+    def __getattr__(self, attr: str) -> Callable[..., CompliantT_co]:
+        def func(*args: Any, **kwargs: Any) -> CompliantT_co:
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            method = deep_getattr(self.native, self._accessor, attr)
+            return self.compliant._with_native(method(*pos, **kwds))
+
+        return func
