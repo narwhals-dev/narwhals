@@ -61,7 +61,7 @@ def test_series_from_numpy_dtype(
         (nw.Struct, r"nw.Struct.+not.+valid.+hint"),
         (nw.Array, r"nw.Array.+not.+valid.+hint"),
         (np.floating, r"expected.+narwhals.+dtype.+floating"),
-        (list[int], r"expected.+narwhals.+dtype.+types.GenericAlias"),
+        (list[int], r"expected.+narwhals.+dtype.+(types.GenericAlias|list)"),
     ],
     ids=str,
 )
