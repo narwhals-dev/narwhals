@@ -31,7 +31,6 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.dtypes import Int64
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.series import Series
@@ -62,6 +61,9 @@ if TYPE_CHECKING:
     )
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
+
+
+dtypes = Version.MAIN.dtypes
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -1785,7 +1787,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = Int64,
+    dtype: IntegerDType = dtypes.Int64,
     eager: Literal[False] = False,
 ) -> Expr: ...
 
@@ -1796,7 +1798,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = Int64,
+    dtype: IntegerDType = dtypes.Int64,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
@@ -1807,7 +1809,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = Int64,
+    dtype: IntegerDType = dtypes.Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]: ...
 
@@ -1817,7 +1819,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = Int64,
+    dtype: IntegerDType = dtypes.Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
