@@ -1453,10 +1453,21 @@ class Series(Generic[IntoSeriesT]):
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> pd.Series[Any]:
-        """Convert to pandas Series.
+        """Convert this Series to a pandas Series.
+
+        Arguments:
+            use_pyarrow_extension_array: Use PyArrow-backed extension arrays instead of a
+                NumPy array for the pandas Series.
+                This allows zero copy operations and preservation of null values.
+                Subsequent operations on the resulting pandas Series may trigger conversion to
+                NumPy if those operations are not supported by PyArrow compute functions.
+            **kwds: Additional keyword arguments to be passed to [`pyarrow.Array.to_pandas`]
 
         Returns:
-            A pandas Series containing the data from this Series.
+            A pandas Series.
+
+        Notes:
+            This operation always requires `pandas`, and requires `pyarrow` when any arguments are provided.
 
         Examples:
             >>> import polars as pl
@@ -1468,6 +1479,8 @@ class Series(Generic[IntoSeriesT]):
             1    2
             2    3
             Name: a, dtype: int64
+
+        [`pyarrow.Array.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Array.html#pyarrow.Array.to_pandas
         """
         return self._compliant_series.to_pandas(
             use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
