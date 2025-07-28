@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from typing import Any
 
 import pytest
 
@@ -296,6 +297,7 @@ def test_str_replace_all_expr_multivalue(
 
 
 def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
+    context: Any
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
     )
@@ -336,6 +338,7 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_str_replace_errors_expr(constructor: Constructor) -> None:
+    context: Any
     not_implemented = pytest.raises(NotImplementedError)
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
