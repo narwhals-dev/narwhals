@@ -25,10 +25,8 @@
         - fill_null
         - filter
         - floordiv
-        - gather_every
         - ge
         - gt
-        - head
         - clip
         - is_between
         - is_duplicated
@@ -73,7 +71,6 @@
         - std
         - sub
         - sum
-        - tail
         - truediv
         - unique
         - var
