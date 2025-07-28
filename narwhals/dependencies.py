@@ -137,14 +137,14 @@ def _warn_if_narwhals_df_or_lf(df: Any) -> None:
         issue_warning(msg, UserWarning)
 
 
-def _raise_if_narwhals_series(ser: Any) -> None:
+def _warn_if_narwhals_series(ser: Any) -> None:
     if is_narwhals_series(ser):
         msg = (
             f"You passed a `{type(ser)}` to `is_pandas_series`.\n\n"
             "Hint: Instead of e.g. `is_pandas_series(ser)`, "
             "did you mean `is_pandas_series(ser.to_native())`?"
         )
-        raise TypeError(msg)
+        issue_warning(msg, UserWarning)
 
 
 def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
@@ -167,7 +167,7 @@ def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -200,7 +200,7 @@ def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -225,7 +225,7 @@ def is_cudf_series(ser: Any) -> TypeIs[cudf.Series[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -302,7 +302,7 @@ def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
@@ -312,7 +312,7 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
@@ -424,7 +424,7 @@ def is_pandas_like_series(ser: Any) -> bool:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 

@@ -579,13 +579,13 @@ def _get_native_namespace_single_obj(
 
     from narwhals._utils import has_native_namespace
 
-    with suppress(TypeError, AssertionError):
+    if has_native_namespace(obj):
+        return obj.__native_namespace__()
+    with suppress(AssertionError):
         return Version.MAIN.namespace.from_native_object(
             obj
         ).implementation.to_native_namespace()
 
-    if has_native_namespace(obj):
-        return obj.__native_namespace__()
     msg = f"Could not get native namespace from object of type: {type(obj)}"
     raise TypeError(msg)
 

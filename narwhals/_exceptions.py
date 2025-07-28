@@ -56,5 +56,5 @@ def issue_deprecation_warning(message: str, _version: str) -> None:  # pragma: n
     warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
 
 
-def issue_warning(message: str, category: Warning) -> None:
+def issue_warning(message: str, category: type[Warning]) -> None:
     warn(message=message, category=category, stacklevel=find_stacklevel())

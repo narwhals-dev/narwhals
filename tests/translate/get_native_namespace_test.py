@@ -80,7 +80,7 @@ def test_native_namespace_series(constructor_eager: Constructor) -> None:
 
 
 def test_get_native_namespace_invalid() -> None:
-    with pytest.raises(TypeError, match="Could not get native namespace"):
+    with pytest.raises(TypeError, match="Unsupported type: 'int'"):
         nw.get_native_namespace(1)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="At least one object"):
         nw.get_native_namespace()

@@ -1660,7 +1660,7 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
-    return hasattr(obj, "__native_namespace__")
+    return _hasattr_static(obj, "__native_namespace__")
 
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
