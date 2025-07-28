@@ -38,7 +38,6 @@ from narwhals.dtypes import (
     Int32,
     Int64,
     Int128,
-    IntegerType,
     List,
     Object,
     String,
@@ -69,6 +68,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntegerDType,
         IntoDType,
         IntoExpr,
         IntoFrame,
@@ -1178,7 +1178,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: Literal[False] = False,
 ) -> Expr: ...
 
@@ -1189,7 +1189,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
@@ -1200,7 +1200,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False],
 ) -> Expr | Series[Any]: ...
 
@@ -1210,7 +1210,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.

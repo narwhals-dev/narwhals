@@ -39,11 +39,12 @@ if TYPE_CHECKING:
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._utils import Implementation, Version, _LimitedContext
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntegerDType,
         Into1DArray,
         IntoDType,
         MultiIndexSelector,
@@ -128,7 +129,7 @@ class CompliantSeries(
         start: int,
         end: int,
         step: int,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
         context: _LimitedContext,
         name: str,
     ) -> Self: ...

@@ -29,9 +29,15 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
+    from narwhals.typing import (
+        IntegerDType,
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        _1DArray,
+    )
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
@@ -171,7 +177,7 @@ class PolarsSeries:
         start: int,
         end: int,
         step: int,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
         context: _LimitedContext,
         name: str,
     ) -> Self:

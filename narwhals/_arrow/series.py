@@ -60,10 +60,11 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.series import HistData
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntegerDType,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
@@ -168,7 +169,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         start: int,
         end: int,
         step: int,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
         context: _LimitedContext,
         name: str,
     ) -> Self:

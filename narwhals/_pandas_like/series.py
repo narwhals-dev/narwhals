@@ -41,10 +41,11 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
+        IntegerDType,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
@@ -188,7 +189,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         start: int,
         end: int,
         step: int,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
         context: _LimitedContext,
         name: str,
     ) -> Self:

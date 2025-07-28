@@ -1785,7 +1785,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType,
+    dtype: IntegerDType = Int64,
     eager: Literal[False] = False,
 ) -> Expr: ...
 
@@ -1796,7 +1796,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 

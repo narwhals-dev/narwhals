@@ -32,10 +32,11 @@ if TYPE_CHECKING:
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
+        IntegerDType,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
@@ -99,7 +100,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         end: int | CompliantExprT,
         step: int,
         *,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
     ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
