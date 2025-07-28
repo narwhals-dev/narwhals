@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
 
 from narwhals._utils import (
     Implementation,
+    _hasattr_static,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
+    generate_repr_html,
     is_compliant_series,
     is_index_selector,
     supports_arrow_c_stream,
@@ -335,6 +337,12 @@ class Series(Generic[IntoSeriesT]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals Series", self.to_native().__repr__())
+
+    def _repr_html_(self) -> str | None:  # pragma: no cover
+        native: Any = self.to_native()
+        if _hasattr_static(native, "_repr_html_") and (html := native._repr_html_()):
+            return generate_repr_html("Narwhals Series", html)
+        return None
 
     def __len__(self) -> int:
         return len(self._compliant_series)
