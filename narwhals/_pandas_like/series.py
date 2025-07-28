@@ -12,6 +12,7 @@ from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
+    ToPandas,
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
@@ -21,7 +22,6 @@ from narwhals._pandas_like.utils import (
     rename,
     select_columns_by_name,
     set_index,
-    should_use_pyarrow_extension_array,
 )
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, is_list_of, parse_version
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._compliant.series import HistData
@@ -54,7 +54,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
         TemporalLiteral,
-        ToPandasArrowKwds,
         _1DArray,
         _SliceIndex,
     )
@@ -108,7 +107,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(EagerSeries[Any]):
+class PandasLikeSeries(ToPandas["pd.Series[Any]"], EagerSeries[Any]):
     def __init__(
         self, native_series: Any, *, implementation: Implementation, version: Version
     ) -> None:
@@ -704,29 +703,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
         return s.to_numpy(dtype=dtype, **kwargs)
-
-    def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
-    ) -> pd.Series[Any]:
-        if self._implementation is Implementation.PANDAS:
-            series = self.native
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
-            if use_pyarrow_extension_array or (kwds and "types_mapper" in kwds):
-                return self.native.to_pandas(arrow_type=True)
-            return self.native.to_pandas()
-        elif self._implementation is Implementation.MODIN:
-            series = self.native._to_pandas()
-        else:
-            msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-            raise AssertionError(msg)
-        if should_use_pyarrow_extension_array(
-            use_pyarrow_extension_array=use_pyarrow_extension_array, kwds=kwds
-        ):
-            return series.convert_dtypes(dtype_backend="pyarrow")
-        return series
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import

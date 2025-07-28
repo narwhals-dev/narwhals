@@ -41,3 +41,5 @@ NativeNDFrameT = TypeVar(
     "_ModinDataFrame",
     "_ModinSeries",
 )
+ToPandasT = TypeVar("ToPandasT", "pd.Series[Any]", "pd.DataFrame")
+"""Return type of `to_pandas()`."""

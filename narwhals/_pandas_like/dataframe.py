@@ -9,6 +9,7 @@ import numpy as np
 from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
+    ToPandas,
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -58,7 +59,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
-        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _2DArray,
         _SliceIndex,
@@ -95,7 +95,8 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(
-    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"]
+    ToPandas["pd.DataFrame"],
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"],
 ):
     def __init__(
         self,
@@ -859,23 +860,6 @@ class PandasLikeDataFrame(
                 )
                 return arr
         return df.to_numpy(copy=copy)
-
-    def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
-    ) -> pd.DataFrame:
-        if self._implementation is Implementation.PANDAS:
-            return self.native
-        elif self._implementation is Implementation.CUDF:
-            if use_pyarrow_extension_array or (kwds and "types_mapper" in kwds):
-                return self.native.to_pandas(arrow_type=True)
-            return self.native.to_pandas()
-        elif self._implementation is Implementation.MODIN:
-            return self.native._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import

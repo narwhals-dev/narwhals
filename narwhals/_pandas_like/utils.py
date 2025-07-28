@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
 
 import pandas as pd
 
@@ -16,10 +16,13 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._pandas_like.typing import ToPandasT
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
+    _StoresImplementation,
+    _StoresNative,
     check_columns_exist,
     isinstance_or_issubclass,
 )
@@ -31,7 +34,7 @@ if TYPE_CHECKING:
 
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -695,6 +698,33 @@ def should_use_pyarrow_extension_array(
     [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
     """
     return use_pyarrow_extension_array or bool(kwds and "types_mapper" in kwds)
+
+
+class ToPandas(_StoresNative[Any], _StoresImplementation, Generic[ToPandasT]):
+    """Shared `(Series|DataFrame).to_pandas` implementation."""
+
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasT:
+        use_pyarrow = should_use_pyarrow_extension_array(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, kwds=kwds
+        )
+        if self._implementation is Implementation.PANDAS:
+            nd_frame = self.native
+        elif self._implementation is Implementation.CUDF:
+            native = self.native
+            return (
+                native.to_pandas(arrow_type=True) if use_pyarrow else native.to_pandas()
+            )
+        else:
+            assert self._implementation is Implementation.MODIN  # noqa: S101
+            nd_frame = self.native._to_pandas()
+        return (
+            nd_frame.convert_dtypes(dtype_backend="pyarrow") if use_pyarrow else nd_frame
+        )
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
