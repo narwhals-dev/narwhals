@@ -131,7 +131,9 @@ def test_to_pandas_use_pyarrow(
     assert_equal_data(nw.from_native(result, series_only=True).to_frame(), expected)
 
 
-def is_pandas_non_pyarrow(constructor_eager: ConstructorEager) -> bool:
+def is_pandas_non_pyarrow(
+    constructor_eager: ConstructorEager,
+) -> bool:  # pragma: no cover
     return constructor_eager.__name__ in {
         "pandas_nullable_constructor",
         "pandas_constructor",
