@@ -332,11 +332,3 @@ def test_imports() -> None:
     from narwhals.stable.v2.dtypes import Enum  # noqa: F401
     from narwhals.stable.v2.selectors import datetime  # noqa: F401
     from narwhals.stable.v2.typing import IntoDataFrame  # noqa: F401
-
-
-def test_interchange_protocol() -> None:
-    class DataFrameLike:
-        def __dataframe__(self) -> None:
-            return None
-
-    nw_v2.from_native(DataFrameLike())
