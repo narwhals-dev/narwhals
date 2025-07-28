@@ -585,9 +585,8 @@ def _get_native_namespace_single_obj(
         return Version.MAIN.namespace.from_native_object(
             obj
         ).implementation.to_native_namespace()
-
-    msg = f"Could not get native namespace from object of type: {type(obj)}"
-    raise TypeError(msg)
+    msg = f"Could not get native namespace from object of type: {type(obj)}"  # pragma: no cover
+    raise TypeError(msg)  # pragma: no cover
 
 
 def narwhalify(
