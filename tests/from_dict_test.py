@@ -34,6 +34,13 @@ def test_from_dict_schema(backend: Implementation | str) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
+    with pytest.deprecated_call():
+        result = nw.from_dict(
+            {"c": [1, 2], "d": [5, 6]},
+            native_namespace=backend,  # type: ignore[arg-type]
+            schema=schema,
+        )
+        assert result.collect_schema() == schema
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
@@ -61,17 +68,6 @@ def test_from_dict_with_backend_invalid() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
-
-
-def test_from_dict_both_backend_and_namespace(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw.get_native_namespace(df)
-    with pytest.raises(ValueError, match="Can't pass both"):
-        nw.from_dict(
-            {"c": [1, 2], "d": [5, 6]},
-            backend="pandas",
-            native_namespace=native_namespace,
-        )
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])

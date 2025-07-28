@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "1.48.1"
+version = "2.0.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -266,6 +266,7 @@ fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
   'narwhals/typing.py',
   'narwhals/stable/v1/typing.py',
+  'narwhals/stable/v2/typing.py',
   'narwhals/this.py',
   'narwhals/_arrow/typing.py',
   'narwhals/_duckdb/typing.py',

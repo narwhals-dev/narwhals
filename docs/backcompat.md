@@ -3,14 +3,15 @@
 Narwhals is primarily aimed at library maintainers rather than end users. As such,
 we need to take stability and backwards compatibility extra-seriously. Our policy is:
 
-- If you write code using `import narwhals.stable.v1 as nw`, then we promise to
+- If you write code using `narwhals.stable.v1` or `import narwhals.stable.v2`, then we promise to
   never change or remove any public function you're using.
 - If we need to make a backwards-incompatible change, it will be pushed into
-  `narwhals.stable.v2`, leaving `narwhals.stable.v1` unaffected.
-- We will maintain `narwhals.stable.v1` indefinitely, even as `narwhals.stable.v2` and other
-  stable APIs come out. For example, Narwhals version 1.0.0 will offer
-  `narwhals.stable.v1`, whereas Narwhals 2.0.0 will offer both `narwhals.stable.v1` and
-  `narwhals.stable.v2`.
+  the main `narwhals` namespace (and eventually `narwhals.stable.v3`),
+  leaving `narwhals.stable.v1` and `narwhals.stable.v2` unaffected.
+- We will maintain `narwhals.stable.v1` and `narwhals.stable.v2` indefinitely,
+  even as `narwhals.stable.v3` and other stable APIs come out. For example,
+  Narwhals version 1.0.0 offers `narwhals.stable.v1`, whereas Narwhals 2.0.0 offers
+  both `narwhals.stable.v1` and `narwhals.stable.v2`.
 
 Like this, we enable different packages to be on different Narwhals stable APIs, and for
 end-users to use all of them in the same project without conflicts nor
@@ -49,8 +50,8 @@ it. That is to say, if you write your code like this:
 
 === "from/to_native"
     ```python
-    import narwhals.stable.v1 as nw
-    from narwhals.typing import IntoFrameT
+    import narwhals.stable.v2 as nw
+    from narwhals.stable.v2.typing import IntoFrameT
 
 
     def func(df: IntoFrameT) -> IntoFrameT:
@@ -59,8 +60,8 @@ it. That is to say, if you write your code like this:
 
 === "@narwhalify"
     ```python
-    import narwhals.stable.v1 as nw
-    from narwhals.typing import FrameT
+    import narwhals.stable.v2 as nw
+    from narwhals.stable.v2.typing import FrameT
 
 
     @nw.narwhalify
@@ -73,18 +74,19 @@ after they have renamed their method.
 
 Concretely, we would do the following:
 
-- `narwhals.stable.v1`: you can keep using `Expr.cum_sum`
-- `narwhals.stable.v2`: you can only use `Expr.cumulative_sum`, `Expr.cum_sum` will have been removed
+- `narwhals.stable.v2`: you can keep using `Expr.cum_sum`
+- `narwhals.stable.v3`: you can only use `Expr.cumulative_sum`, `Expr.cum_sum` will have been removed
 - `narwhals`:  you can only use `Expr.cumulative_sum`, `Expr.cum_sum` will have been removed
 
-So, although Narwhals' main API (and `narwhals.stable.v2`) will have introduced a breaking change,
-users of `narwhals.stable.v1` will have their code unaffected.
+So, although Narwhals' main API (and `narwhals.stable.v3`) will have introduced a breaking change,
+users of `narwhals.stable.v2` will have their code unaffected.
 
 ### Exceptions
 
 Are we really promising perfect backwards compatibility in all cases, without exceptions? Not quite.
 There are some exceptions, which we'll now list. But we'll never intentionally break your code.
-Anything currently in `narwhals.stable.v1` will not be changed or removed in future Narwhals versions.
+Anything currently in `narwhals.stable.v1` or `narwhals.stable.v2` will not be changed or removed
+in future Narwhals versions.
 
 Here are exceptions to our backwards compatibility policy:
 
@@ -100,16 +102,24 @@ Here are exceptions to our backwards compatibility policy:
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
 
-
-### `import narwhals as nw` or `import narwhals.stable.v1 as nw`?
+### `import narwhals as nw`, `import narwhals.stable.v2 as nw`, or `import narwhals.stable.v1 as nw`?
 
 Which should you use? In general we recommend:
 
 - When prototyping, use `import narwhals as nw`, so you can iterate quickly.
 - Once you're happy with what you've got and want to release something production-ready and stable,
-  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v1 as nw`.
+  then switch out your `import narwhals as nw` usage for `import narwhals.stable.v2 as nw`.
+- If you're starting a new project, use either the main Narwhals namespace or `narwhals.stable.v2`.
+- If your project is already using `narwhals.stable.v1`, and you don't need any of the newer Narwhals
+  features, there's probably no need to switch to `narwhals.stable.v2`, as that would require you to
+  raise the minimum version of Narwhals you support. If you'd like to use `narwhals.stable.v2`, make
+  sure to require at least `narwhals>=2.0`.
 
-## `main` vs `stable.v1`
+## `main` vs `stable.v2` differences
+
+So far, nothing, everything non-unstable from the main namespace should be available in `narwhals.stable.v2`.
+
+## `main` vs `stable.v1` differences
 
 - Since Narwhals 1.49:
 
@@ -132,6 +142,9 @@ Which should you use? In general we recommend:
     - `nw.Enum` must be provided `categories` at instantiation.
 
 - Since Narwhals 1.29.0, `LazyFrame.gather_every` has been deprecated from the main namespace.
+
+- Since Narwhals 1.25.0, `native_namespace` is generally deprecated across the API. Please
+  use `backend` instead.
 
 - Since Narwhals 1.24.1, an empty or all-null object-dtype pandas Series is inferred to
   be of dtype `String`. Previously, it would have been inferred as `Object`.

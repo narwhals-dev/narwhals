@@ -10,9 +10,6 @@
         - all
         - and_
         - any
-        - arg_max
-        - arg_min
-        - arg_true
         - cast
         - count
         - cum_count
@@ -70,9 +67,7 @@
         - rolling_sum
         - rolling_var
         - round
-        - sample
         - shift
-        - sort
         - skew
         - sqrt
         - std
