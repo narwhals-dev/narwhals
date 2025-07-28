@@ -423,17 +423,20 @@ class ToPandasArrowKwds(TypedDict, total=False):
     """
 
     memory_pool: pa.MemoryPool
-    categories: list[Any]
-    """List of fields that should be returned as pandas.Categorical.
+    categories: list[str]
+    """Column names to cast to `pandas.Categorical`.
 
-    Only applies to table-like data structures"""
+    Note:
+        Has no effect on `Series`.
+    """
     strings_to_categorical: Literal[True]
+    """Cast all `String`, `Binary` types to `pandas.Categorical`."""
     zero_copy_only: Literal[True]
-    """Raise an ArrowException if this function call would require copying the underlying data."""
+    """Raise an `ArrowException` if this function call would require copying the underlying data."""
     integer_object_nulls: Literal[True]
-    """Cast integers with nulls to objects"""
+    """Cast `Int`, `UInt` types with nulls to `numpy.dtypes.ObjectDType`."""
     date_as_object: Literal[False]
-    """Cast dates to objects.
+    """Cast `Date` types to `numpy.dtypes.ObjectDType`.
 
     If False, convert to datetime64 dtype with the equivalent time unit (if supported).
 
@@ -441,7 +444,7 @@ class ToPandasArrowKwds(TypedDict, total=False):
         in pandas version < 2.0, only datetime64[ns] conversion is supported.
     """
     timestamp_as_object: Literal[True]
-    """Cast non-nanosecond timestamps (np.datetime64) to objects.
+    """Cast non-nanosecond timestamps (np.datetime64) to `numpy.dtypes.ObjectDType`.
 
     This is useful in pandas version 1.x if you have timestamps that don't fit in the normal date range of nanosecond timestamps (1678 CE-2262 CE).
     Non-nanosecond timestamps are supported in pandas version 2.0.
@@ -451,16 +454,16 @@ class ToPandasArrowKwds(TypedDict, total=False):
     deduplicate_objects: Literal[False]
     ignore_metadata: Literal[True]
     safe: Literal[False]
-    """For certain data types, a cast is needed in order to store the data in a pandas DataFrame or Series (e.g. timestamps are always stored as nanoseconds in pandas).
+    """For certain data types, a cast is needed in order to store the data in a `pandas.DataFrame` or `Series` (e.g. timestamps are always stored as nanoseconds in pandas).
 
     This option controls whether it is a safe cast or not."""
     split_blocks: Literal[True]
-    """If True, generate one internal “block” for each column when creating a pandas.DataFrame from a RecordBatch or Table.
+    """Generate one internal "block" for each column when creating a `pandas.DataFrame` from a `RecordBatch` or `Table`.
 
-    While this can temporarily reduce memory note that various pandas operations can trigger “consolidation” which may balloon memory use.
+    While this can temporarily reduce memory note that various pandas operations can trigger "consolidation" which may balloon memory use.
     """
     self_destruct: Literal[True]
-    """EXPERIMENTAL: If True, attempt to deallocate the originating Arrow memory while converting the Arrow object to pandas.
+    """**EXPERIMENTAL**: Attempt to deallocate the originating Arrow memory while converting the Arrow object to pandas.
 
     If you use the object after calling to_pandas with this option it will crash your program.
     Note that you may not see always memory usage improvements.
@@ -468,7 +471,7 @@ class ToPandasArrowKwds(TypedDict, total=False):
     """
     maps_as_pydicts: Literal["None", "lossy", "strict"]
     types_mapper: Callable[[pa.DataType], PandasDType | None] | None
-    """Used to override the default pandas type for conversion of built-in pyarrow types or in absence of pandas_metadata in the Table schema."""
+    """Used to override the default pandas type for conversion of built-in pyarrow types or in absence of pandas_metadata in the `Table` schema."""
     coerce_temporal_nanoseconds: Literal[True]
     """Only applicable to pandas version >= 2.0.
 
