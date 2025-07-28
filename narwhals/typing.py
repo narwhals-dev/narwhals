@@ -414,12 +414,10 @@ MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 class ToPandasArrowKwds(TypedDict, total=False):
-    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`].
+    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas).
 
     Important:
-        Only default-overriding arguments are documented.
-
-    [`pyarrow.Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
+        Only *default-overriding* values are documented.
     """
 
     memory_pool: pa.MemoryPool

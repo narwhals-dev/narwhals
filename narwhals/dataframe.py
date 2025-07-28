@@ -830,7 +830,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 This allows zero copy operations and preservation of null values.
                 Subsequent operations on the resulting pandas DataFrame may trigger conversion to
                 NumPy if those operations are not supported by PyArrow compute functions.
-            **kwds: Additional keyword arguments to be passed to [`pyarrow.Table.to_pandas`]
+            **kwds: Additional keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas)
 
         Returns:
             A pandas DataFrame.
@@ -878,8 +878,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> df_nested.to_pandas(use_pyarrow_extension_array=True).dtypes
             egg    struct<foo: int64, bar: double, ham: large_str...
             dtype: object
-
-        [`pyarrow.Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
         """
         return self._compliant_frame.to_pandas(
             use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
