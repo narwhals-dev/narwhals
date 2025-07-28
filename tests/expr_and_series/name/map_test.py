@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 
@@ -18,9 +20,11 @@ def test_map(constructor: Constructor) -> None:
 
 
 def test_map_after_alias(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="https://github.com/pola-rs/polars/issues/23765")
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.map(function=map_func))
-    expected = {"oof": data["foo"]}
+    expected = {"oof_rof_saila": data["foo"]}
     assert_equal_data(result, expected)
 
 

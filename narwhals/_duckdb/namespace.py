@@ -3,13 +3,11 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import duckdb
 from duckdb import CoalesceOperator, Expression
 from duckdb.typing import BIGINT, VARCHAR
 
-from narwhals._compliant import LazyNamespace
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
@@ -17,6 +15,7 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     concat_str,
+    function,
     lit,
     narwhals_to_native_dtype,
     when,
@@ -25,19 +24,21 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
 
-    from narwhals._duckdb.expr import DuckDBWindowInputs
+    from duckdb import DuckDBPyRelation  # noqa: F401
+
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
 
 
 class DuckDBNamespace(
-    LazyNamespace[DuckDBLazyFrame, DuckDBExpr, duckdb.DuckDBPyRelation]
+    SQLNamespace[DuckDBLazyFrame, DuckDBExpr, "DuckDBPyRelation", Expression]
 ):
     _implementation: Implementation = Implementation.DUCKDB
 
@@ -55,6 +56,18 @@ class DuckDBNamespace(
     @property
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
+
+    def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
+        return function(name, *args)
+
+    def _lit(self, value: Any) -> Expression:
+        return lit(value)
+
+    def _when(self, condition: Expression, value: Expression) -> Expression:
+        return when(condition, value)
+
+    def _coalesce(self, *exprs: Expression) -> Expression:
+        return CoalesceOperator(*exprs)
 
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
@@ -97,46 +110,6 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def all_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            it = (
-                (CoalesceOperator(expr, lit(True)) for expr in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def any_horizontal(self, *exprs: DuckDBExpr, ignore_nulls: bool) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            it = (
-                (CoalesceOperator(expr, lit(False)) for expr in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.or_, it)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def max_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            return F("greatest", *cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def min_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            return F("least", *cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
-    def sum_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            return reduce(operator.add, (CoalesceOperator(col, lit(0)) for col in cols))
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
             cols = list(cols)
@@ -175,29 +148,11 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def coalesce(self, *exprs: DuckDBExpr) -> DuckDBExpr:
-        def func(cols: Iterable[Expression]) -> Expression:
-            return CoalesceOperator(*cols)
-
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
-
 
 class DuckDBWhen(SQLWhen["DuckDBLazyFrame", Expression, DuckDBExpr]):
     @property
     def _then(self) -> type[DuckDBThen]:
         return DuckDBThen
-
-    def __call__(self, df: DuckDBLazyFrame) -> Sequence[Expression]:
-        self.when = when
-        self.lit = lit
-        return super().__call__(df)
-
-    def _window_function(
-        self, df: DuckDBLazyFrame, window_inputs: DuckDBWindowInputs
-    ) -> Sequence[Expression]:
-        self.when = when
-        self.lit = lit
-        return super()._window_function(df, window_inputs)
 
 
 class DuckDBThen(SQLThen["DuckDBLazyFrame", Expression, DuckDBExpr], DuckDBExpr): ...

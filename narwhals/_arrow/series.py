@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -20,8 +20,9 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    zeros,
 )
-from narwhals._compliant import EagerSeries
+from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._expression_parsing import ExprKind
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -51,10 +52,12 @@ if TYPE_CHECKING:
         Incomplete,
         NullPlacement,
         Order,
+        ScalarAny,
         TieBreaker,
         _AsPyType,
         _BasicDataType,
     )
+    from narwhals._compliant.series import HistData
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -72,6 +75,10 @@ if TYPE_CHECKING:
         _1DArray,
         _2DArray,
         _SliceIndex,
+    )
+
+    ArrowHistData: TypeAlias = (
+        "HistData[ChunkedArrayAny, list[ScalarAny] | pa.Int64Array | list[float]]"
     )
 
 
@@ -320,8 +327,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
 
     def median(self, *, _return_py_scalar: bool = True) -> float:
-        from narwhals.exceptions import InvalidOperationError
-
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
@@ -831,8 +836,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        _, lower = extract_native(self, lower_bound) if lower_bound else (None, None)
-        _, upper = extract_native(self, upper_bound) if upper_bound else (None, None)
+        _, lower = (
+            extract_native(self, lower_bound) if lower_bound is not None else (None, None)
+        )
+        _, upper = (
+            extract_native(self, upper_bound) if upper_bound is not None else (None, None)
+        )
 
         if lower is None:
             return self._with_native(pc.min_element_wise(self.native, upper))
@@ -1017,101 +1026,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
-    def hist(  # noqa: C901, PLR0912, PLR0915
-        self,
-        bins: list[float | int] | None,
-        *,
-        bin_count: int | None,
-        include_breakpoint: bool,
+    def hist_from_bins(
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
-        import numpy as np  # ignore-banned-import
-
-        from narwhals._arrow.dataframe import ArrowDataFrame
-
-        def _hist_from_bin_count(bin_count: int):  # type: ignore[no-untyped-def] # noqa: ANN202
-            d = pc.min_max(self.native)
-            lower, upper = d["min"].as_py(), d["max"].as_py()
-            if lower == upper:
-                lower -= 0.5
-                upper += 0.5
-            bins = np.linspace(lower, upper, bin_count + 1)
-            return _hist_from_bins(bins)
-
-        def _hist_from_bins(bins: Sequence[int | float]):  # type: ignore[no-untyped-def] # noqa: ANN202
-            bin_indices = np.searchsorted(bins, self.native, side="left")
-            bin_indices = pc.if_else(  # lowest bin is inclusive
-                pc.equal(self.native, lit(bins[0])), 1, bin_indices
-            )
-
-            # align unique categories and counts appropriately
-            obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
-            obj_cats = np.arange(1, len(bins))
-            counts = np.zeros_like(obj_cats)
-            counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
-
-            bin_right = bins[1:]
-            return counts, bin_right
-
-        counts: Sequence[int | float | pa.Scalar[Any]] | np.typing.ArrayLike
-        bin_right: Sequence[int | float | pa.Scalar[Any]] | np.typing.ArrayLike
-
-        data_count = pc.sum(
-            pc.invert(pc.or_(pc.is_nan(self.native), pc.is_null(self.native))).cast(
-                pa.uint8()
-            ),
-            min_count=0,
+        return (
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bins(bins)
+            .to_frame()
         )
-        if bins is not None:
-            if len(bins) < 2:
-                counts, bin_right = [], []
 
-            elif data_count == pa.scalar(0, type=pa.uint64()):  # type:ignore[comparison-overlap]
-                counts = np.zeros(len(bins) - 1)
-                bin_right = bins[1:]
-
-            elif len(bins) == 2:
-                counts = [
-                    pc.sum(
-                        pc.and_(
-                            pc.greater_equal(self.native, lit(float(bins[0]))),
-                            pc.less_equal(self.native, lit(float(bins[1]))),
-                        ).cast(pa.uint8())
-                    )
-                ]
-                bin_right = [bins[-1]]
-            else:
-                counts, bin_right = _hist_from_bins(bins)
-
-        elif bin_count is not None:
-            if bin_count == 0:
-                counts, bin_right = [], []
-            elif data_count == pa.scalar(0, type=pa.uint64()):  # type:ignore[comparison-overlap]
-                counts, bin_right = (
-                    np.zeros(bin_count),
-                    np.linspace(0, 1, bin_count + 1)[1:],
-                )
-            elif bin_count == 1:
-                d = pc.min_max(self.native)
-                lower, upper = d["min"], d["max"]
-                if lower == upper:
-                    counts, bin_right = [data_count], [pc.add(upper, pa.scalar(0.5))]
-                else:
-                    counts, bin_right = [data_count], [upper]
-            else:
-                counts, bin_right = _hist_from_bin_count(bin_count)
-
-        else:  # pragma: no cover
-            # caller guarantees that either bins or bin_count is specified
-            msg = "must provide one of `bin_count` or `bins`"
-            raise InvalidOperationError(msg)
-
-        data: dict[str, Any] = {}
-        if include_breakpoint:
-            data["breakpoint"] = bin_right
-        data["count"] = counts
-
-        return ArrowDataFrame(
-            pa.Table.from_pydict(data), version=self._version, validate_column_names=True
+    def hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> ArrowDataFrame:
+        return (
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bin_count(bin_count)
+            .to_frame()
         )
 
     def __iter__(self) -> Iterator[Any]:
@@ -1131,8 +1061,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 pc.is_in(other_, self.native), return_py_scalar=True
             )
         except (ArrowInvalid, ArrowNotImplementedError, ArrowTypeError) as exc:
-            from narwhals.exceptions import InvalidOperationError
-
             msg = f"Unable to compare other of type {type(other)} with series of type {self.dtype}."
             raise InvalidOperationError(msg) from exc
 
@@ -1166,3 +1094,90 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStructNamespace(self)
 
     ewm_mean = not_implemented()
+
+
+class _ArrowHist(
+    EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
+):
+    _series: ArrowSeries
+
+    def to_frame(self) -> ArrowDataFrame:
+        # NOTE: Constructor typing is too strict for `TypedDict`
+        table: Incomplete = pa.Table.from_pydict
+        from_native = self._series.__narwhals_namespace__()._dataframe.from_native
+        return from_native(table(self._data), context=self._series)
+
+    # NOTE: *Could* be handled at narwhals-level
+    def is_empty_series(self) -> bool:
+        # NOTE: `ChunkedArray.combine_chunks` returns the concrete array type
+        # Stubs say `Array[pa.BooleanScalar]`, which is missing properties
+        # https://github.com/zen-xu/pyarrow-stubs/blob/6bedee748bc74feb8513b24bf43d64b24c7fddc8/pyarrow-stubs/__lib_pxi/array.pyi#L2395-L2399
+        is_null = self.native.is_null(nan_is_null=True)
+        arr = cast("pa.BooleanArray", is_null.combine_chunks())
+        return arr.false_count == 0
+
+    # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
+    # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
+    def series_empty(self, arg: int | list[float], /) -> ArrowHistData:
+        count = self._zeros(arg)
+        if self._breakpoint:
+            return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
+        return {"count": count}
+
+    def _zeros(self, arg: int | list[float], /) -> pa.Int64Array:
+        return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+
+    def _linear_space(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: Literal["both", "none"] = "both",
+    ) -> _1DArray:
+        from numpy import linspace  # ignore-banned-import
+
+        return linspace(start=start, stop=end, num=num_samples, endpoint=closed == "both")
+
+    def _calculate_bins(self, bin_count: int) -> _1DArray:
+        """Prepare bins for histogram calculation from bin_count."""
+        d = pc.min_max(self.native)
+        lower, upper = d["min"].as_py(), d["max"].as_py()
+        if lower == upper:
+            lower -= 0.5
+            upper += 0.5
+        return self._linear_space(lower, upper, bin_count + 1)
+
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> ArrowHistData:
+        ser = self.native
+        # NOTE: `mypy` refuses to resolve `ndarray.__getitem__`
+        # Previously annotated as `list[float]`, but
+        # - wasn't accurate to how we implemented it
+        # - `pa.scalar` overloads fail to match on `float | np.float64` (but runtime is fine)
+        bins = cast("list[float]", bins)
+        # Handle single bin case
+        if len(bins) == 2:
+            is_between_bins = pc.and_(
+                pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
+            )
+            count = pc.sum(is_between_bins.cast(pa.uint8()))
+            if self._breakpoint:
+                return {"breakpoint": [bins[-1]], "count": [count]}
+            return {"count": [count]}
+
+        # Handle multiple bins
+        import numpy as np  # ignore-banned-import
+
+        bin_indices = np.searchsorted(bins, ser, side="left")
+        # lowest bin is inclusive
+        bin_indices = pc.if_else(pc.equal(ser, lit(bins[0])), 1, bin_indices)
+
+        # Align unique categories and counts appropriately
+        obs_cats, obs_counts = np.unique(bin_indices, return_counts=True)
+        obj_cats = np.arange(1, len(bins))
+        counts = np.zeros_like(obj_cats)
+        counts[np.isin(obj_cats, obs_cats)] = obs_counts[np.isin(obs_cats, obj_cats)]
+
+        if self._breakpoint:
+            return {"breakpoint": bins[1:], "count": counts}
+        return {"count": counts}

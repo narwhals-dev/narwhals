@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+from narwhals._utils import Implementation
 from narwhals.exceptions import InvalidOperationError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
@@ -30,12 +31,20 @@ from narwhals.stable.v1.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.utils import Version
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from narwhals.typing import IntoDataFrameT
+    from narwhals._namespace import EagerAllowed
+    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.typing import _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -367,8 +376,6 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
-    with pytest.deprecated_call():
-        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -389,9 +396,6 @@ def test_any_horizontal() -> None:
     result = df.select(nw_v1.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}
     assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_all_horizontal() -> None:
@@ -404,9 +408,6 @@ def test_all_horizontal() -> None:
     )
     result = df.select(nw_v1.all_horizontal("a", "b"))
     expected = {"a": [True, None, False]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
     assert_equal_data(result, expected)
 
 
@@ -532,10 +533,6 @@ def test_from_native_strict_false_typing() -> None:
     nw_v1.from_native(df, strict=False, eager_only=True)
     nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
 
-    with pytest.deprecated_call(match="please use `pass_through` instead"):
-        nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
-
 
 def test_from_native_strict_false_invalid() -> None:
     with pytest.raises(ValueError, match="Cannot pass both `strict`"):
@@ -570,7 +567,8 @@ def test_dataframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]})
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AttributeError):
+    # NOTE: (#2629) combined with passing in `nw_v1.DataFrame` (w/ a `_version`) into itself changes the error
+    with pytest.raises(AssertionError):
         nw_v1.DataFrame(nw_frame, level="full")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
@@ -836,11 +834,6 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     expected_expr = (2, 1)
     assert result_expr == expected_expr
 
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        df.select(nw.col("a").sample(n=2))
-
 
 def test_is_frame() -> None:
     pytest.importorskip("pyarrow")
@@ -866,13 +859,6 @@ def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) 
     result = df_v1.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}
     assert_equal_data(result, expected)
-
-    # Test deprecation for LazyFrame in main namespace
-    lf = nw.from_native(constructor_eager(data)).lazy()
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        lf.gather_every(n=n, offset=offset)
 
 
 @pytest.mark.parametrize("n", [1, 2])
@@ -933,16 +919,6 @@ def test_deprecated_expr_methods() -> None:
     }
     assert_equal_data(result, expected)
 
-    with pytest.deprecated_call():
-        df.select(
-            c=nw.col("a").sort().head(2),
-            d=nw.col("a").sort().tail(2),
-            e=(nw.col("a") == 0).arg_true(),
-            f=nw.col("a").gather_every(2),
-            g=nw.col("a").arg_min(),
-            h=nw.col("a").arg_max(),
-        )
-
 
 def test_dask_order_dependent_ops() -> None:
     # Preserve these for narwhals.stable.v1, even though they
@@ -974,3 +950,75 @@ def test_dask_order_dependent_ops() -> None:
         "i": [True, True, True],
     }
     assert_equal_data(result, expected)
+
+
+def test_get_column() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    def minimal_function(data: nw_v1.Series[Any]) -> None:
+        data.is_null()
+
+    pd_df = pd.DataFrame({"col": [1, 2, None, 4]})
+    col = nw_v1.from_native(pd_df, eager_only=True).get_column("col")
+    # check this doesn't raise type-checking errors
+    minimal_function(col)
+    assert isinstance(col, nw_v1.Series)
+
+
+def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v1.Int16(), "d": nw_v1.Float32()}
+    result = nw_v1.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+
+
+def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    is_pyarrow = eager_backend in {Implementation.PYARROW, "pyarrow"}
+    data: dict[str, Any] = {"ab": [1, 2, 3], "ba": ["four", "five", None]}
+    table = pa.table(data)
+    supports_arrow_c_stream = nw_v1.DataFrame.from_arrow(table, backend=eager_backend)
+    assert_equal_data(supports_arrow_c_stream, data)
+    assert isinstance(supports_arrow_c_stream, nw_v1.DataFrame)
+    assert supports_arrow_c_stream._version is Version.V1
+    if is_pyarrow:
+        assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    else:
+        assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    if PYARROW_VERSION < (14,):  # pragma: no cover
+        ...
+    else:
+        result = nw_v1.DataFrame.from_arrow(
+            supports_arrow_c_stream, backend=eager_backend
+        )
+        assert_equal_data(result, data)
+        assert result._version is Version.V1
+        assert isinstance(result, nw_v1.DataFrame)
+        if is_pyarrow:
+            assert isinstance(result.to_native(), pa.Table)
+        else:
+            assert not isinstance(result.to_native(), pa.Table)
+
+
+def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
+    schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    expected = {"c": [5, 1, 1], "d": [2, 4, 2], "e": [0, 7, 3], "f": [1, 8, 9]}
+    result = nw_v1.DataFrame.from_numpy(arr, backend=eager_backend, schema=schema)
+    result_schema = result.collect_schema()
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.DataFrame)
+    assert result_schema == schema
+    assert_equal_data(result, expected)
+
+    # NOTE: Existing bug, `schema` and `collect_schema` should be redefined for `v1`
+    with pytest.raises(AssertionError):
+        assert isinstance(result_schema, nw_v1.Schema)
+
+    assert isinstance(result_schema, nw.Schema)

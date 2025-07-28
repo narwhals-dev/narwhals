@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
+    from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
 
@@ -50,6 +51,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
+
+    def __narwhals_namespace__(
+        self,
+    ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
         self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
@@ -140,11 +145,19 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
+        alias_output_names = (
+            None
+            if func is None
+            else func
+            if current_alias_output_names is None
+            else lambda output_names: func(current_alias_output_names(output_names))
+        )
         return type(self)(
             self._call,
             self._window_function,
             evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
+            alias_output_names=alias_output_names,
             version=self._version,
             implementation=self._implementation,
         )
@@ -162,11 +175,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._window_function or default_window_func
 
-    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
-    def _lit(self, value: Any) -> NativeExprT: ...
+    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT:
+        return self.__narwhals_namespace__()._function(name, *args)
+
+    def _lit(self, value: Any) -> NativeExprT:
+        return self.__narwhals_namespace__()._lit(value)
+
+    def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT:
+        return self.__narwhals_namespace__()._when(condition, value)
+
+    def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
+        return self.__narwhals_namespace__()._coalesce(*expr)
+
     def _count_star(self) -> NativeExprT: ...
-    def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT: ...
-    def _coalesce(self, *expr: NativeExprT) -> NativeExprT: ...
+
     def _window_expression(
         self,
         expr: NativeExprT,

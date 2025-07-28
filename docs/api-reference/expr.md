@@ -8,9 +8,6 @@
         - alias
         - all
         - any
-        - arg_max
-        - arg_min
-        - arg_true
         - cast
         - count
         - cum_count
@@ -24,8 +21,6 @@
         - exp
         - fill_null
         - filter
-        - gather_every
-        - head
         - clip
         - is_between
         - is_duplicated
@@ -57,14 +52,11 @@
         - rolling_sum
         - rolling_var
         - round
-        - sample
         - shift
-        - sort
         - skew
         - sqrt
         - std
         - sum
-        - tail
         - unique
         - var
       show_source: false
