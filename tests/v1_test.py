@@ -45,7 +45,8 @@ if TYPE_CHECKING:
     from typing_extensions import assert_type
 
     from narwhals._namespace import EagerAllowed
-    from narwhals.typing import IntoDataFrameT, IntoDType, _1DArray, _2DArray
+    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -377,8 +378,6 @@ def test_get_level() -> None:
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 2, 3]})
-    with pytest.deprecated_call():
-        assert nw.get_level(nw.from_native(df)) == "full"
     assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
     assert (
         nw_v1.get_level(
@@ -399,9 +398,6 @@ def test_any_horizontal() -> None:
     result = df.select(nw_v1.any_horizontal("a", "b"))
     expected = {"a": [True, True, None]}
     assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.any_horizontal("a", "b"))
-    assert_equal_data(result, expected)
 
 
 def test_all_horizontal() -> None:
@@ -414,9 +410,6 @@ def test_all_horizontal() -> None:
     )
     result = df.select(nw_v1.all_horizontal("a", "b"))
     expected = {"a": [True, None, False]}
-    assert_equal_data(result, expected)
-    with pytest.deprecated_call(match="ignore_nulls"):
-        result = df.select(nw.all_horizontal("a", "b"))
     assert_equal_data(result, expected)
 
 
@@ -541,10 +534,6 @@ def test_from_native_strict_false_typing() -> None:
     nw_v1.from_native(df, strict=False)
     nw_v1.from_native(df, strict=False, eager_only=True)
     nw_v1.from_native(df, strict=False, eager_or_interchange_only=True)
-
-    with pytest.deprecated_call(match="please use `pass_through` instead"):
-        nw.from_native(df, strict=False)  # type: ignore[call-overload]
-        nw.from_native(df, strict=False, eager_only=True)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_false_invalid() -> None:
@@ -848,11 +837,6 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     expected_expr = (2, 1)
     assert result_expr == expected_expr
 
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        df.select(nw.col("a").sample(n=2))
-
 
 def test_is_frame() -> None:
     pytest.importorskip("pyarrow")
@@ -878,13 +862,6 @@ def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) 
     result = df_v1.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}
     assert_equal_data(result, expected)
-
-    # Test deprecation for LazyFrame in main namespace
-    lf = nw.from_native(constructor_eager(data)).lazy()
-    with pytest.deprecated_call(
-        match="is deprecated and will be removed in a future version"
-    ):
-        lf.gather_every(n=n, offset=offset)
 
 
 @pytest.mark.parametrize("n", [1, 2])
@@ -944,16 +921,6 @@ def test_deprecated_expr_methods() -> None:
         "h": [2, 2],
     }
     assert_equal_data(result, expected)
-
-    with pytest.deprecated_call():
-        df.select(
-            c=nw.col("a").sort().head(2),
-            d=nw.col("a").sort().tail(2),
-            e=(nw.col("a") == 0).arg_true(),
-            f=nw.col("a").gather_every(2),
-            g=nw.col("a").arg_min(),
-            h=nw.col("a").arg_max(),
-        )
 
 
 def test_dask_order_dependent_ops() -> None:
