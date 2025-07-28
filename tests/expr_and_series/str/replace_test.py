@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import pytest
 
 import narwhals as nw
@@ -291,3 +293,85 @@ def test_str_replace_all_expr_multivalue(
         nw.col("a").str.replace_all(pattern=pattern, value=nw.col(value), literal=literal)
     )
     assert_equal_data(result, expected)
+
+
+def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
+    only_str_supported = pytest.raises(
+        TypeError, match=r"only supports str replacement values"
+    )
+    multivalue_binary_n = pytest.raises(Exception, match=r"'n > 1' not yet supported")
+
+    df = nw.from_native(constructor_eager({"a": ["abc", "def", "ab"]}))
+
+    ## .str.replace
+    # all eager backends support scalar replacement
+    df["a"].str.replace("ab", "XYZ", n=1)
+    df["a"].str.replace("ab", "XYZ", n=2)
+
+    # pyarrow does not support multivalue replacement
+    context = (
+        only_str_supported if "pyarrow_table" in str(constructor_eager) else nullcontext()
+    )
+    with context:
+        df["a"].str.replace("ab", df["a"])
+
+    # no backends support multivalue AND n > 1
+    context = (
+        only_str_supported
+        if "pyarrow_table" in str(constructor_eager)
+        else multivalue_binary_n
+    )
+    with context:
+        df["a"].str.replace("ab", df["a"], n=2)
+
+    ## .str.replace_all; all eager backends support scalar replacement
+    df["a"].str.replace_all("ab", "XYZ")
+
+    # pyarrow does not support multivalue replacement
+    context = (
+        only_str_supported if "pyarrow_table" in str(constructor_eager) else nullcontext()
+    )
+    with context:
+        df["a"].str.replace_all("ab", df["a"])
+
+
+def test_str_replace_errors_expr(constructor: Constructor) -> None:
+    not_implemented = pytest.raises(NotImplementedError)
+    only_str_supported = pytest.raises(
+        TypeError, match=r"only supports str replacement values"
+    )
+
+    df = nw.from_native(constructor({"a": ["abc", "def", "ab"]}))
+
+    ## .str.replace
+    context = (
+        not_implemented
+        if any(x in str(constructor) for x in ["duckdb", "ibis", "pyspark"])
+        else nullcontext()
+    )
+    with context:
+        df.select(nw.col("a").str.replace("ab", "XYZ", n=1))
+
+    ## .str.replace multivalue; some dont implement replace, others dont support multivalue
+    context = nullcontext()
+    if any(x in str(constructor) for x in ["duckdb", "ibis", "pyspark"]):
+        context = not_implemented
+    elif any(x in str(constructor) for x in ["dask", "pyarrow_table"]):
+        context = only_str_supported
+
+    with context:
+        df.select(nw.col("a").str.replace("ab", nw.col("a"), n=1))
+
+    ## .str.replace_all; all backends support .str.replace_all with scalar replacement
+    df.select(nw.col("a").str.replace_all("ab", "a"))
+
+    ## .str.replace_all multivalue
+    context = (
+        only_str_supported
+        if any(
+            x in str(constructor) for x in ["pyarrow_table", "ibis", "pyspark", "dask"]
+        )
+        else nullcontext()
+    )
+    with context:
+        df.select(nw.col("a").str.replace_all("ab", nw.col("a")))

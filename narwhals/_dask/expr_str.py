@@ -24,7 +24,7 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
                 return expr.str.replace(pattern, value, regex=not literal, n=n)
             except TypeError as e:
                 if not isinstance(value, str):
-                    msg = "dask backed `Expr.str.replace` only supports str replacement values."
+                    msg = "dask backed `Expr.str.replace` only supports str replacement values"
                     raise TypeError(msg) from e
                 raise
 

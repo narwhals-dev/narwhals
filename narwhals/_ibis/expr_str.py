@@ -81,7 +81,7 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
     ) -> IbisExpr:
         if not isinstance(value, str):
             msg = (
-                "Ibis backed `Expr.str.replace_all` only supports str replacement values."
+                "Ibis backed `Expr.str.replace_all` only supports str replacement values"
             )
             raise TypeError(msg)
         fn = self._replace_all_literal if literal else self._replace_all

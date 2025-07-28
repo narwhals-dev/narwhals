@@ -25,7 +25,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
             arr = fn(self.native, pattern, replacement=value, max_replacements=n)
         except TypeError as e:
             if not isinstance(value, str):
-                msg = "PyArrow backed `Series.str.replace` only supports str replacement values."
+                msg = "PyArrow backed `Series.str.replace` only supports str replacement values"
                 raise TypeError(msg) from e
             raise
         return self.with_native(arr)

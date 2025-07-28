@@ -35,7 +35,7 @@ class SparkLikeExprStringNamespace(
                 )
             except ValueError as e:
                 if not isinstance(value, str):
-                    msg = f"{self.compliant._implementation} backed `Expr.str.replace_all` only supports str replacement values."
+                    msg = f"{self.compliant._implementation} backed `Expr.str.replace_all` only supports str replacement values"
                     raise TypeError(msg) from e
                 raise
 
