@@ -34,13 +34,17 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
-    issue_deprecation_warning,
     issue_performance_warning,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import get_polars, is_numpy_array
+from narwhals.dependencies import (
+    get_polars,
+    is_numpy_array,
+    is_numpy_array_2d,
+    is_pyarrow_table,
+)
 from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
-from narwhals.functions import _from_dict_no_backend
+from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
@@ -58,6 +62,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals._translate import IntoArrowTable
     from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
@@ -459,6 +464,62 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise AssertionError(msg)
 
     @classmethod
+    def from_arrow(
+        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    ) -> DataFrame[Any]:
+        """Construct a DataFrame from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            native_frame: Object which implements `__arrow_c_stream__`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4.2, 5.1]})
+            >>> nw.DataFrame.from_arrow(df_native, backend="polars")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬─────┐   |
+            |  │ a   ┆ b   │   |
+            |  │ --- ┆ --- │   |
+            |  │ i64 ┆ f64 │   |
+            |  ╞═════╪═════╡   |
+            |  │ 1   ┆ 4.2 │   |
+            |  │ 2   ┆ 5.1 │   |
+            |  └─────┴─────┘   |
+            └──────────────────┘
+        """
+        if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
+            msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_arrow(native_frame, context=ns)
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_arrow` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],
@@ -517,6 +578,80 @@ class DataFrame(BaseFrame[DataFrameT]):
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.DataFrame.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> DataFrame[Any]:
+        """Construct a DataFrame from a NumPy ndarray.
+
+        Notes:
+            Only row orientation is currently supported.
+
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Arguments:
+            data: Two-dimensional data represented as a NumPy ndarray.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new DataFrame.
+
+        Examples:
+            >>> import numpy as np
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
+            >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+            >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="polars")
+            ┌───────────────────┐
+            |Narwhals DataFrame |
+            |-------------------|
+            |shape: (2, 3)      |
+            |┌─────┬─────┬─────┐|
+            |│ c   ┆ d   ┆ e   │|
+            |│ --- ┆ --- ┆ --- │|
+            |│ i16 ┆ f32 ┆ i8  │|
+            |╞═════╪═════╪═════╡|
+            |│ 5   ┆ 2.0 ┆ 1   │|
+            |│ 1   ┆ 4.0 ┆ 3   │|
+            |└─────┴─────┴─────┘|
+            └───────────────────┘
+        """
+        if not is_numpy_array_2d(data):
+            msg = "`from_numpy` only accepts 2D numpy arrays"
+            raise ValueError(msg)
+        if not _is_into_schema(schema):
+            msg = (
+                "`schema` is expected to be one of the following types: "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
+                f"Got {type(schema)}."
+            )
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            return cls(ns.from_numpy(data, schema), level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
         )
         raise ValueError(msg)
 
@@ -2731,22 +2866,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().head(n)
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
-        r"""Get the last `n` rows.
-
-        Warning:
-            `LazyFrame.tail` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
-        return super().tail(n)
-
     def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""Remove columns from the LazyFrame.
 
@@ -3222,30 +3341,6 @@ class LazyFrame(BaseFrame[FrameT]):
             A LazyFrame.
         """
         return self
-
-    def gather_every(self, n: int, offset: int = 0) -> Self:
-        r"""Take every nth row in the DataFrame and return as a new DataFrame.
-
-        Warning:
-            `LazyFrame.gather_every` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Gather every *n*-th row.
-            offset: Starting index.
-
-        Returns:
-            The LazyFrame containing only the selected rows.
-        """
-        msg = (
-            "`LazyFrame.gather_every` is deprecated and will be removed in a future version.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.29.0")
-
-        return super().gather_every(n=n, offset=offset)
 
     def unpivot(
         self,

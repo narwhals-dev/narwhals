@@ -4,7 +4,7 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -14,7 +14,6 @@ from narwhals._expression_parsing import (
     extract_compliant,
     is_scalar_like,
 )
-from narwhals._typing_compat import deprecated
 from narwhals._utils import (
     Implementation,
     Version,
@@ -23,7 +22,6 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
-    issue_deprecation_warning,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -53,7 +51,6 @@ if TYPE_CHECKING:
         FrameT,
         IntoDType,
         IntoExpr,
-        IntoSeriesT,
         NativeFrame,
         NativeLazyFrame,
         NativeSeries,
@@ -170,14 +167,12 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     )
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def new_series(
     name: str,
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    backend: ModuleType | Implementation | str,
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -194,13 +189,6 @@ def new_series(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new Series
@@ -221,7 +209,6 @@ def new_series(
         |Name: a, dtype: int32|
         └─────────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     return _new_series_impl(name, values, dtype, backend=backend)
 
 
@@ -285,13 +272,7 @@ def from_dict(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.26.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
+        native_namespace: deprecated, same as `backend`.
 
     Returns:
         A new DataFrame.
@@ -347,13 +328,11 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    backend: ModuleType | Implementation | str,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -374,13 +353,6 @@ def from_numpy(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -406,7 +378,6 @@ def from_numpy(
         |  e: [[1,3]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not is_numpy_array_2d(data):
         msg = "`from_numpy` only accepts 2D numpy arrays"
         raise ValueError(msg)
@@ -447,12 +418,8 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
     )
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def from_arrow(
-    native_frame: IntoArrowTable,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
+    native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
 ) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -466,13 +433,6 @@ def from_arrow(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
 
     Returns:
         A new DataFrame.
@@ -498,7 +458,6 @@ def from_arrow(
         |  └─────┴─────┘   |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
@@ -601,47 +560,8 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-@deprecated(
-    "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol."
-)
-def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
-) -> Literal["full", "lazy", "interchange"]:
-    """Level of support Narwhals has for current object.
-
-    Warning:
-        `get_level` is deprecated and will be removed in a future version.
-        "DuckDB and Ibis now have full lazy support in Narwhals, and passing
-        them to `nw.from_native` returns `nw.LazyFrame`.
-        Note: this will remain available in `narwhals.stable.v1`.
-        See [stable api](../backcompat.md/) for more information.
-
-    Arguments:
-        obj: Dataframe or Series.
-
-    Returns:
-        This can be one of
-
-            - 'full': full Narwhals API support
-            - 'lazy': only lazy operations are supported. This excludes anything
-              which involves iterating over rows in Python.
-    """
-    issue_deprecation_warning(
-        "`get_level` is deprecated, as Narwhals no longer supports the Dataframe Interchange Protocol.\n"
-        "DuckDB and Ibis now have full lazy support in Narwhals, and passing them to `nw.from_native` \n"
-        "returns `nw.LazyFrame`.",
-        "1.43",
-    )
-    return obj._level
-
-
-@deprecate_native_namespace(warn_version="1.27.2", required=True)
 def read_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -654,13 +574,6 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.27.2)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -679,7 +592,6 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     eager_backend = Implementation.from_backend(backend)
     native_namespace = eager_backend.to_native_namespace()
     native_frame: NativeFrame
@@ -705,13 +617,8 @@ def read_csv(
     return from_native(native_frame, eager_only=True)
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def scan_csv(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -727,13 +634,6 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -755,7 +655,6 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
@@ -799,13 +698,8 @@ def scan_csv(
     return from_native(native_frame).lazy()
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def read_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -818,13 +712,6 @@ def read_parquet(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -848,7 +735,6 @@ def read_parquet(
         |c: [[0.2,0.1]]    |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame
@@ -876,13 +762,8 @@ def read_parquet(
     return from_native(native_frame, eager_only=True)
 
 
-@deprecate_native_namespace(warn_version="1.31.0", required=True)
 def scan_parquet(
-    source: str,
-    *,
-    backend: ModuleType | Implementation | str | None = None,
-    native_namespace: ModuleType | None = None,
-    **kwargs: Any,
+    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -912,13 +793,6 @@ def scan_parquet(
                 `"pyspark"` or `"sqlframe"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
                 `pyspark.sql` or `sqlframe`.
-        native_namespace: The native library to use for DataFrame creation.
-
-            *Deprecated* (v1.31.0)
-
-            Please use `backend` instead. Note that `native_namespace` is still available
-            (and won't emit a deprecation warning) if you use `narwhals.stable.v1`,
-            see [perfect backwards compatibility policy](../backcompat.md/).
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -953,7 +827,6 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    backend = cast("ModuleType | Implementation | str", backend)
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
@@ -1575,9 +1448,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When(*predicates)
 
 
-def all_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
-) -> Expr:
+def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise AND horizontally across columns.
 
     Arguments:
@@ -1587,7 +1458,7 @@ def all_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `True`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:
@@ -1622,12 +1493,6 @@ def all_horizontal(
     if not exprs:
         msg = "At least one expression must be passed to `all_horizontal`"
         raise ValueError(msg)
-    if ignore_nulls is None:
-        issue_deprecation_warning(
-            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.45",
-        )
-        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(
@@ -1679,9 +1544,7 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
 
 
-def any_horizontal(
-    *exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool | None = None
-) -> Expr:
+def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
     r"""Compute the bitwise OR horizontally across columns.
 
     Arguments:
@@ -1691,7 +1554,7 @@ def any_horizontal(
 
             - If `True`, null values are ignored. If there are no elements, the result
               is `False`.
-            - If `False` (default), Kleene logic is followed. Note that this is not allowed for
+            - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
     Returns:
@@ -1730,12 +1593,6 @@ def any_horizontal(
     if not exprs:
         msg = "At least one expression must be passed to `any_horizontal`"
         raise ValueError(msg)
-    if ignore_nulls is None:
-        issue_deprecation_warning(
-            "`ignore_nulls` will become a required argument in Narwhals 2.0. Please specify `ignore_nulls=True` or `ignore_nulls=False` to silence this warning.",
-            _version="1.45",
-        )
-        ignore_nulls = False
     flat_exprs = flatten(exprs)
     return Expr(
         lambda plx: apply_n_ary_operation(

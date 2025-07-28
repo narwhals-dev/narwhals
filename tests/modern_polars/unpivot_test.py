@@ -2,18 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pytest
-
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 
-def test_unpivot(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "cudf" in str(constructor) or (
-        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (13, 0, 0)
-    ):
-        request.applymarker(pytest.mark.xfail)
-
+def test_unpivot(constructor: Constructor) -> None:
     data = {
         "date": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
         "aapl": [110, 100, 105],
@@ -21,11 +14,8 @@ def test_unpivot(constructor: Constructor, request: pytest.FixtureRequest) -> No
         "msft": [330, 300, 315],
         "nflx": [420, 400, 440],
     }
-
     df = nw.from_native(constructor(data))
-
     result = df.unpivot(index="date", value_name="price").sort(by=["date", "variable"])
-
     expected = {
         "date": [
             *[datetime(2020, 1, 1)] * 4,
