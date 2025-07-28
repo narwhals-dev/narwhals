@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from narwhals._utils import Version
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -39,18 +38,6 @@ def schema_struct(a_dtype: IntoDType, b_dtype: IntoDType) -> nw.Schema:
 
 def schema_list(a_dtype: IntoDType, b_dtype: IntoDType) -> nw.Schema:
     return nw.Schema({"a": nw.List(a_dtype), "b": nw.List(b_dtype)})
-
-
-@pytest.fixture(scope="session")
-def arrow_namespace() -> ArrowNamespace:
-    """Using for `ArrowDataFrame.to_struct`.
-
-    Has a backcompat path, but ideally we replace this if/when [`nw.DataFrame.to_struct`] is added.
-
-    [`nw.DataFrame.to_struct`]: https://github.com/narwhals-dev/narwhals/pull/2839#issuecomment-3110332853
-    """
-    pytest.importorskip("pyarrow")
-    return Version.MAIN.namespace.from_backend("pyarrow").compliant
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5, 0), reason="too old for pyarrow")
