@@ -713,6 +713,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self._implementation is Implementation.PANDAS:
             return self.native
         elif self._implementation is Implementation.CUDF:  # pragma: no cover
+            if use_pyarrow_extension_array or (kwds and "types_mapper" in kwds):
+                return self.native.to_pandas(arrow_type=True)
             return self.native.to_pandas()
         elif self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
