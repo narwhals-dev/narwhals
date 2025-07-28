@@ -575,18 +575,13 @@ def get_native_namespace(
 def _get_native_namespace_single_obj(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
-    from contextlib import suppress
-
     from narwhals._utils import has_native_namespace
 
     if has_native_namespace(obj):
         return obj.__native_namespace__()
-    with suppress(AssertionError):
-        return Version.MAIN.namespace.from_native_object(
-            obj
-        ).implementation.to_native_namespace()
-    msg = f"Could not get native namespace from object of type: {type(obj)}"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
+    return Version.MAIN.namespace.from_native_object(
+        obj
+    ).implementation.to_native_namespace()
 
 
 def narwhalify(
