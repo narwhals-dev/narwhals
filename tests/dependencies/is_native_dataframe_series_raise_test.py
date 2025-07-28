@@ -40,7 +40,7 @@ from narwhals.dependencies import (
 def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
     data = {"a": [1, 2], "b": ["bar", "foo"]}
     df = nw.from_native(pd.DataFrame(data))
-    with pytest.raises(TypeError, match="did you mean"):
+    with pytest.warns(UserWarning, match="did you mean"):
         is_native_dataframe(df)
 
 
@@ -58,5 +58,5 @@ def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
 def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
     data = {"a": [1, 2]}
     ser = nw.from_native(pd.DataFrame(data))["a"]
-    with pytest.raises(TypeError, match="did you mean"):
+    with pytest.warns(UserWarning, match="did you mean"):
         is_native_series(ser)
