@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import import POLARS_VERSION, ConstructorEager, assert_equal_data
 
-
+@pytest.mark.skipif(POLARS_VERSION < (1, 1), reason="requires polars 1.1+")
 def test_ew_mean(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
