@@ -21,6 +21,7 @@ from narwhals._pandas_like.utils import (
     rename,
     select_columns_by_name,
     set_index,
+    should_use_pyarrow_extension_array,
 )
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, is_list_of, parse_version
@@ -711,20 +712,26 @@ class PandasLikeSeries(EagerSeries[Any]):
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
-            return self.native
+            series = self.native
         elif self._implementation is Implementation.CUDF:  # pragma: no cover
             if use_pyarrow_extension_array or (kwds and "types_mapper" in kwds):
                 return self.native.to_pandas(arrow_type=True)
             return self.native.to_pandas()
         elif self._implementation is Implementation.MODIN:
-            return self.native._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
+            series = self.native._to_pandas()
+        else:
+            msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
+            raise AssertionError(msg)
+        if should_use_pyarrow_extension_array(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, kwds=kwds
+        ):
+            return series.convert_dtypes(dtype_backend="pyarrow")
+        return series
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
-        return pl.from_pandas(self.to_pandas())
+        return pl.from_pandas(self.to_pandas().convert_dtypes(dtype_backend="pyarrow"))
 
     # --- descriptive ---
     def is_unique(self) -> Self:

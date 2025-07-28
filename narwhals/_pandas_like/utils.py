@@ -42,7 +42,13 @@ if TYPE_CHECKING:
         NativeSeriesT,
     )
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoDType,
+        TimeUnit,
+        ToPandasArrowKwds,
+        _1DArray,
+    )
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
@@ -671,6 +677,24 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
     else:  # pragma: no cover
         msg = f"Expected pandas/modin/cudf, got: {implementation}"
         raise AssertionError(msg)
+
+
+# NOTE: Maybe gate this behind `pandas>=2.0`?
+def should_use_pyarrow_extension_array(
+    *, use_pyarrow_extension_array: bool, kwds: ToPandasArrowKwds
+) -> bool:
+    """Return True if this arg combination should output `[pyarrow]` dtypes.
+
+    `polars` and `pyarrow` have granular options for converting dtypes in `.to_pandas()`.
+
+    Only [`cuDF`] has an option *vaguely* resembling the same behavior, but all
+    `PandasLike*` can at least use:
+
+        pandas_like_nd_frame.convert_dtypes(dtype_backend="pyarrow")
+
+    [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
+    """
+    return use_pyarrow_extension_array or bool(kwds and "types_mapper" in kwds)
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
