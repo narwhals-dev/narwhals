@@ -731,7 +731,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
 
-        return pl.from_pandas(self.to_pandas().convert_dtypes(dtype_backend="pyarrow"))
+        return pl.from_pandas(self.to_pandas())
 
     # --- descriptive ---
     def is_unique(self) -> Self:
