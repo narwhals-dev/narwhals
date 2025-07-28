@@ -395,7 +395,7 @@ class SQLExpr(
     
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
-            return self._when(expr < self._lit(0), self._lit(float("nan")), self._with_elementwise(lambda expr: self._function("sqrt", expr)))
+            return self._when(expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
 
         return self._with_elementwise(_sqrt)
 
