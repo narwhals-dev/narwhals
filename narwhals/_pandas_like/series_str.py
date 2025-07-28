@@ -29,7 +29,7 @@ class PandasLikeSeriesStringNamespace(
             )
         else:
             if n > 1:
-                msg = "multivalue `Series.str.replace` with 'n > 1' not supported"
+                msg = "multivalue `Series.str.replace` with 'n > 1' not yet supported"
                 raise ValueError(msg)
             _, other_native = align_and_extract_native(self.compliant, value)
             values: list[str]
