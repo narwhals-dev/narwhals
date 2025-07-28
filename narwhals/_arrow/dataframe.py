@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
+        Incomplete,
         Mask,
         Order,
     )
@@ -477,6 +478,16 @@ class ArrowDataFrame(
         if as_series:
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
+
+    def to_struct(self, name: str = "") -> ArrowSeries:
+        if self._backend_version < (15, 0):
+            arrays = self.native.columns
+            # NOTE: Stubs say always returns `StructArray`, but it depends on input types
+            # This case is always `ChunkedArray[StructScalar]`
+            struct: Incomplete = pc.make_struct(*arrays, field_names=self.columns)
+        else:
+            struct = self.native.to_struct_array()
+        return ArrowSeries.from_native(struct, context=self, name=name)
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
