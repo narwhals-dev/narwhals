@@ -8,6 +8,7 @@ import pytest
 from pandas.testing import assert_series_equal
 
 import narwhals as nw
+from narwhals._utils import Version
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -33,7 +34,6 @@ def test_convert(
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
-@pytest.mark.xfail(reason="TODO: Update like (9e7e7762ba5ddce59f72de14834557446c274d34)")
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5, 0), reason="too old for pyarrow")
 @pytest.mark.parametrize(
     ("data", "expected"),
@@ -48,14 +48,15 @@ def test_convert(
         ),
     ],
 )
-def test_pyarrow_to_pandas_struct(data: dict[str, Any], expected: nw.Struct) -> None:
+def test_pyarrow_to_pandas_use_pyarrow(data: dict[str, Any], expected: nw.Struct) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    struct_array = pa.table(data).to_struct_array()
-    struct_series_pa = nw.from_native(struct_array, series_only=True).alias("c")
-    struct_series_pd = nw.from_native(struct_series_pa.to_pandas(), series_only=True)
-
-    assert struct_series_pd.dtype == expected
-    assert struct_series_pd.dtype == struct_series_pa.dtype
-    assert struct_series_pd.name == struct_series_pa.name
+    arrow_namespace = Version.MAIN.namespace.from_backend("pyarrow").compliant
+    ser_pa = arrow_namespace.from_native(pa.table(data)).to_struct("c").to_narwhals()
+    ser_pd = nw.from_native(
+        ser_pa.to_pandas(use_pyarrow_extension_array=True), series_only=True
+    )
+    assert ser_pd.dtype == expected
+    assert ser_pd.dtype == ser_pa.dtype
+    assert ser_pd.name == ser_pa.name

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Self, Unpack
 
     from narwhals._compliant import CompliantSeries
     from narwhals.dataframe import DataFrame, MultiIndexSelector
@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SingleIndexSelector,
         TemporalLiteral,
+        ToPandasArrowKwds,
         _1DArray,
     )
 
@@ -1446,7 +1447,12 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_numpy(None, copy=None)
 
-    def to_pandas(self) -> pd.Series[Any]:
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.Series[Any]:
         """Convert to pandas Series.
 
         Returns:
@@ -1463,7 +1469,9 @@ class Series(Generic[IntoSeriesT]):
             2    3
             Name: a, dtype: int64
         """
-        return self._compliant_series.to_pandas()
+        return self._compliant_series.to_pandas(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
 
     def to_polars(self) -> pl.Series:
         """Convert to polars Series.
