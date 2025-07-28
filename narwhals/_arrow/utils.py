@@ -236,10 +236,6 @@ def to_pandas_types_mapper(dtype: pa.DataType, /) -> PandasDType | None:
 
     Should be passed as `types_mapper` in [`Table.to_pandas`] and [`ChunkedArray.to_pandas`].
 
-    Notes:
-    - May need to branch on `pandas` version
-    - `pa.ListType` probably needs this as well
-
     [`Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
     [`ChunkedArray.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray.to_pandas
     """
@@ -248,9 +244,6 @@ def to_pandas_types_mapper(dtype: pa.DataType, /) -> PandasDType | None:
     if Implementation.PANDAS._backend_version() < (1, 5):
         # `pd.ArrowDType` added https://github.com/pandas-dev/pandas/pull/46774
         return None
-    # NOTE: 2.2.0 added the accessors, but probably usable earlier than that?
-    # `.struct` added https://github.com/pandas-dev/pandas/pull/54977
-    # `.list` added https://github.com/pandas-dev/pandas/pull/55777
     return pd.ArrowDtype(dtype)
 
 
