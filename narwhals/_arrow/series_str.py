@@ -20,24 +20,26 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
     def replace(
         self, pattern: str, value: str | ArrowSeries, *, literal: bool, n: int
     ) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
-        if isinstance(value, ArrowSeries):
-            msg = "Series.str.replace does not support Series-like replacement values"
-            raise TypeError(msg)
         fn = pc.replace_substring if literal else pc.replace_substring_regex
-        arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        try:
+            arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `Series.str.replace` only supports str replacement values."
+                raise TypeError(msg) from e
+            raise
         return self.with_native(arr)
 
     def replace_all(
         self, pattern: str, value: str | ArrowSeries, *, literal: bool
     ) -> ArrowSeries:
-        from narwhals._arrow.series import ArrowSeries
-
-        if isinstance(value, ArrowSeries):
-            msg = "PyArrow backed `Series.str.replace_all` does not support Series-like replacement values"
-            raise TypeError(msg)
-        return self.replace(pattern, value, literal=literal, n=-1)
+        try:
+            return self.replace(pattern, value, literal=literal, n=-1)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `Series.str.replace_all` only supports str replacement values."
+                raise TypeError(msg) from e
+            raise
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(

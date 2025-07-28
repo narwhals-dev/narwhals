@@ -23,21 +23,21 @@ class SparkLikeExprStringNamespace(
     def replace_all(
         self, pattern: str, value: str | SparkLikeExpr, *, literal: bool
     ) -> SparkLikeExpr:
-        from narwhals._spark_like.expr import SparkLikeExpr
-
-        if isinstance(value, SparkLikeExpr):
-            msg = "SQLFrame backed `Expr.str.replace_all` does not support Expr-like replacement values"
-            raise TypeError(msg)
-
         def func(expr: Column) -> Column:
             replace_all_func = (
                 self.compliant._F.replace if literal else self.compliant._F.regexp_replace
             )
-            return replace_all_func(
-                expr,
-                self.compliant._F.lit(pattern),  # pyright: ignore[reportArgumentType]
-                self.compliant._F.lit(value),  # pyright: ignore[reportArgumentType]
-            )
+            try:
+                return replace_all_func(
+                    expr,
+                    self.compliant._F.lit(pattern),  # pyright: ignore[reportArgumentType]
+                    self.compliant._F.lit(value),  # pyright: ignore[reportArgumentType]
+                )
+            except ValueError as e:
+                if not isinstance(value, str):
+                    msg = f"{self.compliant._implementation} backed `Expr.str.replace_all` only supports str replacement values."
+                    raise TypeError(msg) from e
+                raise
 
         return self.compliant._with_elementwise(func)
 
