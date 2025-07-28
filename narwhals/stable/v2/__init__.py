@@ -1286,6 +1286,7 @@ __all__ = [
     "from_numpy",
     "generate_temporary_column_name",
     "get_native_namespace",
+    "int_range",
     "is_ordered_categorical",
     "len",
     "lit",
