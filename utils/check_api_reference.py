@@ -26,6 +26,7 @@ if sys.version_info >= (3, 13):
         return (
             isfunction(obj) or isinstance(obj, (MethodType, property))
         ) and obj.__name__.startswith(LOWERCASE)
+
 else:
 
     def _is_public_method_or_property(obj: Any) -> bool:
@@ -60,7 +61,25 @@ def read_documented_members(source: str | Path) -> list[str]:
 ret = 0
 
 NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
-EXPR_ONLY_METHODS = {"over", "map_batches"}
+EXPR_ONLY_METHODS = {
+    "add",
+    "and_",
+    "eq",
+    "floordiv",
+    "ge",
+    "gt",
+    "le",
+    "lt",
+    "mul",
+    "ne",
+    "not_",
+    "or_",
+    "pow",
+    "sub",
+    "truediv",
+    "over",
+    "map_batches",
+}
 SERIES_ONLY_METHODS = {
     "dtype",
     "implementation",
