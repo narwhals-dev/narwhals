@@ -440,4 +440,23 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
+def _native_int_range(
+    start: int,
+    end: int,
+    step: int = 1,
+    *,
+    dtype: pa.DataType | None = None,
+    backend_version: tuple[int, ...],
+) -> ArrayAny:
+    dtype = dtype if dtype is not None else pa.int64()
+    if backend_version < (21, 0, 0):  # pragma: no cover
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
+    return pc.cast(  # type: ignore[assignment]
+        pa.arange(start=start, stop=end, step=step),  # type: ignore[attr-defined]
+        dtype,
+    )
+
+
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...

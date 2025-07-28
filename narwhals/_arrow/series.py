@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    _native_int_range,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -171,17 +172,15 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         context: _LimitedContext,
         name: str,
     ) -> Self:
-        version = context._version
-        dtype_pa = narwhals_to_native_dtype(dtype, version)
-        if cls._implementation._backend_version() < (21, 0, 0):  # pragma: no cover
-            import numpy as np  # ignore-banned-import
-
-            data = np.arange(start=start, stop=end, step=step)
-        else:
-            data = pc.cast(  # type: ignore[assignment]
-                pa.arange(start=start, stop=end, step=step),  # type: ignore[attr-defined]
-                dtype_pa,
-            )
+        dtype_pa = narwhals_to_native_dtype(dtype, context._version)
+        backend_version = cls._implementation._backend_version()
+        data = _native_int_range(
+            start=start,
+            end=end,
+            step=step,
+            dtype=dtype_pa,
+            backend_version=backend_version,
+        )
         return cls.from_native(
             chunked_array([data], dtype_pa), name=name, context=context
         )
@@ -688,7 +687,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
             valid_mask = pc.is_valid(arr)
-            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            indices = _native_int_range(
+                0, len(arr), backend_version=self._backend_version
+            )
             if direction == "forward":
                 valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
                 distance = indices - valid_index
@@ -735,9 +736,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        row_number = pa.array(np.arange(len(self)))
+        row_number = _native_int_range(
+            0, len(self), backend_version=self._backend_version
+        )
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])
@@ -750,9 +751,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        row_number = pa.array(np.arange(len(self)))
+        row_number = _native_int_range(
+            0, len(self), backend_version=self._backend_version
+        )
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])

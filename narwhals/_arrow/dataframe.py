@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import _native_int_range, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -643,10 +643,8 @@ class ArrowDataFrame(
         return None
 
     def is_unique(self) -> ArrowSeries:
-        import numpy as np  # ignore-banned-import
-
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = pa.array(np.arange(len(self)))
+        row_index = _native_int_range(0, len(self), backend_version=self._backend_version)
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -669,8 +667,6 @@ class ArrowDataFrame(
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
-        import numpy as np  # ignore-banned-import
-
         if subset and (error := self._check_columns_exist(subset)):
             raise error
         subset = list(subset or self.columns)
@@ -680,8 +676,11 @@ class ArrowDataFrame(
 
             agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+            col_value = _native_int_range(
+                0, len(self), backend_version=self._backend_version
+            )
             keep_idx_native = (
-                self.native.append_column(col_token, pa.array(np.arange(len(self))))
+                self.native.append_column(col_token, col_value)
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
