@@ -10,12 +10,7 @@ from narwhals._expression_parsing import (
     combine_metadata,
     extract_compliant,
 )
-from narwhals._utils import (
-    _validate_rolling_arguments,
-    ensure_type,
-    flatten,
-    issue_deprecation_warning,
-)
+from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -774,48 +769,6 @@ class Expr:
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).max())
 
-    def arg_min(self) -> Self:
-        """Returns the index of the minimum value.
-
-        Warning:
-            `Expr.arg_min` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.arg_min` is deprecated and will be removed in a future version.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.49.0")
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_min()
-        )
-
-    def arg_max(self) -> Self:
-        """Returns the index of the maximum value.
-
-        Warning:
-            `Expr.arg_max` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.arg_max` is deprecated and will be removed in a future version.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.49.0")
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).arg_max()
-        )
-
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
@@ -1091,36 +1044,6 @@ class Expr:
             )
         )
 
-    def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
-        """Sort this column. Place null values first.
-
-        Warning:
-            `Expr.sort` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').sort())`, use
-            `df.select(nw.col('a')).sort()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            descending: Sort in descending order.
-            nulls_last: Place null values last instead of first.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.sort` is deprecated and will be removed in a future version.\n\n"
-            "Hint: instead of `df.select(nw.col('a').sort())`, use `df.select(nw.col('a')).sort()`.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_orderable_window(
-            lambda plx: self._to_compliant_expr(plx).sort(
-                descending=descending, nulls_last=nulls_last
-            )
-        )
-
     # --- transform ---
     def is_between(
         self,
@@ -1336,25 +1259,6 @@ class Expr:
         """
         return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).is_nan())
 
-    def arg_true(self) -> Self:
-        """Find elements where boolean expression is True.
-
-        Warning:
-            `Expr.arg_true` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.arg_true` is deprecated and will be removed in a future version.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).arg_true())
-
     def fill_null(
         self,
         value: Expr | NonNestedLiteral = None,
@@ -1491,46 +1395,6 @@ class Expr:
         """
         return self._with_filtration(
             lambda plx: self._to_compliant_expr(plx).drop_nulls()
-        )
-
-    def sample(
-        self,
-        n: int | None = None,
-        *,
-        fraction: float | None = None,
-        with_replacement: bool = False,
-        seed: int | None = None,
-    ) -> Self:
-        """Sample randomly from this expression.
-
-        Warning:
-            `Expr.sample` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').sample())`, use
-            `df.select(nw.col('a')).sample()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of items to return. Cannot be used with fraction.
-            fraction: Fraction of items to return. Cannot be used with n.
-            with_replacement: Allow values to be sampled more than once.
-            seed: Seed for the random number generator. If set to None (default), a random
-                seed is generated for each sample operation.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.sample` is deprecated and will be removed in a future version.\n\n"
-            "Hint: instead of `df.select(nw.col('a').sample())`, use `df.select(nw.col('a')).sample()`.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).sample(
-                n, fraction=fraction, with_replacement=with_replacement, seed=seed
-            )
         )
 
     def over(
@@ -1781,58 +1645,6 @@ class Expr:
             lambda plx: self._to_compliant_expr(plx).quantile(quantile, interpolation)
         )
 
-    def head(self, n: int = 10) -> Self:
-        r"""Get the first `n` rows.
-
-        Warning:
-            `Expr.head` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').head())`, use
-            `df.select(nw.col('a')).head()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.head` is deprecated and will be removed in a future version.\n\n"
-            "Hint: instead of `df.select(nw.col('a').head())`, use `df.select(nw.col('a')).head()`.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).head(n)
-        )
-
-    def tail(self, n: int = 10) -> Self:
-        r"""Get the last `n` rows.
-
-        Warning:
-            `Expr.tail` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').tail())`, use
-            `df.select(nw.col('a')).tail()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.tail` is deprecated and will be removed in a future version.\n\n"
-            "Hint: instead of `df.select(nw.col('a').tail())`, use `df.select(nw.col('a')).tail()`.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).tail(n))
-
     def round(self, decimals: int = 0) -> Self:
         r"""Round underlying floating point data by `decimals` digits.
 
@@ -1895,34 +1707,6 @@ class Expr:
             └──────────────────┘
         """
         return self._with_aggregation(lambda plx: self._to_compliant_expr(plx).len())
-
-    def gather_every(self, n: int, offset: int = 0) -> Self:
-        r"""Take every nth value in the Series and return as new Series.
-
-        Warning:
-            `Expr.gather_every` is deprecated and will be removed in a future version.
-            Hint: instead of `df.select(nw.col('a').gather_every())`, use
-            `df.select(nw.col('a')).gather_every()` instead.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Gather every *n*-th row.
-            offset: Starting index.
-
-        Returns:
-            A new expression.
-        """
-        msg = (
-            "`Expr.gather_every` is deprecated and will be removed in a future version.\n\n"
-            "Hint: instead of `df.select(nw.col('a').gather_every())`, use `df.select(nw.col('a')).gather_every()`.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.23.0")
-        return self._with_filtration(
-            lambda plx: self._to_compliant_expr(plx).gather_every(n=n, offset=offset)
-        )
 
     def clip(
         self,
