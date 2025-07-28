@@ -873,7 +873,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             egg    object
             dtype: object
 
-            Pass `use_pyarrow_extension_array=True` to preserve nested and/or nullable values:
+            Pass `use_pyarrow_extension_array=True` to preserve nested and/or null values:
 
             >>> df_nested.to_pandas(use_pyarrow_extension_array=True).dtypes
             egg    struct<foo: int64, bar: double, ham: large_str...

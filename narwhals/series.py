@@ -1480,6 +1480,24 @@ class Series(Generic[IntoSeriesT]):
             2    3
             Name: a, dtype: int64
 
+            Null values are converted to `NaN`:
+
+            >>> s_native = pl.Series("b", [1, 2, None])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.to_pandas()
+            0    1.0
+            1    2.0
+            2    NaN
+            Name: b, dtype: float64
+
+            Pass `use_pyarrow_extension_array=True` to preserve nested and/or null values:
+
+            >>> s.to_pandas(use_pyarrow_extension_array=True)
+            0       1
+            1       2
+            2    <NA>
+            Name: b, dtype: int64[pyarrow]
+
         [`pyarrow.Array.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Array.html#pyarrow.Array.to_pandas
         """
         return self._compliant_series.to_pandas(
