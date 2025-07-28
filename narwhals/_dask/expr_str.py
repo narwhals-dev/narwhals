@@ -9,6 +9,8 @@ from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
+    import dask.dataframe.dask_expr as dx
+
     from narwhals._dask.expr import DaskExpr
 
 
@@ -18,10 +20,12 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
 
     def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> DaskExpr:
         def _replace(
-            expr: DaskExpr, pattern: str, value: str, *, literal: bool, n: int
-        ) -> DaskExpr:
+            expr: dx.Series, pattern: str, value: str, *, literal: bool, n: int
+        ) -> dx.Series:
             try:
-                return expr.str.replace(pattern, value, regex=not literal, n=n)
+                return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
+                    pattern, value, regex=not literal, n=n
+                )
             except TypeError as e:
                 if not isinstance(value, str):
                     msg = "dask backed `Expr.str.replace` only supports str replacement values"
@@ -34,10 +38,12 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> DaskExpr:
         def _replace_all(
-            expr: DaskExpr, pattern: str, value: str, *, literal: bool
-        ) -> DaskExpr:
+            expr: dx.Series, pattern: str, value: str, *, literal: bool
+        ) -> dx.Series:
             try:
-                return expr.str.replace(pattern, value, regex=not literal, n=-1)
+                return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
+                    pattern, value, regex=not literal, n=-1
+                )
             except TypeError as e:
                 if not isinstance(value, str):
                     msg = "dask backed `Expr.str.replace_all` only supports str replacement values."

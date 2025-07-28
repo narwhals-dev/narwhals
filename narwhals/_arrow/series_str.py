@@ -17,27 +17,23 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
-    def replace(
-        self, pattern: str, value: str | ArrowSeries, *, literal: bool, n: int
-    ) -> ArrowSeries:
+    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> ArrowSeries:
         fn = pc.replace_substring if literal else pc.replace_substring_regex
         try:
             arr = fn(self.native, pattern, replacement=value, max_replacements=n)
         except TypeError as e:
             if not isinstance(value, str):
-                msg = "PyArrow backed `Series.str.replace` only supports str replacement values"
+                msg = "PyArrow backed `.str.replace` only supports str replacement values"
                 raise TypeError(msg) from e
             raise
         return self.with_native(arr)
 
-    def replace_all(
-        self, pattern: str, value: str | ArrowSeries, *, literal: bool
-    ) -> ArrowSeries:
+    def replace_all(self, pattern: str, value: str, *, literal: bool) -> ArrowSeries:
         try:
             return self.replace(pattern, value, literal=literal, n=-1)
         except TypeError as e:
             if not isinstance(value, str):
-                msg = "PyArrow backed `Series.str.replace_all` only supports str replacement values."
+                msg = "PyArrow backed `.str.replace_all` only supports str replacement values."
                 raise TypeError(msg) from e
             raise
 
