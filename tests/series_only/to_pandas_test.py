@@ -110,22 +110,18 @@ def test_to_pandas_use_pyarrow(
     request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("pyarrow")
-    if PANDAS_LT_2 and constructor_eager.__name__ in {
-        "pandas_nullable_constructor",
-        "pandas_constructor",
-        "modin_constructor",
-    }:
-        request.applymarker(
-            pytest.mark.xfail(reason="no `dtype_backend` arg in `convert_dtypes`")
+    request.applymarker(
+        pytest.mark.xfail(
+            PANDAS_LT_2 and is_pandas_non_pyarrow(constructor_eager),
+            reason="no `dtype_backend` arg in `convert_dtypes`",
         )
-    if "date32[day][pyarrow]" in pandas_dtypes and constructor_eager.__name__ in {
-        "pandas_nullable_constructor",
-        "pandas_constructor",
-        "pandas_pyarrow_constructor",
-        "modin_pyarrow_constructor",
-        "modin_constructor",
-    }:
-        request.applymarker(pytest.mark.xfail(reason="`date` converted to `object`"))
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            ("date32[day][pyarrow]" in pandas_dtypes and is_pandas(constructor_eager)),
+            reason="`date` converted to `object`",
+        )
+    )
     name = "a"
     expected = {name: data}
     series = nw.from_native(constructor_eager(expected)).get_column(name)
@@ -133,3 +129,21 @@ def test_to_pandas_use_pyarrow(
     actual_name = result.dtype.name
     assert actual_name in pandas_dtypes
     assert_equal_data(nw.from_native(result, series_only=True).to_frame(), expected)
+
+
+def is_pandas_non_pyarrow(constructor_eager: ConstructorEager) -> bool:
+    return constructor_eager.__name__ in {
+        "pandas_nullable_constructor",
+        "pandas_constructor",
+        "modin_constructor",
+    }
+
+
+def is_pandas(constructor_eager: ConstructorEager) -> bool:
+    return constructor_eager.__name__ in {
+        "pandas_nullable_constructor",
+        "pandas_constructor",
+        "pandas_pyarrow_constructor",
+        "modin_pyarrow_constructor",
+        "modin_constructor",
+    }
