@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 import narwhals as nw
@@ -106,11 +104,6 @@ def test_floordiv_int_by_zero(
         pytest.skip(reason="converts floordiv by zero to 0")
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-
-    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU"):
-        request.applymarker(
-            pytest.mark.xfail(reason="https://github.com/pola-rs/polars/issues/23365")
-        )
 
     data: dict[str, list[int]] = {"a": [left]}
     df = nw.from_native(constructor(data))

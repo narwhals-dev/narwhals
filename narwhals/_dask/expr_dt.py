@@ -99,7 +99,8 @@ class DaskExprDateTimeNamespace(
 
         return self.compliant._with_callable(func, "tz_convert", time_zone=time_zone)
 
-    def timestamp(self, time_unit: TimeUnit) -> DaskExpr:
+    # ignoring coverage due to https://github.com/narwhals-dev/narwhals/issues/2808.
+    def timestamp(self, time_unit: TimeUnit) -> DaskExpr:  # pragma: no cover
         def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self.compliant._version, Implementation.DASK
