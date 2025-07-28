@@ -34,7 +34,6 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
-    issue_deprecation_warning,
     issue_performance_warning,
     supports_arrow_c_stream,
 )
@@ -2916,22 +2915,6 @@ class LazyFrame(BaseFrame[FrameT]):
         """
         return super().head(n)
 
-    def tail(self, n: int = 5) -> Self:  # pragma: no cover
-        r"""Get the last `n` rows.
-
-        Warning:
-            `LazyFrame.tail` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Number of rows to return.
-
-        Returns:
-            A subset of the LazyFrame of shape (n, n_columns).
-        """
-        return super().tail(n)
-
     def drop(self, *columns: str | Iterable[str], strict: bool = True) -> Self:
         r"""Remove columns from the LazyFrame.
 
@@ -3407,30 +3390,6 @@ class LazyFrame(BaseFrame[FrameT]):
             A LazyFrame.
         """
         return self
-
-    def gather_every(self, n: int, offset: int = 0) -> Self:
-        r"""Take every nth row in the DataFrame and return as a new DataFrame.
-
-        Warning:
-            `LazyFrame.gather_every` is deprecated and will be removed in a future version.
-            Note: this will remain available in `narwhals.stable.v1`.
-            See [stable api](../backcompat.md/) for more information.
-
-        Arguments:
-            n: Gather every *n*-th row.
-            offset: Starting index.
-
-        Returns:
-            The LazyFrame containing only the selected rows.
-        """
-        msg = (
-            "`LazyFrame.gather_every` is deprecated and will be removed in a future version.\n\n"
-            "Note: this will remain available in `narwhals.stable.v1`.\n"
-            "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-        )
-        issue_deprecation_warning(msg, _version="1.29.0")
-
-        return super().gather_every(n=n, offset=offset)
 
     def unpivot(
         self,

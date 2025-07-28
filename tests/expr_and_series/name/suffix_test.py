@@ -23,6 +23,11 @@ def test_suffix_after_alias(constructor: Constructor) -> None:
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.suffix(suffix))
     expected = {"alias_for_foo_with_suffix": [1, 2, 3]}
     assert_equal_data(result, expected)
+    result = df.select(
+        nw.col("foo").alias("bar").name.prefix("prefix_").name.suffix("_suffix")
+    )
+    expected = {"prefix_bar_suffix": [1, 2, 3]}
+    assert_equal_data(result, expected)
 
 
 def test_suffix_anonymous(constructor: Constructor) -> None:
