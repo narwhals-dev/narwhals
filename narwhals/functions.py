@@ -45,11 +45,12 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType, IntegerType
+    from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
+        IntegerDType,
         IntoDType,
         IntoExpr,
         NativeFrame,
@@ -1784,7 +1785,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType],
+    dtype: IntegerDType,
     eager: Literal[False] = False,
 ) -> Expr: ...
 
@@ -1795,7 +1796,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType],
+    dtype: IntegerDType,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
@@ -1806,7 +1807,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]: ...
 
@@ -1816,7 +1817,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerType | type[IntegerType] = Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
@@ -1875,52 +1876,17 @@ def int_range(
     return _int_range_impl(start, end, step, dtype=dtype, eager=eager)
 
 
-@overload
 def _int_range_impl(
     start: int | Expr,
     end: int | Expr | None,
     step: int,
     *,
-    dtype: IntegerType | type[IntegerType],
-    eager: Literal[False],
-) -> Expr: ...
-
-
-@overload
-def _int_range_impl(
-    start: int | Expr,
-    end: int | Expr | None,
-    step: int,
-    *,
-    dtype: IntegerType | type[IntegerType],
-    eager: ModuleType | Implementation | str,
-) -> Series[Any]: ...
-
-
-@overload
-def _int_range_impl(
-    start: int | Expr,
-    end: int | Expr | None,
-    step: int,
-    *,
-    dtype: IntegerType | type[IntegerType],
-    eager: ModuleType | Implementation | str | Literal[False],
-) -> Expr | Series[Any]: ...
-
-
-def _int_range_impl(
-    start: int | Expr,
-    end: int | Expr | None,
-    step: int,
-    *,
-    dtype: IntegerType | type[IntegerType],
+    dtype: IntegerDType,
     eager: ModuleType | Implementation | str | Literal[False],
 ) -> Expr | Series[Any]:
-    from narwhals._utils import isinstance_or_issubclass
-    from narwhals.dtypes import IntegerType
     from narwhals.exceptions import ComputeError
 
-    if not isinstance_or_issubclass(dtype, IntegerType):
+    if not dtype.is_integer():
         msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
         raise ComputeError(msg)
 

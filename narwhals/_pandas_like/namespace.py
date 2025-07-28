@@ -25,8 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import IntegerType
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntegerDType, IntoDType, NonNestedLiteral
 
 
 Incomplete: TypeAlias = Any
@@ -377,7 +376,7 @@ class PandasLikeNamespace(
         end: int | PandasLikeExpr,
         step: int,
         *,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             if isinstance(start, PandasLikeExpr):

@@ -26,8 +26,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Version
-    from narwhals.dtypes import IntegerType
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntegerDType, IntoDType, NonNestedLiteral
 
 
 class ArrowNamespace(
@@ -291,7 +290,7 @@ class ArrowNamespace(
         end: int | ArrowExpr,
         step: int,
         *,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
     ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             if isinstance(start, ArrowExpr):

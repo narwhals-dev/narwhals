@@ -22,9 +22,8 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dtypes import IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
+    from narwhals.typing import IntegerDType, Into1DArray, IntoDType, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -210,7 +209,7 @@ class PolarsNamespace:
         end: int | PolarsExpr,
         step: int,
         *,
-        dtype: IntegerType | type[IntegerType],
+        dtype: IntegerDType,
     ) -> PolarsExpr:
         start_ = start if isinstance(start, int) else start.native
         end_ = end if isinstance(end, int) else end.native

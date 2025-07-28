@@ -453,7 +453,7 @@ def _native_int_range(
         import numpy as np  # ignore-banned-import
 
         return pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
-    return pc.cast(  # type: ignore[assignment]
+    return pc.cast(  # type: ignore[return-value]
         pa.arange(start=start, stop=end, step=step),  # type: ignore[attr-defined]
         dtype,
     )

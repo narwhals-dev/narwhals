@@ -361,7 +361,8 @@ PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
 
 NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
 """Any Narwhals DType that does not have required arguments."""
-
+IntegerDType: TypeAlias = "dtypes.IntegerType | type[dtypes.IntegerType]"
+"""Instance or class of IntegerType"""
 IntoDType: TypeAlias = "dtypes.DType | type[NonNestedDType]"
 """Anything that can be converted into a Narwhals DType.
 
