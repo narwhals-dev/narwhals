@@ -120,12 +120,14 @@ def test_to_pandas_use_pyarrow(
                 },
             ),
             reason="no `dtype_backend` arg in `convert_dtypes`",
+            raises=TypeError,
         )
     )
     request.applymarker(
         pytest.mark.xfail(
             ("date32[day][pyarrow]" in pandas_dtypes and is_pandas(constructor_eager)),
             reason="`date` converted to `object`",
+            raises=AssertionError,
         )
     )
     name = "a"
