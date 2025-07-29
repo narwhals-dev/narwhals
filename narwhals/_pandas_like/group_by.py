@@ -7,8 +7,9 @@ from operator import methodcaller
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation, find_stacklevel, requires
+from narwhals._utils import Implementation, requires
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -398,12 +399,43 @@ def empty_results_error() -> ValueError:
 
 
 def warn_complex_group_by() -> None:
-    warnings.warn(
+    issue_warning(
         "Found complex group-by expression, which can't be expressed efficiently with the "
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
         "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        UserWarning,
+    )
+
+
+
+def warn_ordered_apply(
+    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
+) -> None:
+    if is_cudf:  # pragma: no cover
+        msg = (
+            f"cuDF does not support selecting the {name} value without skipping NA.\n\n"
+            "Please see: "
+            "https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/groupby/"
+        )
+    elif has_pyarrow_string:
+        msg = (
+            f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
+            "Please see: "
+            "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
+        )
+    else:  # pragma: no cover
+        found = requires._unparse_version(Implementation.PANDAS._backend_version())
+        minimum = requires._unparse_version(_MINIMUM_SKIPNA)
+        msg = (
+            f"If you can, please upgrade to 'pandas>={minimum}', found version {found!r}.\n\n"
+            "Please see: "
+            "https://github.com/pandas-dev/pandas/issues/57019"
+        )
+    warnings.warn(
+        f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
+        f"safely with the pandas API.\n{msg}",
         UserWarning,
         stacklevel=find_stacklevel(),
     )
