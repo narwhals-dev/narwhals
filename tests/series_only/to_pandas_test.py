@@ -8,7 +8,7 @@ import pytest
 from pandas.testing import assert_series_equal
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, assert_equal_data
+from tests.utils import PANDAS_LT_1_5, PANDAS_LT_2, assert_equal_data, is_pandas
 
 if TYPE_CHECKING:
     from collections.abc import Container
@@ -16,9 +16,6 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.typing import IntoDType
     from tests.utils import ConstructorEager
-
-PANDAS_LT_1_5 = PANDAS_VERSION < (1, 5, 0)
-PANDAS_LT_2 = PANDAS_VERSION < (2, 0, 0)
 
 
 @pytest.mark.skipif(PANDAS_LT_2, reason="too old for pyarrow")
@@ -113,7 +110,15 @@ def test_to_pandas_use_pyarrow(
     pytest.importorskip("pyarrow")
     request.applymarker(
         pytest.mark.xfail(
-            PANDAS_LT_2 and is_pandas_non_pyarrow(constructor_eager),
+            PANDAS_LT_2
+            and is_pandas(
+                constructor_eager,
+                exclude={
+                    "pandas_pyarrow_constructor",
+                    "modin_pyarrow_constructor",
+                    "cudf_constructor",
+                },
+            ),
             reason="no `dtype_backend` arg in `convert_dtypes`",
         )
     )
@@ -130,23 +135,3 @@ def test_to_pandas_use_pyarrow(
     actual_name = result.dtype.name
     assert actual_name in pandas_dtypes
     assert_equal_data(nw.from_native(result, series_only=True).to_frame(), expected)
-
-
-def is_pandas_non_pyarrow(
-    constructor_eager: ConstructorEager,
-) -> bool:  # pragma: no cover
-    return constructor_eager.__name__ in {
-        "pandas_nullable_constructor",
-        "pandas_constructor",
-        "modin_constructor",
-    }
-
-
-def is_pandas(constructor_eager: ConstructorEager) -> bool:
-    return constructor_eager.__name__ in {
-        "pandas_nullable_constructor",
-        "pandas_constructor",
-        "pandas_pyarrow_constructor",
-        "modin_pyarrow_constructor",
-        "modin_constructor",
-    }

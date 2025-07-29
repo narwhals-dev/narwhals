@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import datetime as dt
+from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION
+from tests.utils import (
+    PANDAS_LT_1_5,
+    PANDAS_LT_2,
+    PANDAS_VERSION,
+    assert_equal_data,
+    is_pandas,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals.typing import IntoDType
     from tests.utils import ConstructorEager
@@ -81,3 +90,78 @@ def test_pyarrow_to_pandas_use_pyarrow(
     df_pd = nw.from_native(df_pa.to_pandas(use_pyarrow_extension_array=True))
     assert df_pd.schema == expected_schema
     assert df_pd.schema == df_pa.schema
+
+
+@pytest.mark.skipif(PANDAS_LT_1_5, reason="too old for pyarrow")
+@pytest.mark.parametrize(
+    ("data", "pandas_dtypes"),
+    [
+        (
+            {"a": [3.2, None, 42.0, 99], "b": [None, None, 10, 20]},
+            {"a": ["double[pyarrow]"], "b": ["int64[pyarrow]"]},
+        ),
+        (
+            {"a": ["hello", None, "again"], "b": ["a", "b", "c"]},
+            {
+                "a": ["string[pyarrow]", "large_string[pyarrow]"],
+                "b": ["string[pyarrow]", "large_string[pyarrow]"],
+            },
+        ),
+        (
+            {
+                "a": [dt.datetime(1980, 1, 1), None],
+                "b": [dt.datetime(2001, 1, 1), dt.datetime(2002, 1, 1, 3, 1, 2)],
+            },
+            {
+                "a": ["timestamp[ns][pyarrow]", "timestamp[us][pyarrow]"],
+                "b": ["timestamp[ns][pyarrow]", "timestamp[us][pyarrow]"],
+            },
+        ),
+        (
+            {
+                "a": [None, dt.date(1982, 1, 1)],
+                "b": [dt.date(1968, 1, 1), dt.date(1992, 1, 1)],
+            },
+            {"a": ["date32[day][pyarrow]"], "b": ["date32[day][pyarrow]"]},
+        ),
+    ],
+)
+def test_to_pandas_use_pyarrow(
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[Any]],
+    pandas_dtypes: dict[str, Sequence[str]],
+    request: pytest.FixtureRequest,
+) -> None:
+    pytest.importorskip("pyarrow")
+    request.applymarker(
+        pytest.mark.xfail(
+            PANDAS_LT_2
+            and is_pandas(
+                constructor_eager,
+                exclude={
+                    "pandas_pyarrow_constructor",
+                    "modin_pyarrow_constructor",
+                    "cudf_constructor",
+                },
+            ),
+            reason="no `dtype_backend` arg in `convert_dtypes`",
+            raises=TypeError,
+        )
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            (
+                is_pandas(constructor_eager)
+                and "date32[day][pyarrow]"
+                in set((chain.from_iterable(pandas_dtypes.values())))
+            ),
+            reason="`date` converted to `object`",
+            raises=AssertionError,
+        )
+    )
+    frame = nw.from_native(constructor_eager(data))
+    result = frame.to_pandas(use_pyarrow_extension_array=True)
+    for column, dtypes in pandas_dtypes.items():
+        actual_name = result[column].dtype.name
+        assert actual_name in dtypes
+    assert_equal_data(result, data)

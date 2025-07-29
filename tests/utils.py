@@ -6,7 +6,7 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import pandas as pd
 import pyarrow as pa
@@ -16,7 +16,7 @@ from narwhals._utils import Implementation, parse_version
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Container, Iterator, Mapping, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -39,10 +39,40 @@ DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
+PANDAS_LT_1_5: bool = PANDAS_VERSION < (1, 5, 0)
+"""`pandas<1.5`.
+
+https://pandas.pydata.org/pandas-docs/stable/whatsnew/v1.5.0.html
+"""
+PANDAS_LT_2: bool = PANDAS_VERSION < (2, 0, 0)
+"""`pandas<2.0`.
+
+https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html
+"""
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+
+NamePandasLikePyArrow: TypeAlias = Literal[
+    "pandas_pyarrow_constructor", "modin_pyarrow_constructor"
+]
+NamePandasLikeNullable: TypeAlias = Literal[
+    NamePandasLikePyArrow, "pandas_nullable_constructor", "cudf_constructor"
+]
+NamePandasLikeNotNullable: TypeAlias = Literal["pandas_constructor", "modin_constructor"]
+NamePandasLike: TypeAlias = Literal[NamePandasLikeNotNullable, NamePandasLikeNullable]
+
+_NAME_PANDAS_LIKE = frozenset[NamePandasLike](
+    (
+        "pandas_constructor",
+        "pandas_nullable_constructor",
+        "pandas_pyarrow_constructor",
+        "modin_constructor",
+        "modin_pyarrow_constructor",
+        "cudf_constructor",
+    )
+)
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
@@ -171,6 +201,17 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
 def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
+
+
+def is_pandas(
+    constructor: Constructor, *, exclude: Container[NamePandasLike] = ()
+) -> bool:
+    """Return True if constructor is pandas-like.
+
+    Optionally, pass `exclude=<subset>` to treat those constructors as not pandas-like.
+    """
+    name = constructor.__name__
+    return name in _NAME_PANDAS_LIKE and (not exclude or name not in exclude)
 
 
 def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
