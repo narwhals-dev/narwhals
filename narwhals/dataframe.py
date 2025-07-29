@@ -13,8 +13,8 @@ from typing import (
     TypeVar,
     overload,
 )
-from warnings import warn
 
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
     all_exprs_are_scalar_like,
@@ -24,7 +24,6 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
-    find_stacklevel,
     flatten,
     generate_repr,
     is_compliant_dataframe,
@@ -34,7 +33,6 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
-    issue_performance_warning,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import (
@@ -43,7 +41,11 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
+from narwhals.exceptions import (
+    InvalidIntoExprError,
+    InvalidOperationError,
+    PerformanceWarning,
+)
 from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -2196,7 +2198,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
                 "You can safely remove this argument."
             )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+            issue_warning(msg, UserWarning)
         on = [on] if isinstance(on, str) else on
         values = [values] if isinstance(values, str) else values
         index = [index] if isinstance(index, str) else index
@@ -2692,7 +2694,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 "Resolving the schema of a LazyFrame is a potentially expensive operation. "
                 "Use `LazyFrame.collect_schema()` to get the schema without this warning."
             )
-            issue_performance_warning(msg)
+            issue_warning(msg, PerformanceWarning)
         return super().schema
 
     def collect_schema(self) -> Schema:

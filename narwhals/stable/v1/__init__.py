@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
-from warnings import warn
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
+from narwhals._exceptions import issue_warning
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
-    find_stacklevel,
     generate_temporary_column_name,
     inherit_doc,
     is_ordered_categorical,
@@ -326,14 +325,13 @@ class Series(NwSeries[IntoSeriesT]):
         bin_count: int | None = None,
         include_breakpoint: bool = True,
     ) -> DataFrame[Any]:
-        from narwhals._utils import find_stacklevel
         from narwhals.exceptions import NarwhalsUnstableWarning
 
         msg = (
             "`Series.hist` is being called from the stable API although considered "
             "an unstable feature."
         )
-        warn(message=msg, category=NarwhalsUnstableWarning, stacklevel=find_stacklevel())
+        issue_warning(msg, NarwhalsUnstableWarning)
         return _stableify(
             super().hist(
                 bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
@@ -375,7 +373,7 @@ class Expr(NwExpr):
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
                 "You can safely remove this argument."
             )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+            issue_warning(msg, UserWarning)
         return self._with_filtration(lambda plx: self._to_compliant_expr(plx).unique())
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:

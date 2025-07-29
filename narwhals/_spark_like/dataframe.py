@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import warnings
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any
 
+from narwhals._exceptions import issue_warning
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
     catch_pyspark_connect_exception,
@@ -19,7 +19,6 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
-    find_stacklevel,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -156,9 +155,9 @@ class SparkLikeLazyFrame(
                 # We can avoid the check when we introduce `nw.Null` dtype.
                 null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
                 if not isinstance(native_spark_dtype, null_type):
-                    warnings.warn(
+                    issue_warning(
                         f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
-                        stacklevel=find_stacklevel(),
+                        UserWarning,
                     )
                 schema.append((key, pa.null()))
             else:
