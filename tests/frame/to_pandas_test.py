@@ -124,6 +124,11 @@ def test_pyarrow_to_pandas_use_pyarrow(
             },
             {"a": ["date32[day][pyarrow]"], "b": ["date32[day][pyarrow]"]},
         ),
+        (
+            {"a": [None, True], "b": [True, False]},
+            {"a": ["bool[pyarrow]"], "b": ["bool[pyarrow]"]},
+        ),
+        ({"a": [b"hi"]}, {"a": ["binary[pyarrow]", "large_binary[pyarrow]"]}),
     ],
 )
 def test_to_pandas_use_pyarrow(
@@ -148,12 +153,19 @@ def test_to_pandas_use_pyarrow(
             raises=TypeError,
         )
     )
+    pandas_unsupported = {
+        "date32[day][pyarrow]",
+        "binary[pyarrow]",
+        "large_binary[pyarrow]",
+    }
+
     request.applymarker(
         pytest.mark.xfail(
-            (
+            bool(
                 is_pandas(constructor_eager)
-                and "date32[day][pyarrow]"
-                in set((chain.from_iterable(pandas_dtypes.values())))
+                and pandas_unsupported.intersection(
+                    chain.from_iterable(pandas_dtypes.values())
+                )
             ),
             reason="`date` converted to `object`",
             raises=AssertionError,
