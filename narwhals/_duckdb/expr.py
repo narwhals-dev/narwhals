@@ -313,12 +313,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_elementwise(_log)
 
-    def exp(self) -> Self:
-        def _exp(expr: Expression) -> Expression:
-            return F("exp", expr)
-
-        return self._with_elementwise(_exp)
-
     @property
     def str(self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
