@@ -174,14 +174,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         name: str,
     ) -> Self:
         dtype_pa = narwhals_to_native_dtype(dtype, context._version)
-        backend_version = cls._implementation._backend_version()
-        data = _native_int_range(
-            start=start,
-            end=end,
-            step=step,
-            dtype=dtype_pa,
-            backend_version=backend_version,
-        )
+        data = _native_int_range(start=start, end=end, step=step, dtype=dtype_pa)
         return cls.from_native(
             chunked_array([data], dtype_pa), name=name, context=context
         )
@@ -688,9 +681,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
             valid_mask = pc.is_valid(arr)
-            indices = _native_int_range(
-                0, len(arr), backend_version=self._backend_version
-            )
+            indices = _native_int_range(0, len(arr))
             if direction == "forward":
                 valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
                 distance = indices - valid_index
@@ -737,9 +728,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self) -> Self:
-        row_number = _native_int_range(
-            0, len(self), backend_version=self._backend_version
-        )
+        row_number = _native_int_range(0, len(self))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])
@@ -752,9 +741,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self) -> Self:
-        row_number = _native_int_range(
-            0, len(self), backend_version=self._backend_version
-        )
+        row_number = _native_int_range(0, len(self))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])

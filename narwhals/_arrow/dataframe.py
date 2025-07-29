@@ -644,7 +644,7 @@ class ArrowDataFrame(
 
     def is_unique(self) -> ArrowSeries:
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = _native_int_range(0, len(self), backend_version=self._backend_version)
+        row_index = _native_int_range(0, len(self))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -676,9 +676,7 @@ class ArrowDataFrame(
 
             agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-            col_value = _native_int_range(
-                0, len(self), backend_version=self._backend_version
-            )
+            col_value = _native_int_range(0, len(self))
             keep_idx_native = (
                 self.native.append_column(col_token, col_value)
                 .group_by(subset)

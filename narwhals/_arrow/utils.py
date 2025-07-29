@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Implementation, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -57,6 +57,9 @@ else:
         is_list,
         is_timestamp,
     )
+
+BACKEND_VERSION = Implementation.PYARROW._backend_version()
+"""Static backend version for `pyarrow`."""
 
 UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "y": "year",
@@ -441,15 +444,10 @@ def cast_to_comparable_string_types(
 
 
 def _native_int_range(
-    start: int,
-    end: int,
-    step: int = 1,
-    *,
-    dtype: pa.DataType | None = None,
-    backend_version: tuple[int, ...],
+    start: int, end: int, step: int = 1, *, dtype: pa.DataType | None = None
 ) -> ArrayAny:
     dtype = dtype if dtype is not None else pa.int64()
-    if backend_version < (21, 0, 0):  # pragma: no cover
+    if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
         return pa.array(np.arange(start=start, stop=end, step=step), type=dtype)
