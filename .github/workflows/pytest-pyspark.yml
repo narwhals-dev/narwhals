@@ -2,7 +2,10 @@ name: PyTest PySpark constructor
 
 on:
   pull_request:
-    types: [opened, labeled, synchronize]  # Triggers on PR creation, updates, and label changes
+    paths:
+      - narwhals/_expression_parsing.py
+      - narwhals/_spark_like/**
+      - narwhals/_sql/**
 
 env:
   PY_COLORS: 1
@@ -11,10 +14,9 @@ env:
 jobs:
 
   pytest-pyspark-constructor:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark') || contains(github.event.pull_request.labels.*.name, 'spark-like') || contains(github.event.pull_request.labels.*.name, 'release')}}
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.11"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -39,10 +41,9 @@ jobs:
 
 
   pytest-pyspark-connect-constructor:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'pyspark-connect') || contains(github.event.pull_request.labels.*.name, 'release') }}
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.11"]
         os: [ubuntu-latest]
     env:
       SPARK_VERSION: 3.5.5
