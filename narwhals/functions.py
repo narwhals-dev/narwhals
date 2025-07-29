@@ -1803,17 +1803,6 @@ def int_range(
 ) -> Series[Any]: ...
 
 
-@overload
-def int_range(
-    start: int | Expr,
-    end: int | Expr | None = ...,
-    step: int = ...,
-    *,
-    dtype: IntegerDType = ...,
-    eager: ModuleType | Implementation | str | Literal[False] = ...,
-) -> Expr | Series[Any]: ...
-
-
 def int_range(
     start: int | Expr,
     end: int | Expr | None = None,
