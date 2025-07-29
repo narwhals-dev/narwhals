@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
+from pandas.testing import assert_series_equal
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, assert_equal_data
@@ -36,7 +37,7 @@ def test_convert(
     )
 
     result = series.to_pandas()
-    pd.testing.assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
+    assert_series_equal(result, pd.Series([1, 3, 2], name="a"))
 
 
 def dtype_struct(a_dtype: IntoDType, b_dtype: IntoDType) -> nw.Struct:
