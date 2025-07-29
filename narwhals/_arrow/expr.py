@@ -114,11 +114,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         return {"_return_py_scalar": False} if returns_scalar else {}
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
-        if (
-            partition_by
-            and self._metadata is not None
-            and not self._metadata.is_scalar_like
-        ):
+        meta = self._metadata
+        if partition_by and meta is not None and not meta.is_scalar_like:
             msg = "Only aggregation or literal operations are supported in grouped `over` context for PyArrow."
             raise NotImplementedError(msg)
 
@@ -132,22 +129,20 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 df = df.with_row_index(token, order_by=None).sort(
                     *order_by, descending=False, nulls_last=False
                 )
-                result = self(df.drop([token], strict=True))
-                if (
-                    meta := self._metadata
-                ) is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
-                    # Orderable aggregations require `order_by` columns and result in a
+                results = self(df.drop([token], strict=True))
+                if meta is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
+                    # Orderable aggregations require `order_by` columns and results in a
                     # scalar output (well actually in a length 1 series).
-                    # Therefore we need to broadcast the result to the original size, since
+                    # Therefore we need to broadcast the results to the original size, since
                     # `over` is not a length changing operation.
                     size = len(df)
-                    return [s._with_native(pa.repeat(s.item(), size)) for s in result]
+                    return [s._with_native(pa.repeat(s.item(), size)) for s in results]
 
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.
                 sorting_indices = pc.sort_indices(df.get_column(token).native)
-                return [s._with_native(s.native.take(sorting_indices)) for s in result]
+                return [s._with_native(s.native.take(sorting_indices)) for s in results]
         else:
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
