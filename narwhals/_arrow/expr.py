@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -132,6 +133,14 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 result = self(df.drop([token], strict=True))
+                if (
+                    meta := self._metadata
+                ) is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
+                    # Orderable aggregation result in a scalar, yet require order_by.
+                    # Therefore we need to broadcast the result to the original size
+                    size = len(df)
+                    return [s._with_native(pa.repeat(s.item(), size)) for s in result]
+
                 # TODO(marco): is there a way to do this efficiently without
                 # doing 2 sorts? Here we're sorting the dataframe and then
                 # again calling `sort_indices`. `ArrowSeries.scatter` would also sort.

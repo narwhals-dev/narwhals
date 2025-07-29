@@ -409,7 +409,6 @@ def warn_complex_group_by() -> None:
     )
 
 
-
 def warn_ordered_apply(
     name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
 ) -> None:
@@ -433,40 +432,8 @@ def warn_ordered_apply(
             "Please see: "
             "https://github.com/pandas-dev/pandas/issues/57019"
         )
-    warnings.warn(
+    msg = (
         f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
-        f"safely with the pandas API.\n{msg}",
-        UserWarning,
-        stacklevel=find_stacklevel(),
+        f"safely with the pandas API.\n{msg}"
     )
-
-
-def warn_ordered_apply(
-    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
-) -> None:
-    if is_cudf:  # pragma: no cover
-        msg = (
-            f"cuDF does not support selecting the {name} value without skipping NA.\n\n"
-            "Please see: "
-            "https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/groupby/"
-        )
-    elif has_pyarrow_string:
-        msg = (
-            f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
-            "Please see: "
-            "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
-        )
-    else:  # pragma: no cover
-        found = requires._unparse_version(Implementation.PANDAS._backend_version())
-        minimum = requires._unparse_version(_MINIMUM_SKIPNA)
-        msg = (
-            f"If you can, please upgrade to 'pandas>={minimum}', found version {found!r}.\n\n"
-            "Please see: "
-            "https://github.com/pandas-dev/pandas/issues/57019"
-        )
-    warnings.warn(
-        f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
-        f"safely with the pandas API.\n{msg}",
-        UserWarning,
-        stacklevel=find_stacklevel(),
-    )
+    issue_warning(msg, UserWarning)
