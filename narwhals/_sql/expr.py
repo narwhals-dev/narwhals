@@ -168,7 +168,12 @@ class SQLExpr(
     def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...
     def _count_star(self) -> NativeExprT: ...
-    def _when(self, condition: NativeExprT, value: NativeExprT, otherwise: NativeExprT | None=None) -> NativeExprT: ...
+    def _when(
+        self,
+        condition: NativeExprT,
+        value: NativeExprT,
+        otherwise: NativeExprT | None = None,
+    ) -> NativeExprT: ...
     def _window_expression(
         self,
         expr: NativeExprT,
@@ -386,20 +391,13 @@ class SQLExpr(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
 
-    ## model from duckdb:
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
-            return self._when(expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr))
+            return self._when(
+                expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr)
+            )  # type: ignore[operator]
 
         return self._with_elementwise(_sqrt)
-
-    # def sqrt(self) -> Self:
-    #     def _sqrt(expr: NativeExprT) -> NativeExprT:
-    #         return self._when(
-    #             expr < self._lit(0), self._lit(float("nan"))
-    #             )
-
-    #     return self._with_elementwise(lambda expr: self._function("_sqrt", expr))
 
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
