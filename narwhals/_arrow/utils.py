@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -77,6 +77,9 @@ UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
 
 lit = pa.scalar
 """Alias for `pyarrow.scalar`."""
+
+int64: Final = pa.int64()
+"""Initialized `pyarrow.types.Int64Type`."""
 
 
 def extract_py_scalar(value: Any, /) -> Any:
@@ -445,9 +448,8 @@ def cast_to_comparable_string_types(
 
 
 def _native_int_range(
-    start: int, end: int, step: int = 1, *, dtype: pa.DataType | None = None
+    start: int, end: int, step: int = 1, *, dtype: pa.DataType = int64
 ) -> ArrayAny:
-    dtype = dtype if dtype is not None else pa.int64()
     if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
         import numpy as np  # ignore-banned-import
 
