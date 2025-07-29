@@ -191,7 +191,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         condition: NativeExprT,
         value: NativeExprT,
         otherwise: NativeExprT | None = None,
-    ) -> NativeExprT: ...
+    ) -> NativeExprT:
+        return self.__narwhals_namespace__()._when(condition, value, otherwise)
 
     def _window_expression(
         self,
