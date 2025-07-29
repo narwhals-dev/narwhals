@@ -51,6 +51,8 @@ def test_timestamp_datetimes(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if "dask" in str(constructor):
+        pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
@@ -95,6 +97,8 @@ def test_timestamp_datetimes_tz_aware(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if "dask" in str(constructor):
+        pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
@@ -150,6 +154,8 @@ def test_timestamp_dates(
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
+    if "dask" in str(constructor):
+        pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
@@ -177,6 +183,8 @@ def test_timestamp_dates(
 def test_timestamp_invalid_date(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
+    if "dask" in str(constructor):
+        pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")

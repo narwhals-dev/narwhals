@@ -307,7 +307,8 @@ class ExprMetadata:
         )
 
     def with_orderable_aggregation(self) -> ExprMetadata:
-        if self.is_scalar_like:
+        # Deprecated, used only in stable.v1.
+        if self.is_scalar_like:  # pragma: no cover
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(

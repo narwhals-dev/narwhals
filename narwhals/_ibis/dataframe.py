@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from io import BytesIO
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
@@ -19,6 +20,7 @@ from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from pathlib import Path
     from types import ModuleType
 
     import pandas as pd
@@ -400,6 +402,12 @@ class IbisLazyFrame(
             ibis.selectors.all(),
         ]
         return self._with_native(self.native.select(*to_select))
+
+    def sink_parquet(self, file: str | Path | BytesIO) -> None:
+        if isinstance(file, BytesIO):  # pragma: no cover
+            msg = "Writing to BytesIO is not supported for Ibis backend."
+            raise NotImplementedError(msg)
+        self.native.to_parquet(file)
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."

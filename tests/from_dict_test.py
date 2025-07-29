@@ -34,6 +34,13 @@ def test_from_dict_schema(backend: Implementation | str) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
+    with pytest.deprecated_call():
+        result = nw.from_dict(
+            {"c": [1, 2], "d": [5, 6]},
+            native_namespace=backend,  # type: ignore[arg-type]
+            schema=schema,
+        )
+        assert result.collect_schema() == schema
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
@@ -63,17 +70,6 @@ def test_from_dict_with_backend_invalid() -> None:
         nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
 
 
-def test_from_dict_both_backend_and_namespace(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    native_namespace = nw.get_native_namespace(df)
-    with pytest.raises(ValueError, match="Can't pass both"):
-        nw.from_dict(
-            {"c": [1, 2], "d": [5, 6]},
-            backend="pandas",
-            native_namespace=native_namespace,
-        )
-
-
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
     constructor: Constructor, backend: Implementation | str
@@ -90,9 +86,17 @@ def test_from_dict_one_native_one_narwhals(
     assert_equal_data(result, expected)
 
 
-def test_from_dict_empty() -> None:
-    with pytest.raises(ValueError, match="empty"):
-        nw.from_dict({})
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_empty(backend: Implementation | str) -> None:
+    result = nw.from_dict({}, backend=backend)
+    assert result.shape == (0, 0)
+
+
+@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
+def test_from_dict_empty_with_schema(backend: Implementation | str) -> None:
+    schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
+    result = nw.from_dict({}, schema, backend=backend)
+    assert result.schema == schema
 
 
 def test_alignment() -> None:
