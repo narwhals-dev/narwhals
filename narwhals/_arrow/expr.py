@@ -136,8 +136,10 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 if (
                     meta := self._metadata
                 ) is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
-                    # Orderable aggregation result in a scalar, yet require order_by.
-                    # Therefore we need to broadcast the result to the original size
+                    # Orderable aggregations require `order_by` columns and result in a
+                    # scalar output (well actually in a length 1 series).
+                    # Therefore we need to broadcast the result to the original size, since
+                    # `over` is not a length changing operation.
                     size = len(df)
                     return [s._with_native(pa.repeat(s.item(), size)) for s in result]
 
