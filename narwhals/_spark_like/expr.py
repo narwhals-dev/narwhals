@@ -86,7 +86,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _count_star(self) -> Column:
         return self._F.count("*")
 
-    def _when(self, condition: Column, value: Column, otherwise: ExprKind | None=None) -> Column:
+    def _when(
+        self, condition: Column, value: Column, otherwise: ExprKind | None = None
+    ) -> Column:
         if otherwise is None:
             return self._F.when(condition, value)
         return self._F.when(condition, value).otherwise(otherwise)
@@ -499,14 +501,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.exp(expr)
 
         return self._with_elementwise(_exp)
-
-    # def sqrt(self) -> Self:
-    #     def _sqrt(expr: Column) -> Column:
-    #         return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
-    #             self._F.sqrt(expr)
-    #         )
-
-    #     return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

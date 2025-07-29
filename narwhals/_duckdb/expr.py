@@ -83,7 +83,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _count_star(self) -> Expression:
         return F("count", StarExpression())
 
-    def _when(self, condition: Expression, value: Expression, otherwise: Expression | None=None) -> Expression:
+    def _when(
+        self,
+        condition: Expression,
+        value: Expression,
+        otherwise: Expression | None = None,
+    ) -> Expression:
         if otherwise is None:
             return when(condition, value)
         return when(condition, value).otherwise(otherwise)
@@ -397,12 +402,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             return F("exp", expr)
 
         return self._with_elementwise(_exp)
-
-    # def sqrt(self) -> Self:
-    #     def _sqrt(expr: Expression) -> Expression:
-    #         return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
-
-    #     return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> DuckDBExprStringNamespace:
