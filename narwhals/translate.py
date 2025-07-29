@@ -12,7 +12,7 @@ from narwhals._namespace import (
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, has_native_namespace
 from narwhals.dependencies import (
     get_dask_expr,
     get_numpy,
@@ -575,19 +575,11 @@ def get_native_namespace(
 def _get_native_namespace_single_obj(
     obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
-    from contextlib import suppress
-
-    from narwhals._utils import has_native_namespace
-
-    with suppress(TypeError, AssertionError):
-        return Version.MAIN.namespace.from_native_object(
-            obj
-        ).implementation.to_native_namespace()
-
     if has_native_namespace(obj):
         return obj.__native_namespace__()
-    msg = f"Could not get native namespace from object of type: {type(obj)}"
-    raise TypeError(msg)
+    return Version.MAIN.namespace.from_native_object(
+        obj
+    ).implementation.to_native_namespace()
 
 
 def narwhalify(

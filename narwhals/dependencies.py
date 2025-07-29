@@ -6,6 +6,8 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Any
 
+from narwhals._exceptions import issue_warning
+
 if TYPE_CHECKING:
     import cudf
     import dask.dataframe as dd
@@ -125,24 +127,24 @@ def get_sqlframe() -> Any:
     return sys.modules.get("sqlframe", None)
 
 
-def _raise_if_narwhals_df_or_lf(df: Any) -> None:
+def _warn_if_narwhals_df_or_lf(df: Any) -> None:
     if is_narwhals_dataframe(df) or is_narwhals_lazyframe(df):
         msg = (
             f"You passed a `{type(df)}` to `is_pandas_dataframe`.\n\n"
             "Hint: Instead of e.g. `is_pandas_dataframe(df)`, "
             "did you mean `is_pandas_dataframe(df.to_native())`?"
         )
-        raise TypeError(msg)
+        issue_warning(msg, UserWarning)
 
 
-def _raise_if_narwhals_series(ser: Any) -> None:
+def _warn_if_narwhals_series(ser: Any) -> None:
     if is_narwhals_series(ser):
         msg = (
             f"You passed a `{type(ser)}` to `is_pandas_series`.\n\n"
             "Hint: Instead of e.g. `is_pandas_series(ser)`, "
             "did you mean `is_pandas_series(ser.to_native())`?"
         )
-        raise TypeError(msg)
+        issue_warning(msg, UserWarning)
 
 
 def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
@@ -151,7 +153,7 @@ def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(df, mod.pandas.DataFrame)
@@ -165,7 +167,7 @@ def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -188,7 +190,7 @@ def is_modin_dataframe(df: Any) -> TypeIs[mpd.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
@@ -198,7 +200,7 @@ def is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -213,7 +215,7 @@ def is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
@@ -223,7 +225,7 @@ def is_cudf_series(ser: Any) -> TypeIs[cudf.Series[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -248,7 +250,7 @@ def is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame)
 
 
@@ -258,7 +260,7 @@ def is_duckdb_relation(df: Any) -> TypeIs[duckdb.DuckDBPyRelation]:
     Warning:
         This method cannot be called on Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (duckdb := get_duckdb()) is not None and isinstance(
         df, duckdb.DuckDBPyRelation
     )
@@ -270,7 +272,7 @@ def is_ibis_table(df: Any) -> TypeIs[ibis.Table]:
     Warning:
         This method cannot be called on Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
@@ -280,7 +282,7 @@ def is_polars_dataframe(df: Any) -> TypeIs[pl.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
 
 
@@ -290,7 +292,7 @@ def is_polars_lazyframe(df: Any) -> TypeIs[pl.LazyFrame]:
     Warning:
         This method cannot be called on Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
 
 
@@ -300,7 +302,7 @@ def is_polars_series(ser: Any) -> TypeIs[pl.Series]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
@@ -310,7 +312,7 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
@@ -320,7 +322,7 @@ def is_pyarrow_table(df: Any) -> TypeIs[pa.Table]:
     Warning:
         This method cannot be called on Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
 
 
@@ -334,7 +336,7 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
@@ -347,7 +349,7 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     if get_pyspark_connect() is not None:  # pragma: no cover
         try:
             from pyspark.sql.connect.dataframe import DataFrame
@@ -363,7 +365,7 @@ def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     if get_sqlframe() is not None:
         from sqlframe.base.dataframe import BaseDataFrame
 
@@ -410,7 +412,7 @@ def is_pandas_like_dataframe(df: Any) -> bool:
     Warning:
         This method cannot be called on a Narwhals DataFrame/LazyFrame.
     """
-    _raise_if_narwhals_df_or_lf(df)
+    _warn_if_narwhals_df_or_lf(df)
     return is_pandas_dataframe(df) or is_modin_dataframe(df) or is_cudf_dataframe(df)
 
 
@@ -422,7 +424,7 @@ def is_pandas_like_series(ser: Any) -> bool:
     Warning:
         This method cannot be called on Narwhals Series.
     """
-    _raise_if_narwhals_series(ser)
+    _warn_if_narwhals_series(ser)
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 
