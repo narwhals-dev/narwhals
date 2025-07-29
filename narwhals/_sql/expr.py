@@ -181,9 +181,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _lit(self, value: Any) -> NativeExprT:
         return self.__narwhals_namespace__()._lit(value)
 
-    def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT:
-        return self.__narwhals_namespace__()._when(condition, value)
-
     def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
         return self.__narwhals_namespace__()._coalesce(*expr)
 
