@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, Int64 as _Int64
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
 
 
-dtypes = Version.MAIN.dtypes
+Int64: _Int64 = Version.MAIN.dtypes.Int64()
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -1787,7 +1787,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = dtypes.Int64,
+    dtype: IntegerDType = Int64,
     eager: Literal[False] = False,
 ) -> Expr: ...
 
@@ -1798,7 +1798,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = dtypes.Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str,
 ) -> Series[Any]: ...
 
@@ -1809,7 +1809,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = dtypes.Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]: ...
 
@@ -1819,7 +1819,7 @@ def int_range(
     end: int | Expr | None = None,
     step: int = 1,
     *,
-    dtype: IntegerDType = dtypes.Int64,
+    dtype: IntegerDType = Int64,
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
