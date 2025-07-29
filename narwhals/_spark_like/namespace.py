@@ -5,6 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import (
+    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
@@ -73,8 +74,12 @@ class SparkLikeNamespace(
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
-    def _when(self, condition: Column, value: Column) -> Column:
-        return self._F.when(condition, value)
+    def _when(
+        self, condition: Column, value: Column, otherwise: ExprKind | None = None
+    ) -> Column:
+        if otherwise is None:
+            return self._F.when(condition, value)
+        return self._F.when(condition, value).otherwise(otherwise)
 
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
