@@ -1886,9 +1886,6 @@ def _int_range_impl(
         start = 0
 
     if not eager:
-        assert start is not None  # noqa: S101, help mypy
-        assert end is not None  # noqa: S101, help mypy
-
         start = start if isinstance(start, Expr) else lit(start, dtype=dtype)
         end = end if isinstance(end, Expr) else lit(end, dtype=dtype)
 
