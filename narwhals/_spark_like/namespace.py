@@ -73,8 +73,12 @@ class SparkLikeNamespace(
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
 
-    def _when(self, condition: Column, value: Column) -> Column:
-        return self._F.when(condition, value)
+    def _when(
+        self, condition: Column, value: Column, otherwise: Column | None = None
+    ) -> Column:
+        if otherwise is None:
+            return self._F.when(condition, value)
+        return self._F.when(condition, value).otherwise(otherwise)
 
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
