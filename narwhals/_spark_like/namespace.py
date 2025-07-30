@@ -74,7 +74,7 @@ class SparkLikeNamespace(
         return self._F.lit(value)
 
     def _when(
-        self, condition: Column, value: Column, otherwise: SparkLikeExpr | None = None
+        self, condition: Column, value: Column, otherwise: Column | None = None
     ) -> Column:
         if otherwise is None:
             return self._F.when(condition, value)
