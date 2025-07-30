@@ -16,8 +16,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
-    from polars.datatypes import IntegerType as PlIntegerType
-
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
@@ -213,13 +211,9 @@ class PolarsNamespace:
     ) -> PolarsExpr:
         start_ = start if isinstance(start, int) else start.native
         end_ = end if isinstance(end, int) else end.native
-        pl_dtype: PlIntegerType = narwhals_to_native_dtype(
-            dtype=dtype, version=self._version
-        )  # type: ignore[assignment]
-        return self._expr(
-            pl.int_range(start=start_, end=end_, step=step, dtype=pl_dtype, eager=False),
-            version=self._version,
-        )
+        pl_dtype = narwhals_to_native_dtype(dtype, self._version)
+        native = pl.int_range(start_, end_, step, dtype=pl_dtype)
+        return self._expr(native, self._version)
 
     # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
     # 1. Others have lots of private stuff for code reuse

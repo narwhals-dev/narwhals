@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
-    from polars.datatypes import IntegerType as PlIntegerType
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
@@ -181,12 +180,9 @@ class PolarsSeries:
         context: _LimitedContext,
         name: str,
     ) -> Self:
-        version = context._version
-        dtype_pl: PlIntegerType = narwhals_to_native_dtype(dtype, version)  # type: ignore[assignment]
-        return cls.from_native(
-            pl.int_range(start=start, end=end, step=step, dtype=dtype_pl, eager=True),
-            context=context,
-        ).alias(name)
+        dtype_pl = narwhals_to_native_dtype(dtype, context._version)
+        native = pl.int_range(start, end, step, dtype=dtype_pl, eager=True)
+        return cls.from_native(native, context=context).alias(name)
 
     @staticmethod
     def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:
