@@ -18,6 +18,7 @@ if t.TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
     from narwhals._plan.dummy import DummyDataFrame
@@ -109,3 +110,18 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
     def drop(self, columns: Sequence[str]) -> Self:
         to_drop = list(columns)
         return self._with_native(self.native.drop(to_drop))
+
+    # NOTE: Use instead of `with_columns` for trivial cases
+    def _with_columns(self, exprs: Iterable[ArrowExpr | ArrowScalar], /) -> Self:
+        native = self.native
+        columns = self.columns
+        height = len(self)
+        for into_series in exprs:
+            name = into_series.name
+            chunked = into_series.broadcast(height).native
+            if name in columns:
+                i = columns.index(name)
+                native = native.set_column(i, name, chunked)
+            else:
+                native = native.append_column(name, chunked)
+        return self._with_native(native)
