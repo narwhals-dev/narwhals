@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals import Implementation
 from narwhals.exceptions import ComputeError
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType, IntegerType
@@ -42,6 +42,22 @@ def test_int_range_eager(
         end = start
         start = 0
     assert_equal_data({"a": series}, {"a": list(range(start, end, step))})
+
+
+# NOTE: Two options for solving
+# (1): Remove `Expr` inputs from the overloads that return `Series`
+#   - Then check that this gives a helpful runtime message + requires a `type: ignore[call-overload]`
+# (2): Add support for this at runtime, like `polars`
+#   - Then check that this produces the same result for (polars) lazy and eager constructors
+#   - https://github.com/pola-rs/polars/blob/867443ce3875da30791021e4072e5a6fb2249d91/py-polars/polars/functions/range/int_range.py#L214-L229
+def test_int_range_eager_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [0, 2, 3, 6, 5, 1]}
+    expected = {"a": [0, 2, 4, 6, 8, 10]}
+    df = nw.from_native(constructor_eager(data))
+    impl = df.implementation
+    int_range = nw.int_range(nw.col("a").min(), nw.col("a").max() * 2, eager=impl)
+    result = df.select(int_range)
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
