@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from narwhals._compliant.group_by import CompliantGroupBy, ParseKeysGroupBy
 from narwhals._compliant.typing import CompliantLazyFrameT_co, NativeExprT_co
 from narwhals._sql.typing import SQLExprT_contra
-from narwhals._typing_compat import Protocol38
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
 class SQLGroupBy(
     ParseKeysGroupBy[CompliantLazyFrameT_co, SQLExprT_contra],
     CompliantGroupBy[CompliantLazyFrameT_co, SQLExprT_contra],
-    Protocol38[CompliantLazyFrameT_co, SQLExprT_contra, NativeExprT_co],
+    Protocol[CompliantLazyFrameT_co, SQLExprT_contra, NativeExprT_co],
 ):
     _keys: list[str]
     _output_key_names: list[str]

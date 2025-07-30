@@ -4,9 +4,6 @@
 Import from here to avoid introducing a runtime dependency on [`typing_extensions`]
 
 ## Notes
-- `Protocol38`
-  - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-  - https://github.com/narwhals-dev/narwhals/pull/2294#discussion_r2014534830
 - `TypeVar` defaults
   - https://typing.python.org/en/latest/spec/generics.html#type-parameter-defaults
   - https://peps.python.org/pep-0696/
@@ -25,7 +22,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from typing import Callable, Protocol as Protocol38
+    from typing import Callable
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar
@@ -85,9 +82,5 @@ else:  # pragma: no cover
         )
         raise AssertionError(msg)
 
-    # TODO @dangotbanned: Remove after dropping `3.8` (#2084)
-    # - https://github.com/narwhals-dev/narwhals/pull/2064#discussion_r1965921386
-    from typing import Protocol as Protocol38
 
-
-__all__ = ["Protocol38", "TypeVar", "assert_never", "deprecated"]
+__all__ = ["TypeVar", "assert_never", "deprecated"]

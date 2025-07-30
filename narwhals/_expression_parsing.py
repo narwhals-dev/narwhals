@@ -1,6 +1,7 @@
 # Utilities for expression parsing
 # Useful for backends which don't have any concept of expressions, such
 # and pandas or PyArrow.
+# ! Any change to this module will trigger the pyspark and pyspark-connect tests in CI
 from __future__ import annotations
 
 from enum import Enum, auto
@@ -307,7 +308,8 @@ class ExprMetadata:
         )
 
     def with_orderable_aggregation(self) -> ExprMetadata:
-        if self.is_scalar_like:
+        # Deprecated, used only in stable.v1.
+        if self.is_scalar_like:  # pragma: no cover
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(
