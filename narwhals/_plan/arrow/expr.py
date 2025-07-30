@@ -341,7 +341,7 @@ class ArrowExpr(  # type: ignore[misc]
 
     def over_ordered(
         self, node: OrderedWindowExpr, frame: ArrowDataFrame, name: str
-    ) -> Self:
+    ) -> Self | ArrowScalar:
         if node.partition_by:
             msg = f"Need to implement `group_by`, `join` for:\n{node!r}"
             raise NotImplementedError(msg)
@@ -349,15 +349,17 @@ class ArrowExpr(  # type: ignore[misc]
         # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
         sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
         options = node.sort_options.to_multiple(len(node.order_by))
-
         idx_name = generate_temporary_column_name(8, frame.columns)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
-        height = len(sorted_context)
-
         evaluated = self._dispatch(node.expr, sorted_context.drop([idx_name]), name)
-
-        # NOTE: Might be able to skip this if ^^^ returned a scalar, since len == 1 is already sorted
+        if isinstance(evaluated, ArrowScalar):
+            # NOTE: We're already sorted, defer broadcasting to the outer context
+            # Wouldn't be suitable for partitions, but will be fine here
+            # - https://github.com/narwhals-dev/narwhals/pull/2528/commits/2ae42458cae91f4473e01270919815fcd7cb9667
+            # - https://github.com/narwhals-dev/narwhals/pull/2528/commits/b8066c4c57d4b0b6c38d58a0f5de05eefc2cae70
+            return self._with_native(evaluated.native, name)
         indices = pc.sort_indices(sorted_context.get_column(idx_name).native)
+        height = len(sorted_context)
         result = evaluated.broadcast(height).native.take(indices)
         return self._with_native(result, name)
 
