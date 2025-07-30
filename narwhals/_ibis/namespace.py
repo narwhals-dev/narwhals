@@ -56,7 +56,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     ) -> ir.Value:
         if otherwise is None:
             return ibis.cases((condition, value))
-        return ibis.cases((condition, value), else_=otherwise)
+        return ibis.cases((condition, value), else_=otherwise)  # pragma: no cover
 
     def _coalesce(self, *exprs: ir.Value) -> ir.Value:
         return ibis.coalesce(*exprs)
