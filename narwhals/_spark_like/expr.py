@@ -387,14 +387,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_log)
 
-    def sqrt(self) -> Self:
-        def _sqrt(expr: Column) -> Column:
-            return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
-                self._F.sqrt(expr)
-            )
-
-        return self._with_elementwise(_sqrt)
-
     @property
     def str(self) -> SparkLikeExprStringNamespace:
         return SparkLikeExprStringNamespace(self)
