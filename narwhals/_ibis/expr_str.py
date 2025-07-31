@@ -12,23 +12,27 @@ from narwhals._ibis.utils import lit
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
     from narwhals._ibis.expr import IbisExpr
+
+IntoStringValue: TypeAlias = "str | ir.StringValue"
 
 
 class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["IbisExpr"]):
-    def starts_with(self, prefix: str) -> IbisExpr:
+    def starts_with(self, prefix: IntoStringValue) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.startswith(prefix)
 
         return self.compliant._with_callable(fn)
 
-    def ends_with(self, suffix: str) -> IbisExpr:
+    def ends_with(self, suffix: IntoStringValue) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.endswith(suffix)
 
         return self.compliant._with_callable(fn)
 
-    def contains(self, pattern: str, *, literal: bool) -> IbisExpr:
+    def contains(self, pattern: IntoStringValue, *, literal: bool) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.BooleanValue:
             return expr.contains(pattern) if literal else expr.re_search(pattern)
 
@@ -40,7 +44,7 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
 
         return self.compliant._with_callable(fn)
 
-    def split(self, by: str) -> IbisExpr:
+    def split(self, by: IntoStringValue) -> IbisExpr:
         def fn(expr: ir.StringColumn) -> ir.ArrayValue:
             return expr.split(by)
 
@@ -62,14 +66,16 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
 
         return self.compliant._with_callable(lambda expr: expr.strip())
 
-    def _replace_all(self, pattern: str, value: str) -> Callable[..., ir.StringValue]:
+    def _replace_all(
+        self, pattern: IntoStringValue, value: IntoStringValue
+    ) -> Callable[..., ir.StringValue]:
         def fn(expr: ir.StringColumn) -> ir.StringValue:
             return expr.re_replace(pattern, value)
 
         return fn
 
     def _replace_all_literal(
-        self, pattern: str, value: str
+        self, pattern: IntoStringValue, value: IntoStringValue
     ) -> Callable[..., ir.StringValue]:
         def fn(expr: ir.StringColumn) -> ir.StringValue:
             return expr.replace(pattern, value)  # pyright: ignore[reportArgumentType]
@@ -79,13 +85,12 @@ class IbisExprStringNamespace(LazyExprNamespace["IbisExpr"], StringNamespace["Ib
     def replace_all(
         self, pattern: str, value: str | IbisExpr, *, literal: bool
     ) -> IbisExpr:
-        if not isinstance(value, str):
-            msg = (
-                "Ibis backed `Expr.str.replace_all` only supports str replacement values"
-            )
-            raise TypeError(msg)
         fn = self._replace_all_literal if literal else self._replace_all
-        return self.compliant._with_callable(fn(pattern, value))
+        if isinstance(value, str):
+            return self.compliant._with_callable(fn(pattern, value))
+        return self.compliant._with_elementwise(
+            lambda expr, value: fn(pattern, value)(expr), value=value
+        )
 
     def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:
         def fn(expr: ir.StringColumn) -> ir.TimestampValue:
