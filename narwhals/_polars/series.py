@@ -682,6 +682,10 @@ class PolarsSeries:
 
 
 class PolarsSeriesDateTimeNamespace:
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._compliant_series
+
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
@@ -694,8 +698,36 @@ class PolarsSeriesDateTimeNamespace:
 
         return func
 
+    truncate: Method[PolarsSeries]
+    offset_by: Method[PolarsSeries]
+    to_string: Method[PolarsSeries]
+    replace_time_zone: Method[PolarsSeries]
+    convert_time_zone: Method[PolarsSeries]
+    timestamp: Method[PolarsSeries]
+    date: Method[PolarsSeries]
+    year: Method[PolarsSeries]
+    month: Method[PolarsSeries]
+    day: Method[PolarsSeries]
+    hour: Method[PolarsSeries]
+    minute: Method[PolarsSeries]
+    second: Method[PolarsSeries]
+    millisecond: Method[PolarsSeries]
+    microsecond: Method[PolarsSeries]
+    nanosecond: Method[PolarsSeries]
+    ordinal_day: Method[PolarsSeries]
+    weekday: Method[PolarsSeries]
+    total_minutes: Method[PolarsSeries]
+    total_seconds: Method[PolarsSeries]
+    total_milliseconds: Method[PolarsSeries]
+    total_microseconds: Method[PolarsSeries]
+    total_nanoseconds: Method[PolarsSeries]
+
 
 class PolarsSeriesStringNamespace:
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._compliant_series
+
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
@@ -714,8 +746,26 @@ class PolarsSeriesStringNamespace:
 
         return func
 
+    len_chars: Method[PolarsSeries]
+    replace: Method[PolarsSeries]
+    replace_all: Method[PolarsSeries]
+    strip_chars: Method[PolarsSeries]
+    starts_with: Method[PolarsSeries]
+    ends_with: Method[PolarsSeries]
+    contains: Method[PolarsSeries]
+    slice: Method[PolarsSeries]
+    split: Method[PolarsSeries]
+    to_date: Method[PolarsSeries]
+    to_datetime: Method[PolarsSeries]
+    to_lowercase: Method[PolarsSeries]
+    to_uppercase: Method[PolarsSeries]
+
 
 class PolarsSeriesCatNamespace:
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._compliant_series
+
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
@@ -728,8 +778,14 @@ class PolarsSeriesCatNamespace:
 
         return func
 
+    get_categories: Method[PolarsSeries]
+
 
 class PolarsSeriesListNamespace:
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._series
+
     def __init__(self, series: PolarsSeries) -> None:
         self._series = series
 
@@ -759,6 +815,10 @@ class PolarsSeriesListNamespace:
 
 
 class PolarsSeriesStructNamespace:
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._compliant_series
+
     def __init__(self, series: PolarsSeries) -> None:
         self._compliant_series = series
 
@@ -770,3 +830,5 @@ class PolarsSeriesStructNamespace:
             )
 
         return func
+
+    field: Method[PolarsSeries]
