@@ -513,16 +513,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def log(self, base: float) -> Self:
         def _log(expr: NativeExprT) -> NativeExprT:
             return self._when(
-                expr < self._lit(0),
-                self._lit(float("nan")),  # type: ignore[operator]
+                expr < self._lit(0), # type: ignore[operator]
+                self._lit(float("nan")),  
                 self._when(
-                    expr == self._lit(0),
+                    expr == self._lit(0), # type: ignore[operator]
                     self._lit(float("-inf")),
                     self._function("log", expr),
-                ),  # type: ignore[operator]
+                )  
             )
 
-        return self._with_elementwise(lambda expr: self._function("log", expr))  # type: ignore[operator]
+        return self._with_elementwise(_log)  
 
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
