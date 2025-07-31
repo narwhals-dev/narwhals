@@ -1915,7 +1915,7 @@ def _int_range_impl(
             msg = (
                 f"Expected `start` and `end` to be integer values since `eager={eager}`.\n"
                 f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
-                "Hint: Calling with `nw.int_range` expressions requires a context "
+                "Hint: Calling `nw.int_range` with expressions requires a context "
                 "such as `select` or `with_columns`"
             )
             raise InvalidOperationError(msg)
