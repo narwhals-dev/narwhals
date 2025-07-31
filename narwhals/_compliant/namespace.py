@@ -100,9 +100,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
         self,
         start: int | CompliantExprT,
         end: int | CompliantExprT,
-        step: int,
+        step: int = 1,
         *,
-        dtype: IntegerDType,
+        dtype: IntegerDType = Int64,
     ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
@@ -238,9 +238,9 @@ class EagerNamespace(
         self,
         start: int | EagerExprT,
         end: int | EagerExprT,
-        step: int,
+        step: int = 1,
         *,
-        dtype: IntegerDType,
+        dtype: IntegerDType = Int64,
     ) -> EagerExprT:
         def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
             if isinstance(start, int):  # pragma: no cover

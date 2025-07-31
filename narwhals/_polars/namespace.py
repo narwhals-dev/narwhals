@@ -218,9 +218,9 @@ class PolarsNamespace:
         self,
         start: int | PolarsExpr,
         end: int | PolarsExpr,
-        step: int,
+        step: int = 1,
         *,
-        dtype: IntegerDType,
+        dtype: IntegerDType = Int64,
     ) -> PolarsExpr:
         start_ = start if isinstance(start, int) else start.native
         end_ = end if isinstance(end, int) else end.native
