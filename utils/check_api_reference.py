@@ -66,6 +66,7 @@ SERIES_ONLY_METHODS = {
     "arg_min",
     "arg_true",
     "dtype",
+    "from_numpy",
     "gather_every",
     "implementation",
     "is_empty",
