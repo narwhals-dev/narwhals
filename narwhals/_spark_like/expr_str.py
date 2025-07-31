@@ -11,6 +11,7 @@ from narwhals._utils import _is_naive_format, not_implemented
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
 
+    from narwhals._spark_like.dataframe import Incomplete
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
@@ -23,23 +24,21 @@ class SparkLikeExprStringNamespace(
     def replace_all(
         self, pattern: str, value: str | SparkLikeExpr, *, literal: bool
     ) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:
-            replace_all_func = (
-                self.compliant._F.replace if literal else self.compliant._F.regexp_replace
-            )
-            try:
-                return replace_all_func(
-                    expr,
-                    self.compliant._F.lit(pattern),  # pyright: ignore[reportArgumentType]
-                    self.compliant._F.lit(value),  # pyright: ignore[reportArgumentType]
-                )
-            except ValueError as e:
-                if not isinstance(value, str):
-                    msg = f"{self.compliant._implementation} backed `Expr.str.replace_all` only supports str replacement values"
-                    raise TypeError(msg) from e
-                raise
+        F = self.compliant._F  # noqa: N806
+        # NOTE: Both support `Column | str` in all 3 positions
+        # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.replace.html
+        # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.regexp_replace.html
+        replace_all: Incomplete = F.replace if literal else F.regexp_replace
+        pattern_ = F.lit(pattern)
+        if isinstance(value, str):
 
-        return self.compliant._with_elementwise(func)
+            def func(expr: Column) -> Column:
+                return replace_all(expr, pattern_, F.lit(value))
+
+            return self.compliant._with_elementwise(func)
+        return self.compliant._with_elementwise(
+            lambda expr, value: replace_all(expr, pattern_, value), value=value
+        )
 
     def strip_chars(self, characters: str | None) -> SparkLikeExpr:
         import string
