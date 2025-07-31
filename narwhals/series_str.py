@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import Any, Generic
 
+from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
 
@@ -33,6 +34,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.len_chars()
         )
 
+    def _extract_compliant(self, arg: Any) -> Any:
+        return arg._compliant_series if is_narwhals_series(arg) else arg
+
     def replace(
         self, pattern: str, value: str | SeriesT, *, literal: bool = False, n: int = 1
     ) -> SeriesT:
@@ -59,7 +63,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace(
-                pattern, value, literal=literal, n=n
+                pattern, self._extract_compliant(value), literal=literal, n=n
             )
         )
 
@@ -88,7 +92,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.replace_all(
-                pattern, value, literal=literal
+                pattern, self._extract_compliant(value), literal=literal
             )
         )
 
