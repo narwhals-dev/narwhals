@@ -66,6 +66,15 @@ class PandasLikeNamespace(
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
 
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        else:
+            return import_array_module(self._implementation)
+
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
         self._version = version
@@ -380,9 +389,8 @@ class PandasLikeNamespace(
         dtype: IntegerDType = Int64,
         name: str = "literal",
     ) -> PandasLikeSeries:
-        array_funcs = import_array_module(self._implementation)
-        data = array_funcs.arange(start, end, step)
-        return PandasLikeSeries.from_iterable(data, context=self, name=name, dtype=dtype)
+        data = self._array_funcs.arange(start, end, step)
+        return self._series.from_iterable(data, context=self, name=name, dtype=dtype)
 
     def int_range(
         self,
