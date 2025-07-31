@@ -512,9 +512,11 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def log(self, base: float) -> Self:
         def _log(expr: NativeExprT) -> NativeExprT:
-            return (self._when(
-                expr < self._lit(0), # type: ignore[operator]
-                self._lit(float("nan"))),  
+            return (
+                self._when(
+                    expr < self._lit(0),  # type: ignore[operator]
+                    self._lit(float("nan")),
+                ),
                 self._when(
                     expr == self._lit(0),  # type: ignore[operator]
                     self._lit(float("-inf")),
