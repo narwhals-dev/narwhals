@@ -516,7 +516,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 expr < self._lit(0),  # type: ignore[operator]
                 self._lit(float("nan")),
                 self._when(
-                    expr == self._lit(0),  # type: ignore[operator]
+                    cast("NativeExprT", expr == self._lit(0)),
                     self._lit(float("-inf")),
                     self._function("log", expr) / self._function("log", self._lit(base)),  # type: ignore[operator]
                 ),
