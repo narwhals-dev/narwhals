@@ -31,6 +31,7 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
+from narwhals.dtypes import Int64
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.series import Series
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType, Int64 as _Int64
+    from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
@@ -61,9 +62,6 @@ if TYPE_CHECKING:
     )
 
     _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
-
-
-Int64: _Int64 = Version.MAIN.dtypes.Int64()
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
