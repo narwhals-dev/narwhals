@@ -212,7 +212,7 @@ class PolarsNamespace:
     ) -> PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         native = pl.int_range(start, end, step, dtype=dtype_pl, eager=True).alias(name)
-        return PolarsSeries.from_native(native, context=self)
+        return self._series.from_native(native, context=self)
 
     def int_range(
         self,

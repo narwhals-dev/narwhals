@@ -301,9 +301,7 @@ class ArrowNamespace(
     ) -> ArrowSeries:
         dtype_pa = narwhals_to_native_dtype(dtype, version=self._version)
         data = int_range(start=start, end=end, step=step, dtype=dtype_pa)
-        return ArrowSeries.from_native(
-            chunked_array([data], dtype_pa), name=name, context=self
-        )
+        return self._series.from_native(chunked_array([data]), name=name, context=self)
 
 
 class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
