@@ -292,23 +292,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             version=self._version,
         )
 
-    def log(self, base: float) -> Self:
-        def _log(expr: Expression) -> Expression:
-            log = F("log", expr)
-            return (
-                when(expr < lit(0), lit(float("nan")))
-                .when(expr == lit(0), lit(float("-inf")))
-                .otherwise(log / F("log", lit(base)))
-            )
-
-        return self._with_elementwise(_log)
-
-    def sqrt(self) -> Self:
-        def _sqrt(expr: Expression) -> Expression:
-            return when(expr < lit(0), lit(float("nan"))).otherwise(F("sqrt", expr))
-
-        return self._with_elementwise(_sqrt)
-
     @property
     def str(self) -> DuckDBExprStringNamespace:
         return DuckDBExprStringNamespace(self)
