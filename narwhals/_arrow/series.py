@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
@@ -166,6 +167,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
+
+    def _to_expr(self) -> ArrowExpr:
+        return cast("ArrowExpr", super()._to_expr())
 
     @staticmethod
     def _is_native(obj: ChunkedArrayAny | Any) -> TypeIs[ChunkedArrayAny]:
