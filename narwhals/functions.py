@@ -1915,15 +1915,15 @@ def _int_range_impl(
             msg = (
                 f"Expected `start` and `end` to be integer values since `eager={eager}`.\n"
                 f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
-                "Hint: Calling `nw.int_range` with expressions requires a context "
-                "such as `select` or `with_columns`"
+                "Hint: Calling `nw.int_range` with expressions requires:\n"
+                "  - `eager=False`"
+                "  - a context such as `select` or `with_columns`"
             )
             raise InvalidOperationError(msg)
 
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        return ns.int_range_eager(
-            start=start, end=end, step=step, dtype=dtype
-        ).to_narwhals()
+        series = ns.int_range_eager(start=start, end=end, step=step, dtype=dtype)
+        return series.to_narwhals()
 
     msg = f"Cannot create a Series from a lazy backend. Found: {impl}"
     raise ValueError(msg)
