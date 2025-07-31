@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
 from narwhals._utils import (
     Implementation,
+    Version,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
     is_compliant_series,
+    is_eager_allowed,
     is_index_selector,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import is_numpy_scalar
-from narwhals.dtypes import _validate_dtype
+from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
+from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
@@ -70,6 +72,8 @@ class Series(Generic[IntoSeriesT]):
             ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         from narwhals.dataframe import DataFrame
@@ -87,6 +91,74 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        """Construct a Series from a NumPy ndarray.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as a NumPy ndarray.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import numpy as np
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = np.arange(5, 10)
+            >>> nw.Series.from_numpy("arr", arr, dtype=nw.Int8, backend="polars")
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (5,)       |
+            |Series: 'arr' [i8]|
+            |[                 |
+            |        5         |
+            |        6         |
+            |        7         |
+            |        8         |
+            |        9         |
+            |]                 |
+            └──────────────────┘
+        """
+        if not is_numpy_array_1d(values):
+            msg = "`from_numpy` only accepts 1D numpy arrays"
+            raise ValueError(msg)
+        if dtype:
+            _validate_into_dtype(dtype)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns.from_numpy(values).alias(name)
+            if dtype:
+                return cls(compliant.cast(dtype), level="full")
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
 
     @property
     def implementation(self) -> Implementation:
@@ -2553,7 +2625,7 @@ class Series(Generic[IntoSeriesT]):
 
     def hist(
         self,
-        bins: list[float | int] | None = None,
+        bins: list[float] | None = None,
         *,
         bin_count: int | None = None,
         include_breakpoint: bool = True,
@@ -2587,24 +2659,25 @@ class Series(Generic[IntoSeriesT]):
             |3        8.00      2|
             └────────────────────┘
         """
-        if bins is not None and bin_count is not None:
-            msg = "can only provide one of `bin_count` or `bins`"
-            raise ComputeError(msg)
-        if bins is None and bin_count is None:
-            bin_count = 10  # polars (v1.20) sets bin=10 if neither are provided.
-
         if bins is not None:
-            for i in range(1, len(bins)):
-                if bins[i - 1] >= bins[i]:
-                    msg = "bins must increase monotonically"
-                    raise ComputeError(msg)
+            if any(bins[i - 1] >= bins[i] for i in range(1, len(bins))):
+                msg = "bins must increase monotonically"
+                raise ComputeError(msg)
+            if bin_count is not None:
+                msg = f"can only provide one of `bin_count` or `bins`, got: {bin_count=}, {bins=}"
+                raise ComputeError(msg)
+            result = self._compliant_series.hist_from_bins(
+                bins=bins, include_breakpoint=include_breakpoint
+            )
+        else:
+            # polars (v1.20) sets bin=10 if neither are provided.
+            default = 10
+            bin_count = default if bin_count is None else bin_count
+            result = self._compliant_series.hist_from_bin_count(
+                bin_count=bin_count, include_breakpoint=include_breakpoint
+            )
 
-        return self._dataframe(
-            self._compliant_series.hist(
-                bins=bins, bin_count=bin_count, include_breakpoint=include_breakpoint
-            ),
-            level=self._level,
-        )
+        return self._dataframe(result, level=self._level)
 
     def log(self, base: float = math.e) -> Self:
         r"""Compute the logarithm to a given base.

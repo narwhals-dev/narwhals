@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
     from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, PythonLiteral
 
 lit = ibis.literal
 """Alias for `ibis.literal`."""
@@ -238,3 +238,22 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
 
 def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
     return ibis.interval(days=td.days, seconds=td.seconds, microseconds=td.microseconds)
+
+
+def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
+    if name == "row_number":
+        return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+    if name == "least":
+        return ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
+    if name == "greatest":
+        return ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
+    expr = args[0]
+    if name == "var_pop":
+        return cast("ir.NumericColumn", expr).var(how="pop")
+    if name == "var_samp":
+        return cast("ir.NumericColumn", expr).var(how="sample")
+    if name == "stddev_pop":
+        return cast("ir.NumericColumn", expr).std(how="pop")
+    if name == "stddev_samp":
+        return cast("ir.NumericColumn", expr).std(how="sample")
+    return getattr(expr, name)(*args[1:])

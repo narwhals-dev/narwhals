@@ -22,7 +22,7 @@ from narwhals._translate import (
     ToNarwhals,
     ToNarwhalsT_co,
 )
-from narwhals._typing_compat import assert_never, deprecated
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     ValidateBackendVersion,
     Version,
@@ -312,10 +312,6 @@ class CompliantLazyFrame(
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     def explode(self, columns: Sequence[str]) -> Self: ...
     def filter(self, predicate: CompliantExprT_contra | Incomplete) -> Self: ...
-    @deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
-    def gather_every(self, n: int, offset: int) -> Self: ...
     def group_by(
         self,
         keys: Sequence[str] | Sequence[CompliantExprT_contra],
@@ -349,8 +345,6 @@ class CompliantLazyFrame(
     def sort(
         self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
     ) -> Self: ...
-    @deprecated("`LazyFrame.tail` is deprecated and will be removed in a future version.")
-    def tail(self, n: int) -> Self: ...
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self: ...

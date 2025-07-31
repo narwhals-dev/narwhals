@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
-from narwhals._compliant import EagerSeries
+from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -34,9 +34,10 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Version, _LimitedContext
@@ -53,9 +54,11 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
-        _AnyDArray,
         _SliceIndex,
     )
+
+    PandasHistData: TypeAlias = "HistData[pd.Series[Any], list[float]]"
+
 
 PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "Int64": "int64",
@@ -816,10 +819,14 @@ class PandasLikeSeries(EagerSeries[Any]):
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
         _, lower = (
-            align_and_extract_native(self, lower_bound) if lower_bound else (None, None)
+            align_and_extract_native(self, lower_bound)
+            if lower_bound is not None
+            else (None, None)
         )
         _, upper = (
-            align_and_extract_native(self, upper_bound) if upper_bound else (None, None)
+            align_and_extract_native(self, upper_bound)
+            if upper_bound is not None
+            else (None, None)
         )
         kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
         return self._with_native(self.native.clip(lower, upper, **kwargs))
@@ -945,77 +952,23 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         )
 
-    def hist(  # noqa: C901, PLR0912
-        self,
-        bins: list[float | int] | None,
-        *,
-        bin_count: int | None,
-        include_breakpoint: bool,
+    def hist_from_bins(
+        self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
-        from numpy import linspace, zeros
-
-        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-        ns = self.__native_namespace__()
-        data: dict[str, Sequence[int | float | str] | _AnyDArray]
-
-        if bin_count == 0 or (bins is not None and len(bins) <= 1):
-            data = {}
-            if include_breakpoint:
-                data["breakpoint"] = []
-            data["count"] = []
-            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-
-        if self.native.count() < 1:
-            if bins is not None:
-                data = {"breakpoint": bins[1:], "count": zeros(shape=len(bins) - 1)}
-            else:
-                count = cast("int", bin_count)
-                if bin_count == 1:
-                    data = {"breakpoint": [1.0], "count": [0]}
-                else:
-                    data = {
-                        "breakpoint": linspace(0, 1, count + 1)[1:],
-                        "count": zeros(shape=count),
-                    }
-            if not include_breakpoint:
-                del data["breakpoint"]
-            return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-
-        if bin_count is not None:
-            # use Polars binning behavior
-            lower, upper = self.native.min(), self.native.max()
-            if lower == upper:
-                lower -= 0.5
-                upper += 0.5
-
-            if bin_count == 1:
-                data = {"breakpoint": [upper], "count": [self.native.count()]}
-                if not include_breakpoint:
-                    del data["breakpoint"]
-                return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
-
-            bins = linspace(lower, upper, bin_count + 1)
-            bin_count = None
-
-        # pandas (2.2.*) .value_counts(bins=int) adjusts the lowest bin twice, result in improper counts.
-        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not happen since
-        #   the bins were explicitly passed in.
-        categories = ns.cut(
-            self.native,
-            bins=bins if bin_count is None else bin_count,
-            include_lowest=True,  # Polars 1.27.0 always includes the lowest bin
+        return (
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bins(bins)
+            .to_frame()
         )
-        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations, .reindex
-        #   is necessary to restore these bins.
-        result = categories.value_counts(dropna=True, sort=False).reindex(
-            categories.cat.categories, fill_value=0
+
+    def hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> PandasLikeDataFrame:
+        return (
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            .with_bin_count(bin_count)
+            .to_frame()
         )
-        data = {}
-        if include_breakpoint:
-            data["breakpoint"] = bins[1:] if bins is not None else result.index.right
-        data["count"] = result.reset_index(drop=True)
-        return PandasLikeDataFrame.from_native(ns.DataFrame(data), context=self)
 
     def log(self, base: float) -> Self:
         native = self.native
@@ -1104,3 +1057,80 @@ class PandasLikeSeries(EagerSeries[Any]):
             msg = "Series must be of PyArrow Struct type to support struct namespace."
             raise TypeError(msg)
         return PandasLikeSeriesStructNamespace(self)
+
+
+class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
+    _series: PandasLikeSeries
+
+    def to_frame(self) -> PandasLikeDataFrame:
+        from_native = self._series.__narwhals_namespace__()._dataframe.from_native
+        DataFrame = self._series.__native_namespace__().DataFrame  # noqa: N806
+        return from_native(DataFrame(self._data), context=self._series)
+
+    # NOTE: *Could* be handled at narwhals-level
+    def is_empty_series(self) -> bool:
+        return self._series.count() < 1
+
+    # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
+    # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
+    def series_empty(self, arg: int | list[float], /) -> PandasHistData:
+        count = self._zeros(arg)
+        if self._breakpoint:
+            return {"breakpoint": self._calculate_breakpoint(arg), "count": count}
+        return {"count": count}
+
+    def _zeros(self, arg: int | list[float], /) -> _1DArray:
+        zeros = self._series._array_funcs.zeros
+        return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+
+    # NOTE: Based on `pl.Expr.cut`
+    def _cut(
+        self,
+        breaks: list[float] | _1DArray,
+        *,
+        labels: Sequence[str] | None = None,
+        closed: Literal["left", "right"] = "right",
+    ) -> pd.Series[Any]:
+        # NOTE: Polars 1.27.0 always includes the lowest bin
+        cut = self._series.__native_namespace__().cut
+        return cut(
+            self.native,
+            bins=breaks,
+            right=closed == "right",
+            labels=labels,
+            include_lowest=True,
+        )
+
+    def _linear_space(
+        self,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: Literal["both", "none"] = "both",
+    ) -> _1DArray:
+        return self._series._array_funcs.linspace(
+            start=start, stop=end, num=num_samples, endpoint=closed == "both"
+        )
+
+    def _calculate_bins(self, bin_count: int) -> _1DArray:
+        """Prepare bins for histogram calculation from bin_count."""
+        lower, upper = self.native.min(), self.native.max()
+        if lower == upper:
+            lower -= 0.5
+            upper += 0.5
+        return self._linear_space(lower, upper, bin_count + 1)
+
+    def _calculate_hist(self, bins: list[float] | _1DArray) -> PandasHistData:
+        # pandas (2.2.*) .value_counts(bins=[...]) adjusts the lowest bin which should not
+        #   happen since the bins were explicitly passed in.
+        categories = self._cut(bins)
+        # modin (0.32.0) .value_counts(...) silently drops bins with empty observations,
+        #   .reindex is necessary to restore these bins.
+        count = categories.value_counts(dropna=True, sort=False).reindex(
+            categories.cat.categories, fill_value=0
+        )
+        count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        if self._breakpoint:
+            return {"breakpoint": bins[1:], "count": count}
+        return {"count": count}
