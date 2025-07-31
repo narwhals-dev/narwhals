@@ -98,8 +98,8 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     ) -> CompliantExprT: ...
     def int_range(
         self,
-        start: int | CompliantExprT,
-        end: int | CompliantExprT,
+        start: CompliantExprT,
+        end: CompliantExprT,
         step: int = 1,
         *,
         dtype: IntegerDType = Int64,
@@ -236,35 +236,26 @@ class EagerNamespace(
 
     def int_range(
         self,
-        start: int | EagerExprT,
-        end: int | EagerExprT,
+        start: EagerExprT,
+        end: EagerExprT,
         step: int = 1,
         *,
         dtype: IntegerDType = Int64,
     ) -> EagerExprT:
         def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
-            if isinstance(start, int):  # pragma: no cover
-                name = "literal"
-                start_value = start
-            else:
-                start_eval = start(df)[0]
-                name = start_eval.name
-                start_value = start_eval.item()
-            end_value = end if isinstance(end, int) else end(df)[0].item()
+            start_eval = start(df)[0]
+            name = start_eval.name
+            start_value = start_eval.item()
+            end_value = end(df)[0].item()
             return [
                 self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
             ]
 
-        evaluate_output_names = (
-            (lambda _df: ["literal"])
-            if isinstance(start, int)
-            else combine_evaluate_output_names(start)
-        )
         return self._expr._from_callable(
             func=func,
             depth=0,
             function_name="int_range",
-            evaluate_output_names=evaluate_output_names,
+            evaluate_output_names=combine_evaluate_output_names(start),
             alias_output_names=None,
             context=self,
         )

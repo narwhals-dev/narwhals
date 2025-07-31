@@ -216,16 +216,14 @@ class PolarsNamespace:
 
     def int_range(
         self,
-        start: int | PolarsExpr,
-        end: int | PolarsExpr,
+        start: PolarsExpr,
+        end: PolarsExpr,
         step: int = 1,
         *,
         dtype: IntegerDType = Int64,
     ) -> PolarsExpr:
-        start_ = start if isinstance(start, int) else start.native
-        end_ = end if isinstance(end, int) else end.native
         pl_dtype = narwhals_to_native_dtype(dtype, self._version)
-        native = pl.int_range(start_, end_, step, dtype=pl_dtype)
+        native = pl.int_range(start.native, end.native, step, dtype=pl_dtype)
         return self._expr(native, self._version)
 
     # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
