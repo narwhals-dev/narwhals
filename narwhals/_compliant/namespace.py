@@ -16,6 +16,7 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
+from narwhals._expression_parsing import combine_evaluate_output_names
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
@@ -232,3 +233,38 @@ class EagerNamespace(
         dtype: IntegerDType = Int64,
         name: str = "literal",
     ) -> EagerSeriesT: ...
+
+    def int_range(
+        self,
+        start: int | EagerExprT,
+        end: int | EagerExprT,
+        step: int,
+        *,
+        dtype: IntegerDType,
+    ) -> EagerExprT:
+        def func(df: EagerDataFrameT) -> list[EagerSeriesT]:
+            if isinstance(start, int):  # pragma: no cover
+                name = "literal"
+                start_value = start
+            else:
+                start_eval = start(df)[0]
+                name = start_eval.name
+                start_value = start_eval.item()
+            end_value = end if isinstance(end, int) else end(df)[0].item()
+            return [
+                self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
+            ]
+
+        evaluate_output_names = (
+            (lambda _df: ["literal"])
+            if isinstance(start, int)
+            else combine_evaluate_output_names(start)
+        )
+        return self._expr._from_callable(
+            func=func,
+            depth=0,
+            function_name="int_range",
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
+            context=self,
+        )

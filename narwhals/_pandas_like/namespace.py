@@ -392,41 +392,6 @@ class PandasLikeNamespace(
         data = self._array_funcs.arange(start, end, step)
         return self._series.from_iterable(data, context=self, name=name, dtype=dtype)
 
-    def int_range(
-        self,
-        start: int | PandasLikeExpr,
-        end: int | PandasLikeExpr,
-        step: int,
-        *,
-        dtype: IntegerDType,
-    ) -> PandasLikeExpr:
-        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            if isinstance(start, PandasLikeExpr):
-                start_eval = start(df)[0]
-                name = start_eval.name
-                start_value = start_eval.item()
-            else:  # pragma: no cover
-                name = "literal"
-                start_value = start
-            end_value = end(df)[0].item() if isinstance(end, PandasLikeExpr) else end
-            return [
-                self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
-            ]
-
-        evaluate_output_names = (
-            combine_evaluate_output_names(start)
-            if isinstance(start, PandasLikeExpr)
-            else lambda _df: ["literal"]
-        )
-        return self._expr._from_callable(
-            func=func,
-            depth=0,
-            function_name="int_range",
-            evaluate_output_names=evaluate_output_names,
-            alias_output_names=None,
-            context=self,
-        )
-
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
     @overload

@@ -305,42 +305,6 @@ class ArrowNamespace(
             chunked_array([data], dtype_pa), name=name, context=self
         )
 
-    def int_range(
-        self,
-        start: int | ArrowExpr,
-        end: int | ArrowExpr,
-        step: int,
-        *,
-        dtype: IntegerDType,
-    ) -> ArrowExpr:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            if isinstance(start, ArrowExpr):
-                start_eval = start(df)[0]
-                name = start_eval.name
-                start_value = start_eval.item()
-            else:
-                name = "literal"
-                start_value = start
-
-            end_value = end(df)[0].item() if isinstance(end, ArrowExpr) else end
-            return [
-                self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
-            ]
-
-        evaluate_output_names = (
-            combine_evaluate_output_names(start)
-            if isinstance(start, ArrowExpr)
-            else lambda _df: ["literal"]
-        )
-        return self._expr._from_callable(
-            func=func,
-            depth=0,
-            function_name="int_range",
-            evaluate_output_names=evaluate_output_names,
-            alias_output_names=None,
-            context=self,
-        )
-
 
 class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
     @property
