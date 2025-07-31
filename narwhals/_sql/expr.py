@@ -181,13 +181,18 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _lit(self, value: Any) -> NativeExprT:
         return self.__narwhals_namespace__()._lit(value)
 
-    def _when(self, condition: NativeExprT, value: NativeExprT) -> NativeExprT:
-        return self.__narwhals_namespace__()._when(condition, value)
-
     def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
         return self.__narwhals_namespace__()._coalesce(*expr)
 
     def _count_star(self) -> NativeExprT: ...
+
+    def _when(
+        self,
+        condition: NativeExprT,
+        value: NativeExprT,
+        otherwise: NativeExprT | None = None,
+    ) -> NativeExprT:
+        return self.__narwhals_namespace__()._when(condition, value, otherwise)
 
     def _window_expression(
         self,
@@ -492,8 +497,32 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
 
+    def sqrt(self) -> Self:
+        def _sqrt(expr: NativeExprT) -> NativeExprT:
+            return self._when(
+                expr < self._lit(0),  # type: ignore[operator]
+                self._lit(float("nan")),
+                self._function("sqrt", expr),
+            )
+
+        return self._with_elementwise(_sqrt)
+
     def exp(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("exp", expr))
+
+    def log(self, base: float) -> Self:
+        def _log(expr: NativeExprT) -> NativeExprT:
+            return self._when(
+                expr < self._lit(0),  # type: ignore[operator]
+                self._lit(float("nan")),
+                self._when(
+                    cast("NativeExprT", expr == self._lit(0)),
+                    self._lit(float("-inf")),
+                    self._function("log", expr) / self._function("log", self._lit(base)),  # type: ignore[operator]
+                ),
+            )
+
+        return self._with_elementwise(_log)
 
     # Cumulative
     def cum_sum(self, *, reverse: bool) -> Self:
