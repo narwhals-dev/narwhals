@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import _native_int_range, native_to_narwhals_dtype
+from narwhals._arrow.utils import int_range, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -644,7 +644,7 @@ class ArrowDataFrame(
 
     def is_unique(self) -> ArrowSeries:
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-        row_index = _native_int_range(0, len(self))
+        row_index = int_range(0, len(self))
         keep_idx = (
             self.native.append_column(col_token, row_index)
             .group_by(self.columns)
@@ -676,7 +676,7 @@ class ArrowDataFrame(
 
             agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-            col_value = _native_int_range(0, len(self))
+            col_value = int_range(0, len(self))
             keep_idx_native = (
                 self.native.append_column(col_token, col_value)
                 .group_by(subset)

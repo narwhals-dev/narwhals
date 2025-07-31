@@ -1215,7 +1215,7 @@ def int_range(
             a `Series` is returned.
 
     Returns:
-        Expr or Series: Column of integer data type `dtype`.
+        Expr or Series of integer data type `dtype`.
     """
     return _stableify(
         _int_range_impl(start=start, end=end, step=step, dtype=dtype, eager=eager)

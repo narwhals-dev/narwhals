@@ -1824,7 +1824,7 @@ def int_range(
             a `Series` is returned.
 
     Returns:
-        Expr or Series: Column of integer data type `dtype`.
+        Expr or Series of integer data type `dtype`.
 
     Examples:
         >>> import narwhals as nw

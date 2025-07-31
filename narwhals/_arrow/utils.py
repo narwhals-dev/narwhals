@@ -447,7 +447,7 @@ def cast_to_comparable_string_types(
     return (ca.cast(dtype) for ca in chunked_arrays), lit(separator, dtype)
 
 
-def _native_int_range(
+def int_range(
     start: int, end: int, step: int = 1, *, dtype: pa.DataType = int64
 ) -> ArrayAny:
     if BACKEND_VERSION < (21, 0, 0):  # pragma: no cover
