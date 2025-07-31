@@ -30,13 +30,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import (
-        IntegerDType,
-        Into1DArray,
-        IntoDType,
-        MultiIndexSelector,
-        _1DArray,
-    )
+    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
@@ -169,20 +163,6 @@ class PolarsSeries:
         # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
         native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
         return cls.from_native(native, context=context)
-
-    @classmethod
-    def _int_range(
-        cls,
-        start: int,
-        end: int,
-        step: int,
-        dtype: IntegerDType,
-        context: _LimitedContext,
-        name: str,
-    ) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, context._version)
-        native = pl.int_range(start, end, step, dtype=dtype_pl, eager=True)
-        return cls.from_native(native, context=context).alias(name)
 
     @staticmethod
     def _is_native(obj: pl.Series | Any) -> TypeIs[pl.Series]:

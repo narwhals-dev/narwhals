@@ -1210,7 +1210,7 @@ def int_range(
             the value of `start` is used and `start` is set to `0`.
         step: Step size of the range.
         dtype: Data type of the range (must be an integer data type).
-        eager: If set to `False` (default) or `None`, then an expression is returned.
+        eager: If set to `False` (default), then an expression is returned.
             If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
             a `Series` is returned.
 

@@ -44,7 +44,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
-        IntegerDType,
         Into1DArray,
         IntoDType,
         MultiIndexSelector,
@@ -122,16 +121,6 @@ class CompliantSeries(
         context: _LimitedContext,
         name: str = "",
         dtype: IntoDType | None = None,
-    ) -> Self: ...
-    @classmethod
-    def _int_range(
-        cls,
-        start: int,
-        end: int,
-        step: int,
-        dtype: IntegerDType,
-        context: _LimitedContext,
-        name: str,
     ) -> Self: ...
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")

@@ -1819,7 +1819,7 @@ def int_range(
             the value of `start` is used and `start` is set to `0`.
         step: Step size of the range.
         dtype: Data type of the range (must be an integer data type).
-        eager: If set to `False` (default) or `None`, then an expression is returned.
+        eager: If set to `False` (default), then an expression is returned.
             If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
             a `Series` is returned.
 
@@ -1911,13 +1911,19 @@ def _int_range_impl(
 
     impl = Implementation.from_backend(eager)
     if is_eager_allowed(impl):
-        assert isinstance(start, int)  # noqa: S101, help mypy
-        assert isinstance(end, int)  # noqa: S101, help mypy
+        if not (isinstance(start, int) and isinstance(end, int)):
+            msg = (
+                f"Expected `start` and `end` to be integer values since `eager={eager}`.\n"
+                f"Found: `start` of type {type(start)} and `end` of type {type(end)}\n\n"
+                "Hint: Calling with `nw.int_range` expressions requires a context "
+                "such as `select` or `with_columns`"
+            )
+            raise InvalidOperationError(msg)
+
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        series = ns._series._int_range(
-            start=start, end=end, step=step, dtype=dtype, context=ns, name="literal"
-        )
-        return series.to_narwhals()
+        return ns.int_range_eager(
+            start=start, end=end, step=step, dtype=dtype
+        ).to_narwhals()
 
     msg = f"Cannot create a Series from a lazy backend. Found: {impl}"
     raise ValueError(msg)

@@ -16,7 +16,8 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._pandas_like.utils import import_array_module, is_non_nullable_boolean
+from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -370,6 +371,19 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> PandasLikeSeries:
+        array_funcs = import_array_module(self._implementation)
+        data = array_funcs.arange(start, end, step)
+        return PandasLikeSeries.from_iterable(data, context=self, name=name, dtype=dtype)
+
     def int_range(
         self,
         start: int | PandasLikeExpr,
@@ -388,14 +402,7 @@ class PandasLikeNamespace(
                 start_value = start
             end_value = end(df)[0].item() if isinstance(end, PandasLikeExpr) else end
             return [
-                PandasLikeSeries._int_range(
-                    start=start_value,
-                    end=end_value,
-                    step=step,
-                    dtype=dtype,
-                    context=self,
-                    name=name,
-                )
+                self.int_range_eager(start_value, end_value, step, dtype=dtype, name=name)
             ]
 
         evaluate_output_names = (

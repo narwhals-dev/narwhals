@@ -23,6 +23,7 @@ from narwhals._utils import (
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array_2d
+from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Mapping, Sequence
@@ -221,3 +222,13 @@ class EagerNamespace(
         else:  # pragma: no cover
             raise NotImplementedError
         return self._dataframe.from_native(native, context=self)
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> EagerSeriesT: ...

@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
-        IntegerDType,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
@@ -159,22 +158,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     ) -> Self:
         version = context._version
         dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls.from_native(
-            chunked_array([data], dtype_pa), name=name, context=context
-        )
-
-    @classmethod
-    def _int_range(
-        cls,
-        start: int,
-        end: int,
-        step: int,
-        dtype: IntegerDType,
-        context: _LimitedContext,
-        name: str,
-    ) -> Self:
-        dtype_pa = narwhals_to_native_dtype(dtype, context._version)
-        data = int_range(start=start, end=end, step=step, dtype=dtype_pa)
         return cls.from_native(
             chunked_array([data], dtype_pa), name=name, context=context
         )
