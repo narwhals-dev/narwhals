@@ -23,6 +23,7 @@ from narwhals._utils import (
     is_eager_allowed,
     is_sequence_but_not_str,
     supports_arrow_c_stream,
+    unstable,
     validate_laziness,
 )
 from narwhals.dependencies import (
@@ -1801,6 +1802,7 @@ def int_range(
 ) -> Series[Any]: ...
 
 
+@unstable
 def int_range(
     start: int | Expr,
     end: int | Expr | None = None,
@@ -1810,6 +1812,10 @@ def int_range(
     eager: ModuleType | Implementation | str | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
+
+    Warning:
+        This functionality is considered **unstable**. It may be changed at any point
+        without it being considered a breaking change.
 
     Arguments:
         start: Start of the range (inclusive). Defaults to 0.

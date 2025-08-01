@@ -674,9 +674,8 @@ class ArrowDataFrame(
 
             agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
-            col_value = int_range(0, len(self))
             keep_idx_native = (
-                self.native.append_column(col_token, col_value)
+                self.native.append_column(col_token, int_range(0, len(self)))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")

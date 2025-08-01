@@ -1351,6 +1351,10 @@ def int_range(
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
 
+    Warning:
+        This functionality is considered **unstable**. It may be changed at any point
+        without it being considered a breaking change.
+
     Arguments:
         start: Start of the range (inclusive). Defaults to 0.
         end:  End of the range (exclusive). If set to `None` (default),
