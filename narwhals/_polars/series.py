@@ -747,19 +747,8 @@ class PolarsSeriesStringNamespace(PolarsSeriesNamespace):
     to_uppercase: Method[PolarsSeries]
 
 
-class PolarsSeriesCatNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
-        self._compliant_series = series
-
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.cat, attr)(*pos, **kwds)
-            )
-
-        return func
-
+class PolarsSeriesCatNamespace(PolarsSeriesNamespace):
+    _accessor = "cat"
     get_categories: Method[PolarsSeries]
 
 
