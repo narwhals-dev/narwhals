@@ -12,3 +12,7 @@ if TYPE_CHECKING:
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)
 SQLLazyFrameT = TypeVar("SQLLazyFrameT", bound="SQLLazyFrameAny")
+
+
+# it needs to inherit from SQLExpr, but getting errors if passing SQLExprT
+class NativeSQLExpr(Any): ...
