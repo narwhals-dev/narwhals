@@ -1895,14 +1895,10 @@ def _int_range_impl(
             msg = "`end` must contain exactly one value, got expression returning multiple values"
             raise ComputeError(msg)
 
+        args = start, end, step
         return Expr(
             lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *args: plx.int_range(*args, dtype=dtype),
-                start,
-                end,
-                step,
-                str_as_lit=False,
+                plx, partial(plx.int_range, dtype=dtype), *args, str_as_lit=False
             ),
             ExprMetadata.selector_single(),
         )
