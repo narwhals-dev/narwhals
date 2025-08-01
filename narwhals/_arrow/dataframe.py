@@ -695,6 +695,8 @@ class ArrowDataFrame(
     def to_arrow(self) -> pa.Table:
         return self.native
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def sample(
         self,
         n: int | None,

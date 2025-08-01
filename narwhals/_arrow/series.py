@@ -634,6 +634,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         cond = mask.native.combine_chunks()
         return self._with_native(pc.if_else(cond, self.native, other.native))
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def sample(
         self,
         n: int | None,
@@ -784,6 +786,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(self.native.take(sorted_indices))
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def to_dummies(self, *, separator: str, drop_first: bool) -> ArrowDataFrame:
         import numpy as np  # ignore-banned-import
 
@@ -1149,6 +1153,8 @@ class _ArrowHist(
             upper += 0.5
         return self._linear_space(lower, upper, bin_count + 1)
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def _calculate_hist(self, bins: list[float] | _1DArray) -> ArrowHistData:
         ser = self.native
         # NOTE: `mypy` refuses to resolve `ndarray.__getitem__`
