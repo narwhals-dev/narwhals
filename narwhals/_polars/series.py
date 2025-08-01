@@ -276,18 +276,18 @@ class PolarsSeries:
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))
 
-    # NOTE: `pyright` is being reasonable here
-    def __ge__(self, other: Any) -> Self:
-        return self._with_native(self.native.__ge__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    # NOTE: These need to be anything that can't match `PolarsExpr`, due to overload order
+    def __ge__(self, other: Self) -> Self:
+        return self._with_native(self.native.__ge__(extract_native(other)))
 
-    def __gt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__gt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __gt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__gt__(extract_native(other)))
 
-    def __le__(self, other: Any) -> Self:
-        return self._with_native(self.native.__le__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __le__(self, other: Self) -> Self:
+        return self._with_native(self.native.__le__(extract_native(other)))
 
-    def __lt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __lt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__lt__(extract_native(other)))
 
     def __rpow__(self, other: PolarsSeries | Any) -> Self:
         result = self.native.__rpow__(extract_native(other))
