@@ -354,7 +354,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
             return self._gather_slice(item)
         if is_compliant_series(item):
             return self._gather(item.native)
-        if is_sized_multi_index_selector(item):
+        elif is_sized_multi_index_selector(item):  # noqa: RET505
             return self._gather(item)
         assert_never(item)
 
