@@ -7,6 +7,11 @@ import polars as pl
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     PolarsAnyNamespace,
+    PolarsCatNamespace,
+    PolarsDateTimeNamespace,
+    PolarsListNamespace,
+    PolarsStringNamespace,
+    PolarsStructNamespace,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -276,18 +281,18 @@ class PolarsSeries:
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))
 
-    # NOTE: `pyright` is being reasonable here
-    def __ge__(self, other: Any) -> Self:
-        return self._with_native(self.native.__ge__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    # NOTE: These need to be anything that can't match `PolarsExpr`, due to overload order
+    def __ge__(self, other: Self) -> Self:
+        return self._with_native(self.native.__ge__(extract_native(other)))
 
-    def __gt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__gt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __gt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__gt__(extract_native(other)))
 
-    def __le__(self, other: Any) -> Self:
-        return self._with_native(self.native.__le__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __le__(self, other: Self) -> Self:
+        return self._with_native(self.native.__le__(extract_native(other)))
 
-    def __lt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __lt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__lt__(extract_native(other)))
 
     def __rpow__(self, other: PolarsSeries | Any) -> Self:
         result = self.native.__rpow__(extract_native(other))
@@ -695,13 +700,14 @@ class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
         return self._series.native
 
 
-class PolarsSeriesDateTimeNamespace(PolarsSeriesNamespace):
-    _accessor = "dt"
+class PolarsSeriesDateTimeNamespace(
+    PolarsSeriesNamespace, PolarsDateTimeNamespace[PolarsSeries, pl.Series]
+): ...
 
 
-class PolarsSeriesStringNamespace(PolarsSeriesNamespace):
-    _accessor = "str"
-
+class PolarsSeriesStringNamespace(
+    PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
+):
     def zfill(self, width: int) -> PolarsSeries:
         series = self.compliant
         name = series.name
@@ -709,13 +715,14 @@ class PolarsSeriesStringNamespace(PolarsSeriesNamespace):
         return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
 
-class PolarsSeriesCatNamespace(PolarsSeriesNamespace):
-    _accessor = "cat"
+class PolarsSeriesCatNamespace(
+    PolarsSeriesNamespace, PolarsCatNamespace[PolarsSeries, pl.Series]
+): ...
 
 
-class PolarsSeriesListNamespace(PolarsSeriesNamespace):
-    _accessor = "list"
-
+class PolarsSeriesListNamespace(
+    PolarsSeriesNamespace, PolarsListNamespace[PolarsSeries, pl.Series]
+):
     def len(self) -> PolarsSeries:
         native_result = self.native.list.len()
         if self.compliant._backend_version < (1, 16):  # pragma: no cover
@@ -730,5 +737,6 @@ class PolarsSeriesListNamespace(PolarsSeriesNamespace):
         return self.compliant._with_native(native_result)
 
 
-class PolarsSeriesStructNamespace(PolarsSeriesNamespace):
-    _accessor = "struct"
+class PolarsSeriesStructNamespace(
+    PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]
+): ...
