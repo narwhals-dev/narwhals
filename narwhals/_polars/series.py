@@ -7,6 +7,11 @@ import polars as pl
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     PolarsAnyNamespace,
+    PolarsCatNamespace,
+    PolarsDateTimeNamespace,
+    PolarsListNamespace,
+    PolarsStringNamespace,
+    PolarsStructNamespace,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -696,66 +701,29 @@ class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
         return self._series.native
 
 
-class PolarsSeriesDateTimeNamespace(PolarsSeriesNamespace):
-    _accessor = "dt"
-
-    truncate: Method[PolarsSeries]
-    offset_by: Method[PolarsSeries]
-    to_string: Method[PolarsSeries]
-    replace_time_zone: Method[PolarsSeries]
-    convert_time_zone: Method[PolarsSeries]
-    timestamp: Method[PolarsSeries]
-    date: Method[PolarsSeries]
-    year: Method[PolarsSeries]
-    month: Method[PolarsSeries]
-    day: Method[PolarsSeries]
-    hour: Method[PolarsSeries]
-    minute: Method[PolarsSeries]
-    second: Method[PolarsSeries]
-    millisecond: Method[PolarsSeries]
-    microsecond: Method[PolarsSeries]
-    nanosecond: Method[PolarsSeries]
-    ordinal_day: Method[PolarsSeries]
-    weekday: Method[PolarsSeries]
-    total_minutes: Method[PolarsSeries]
-    total_seconds: Method[PolarsSeries]
-    total_milliseconds: Method[PolarsSeries]
-    total_microseconds: Method[PolarsSeries]
-    total_nanoseconds: Method[PolarsSeries]
+class PolarsSeriesDateTimeNamespace(
+    PolarsSeriesNamespace, PolarsDateTimeNamespace[PolarsSeries, pl.Series]
+): ...
 
 
-class PolarsSeriesStringNamespace(PolarsSeriesNamespace):
-    _accessor = "str"
-
+class PolarsSeriesStringNamespace(
+    PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
+):
     def zfill(self, width: int) -> PolarsSeries:
         series = self.compliant
         name = series.name
         ns = series.__narwhals_namespace__()
         return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
-    len_chars: Method[PolarsSeries]
-    replace: Method[PolarsSeries]
-    replace_all: Method[PolarsSeries]
-    strip_chars: Method[PolarsSeries]
-    starts_with: Method[PolarsSeries]
-    ends_with: Method[PolarsSeries]
-    contains: Method[PolarsSeries]
-    slice: Method[PolarsSeries]
-    split: Method[PolarsSeries]
-    to_date: Method[PolarsSeries]
-    to_datetime: Method[PolarsSeries]
-    to_lowercase: Method[PolarsSeries]
-    to_uppercase: Method[PolarsSeries]
+
+class PolarsSeriesCatNamespace(
+    PolarsSeriesNamespace, PolarsCatNamespace[PolarsSeries, pl.Series]
+): ...
 
 
-class PolarsSeriesCatNamespace(PolarsSeriesNamespace):
-    _accessor = "cat"
-    get_categories: Method[PolarsSeries]
-
-
-class PolarsSeriesListNamespace(PolarsSeriesNamespace):
-    _accessor = "list"
-
+class PolarsSeriesListNamespace(
+    PolarsSeriesNamespace, PolarsListNamespace[PolarsSeries, pl.Series]
+):
     def len(self) -> PolarsSeries:
         native_result = self.native.list.len()
         if self.compliant._backend_version < (1, 16):  # pragma: no cover
@@ -770,6 +738,6 @@ class PolarsSeriesListNamespace(PolarsSeriesNamespace):
         return self.compliant._with_native(native_result)
 
 
-class PolarsSeriesStructNamespace(PolarsSeriesNamespace):
-    _accessor = "struct"
-    field: Method[PolarsSeries]
+class PolarsSeriesStructNamespace(
+    PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]
+): ...
