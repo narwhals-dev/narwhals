@@ -682,6 +682,7 @@ class PolarsSeries:
         return PolarsSeriesListNamespace(self)
 
 
+# TODO @dangotbanned: refactor to allow shared `Method[CompliantT_co]`
 class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
     def __init__(self, series: PolarsSeries) -> None:
         self._series = series
