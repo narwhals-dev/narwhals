@@ -699,6 +699,16 @@ class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
     def native(self) -> pl.Series:
         return self._series.native
 
+    @property
+    def name(self) -> str:
+        return self.compliant.name
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        return self.compliant.__narwhals_namespace__()
+
+    def to_frame(self) -> PolarsDataFrame:
+        return self.compliant.to_frame()
+
 
 class PolarsSeriesDateTimeNamespace(
     PolarsSeriesNamespace, PolarsDateTimeNamespace[PolarsSeries, pl.Series]
@@ -709,10 +719,9 @@ class PolarsSeriesStringNamespace(
     PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
 ):
     def zfill(self, width: int) -> PolarsSeries:
-        series = self.compliant
-        name = series.name
-        ns = series.__narwhals_namespace__()
-        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
 
 class PolarsSeriesCatNamespace(
@@ -724,10 +733,9 @@ class PolarsSeriesListNamespace(
     PolarsSeriesNamespace, PolarsListNamespace[PolarsSeries, pl.Series]
 ):
     def len(self) -> PolarsSeries:
-        series = self.compliant
-        name = series.name
-        ns = series.__narwhals_namespace__()
-        return series.to_frame().select(ns.col(name).list.len()).get_column(name)
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.len()).get_column(name)
 
 
 class PolarsSeriesStructNamespace(
