@@ -518,7 +518,7 @@ class Enum(DType):
             self._cached_categories = delayed.to_tuple()
             return self._cached_categories
         msg = f"Internal structure of {type(self).__name__!r} is invalid."  # pragma: no cover
-        raise TypeError(msg)
+        raise TypeError(msg)  # pragma: no cover
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class

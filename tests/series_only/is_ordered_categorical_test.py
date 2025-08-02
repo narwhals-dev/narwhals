@@ -34,7 +34,7 @@ def test_is_ordered_categorical_polars() -> None:
 
     s: IntoSeries | Any
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
-    if POLARS_VERSION < (1, 32):
+    if POLARS_VERSION < (1, 32):  # pragma: no cover
         assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     else:  # pragma: no cover
         # Post 1.32 there's no physical ordering for categoricals anymore.

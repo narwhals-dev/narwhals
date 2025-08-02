@@ -1946,7 +1946,7 @@ def inherit_doc(
             f"Method: {init_child.__qualname__!r}\n"
             f"Parent: {tp_parent!r}"
         )
-        raise TypeError(msg)
+        raise TypeError(msg)  # pragma: no cover
 
     return decorate
 
