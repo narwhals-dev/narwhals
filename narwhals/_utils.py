@@ -1281,6 +1281,8 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         native = series.to_native()
         impl = series.implementation
         if impl.is_polars() and impl._backend_version() < (1, 32):
+            # Since version 1.32.0, ordering parameter is ignored and
+            # it always behaves as if 'lexical' was passed.
             result = cast("pl.Categorical", native.dtype).ordering == "physical"
         elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
