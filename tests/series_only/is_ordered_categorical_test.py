@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 class MockCompliantSeries:
     _version = Version.MAIN
+    _implementation = Implementation.UNKNOWN
 
     def __narwhals_series__(self) -> Any:
         return self
@@ -34,9 +35,9 @@ def test_is_ordered_categorical_polars() -> None:
 
     s: IntoSeries | Any
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
-    if POLARS_VERSION < (1, 32):
+    if POLARS_VERSION < (1, 32):  # pragma: no cover
         assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
-    else:  # pragma: no cover
+    else:
         # Post 1.32 there's no physical ordering for categoricals anymore.
         assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     s = pl.Series(["a", "b"], dtype=pl.Categorical(ordering="lexical"))
