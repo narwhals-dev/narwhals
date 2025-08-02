@@ -9,7 +9,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -416,3 +416,29 @@ def test_schema_to_pandas_invalid() -> None:
     msg = "Expected one of {None, 'pyarrow', 'numpy_nullable'}, got: 'cabbage'"
     with pytest.raises(ValueError, match=msg):
         schema.to_pandas("cabbage")  # type: ignore[arg-type]
+
+
+def test_schema_from_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    container = pl.Schema if POLARS_VERSION >= (1,) else dict
+    native = container(
+        {
+            "a": pl.Int64(),
+            "b": pl.String(),
+            "c": pl.Boolean(),
+            "d": pl.Date(),
+            "e": pl.Time(),
+            "f": pl.Datetime("ms"),
+        }
+    )
+    schema = nw.Schema.from_polars(native)
+    assert schema == {
+        "a": nw.Int64(),
+        "b": nw.String(),
+        "c": nw.Boolean(),
+        "d": nw.Date(),
+        "e": nw.Time(),
+        "f": nw.Datetime("ms"),
+    }
