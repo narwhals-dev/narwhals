@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 class MockCompliantSeries:
     _version = Version.MAIN
+    _implementation = Implementation.UNKNOWN
 
     def __narwhals_series__(self) -> Any:
         return self
