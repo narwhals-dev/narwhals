@@ -178,7 +178,7 @@ class EagerNamespace(
         self,
         data: _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = ...,
     ) -> EagerDataFrameT: ...
 
     def from_numpy(
