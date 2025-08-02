@@ -79,3 +79,8 @@ class ExprListNamespace(Generic[ExprT]):
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.unique()
         )
+
+    def get(self, index: int) -> ExprT:
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).list.get(index)
+        )
