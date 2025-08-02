@@ -84,3 +84,8 @@ class SeriesListNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.contains(item)
         )
+
+    def get(self, index: int) -> SeriesT:
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.list.get(index)
+        )

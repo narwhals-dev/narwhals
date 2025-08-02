@@ -117,6 +117,9 @@ class PolarsNamespace:
             return self._expr(pl.count().alias("len"), self._version)
         return self._expr(pl.len(), self._version)
 
+    def get(self, index: int) -> PolarsExpr:
+        return self._expr(pl.get(index), self._version)
+
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
         it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
         return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)

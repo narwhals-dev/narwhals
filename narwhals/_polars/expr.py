@@ -471,6 +471,12 @@ class PolarsExprListNamespace(
             result = self.native.list.contains(item)
         return self.compliant._with_native(result)
 
+    def get(self, index: int) -> PolarsExpr:
+        native_expr = self.compliant._native_expr
+        native_result = native_expr.list.get(index)
+
+        return self.compliant._with_native(native_result)
+
 
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
