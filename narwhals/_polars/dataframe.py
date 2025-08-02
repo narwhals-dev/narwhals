@@ -66,6 +66,7 @@ Where `R` is the return type.
 # DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
 INHERITED_METHODS = frozenset(
     [
+        "clear",
         "clone",
         "drop_nulls",
         "estimated_size",

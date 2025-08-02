@@ -758,4 +758,11 @@ class ArrowDataFrame(
         # TODO(Unassigned): Even with promote_options="permissive", pyarrow does not
         # upcast numeric to non-numeric (e.g. string) datatypes
 
+    def clear(self, n: int) -> Self:
+        schema = self.native.schema
+        data = {
+            name: pa.nulls(n, dtype) for name, dtype in zip(schema.names, schema.types)
+        }
+        return self._with_native(pa.table(data))
+
     pivot = not_implemented()
