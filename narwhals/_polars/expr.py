@@ -334,7 +334,6 @@ class PolarsExpr:
     var: Method[Self]
 
 
-# TODO @dangotbanned: refactor to allow shared `Method[CompliantT_co]`
 class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
