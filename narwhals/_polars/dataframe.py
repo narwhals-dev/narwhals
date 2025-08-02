@@ -407,7 +407,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
-                    elif is_compliant_series(columns):
+                    # NOTE: `mypy` loses track of `PolarsSeries` when `is_compliant_series` is used here
+                    # `pyright` is fine
+                    elif isinstance(columns, PolarsSeries):
                         native = native[:, columns.native.to_list()]
                     else:
                         native = native[:, columns]

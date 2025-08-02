@@ -33,9 +33,7 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
 
-    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
-    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
-    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
     _implementation = Implementation.POLARS
 
