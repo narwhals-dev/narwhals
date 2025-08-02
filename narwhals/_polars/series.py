@@ -724,17 +724,10 @@ class PolarsSeriesListNamespace(
     PolarsSeriesNamespace, PolarsListNamespace[PolarsSeries, pl.Series]
 ):
     def len(self) -> PolarsSeries:
-        native_result = self.native.list.len()
-        if self.compliant._backend_version < (1, 16):  # pragma: no cover
-            native_series = self.native
-            native_result = pl.select(
-                pl.when(~native_series.is_null()).then(native_result).otherwise(None)
-            )[native_series.name].cast(pl.UInt32())
-
-        elif self.compliant._backend_version < (1, 17):  # pragma: no cover
-            native_result = self.native.cast(pl.UInt32())
-
-        return self.compliant._with_native(native_result)
+        series = self.compliant
+        name = series.name
+        ns = series.__narwhals_namespace__()
+        return series.to_frame().select(ns.col(name).list.len()).get_column(name)
 
 
 class PolarsSeriesStructNamespace(
