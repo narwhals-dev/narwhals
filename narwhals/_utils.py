@@ -43,8 +43,6 @@ from narwhals.dependencies import (
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_polars_series,
-    is_pyarrow_chunked_array,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
@@ -1248,7 +1246,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import polars as pl
         >>> data = ["x", "y"]
         >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
+        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
 
         Let's define a library-agnostic function:
 
@@ -1261,7 +1259,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> func(s_pd)
         True
         >>> func(s_pl)
-        True
+        False
     """
     from narwhals._interchange.series import InterchangeSeries
 
@@ -1279,11 +1277,15 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         result = False
     else:
         native = series.to_native()
-        if is_polars_series(native):
+        impl = series.implementation
+        if impl.is_polars() and impl._backend_version() < (1, 32):
+            # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
+            # Since version 1.32.0, ordering parameter is ignored and
+            # it always behaves as if 'lexical' was passed.
             result = cast("pl.Categorical", native.dtype).ordering == "physical"
-        elif is_pandas_like_series(native):
+        elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
-        elif is_pyarrow_chunked_array(native):
+        elif impl.is_pyarrow():
             from narwhals._arrow.utils import is_dictionary
 
             result = is_dictionary(native.type) and native.type.ordered

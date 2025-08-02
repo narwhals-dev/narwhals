@@ -72,7 +72,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
-  "polars==1.30.0",
+  "polars==1.32.0",
   "uv",
   "narwhals[ibis]",
 ]
