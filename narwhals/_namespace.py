@@ -354,36 +354,37 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
-    def from_native_object(  # noqa: PLR0911
+    def from_native_object(
         cls: type[Namespace[Any]], native: NativeAny, /
     ) -> Namespace[Any]:
         if is_native_polars(native):
-            return cls.from_backend(Implementation.POLARS)
+            impl = Implementation.POLARS
         elif is_native_pandas(native):
-            return cls.from_backend(Implementation.PANDAS)
+            impl = Implementation.PANDAS
         elif is_native_arrow(native):
-            return cls.from_backend(Implementation.PYARROW)
+            impl = Implementation.PYARROW
         elif is_native_spark_like(native):
-            return cls.from_backend(
+            impl = (
                 Implementation.SQLFRAME
                 if is_native_sqlframe(native)
                 else Implementation.PYSPARK_CONNECT
                 if is_native_pyspark_connect(native)
                 else Implementation.PYSPARK
             )
-        elif is_native_dask(native):
-            return cls.from_backend(Implementation.DASK)  # pragma: no cover
+        elif is_native_dask(native):  # pragma: no cover
+            impl = Implementation.DASK
         elif is_native_duckdb(native):
-            return cls.from_backend(Implementation.DUCKDB)
+            impl = Implementation.DUCKDB
         elif is_native_cudf(native):  # pragma: no cover
-            return cls.from_backend(Implementation.CUDF)
+            impl = Implementation.CUDF
         elif is_native_modin(native):  # pragma: no cover
-            return cls.from_backend(Implementation.MODIN)
+            impl = Implementation.MODIN
         elif is_native_ibis(native):
-            return cls.from_backend(Implementation.IBIS)
+            impl = Implementation.IBIS
         else:
             msg = f"Unsupported type: {type(native).__qualname__!r}"
             raise TypeError(msg)
+        return cls.from_backend(impl)
 
 
 def is_native_polars(obj: Any) -> TypeIs[_NativePolars]:

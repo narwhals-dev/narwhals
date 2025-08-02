@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
 from narwhals._utils import (
     Implementation,
+    Version,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
     is_compliant_series,
+    is_eager_allowed,
     is_index_selector,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import is_numpy_scalar
-from narwhals.dtypes import _validate_dtype
+from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
+from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
@@ -71,6 +73,8 @@ class Series(Generic[IntoSeriesT]):
             ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         from narwhals.dataframe import DataFrame
@@ -88,6 +92,74 @@ class Series(Generic[IntoSeriesT]):
         else:  # pragma: no cover
             msg = f"Expected Polars Series or an object which implements `__narwhals_series__`, got: {type(series)}."
             raise AssertionError(msg)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        """Construct a Series from a NumPy ndarray.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as a NumPy ndarray.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import numpy as np
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = np.arange(5, 10)
+            >>> nw.Series.from_numpy("arr", arr, dtype=nw.Int8, backend="polars")
+            ┌──────────────────┐
+            | Narwhals Series  |
+            |------------------|
+            |shape: (5,)       |
+            |Series: 'arr' [i8]|
+            |[                 |
+            |        5         |
+            |        6         |
+            |        7         |
+            |        8         |
+            |        9         |
+            |]                 |
+            └──────────────────┘
+        """
+        if not is_numpy_array_1d(values):
+            msg = "`from_numpy` only accepts 1D numpy arrays"
+            raise ValueError(msg)
+        if dtype:
+            _validate_into_dtype(dtype)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns.from_numpy(values).alias(name)
+            if dtype:
+                return cls(compliant.cast(dtype), level="full")
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
 
     @property
     def implementation(self) -> Implementation:

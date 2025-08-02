@@ -30,6 +30,7 @@
         - fill_null
         - filter
         - first
+        - from_numpy
         - last
         - gather_every
         - head
