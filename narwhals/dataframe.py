@@ -112,14 +112,8 @@ class BaseFrame(Generic[_FrameT]):
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
-        """Process `args` and `kwargs`, extracting underlying objects as we go.
-
-        Warning:
-            String are interpreted as column names.
-
-        Returns:
-            Tuple of compliant expression and expression kind.
-        """
+        # Process `args` and `kwargs`, extracting underlying objects as we go.
+        # NOTE: Strings are interpreted as column names.
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
