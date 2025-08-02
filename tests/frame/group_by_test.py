@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import os
 import re
+from contextlib import nullcontext
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -22,7 +23,8 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
+    from contextlib import AbstractContextManager
 
     from narwhals.typing import NonNestedLiteral
 
@@ -657,4 +659,102 @@ def test_group_by_no_preserve_dtype(
     )
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
+    assert_equal_data(result, expected)
+
+
+def _warns_context(request: pytest.FixtureRequest) -> AbstractContextManager[Any]:
+    if "[pyarrow]" in request.node.name and "NA-order" in request.node.name:
+        pattern = r"ordered.+safely.+string\[pyarrow\]"
+    elif any(x in str(request.node.name) for x in ("pandas", "modin", "cudf")) and (
+        PANDAS_VERSION >= (2, 0, 0) and PANDAS_VERSION < (2, 2, 1)
+    ):  # pragma: no cover
+        pattern = r"ordered.+safely.+please upgrade.+2.2.1"
+    else:
+        return nullcontext()
+    return pytest.warns(UserWarning, match=re.compile(pattern, re.DOTALL | re.IGNORECASE))
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_first(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    with _warns_context(request):
+        result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_last(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    with _warns_context(request):
+        result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
     assert_equal_data(result, expected)
