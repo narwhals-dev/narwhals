@@ -389,7 +389,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             selector = rows_native, columns_native
             selected = self.native.__getitem__(selector)  # type: ignore[index]
             return self._from_native_object(selected)
-        else:  # pragma: no cover
+        else:  # pragma: no cover # noqa: RET505
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
             # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
@@ -450,7 +450,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
-        elif backend is Implementation.DUCKDB:
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -460,7 +460,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        elif backend is Implementation.DASK:
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -470,7 +470,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend.is_ibis():
+        if backend.is_ibis():
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -497,8 +497,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 name: PolarsSeries.from_native(col, context=self)
                 for name, col in self.native.to_dict().items()
             }
-        else:
-            return self.native.to_dict(as_series=False)
+        return self.native.to_dict(as_series=False)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool

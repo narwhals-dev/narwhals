@@ -135,9 +135,8 @@ class LazyNamespace(
     def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
         if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        else:  # pragma: no cover
-            msg = f"Unsupported type: {type(data).__name__!r}"
-            raise TypeError(msg)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
 
 class EagerNamespace(
@@ -165,7 +164,7 @@ class EagerNamespace(
     ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
-        elif self._series._is_native(data):
+        if self._series._is_native(data):
             return self._series.from_native(data, context=self)
         msg = f"Unsupported type: {type(data).__name__!r}"
         raise TypeError(msg)

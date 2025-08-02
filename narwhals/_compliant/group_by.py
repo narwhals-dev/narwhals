@@ -70,8 +70,7 @@ class ParseKeysGroupBy(
         if is_sequence_of(keys, str):
             keys_str = list(keys)
             return compliant_frame, keys_str, keys_str.copy()
-        else:
-            return self._parse_expr_keys(compliant_frame, keys=keys)
+        return self._parse_expr_keys(compliant_frame, keys=keys)
 
     @staticmethod
     def _parse_expr_keys(
