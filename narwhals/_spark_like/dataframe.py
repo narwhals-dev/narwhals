@@ -500,7 +500,7 @@ class SparkLikeLazyFrame(
                 )
             )
         msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
+        raise AssertionError(msg)
 
     def unpivot(
         self,
