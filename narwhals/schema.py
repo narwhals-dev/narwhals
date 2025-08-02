@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
@@ -87,6 +88,15 @@ class Schema(OrderedDict[str, "DType"]):
             Number of columns.
         """
         return len(self)
+
+    @classmethod
+    def from_arrow(cls, native: pa.Schema, /) -> Self:
+        from narwhals._arrow.utils import native_to_narwhals_dtype
+
+        return cls(
+            (field.name, native_to_narwhals_dtype(field.type, cls._version))
+            for field in native
+        )
 
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
