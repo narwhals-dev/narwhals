@@ -94,8 +94,7 @@ class DaskExprDateTimeNamespace(
             )
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
-            else:
-                return s.dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
+            return s.dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
 
         return self.compliant._with_callable(func, "tz_convert", time_zone=time_zone)
 

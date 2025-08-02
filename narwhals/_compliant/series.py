@@ -352,12 +352,11 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def __getitem__(self, item: MultiIndexSelector[Self]) -> Self:
         if isinstance(item, (slice, range)):
             return self._gather_slice(item)
-        elif is_compliant_series(item):
+        if is_compliant_series(item):
             return self._gather(item.native)
-        elif is_sized_multi_index_selector(item):
+        elif is_sized_multi_index_selector(item):  # noqa: RET505
             return self._gather(item)
-        else:
-            assert_never(item)
+        assert_never(item)
 
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...

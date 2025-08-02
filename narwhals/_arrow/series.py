@@ -380,29 +380,27 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         ser_not_null = self.native.drop_null()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        elif len(ser_not_null) == 2:
+        if len(ser_not_null) == 2:
             return 0.0
-        else:
-            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
-            m2 = pc.mean(pc.power(m, lit(2)))
-            m3 = pc.mean(pc.power(m, lit(3)))
-            biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
-            return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
+        m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+        m2 = pc.mean(pc.power(m, lit(2)))
+        m3 = pc.mean(pc.power(m, lit(3)))
+        biased_population_skewness = pc.divide(m3, pc.power(m2, lit(1.5)))
+        return maybe_extract_py_scalar(biased_population_skewness, _return_py_scalar)
 
     def kurtosis(self, *, _return_py_scalar: bool = True) -> float | None:
         ser_not_null = self.native.drop_null()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        else:
-            m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
-            m2 = pc.mean(pc.power(m, lit(2)))
-            m4 = pc.mean(pc.power(m, lit(4)))
-            k = pc.subtract(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
-            return maybe_extract_py_scalar(k, _return_py_scalar)
+        m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
+        m2 = pc.mean(pc.power(m, lit(2)))
+        m4 = pc.mean(pc.power(m, lit(4)))
+        k = pc.subtract(pc.divide(m4, pc.power(m2, lit(2))), lit(3))
+        return maybe_extract_py_scalar(k, _return_py_scalar)
 
     def count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(pc.count(self.native), _return_py_scalar)
@@ -563,16 +561,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def head(self, n: int) -> Self:
         if n >= 0:
             return self._with_native(self.native.slice(0, n))
-        else:
-            num_rows = len(self)
-            return self._with_native(self.native.slice(0, max(0, num_rows + n)))
+        num_rows = len(self)
+        return self._with_native(self.native.slice(0, max(0, num_rows + n)))
 
     def tail(self, n: int) -> Self:
         if n >= 0:
             num_rows = len(self)
             return self._with_native(self.native.slice(max(0, num_rows - n)))
-        else:
-            return self._with_native(self.native.slice(abs(n)))
+        return self._with_native(self.native.slice(abs(n)))
 
     def is_in(self, other: Any) -> Self:
         if self._is_native(other):

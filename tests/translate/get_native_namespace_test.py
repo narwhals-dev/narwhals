@@ -20,35 +20,35 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import pandas as pd
 
         return pd
-    elif "polars" in constructor_name:
+    if "polars" in constructor_name:
         import polars as pl
 
         return pl
-    elif "pyarrow_table" in constructor_name:
+    if "pyarrow_table" in constructor_name:
         import pyarrow as pa
 
         return pa
-    elif "duckdb" in constructor_name:
+    if "duckdb" in constructor_name:
         import duckdb
 
         return duckdb
-    elif "cudf" in constructor_name:  # pragma: no cover
+    if "cudf" in constructor_name:  # pragma: no cover
         import cudf
 
         return cudf
-    elif "modin" in constructor_name:
+    if "modin" in constructor_name:
         import modin.pandas as mpd
 
         return mpd
-    elif "dask" in constructor_name:
+    if "dask" in constructor_name:
         import dask.dataframe as dd
 
         return dd
-    elif "ibis" in constructor_name:
+    if "ibis" in constructor_name:
         import ibis
 
         return ibis
-    elif "sqlframe" in constructor_name:
+    if "sqlframe" in constructor_name:
         import sqlframe
 
         return sqlframe

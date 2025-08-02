@@ -214,19 +214,14 @@ class DaskLazyFrame(
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
         if order_by is None:
             return self._with_native(add_row_index(self.native, name))
-        else:
-            plx = self.__narwhals_namespace__()
-            columns = self.columns
-            const_expr = (
-                plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
-            )
-            row_index_expr = (
-                plx.col(name)
-                .cum_sum(reverse=False)
-                .over(partition_by=[], order_by=order_by)
-                - 1
-            )
-            return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
+        plx = self.__narwhals_namespace__()
+        columns = self.columns
+        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+        row_index_expr = (
+            plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
+            - 1
+        )
+        return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
@@ -445,9 +440,10 @@ class DaskLazyFrame(
 
         if n_partitions == 1:
             return self._with_native(self.native.tail(n=n, compute=False))
-        else:
-            msg = "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
-            raise NotImplementedError(msg)
+        msg = (
+            "`LazyFrame.tail` is not supported for Dask backend with multiple partitions."
+        )
+        raise NotImplementedError(msg)
 
     def gather_every(self, n: int, offset: int) -> Self:
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)

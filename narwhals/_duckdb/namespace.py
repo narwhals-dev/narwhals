@@ -107,8 +107,7 @@ class DuckDBNamespace(
                     for y in x
                 ]
                 return [when(~null_mask_result, concat_str(*cols_separated))]
-            else:
-                return [concat_str(*cols, separator=separator)]
+            return [concat_str(*cols, separator=separator)]
 
         return self._expr(
             call=func,
