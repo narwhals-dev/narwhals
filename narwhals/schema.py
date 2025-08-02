@@ -98,6 +98,15 @@ class Schema(OrderedDict[str, "DType"]):
             for field in native
         )
 
+    @classmethod
+    def from_polars(cls, native: pl.Schema | Mapping[str, pl.DataType], /) -> Self:
+        from narwhals._polars.utils import native_to_narwhals_dtype
+
+        return cls(
+            (name, native_to_narwhals_dtype(dtype, cls._version))
+            for name, dtype in native.items()
+        )
+
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
 
