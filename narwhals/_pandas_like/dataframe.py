@@ -121,11 +121,16 @@ class PandasLikeDataFrame(
         tbl = _into_arrow_table(data, context)
         if implementation.is_pandas():
             native = tbl.to_pandas()
-        elif implementation.is_modin():  # pragma: no cover
-            from modin.pandas.utils import (
-                from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
-            )
-
+        elif implementation.is_modin():
+            # NOTE: Function moved + deprecated (0.26.0), then old path removed (0.31.0)
+            # https://github.com/modin-project/modin/pull/6806
+            # https://github.com/modin-project/modin/pull/7274
+            if implementation._backend_version() >= (0, 26, 0):
+                from modin.pandas.io import from_arrow as mpd_from_arrow
+            else:  # pragma: no cover
+                from modin.pandas.utils import (
+                    from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
+                )
             native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover
             native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
