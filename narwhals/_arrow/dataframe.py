@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype
+from narwhals._arrow.utils import native_to_narwhals_dtype, to_pandas_types_mapper
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -32,13 +32,14 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
+        Incomplete,
         Mask,
         Order,
     )
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
+        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _1DArray,
         _2DArray,
@@ -441,8 +443,16 @@ class ArrowDataFrame(
             validate_column_names=False,
         )
 
-    def to_pandas(self) -> pd.DataFrame:
-        return self.native.to_pandas()
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.DataFrame:
+        if use_pyarrow_extension_array:
+            types_mapper = kwds.pop("types_mapper", to_pandas_types_mapper)
+            kwds["types_mapper"] = types_mapper
+        return self.native.to_pandas(**kwds)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
@@ -468,6 +478,16 @@ class ArrowDataFrame(
         if as_series:
             return {ser.name: ser for ser in it}
         return {ser.name: ser.to_list() for ser in it}
+
+    def to_struct(self, name: str = "") -> ArrowSeries:
+        if self._backend_version < (15, 0):
+            arrays = self.native.columns
+            # NOTE: Stubs say always returns `StructArray`, but it depends on input types
+            # This case is always `ChunkedArray[StructScalar]`
+            struct: Incomplete = pc.make_struct(*arrays, field_names=self.columns)
+        else:
+            struct = self.native.to_struct_array()
+        return ArrowSeries.from_native(struct, context=self, name=name)
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()

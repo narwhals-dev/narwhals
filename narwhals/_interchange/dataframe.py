@@ -94,7 +94,7 @@ class InterchangeFrame:
 
         return InterchangeSeries(self._interchange_frame.get_column_by_name(name))
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, **_: Any) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
 
         if parse_version(pd) >= (1, 5, 0):

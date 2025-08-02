@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Sequence, Sized
+    from collections.abc import Callable, Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
 
     import numpy as np
+    import pyarrow as pa
+    from pandas.api.extensions import ExtensionDtype as PandasDType
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
@@ -409,6 +411,72 @@ MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
+
+
+class ToPandasArrowKwds(TypedDict, total=False):
+    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas).
+
+    Important:
+        Only *default-overriding* values are documented.
+    """
+
+    memory_pool: pa.MemoryPool
+    categories: list[str]
+    """Column names to cast to `pandas.Categorical`.
+
+    Note:
+        Has no effect on `Series`.
+    """
+    strings_to_categorical: Literal[True]
+    """Cast all `String`, `Binary` types to `pandas.Categorical`."""
+    zero_copy_only: Literal[True]
+    """Raise an `ArrowException` if this function call would require copying the underlying data."""
+    integer_object_nulls: Literal[True]
+    """Cast `Int`, `UInt` types with nulls to `numpy.dtypes.ObjectDType`."""
+    date_as_object: Literal[False]
+    """Cast `Date` types to `numpy.dtypes.ObjectDType`.
+
+    If False, convert to datetime64 dtype with the equivalent time unit (if supported).
+
+    Note:
+        in pandas version < 2.0, only datetime64[ns] conversion is supported.
+    """
+    timestamp_as_object: Literal[True]
+    """Cast non-nanosecond timestamps (np.datetime64) to `numpy.dtypes.ObjectDType`.
+
+    This is useful in pandas version 1.x if you have timestamps that don't fit in the normal date range of nanosecond timestamps (1678 CE-2262 CE).
+    Non-nanosecond timestamps are supported in pandas version 2.0.
+    If False, all timestamps are converted to datetime64 dtype.
+    """
+    use_threads: Literal[False]
+    deduplicate_objects: Literal[False]
+    ignore_metadata: Literal[True]
+    safe: Literal[False]
+    """For certain data types, a cast is needed in order to store the data in a `pandas.DataFrame` or `Series` (e.g. timestamps are always stored as nanoseconds in pandas).
+
+    This option controls whether it is a safe cast or not."""
+    split_blocks: Literal[True]
+    """Generate one internal "block" for each column when creating a `pandas.DataFrame` from a `RecordBatch` or `Table`.
+
+    While this can temporarily reduce memory note that various pandas operations can trigger "consolidation" which may balloon memory use.
+    """
+    self_destruct: Literal[True]
+    """**EXPERIMENTAL**: Attempt to deallocate the originating Arrow memory while converting the Arrow object to pandas.
+
+    If you use the object after calling to_pandas with this option it will crash your program.
+    Note that you may not see always memory usage improvements.
+    For example, if multiple columns share an underlying allocation, memory can't be freed until all columns are converted.
+    """
+    maps_as_pydicts: Literal["None", "lossy", "strict"]
+    types_mapper: Callable[[pa.DataType], PandasDType | None] | None
+    """Used to override the default pandas type for conversion of built-in pyarrow types or in absence of pandas_metadata in the `Table` schema."""
+    coerce_temporal_nanoseconds: Literal[True]
+    """Only applicable to pandas version >= 2.0.
+
+    A legacy option to coerce date32, date64, duration, and timestamp time units to nanoseconds when converting to pandas.
+    This is the default behavior in pandas version 1.x.
+    Set this option to True if you'd like to use this coercion when using pandas version >= 2.0 for backwards compatibility (not recommended otherwise).
+    """
 
 
 __all__ = [
