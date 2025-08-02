@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import abc
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
 
 import polars as pl
 
+from narwhals._duration import Interval
 from narwhals._utils import (
     Implementation,
     Version,
@@ -28,6 +30,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import NativeAccessor
@@ -41,6 +44,7 @@ if TYPE_CHECKING:
 
 NativeT_co = TypeVar("NativeT_co", "pl.Series", "pl.Expr", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", "PolarsSeries", "PolarsExpr", covariant=True)
+CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
@@ -264,3 +268,80 @@ class PolarsAnyNamespace(
             return self.compliant._with_native(method(*pos, **kwds))
 
         return func
+
+
+class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "dt"
+
+    def truncate(self, every: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse(every)
+        return self.__getattr__("truncate")(every)
+
+    def offset_by(self, by: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse_no_constraints(by)
+        return self.__getattr__("offset_by")(by)
+
+    to_string: Method[CompliantT]
+    replace_time_zone: Method[CompliantT]
+    convert_time_zone: Method[CompliantT]
+    timestamp: Method[CompliantT]
+    date: Method[CompliantT]
+    year: Method[CompliantT]
+    month: Method[CompliantT]
+    day: Method[CompliantT]
+    hour: Method[CompliantT]
+    minute: Method[CompliantT]
+    second: Method[CompliantT]
+    millisecond: Method[CompliantT]
+    microsecond: Method[CompliantT]
+    nanosecond: Method[CompliantT]
+    ordinal_day: Method[CompliantT]
+    weekday: Method[CompliantT]
+    total_minutes: Method[CompliantT]
+    total_seconds: Method[CompliantT]
+    total_milliseconds: Method[CompliantT]
+    total_microseconds: Method[CompliantT]
+    total_nanoseconds: Method[CompliantT]
+
+
+class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "str"
+
+    # NOTE: Use `abstractmethod` if we have defs to implement, but also `Method` usage
+    @abc.abstractmethod
+    def zfill(self, width: int) -> CompliantT: ...
+
+    len_chars: Method[CompliantT]
+    replace: Method[CompliantT]
+    replace_all: Method[CompliantT]
+    strip_chars: Method[CompliantT]
+    starts_with: Method[CompliantT]
+    ends_with: Method[CompliantT]
+    contains: Method[CompliantT]
+    slice: Method[CompliantT]
+    split: Method[CompliantT]
+    to_date: Method[CompliantT]
+    to_datetime: Method[CompliantT]
+    to_lowercase: Method[CompliantT]
+    to_uppercase: Method[CompliantT]
+
+
+class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "cat"
+    get_categories: Method[CompliantT]
+
+
+# NOTE: Use `Protocol` if we **only** have defs to implement
+class PolarsListNamespace(
+    PolarsAnyNamespace[CompliantT_co, NativeT_co], Protocol[CompliantT_co, NativeT_co]
+):
+    _accessor: ClassVar[NativeAccessor] = "list"
+
+    def len(self) -> CompliantT_co: ...
+
+
+class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "struct"
+    field: Method[CompliantT]
