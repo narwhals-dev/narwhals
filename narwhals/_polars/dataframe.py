@@ -15,7 +15,6 @@ from narwhals._polars.utils import (
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
-    check_columns_exist,
     convert_str_slice_to_int_slice,
     is_compliant_series,
     is_index_selector,
@@ -164,11 +163,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     @classmethod
     def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
-
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(  # pragma: no cover
-            subset, available=self.columns
-        )
 
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
