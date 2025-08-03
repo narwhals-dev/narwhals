@@ -15,7 +15,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._sql.typing import SQLLazyFrameT
+from narwhals._sql.typing import SQLLazyFrameT, NativeSQLExprT
 from narwhals._utils import Implementation, Version, not_implemented
 
 if TYPE_CHECKING:
@@ -249,7 +249,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             end = 0
 
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
         ) -> Sequence[NativeExprT]:
             if func_name in {"sum", "mean"}:
                 func_: str = func_name
@@ -496,11 +496,11 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_elementwise(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
-
+    # WIP: trying new NativeSQLExprT 
     def sqrt(self) -> Self:
-        def _sqrt(expr: NativeExprT) -> NativeExprT:
+        def _sqrt(expr: NativeSQLExprT) -> NativeSQLExprT:
             return self._when(
-                expr < self._lit(0),  # type: ignore[operator]
+                expr < self._lit(0),  
                 self._lit(float("nan")),
                 self._function("sqrt", expr),
             )
