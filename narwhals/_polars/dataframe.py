@@ -263,9 +263,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     write_csv: Method[Any]
     write_parquet: Method[None]
 
-    # CompliantDataFrame
-    _evaluate_aliases: Any
-
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         if context._implementation._backend_version() >= (1, 3):
@@ -558,10 +555,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
-    # CompliantLazyFrame
     sink_parquet: Method[None]
+    # CompliantLazyFrame
     _evaluate_expr: Any
-    _evaluate_aliases: Any
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:

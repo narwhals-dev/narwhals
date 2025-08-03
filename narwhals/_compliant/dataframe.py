@@ -258,10 +258,6 @@ class CompliantDataFrame(
     def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
 
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
 
@@ -361,10 +357,6 @@ class CompliantLazyFrame(
         result = expr(self)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
-
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
