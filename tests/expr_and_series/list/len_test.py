@@ -61,6 +61,7 @@ def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
 
 
 def test_pandas_object_series() -> None:
+    pytest.importorskip("pandas")
     import pandas as pd
 
     import narwhals as nw

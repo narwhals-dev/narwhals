@@ -393,6 +393,7 @@ def test_all_nulls_pandas() -> None:
 def test_schema_to_pandas(
     dtype_backend: DTypeBackend | Sequence[DTypeBackend] | None, expected: dict[str, Any]
 ) -> None:
+    pytest.importorskip("pandas")
     schema = nw.Schema(
         {
             "a": nw.Int64(),
@@ -406,6 +407,7 @@ def test_schema_to_pandas(
 
 
 def test_schema_to_pandas_strict_zip() -> None:
+    pytest.importorskip("pandas")
     schema = nw.Schema(
         {
             "a": nw.Int64(),
@@ -429,6 +431,7 @@ def test_schema_to_pandas_strict_zip() -> None:
 
 
 def test_schema_to_pandas_invalid() -> None:
+    pytest.importorskip("pandas")
     schema = nw.Schema({"a": nw.Int64()})
     msg = "Expected one of {None, 'pyarrow', 'numpy_nullable'}, got: 'cabbage'"
     with pytest.raises(ValueError, match=msg):

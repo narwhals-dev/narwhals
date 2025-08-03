@@ -45,6 +45,7 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works
+    pytest.importorskip("pandas")
     monkeypatch.delattr("polars.DataFrame.__arrow_c_stream__")
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     result = pa.table(df)

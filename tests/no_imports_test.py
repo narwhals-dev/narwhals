@@ -11,8 +11,8 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    monkeypatch.delitem(sys.modules, "pandas")
-    monkeypatch.delitem(sys.modules, "numpy")
+    monkeypatch.delitem(sys.modules, "pandas", raising=False)
+    monkeypatch.delitem(sys.modules, "numpy", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "typing_extensions", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
@@ -82,7 +82,7 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     import pyarrow as pa
 
     monkeypatch.delitem(sys.modules, "polars", raising=False)
-    monkeypatch.delitem(sys.modules, "pandas")
+    monkeypatch.delitem(sys.modules, "pandas", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
     monkeypatch.delitem(sys.modules, "dask", raising=False)
     monkeypatch.delitem(sys.modules, "ibis", raising=False)
