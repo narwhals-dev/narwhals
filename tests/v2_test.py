@@ -353,7 +353,7 @@ def test_imports() -> None:
         (nw_v2.String, ("a", "b", "c")),
         (nw_v2.Float64, [5.0, 2.0, 0.0, 1.0]),
         (
-            nw_v2.Datetime(),
+            nw_v2.Datetime("ms"),
             deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
         ),
     ],

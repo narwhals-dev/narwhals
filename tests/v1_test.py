@@ -1061,7 +1061,7 @@ def test_series_from_numpy(
         (nw_v1.String, ("a", "b", "c")),
         (nw_v1.Float64, [5.0, 2.0, 0.0, 1.0]),
         (
-            nw_v1.Datetime(),
+            nw_v1.Datetime("ns"),
             deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
         ),
     ],
