@@ -1556,7 +1556,7 @@ def generate_repr_html(
 
     style_css = (
         ".dataframe caption { "
-        "caption-side: bottom; "
+        "caption-side: top; "
         "text-align: center; "
         "font-weight: bold; "
         "padding-top: 8px;"
