@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)
 SQLLazyFrameT = TypeVar("SQLLazyFrameT", bound="SQLLazyFrameAny")
-NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr")
+# TODO: @mp, should this be contravariant as to do with function arguments? think through!
+NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr") 
 
 class NativeSQLExpr(NativeExpr):
     # both Self because we're comparing an expression with an expression? 
