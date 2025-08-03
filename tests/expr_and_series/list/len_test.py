@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from importlib.util import find_spec
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -46,7 +45,11 @@ def test_len_series(
 
 
 def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
-    if PANDAS_VERSION < (2, 2) or not find_spec("pyarrow"):
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    if PANDAS_VERSION < (2, 2):
         request.applymarker(pytest.mark.xfail)
 
     index = pd.Index(["a", "b", "c", "d", "e"])

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -16,6 +15,9 @@ from tests.utils import (
 
 
 def test_with_columns_int_col_name_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     np_matrix = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     df = pd.DataFrame(np_matrix, dtype="int64")
     nw_df = nw.from_native(df, eager_only=True)

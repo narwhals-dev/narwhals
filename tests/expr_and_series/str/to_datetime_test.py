@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Literal
 import pytest
 
 import narwhals as nw
-from narwhals._pandas_like.utils import get_dtype_backend
 from tests.utils import (
     PANDAS_VERSION,
     assert_equal_data,
@@ -251,6 +250,8 @@ def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import pandas as pd
+
+    from narwhals._pandas_like.utils import get_dtype_backend
 
     dtype_backend: Literal["pyarrow", "numpy_nullable"] = "pyarrow"
 

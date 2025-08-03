@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -88,6 +87,9 @@ def test_gather(constructor_eager: ConstructorEager) -> None:
 
 def test_gather_pandas_index() -> None:
     # check that we're slicing positionally, and not on the pandas index
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [4, 1, 2], "b": [1, 4, 2]}, index=[2, 1, 3])
     result = nw.from_native(df, eager_only=True)[[1, 2]]
     expected = {"a": [1, 2], "b": [4, 2]}
@@ -346,6 +348,9 @@ def test_pandas_non_str_columns() -> None:
     # The general rule with getitem is: ints are always treated as positions. The rest, we should
     # be able to hand down to the native frame. Here we check what happens for pandas with
     # datetime column names.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame({datetime(2020, 1, 1): [1, 2, 3], datetime(2020, 1, 2): [4, 5, 6]}),
         eager_only=True,

@@ -4,7 +4,6 @@ from datetime import datetime, time, timedelta, timezone
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, cast
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -169,6 +168,9 @@ def test_cast_series(
 
 
 def test_cast_string() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2]).convert_dtypes()
     s = nw.from_native(s_pd, series_only=True)
     s = s.cast(nw.String)

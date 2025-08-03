@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
+
+pytest.importorskip("pandas")
+import pandas as pd
 
 import narwhals.stable.v1 as nw_v1
 from tests.utils import PANDAS_VERSION

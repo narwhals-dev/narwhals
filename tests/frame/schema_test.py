@@ -4,7 +4,6 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -53,6 +52,9 @@ def test_schema_comparison() -> None:
 
 
 def test_object() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     class Foo: ...
 
     df = pd.DataFrame({"a": [Foo()]}).astype(object)
@@ -61,6 +63,9 @@ def test_object() -> None:
 
 
 def test_string_disguised_as_object() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": ["foo", "bar"]}).astype(object)
     result = nw.from_native(df).schema
     assert result["a"] == nw.String
@@ -185,6 +190,9 @@ def test_dtypes() -> None:
 
 
 def test_unknown_dtype() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": pd.period_range("2000", periods=3, freq="M")})
     assert nw.from_native(df).schema == {"a": nw.Unknown}
 
@@ -208,6 +216,9 @@ def test_schema_object(method: str, expected: Any) -> None:
 
 
 def test_validate_not_duplicated_columns_pandas_like() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame([[1, 2], [4, 5]], columns=["a", "a"])
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
@@ -331,6 +342,9 @@ def test_nested_dtypes_dask() -> None:
 
 
 def test_all_nulls_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     assert (
         nw.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw.String

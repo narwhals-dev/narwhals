@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -110,6 +109,9 @@ def test_when_then() -> None:
 
 def test_constructors() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
     assert nw_v1.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
@@ -254,6 +256,9 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
 
 
 def test_all_nulls_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     assert (
         nw_v1.from_native(pd.Series([None] * 3, dtype="object"), series_only=True).dtype
         == nw_v1.Object
@@ -261,6 +266,9 @@ def test_all_nulls_pandas() -> None:
 
 
 def test_int_select_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v1.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(
         nw_v1.exceptions.InvalidIntoExprError, match="\n\nHint:\n- if you were trying"
@@ -306,6 +314,9 @@ def test_cast_to_enum_v1(
 
 
 def test_v1_ordered_categorical_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = nw_v1.from_native(
         pd.Series([0, 1], dtype=pd.CategoricalDtype(ordered=True)), series_only=True
     )
@@ -351,6 +362,9 @@ def test_v1_enum_duckdb_2550() -> None:
     ],
 )
 def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 2], "b": ["bar", "foo"]}
     df = nw.from_native(pd.DataFrame(data))
     assert not is_native_dataframe(df)
@@ -368,6 +382,9 @@ def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
     ],
 )
 def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 2]}
     ser = nw.from_native(pd.DataFrame(data))["a"]
     assert not is_native_series(ser)
@@ -494,6 +511,9 @@ def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
 
 
 def test_dtypes() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw_v1.from_native(
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
@@ -869,6 +889,7 @@ def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) 
 def test_gather_every_dask_v1(n: int, offset: int) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     data = {"a": list(range(10))}
 
@@ -902,6 +923,9 @@ def test_head_aggregation() -> None:
 
 
 def test_deprecated_expr_methods() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [0, 0, 2, -1]}
     df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
     result = df.select(
@@ -928,6 +952,7 @@ def test_dask_order_dependent_ops() -> None:
     # raise after stable.v1.
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = nw_v1.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     result = df.select(

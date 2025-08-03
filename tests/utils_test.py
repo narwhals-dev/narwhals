@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 import narwhals as nw
 from narwhals._utils import (
@@ -28,6 +27,7 @@ pytest.importorskip("pyarrow")
 
 import pandas as pd
 import pyarrow as pa
+from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

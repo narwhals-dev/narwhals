@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -20,6 +19,9 @@ def test_get_column(constructor_eager: ConstructorEager) -> None:
 
 
 def test_non_string_name() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({0: [1, 2]})
     result = nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
     assert_equal_data({"a": result}, {"a": [1, 2]})
@@ -27,6 +29,9 @@ def test_non_string_name() -> None:
 
 
 def test_get_single_row() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
     result = nw.from_native(df, eager_only=True)[0]
     assert_equal_data(result, {"a": [1], "b": [3]})

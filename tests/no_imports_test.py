@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -36,6 +35,9 @@ def test_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
     monkeypatch.delitem(sys.modules, "duckdb", raising=False)
@@ -59,6 +61,7 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_dask(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     monkeypatch.delitem(sys.modules, "polars", raising=False)
     monkeypatch.delitem(sys.modules, "pyarrow", raising=False)

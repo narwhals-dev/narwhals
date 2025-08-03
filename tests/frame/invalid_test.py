@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -27,6 +26,9 @@ def test_all_vs_all(constructor: Constructor) -> None:
 
 
 def test_invalid() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df: Frame = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
@@ -47,7 +49,7 @@ def test_invalid_polars() -> None:
     import polars as pl
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df: Frame = nw.from_native(pd.DataFrame(data))
+    df: Frame = nw.from_native(pl.DataFrame(data))
     with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
@@ -55,6 +57,9 @@ def test_invalid_polars() -> None:
 
 
 def test_native_vs_non_native() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_pd = pd.Series([1, 2, 3])
     df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     with pytest.raises(TypeError, match="Perhaps you\n- forgot"):
@@ -86,8 +91,10 @@ def test_validate_laziness() -> None:
 @pytest.mark.slow
 @pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
 def test_memmap() -> None:
+    pytest.importorskip("pandas")
     pytest.importorskip("sklearn")
     # the headache this caused me...
+    import pandas as pd
     from sklearn.utils import check_X_y
 
     if TYPE_CHECKING:

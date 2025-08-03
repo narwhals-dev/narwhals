@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import narwhals.stable.v2 as nw_v2
@@ -78,6 +77,9 @@ def test_when_then() -> None:
 
 def test_constructors() -> None:
     pytest.importorskip("pyarrow")
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     if PANDAS_VERSION < (2, 2):
         pytest.skip()
     assert nw_v2.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]

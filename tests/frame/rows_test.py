@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -112,6 +111,9 @@ def test_rows_with_nulls_unnamed(
         for j, value in enumerate(row):
             value_in_result = result[i][j]
             if value is None:
+                pytest.importorskip("pandas")
+                import pandas as pd
+
                 assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
@@ -134,6 +136,9 @@ def test_rows_with_nulls_named(
         for col, value in row.items():
             value_in_result = result[i][col]
             if value is None:
+                pytest.importorskip("pandas")
+                import pandas as pd
+
                 assert pd.isna(value_in_result)  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value

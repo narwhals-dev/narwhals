@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 from typing import Any, Literal
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -235,9 +234,10 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
 
 
 def test_cross_join_non_pandas() -> None:
-    _ = pytest.importorskip("modin")
+    pytest.importorskip("modin")
 
     import modin.pandas as mpd
+    import pandas as pd
 
     data = {"antananarivo": [1, 3, 2]}
     df1 = nw.from_native(mpd.DataFrame(pd.DataFrame(data)), eager_only=True)

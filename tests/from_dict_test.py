@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from importlib.util import find_spec
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -101,6 +100,9 @@ def test_from_dict_empty_with_schema(backend: Implementation | str) -> None:
 
 def test_alignment() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/1474
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     result = nw.from_dict(
         {"a": df["a"], "b": df["a"].sort_values(ascending=False)}, backend=pd
