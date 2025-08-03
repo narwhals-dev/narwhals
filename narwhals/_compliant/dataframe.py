@@ -353,10 +353,6 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
-    def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
-        result = expr(self)
-        assert len(result) == 1  # debug assertion  # noqa: S101
-        return result[0]
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)

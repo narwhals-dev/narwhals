@@ -556,8 +556,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
     sink_parquet: Method[None]
-    # CompliantLazyFrame
-    _evaluate_expr: Any
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:
