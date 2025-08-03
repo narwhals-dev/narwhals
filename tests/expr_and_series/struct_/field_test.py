@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -18,6 +16,10 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
     df_native = constructor(data)
 
     if "pandas" in str(constructor):
+        pytest.importorskip("pyarrow")
+        import pandas as pd
+        import pyarrow as pa
+
         df_native = df_native.assign(  # type: ignore[union-attr]
             user=pd.Series(
                 data["user"],
@@ -53,6 +55,10 @@ def test_get_field_series(
     df_native = constructor_eager(data)
 
     if "pandas" in str(constructor_eager):
+        pytest.importorskip("pyarrow")
+        import pandas as pd
+        import pyarrow as pa
+
         df_native = df_native.assign(  # type: ignore[union-attr]
             user=pd.Series(
                 data["user"],
@@ -72,6 +78,9 @@ def test_get_field_series(
 
 
 def test_pandas_object_series() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s_native = pd.Series(data=[{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}])
     s = nw.from_native(s_native, series_only=True)
 

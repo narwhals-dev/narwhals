@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+
+if TYPE_CHECKING:
+    import pyarrow as pa
+
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
@@ -70,26 +73,28 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     ("input_schema", "input_values", "expected_function"),
     [
         (
-            [("store", pa.large_string()), ("item", pa.large_string())],
+            [("store", "large_string"), ("item", "large_string")],
             ["a", "b"],
-            pa.types.is_large_string,
+            "is_large_string",
         ),
-        (
-            [("store", pa.large_string()), ("item", pa.int32())],
-            [0, 1],
-            pa.types.is_large_string,
-        ),
-        ([("store", pa.string()), ("item", pa.int32())], [0, 1], pa.types.is_string),
-        ([("store", pa.string()), ("item", pa.string())], ["a", "b"], pa.types.is_string),
+        ([("store", "large_string"), ("item", "int32")], [0, 1], "is_large_string"),
+        ([("store", "string"), ("item", "int32")], [0, 1], "is_string"),
+        ([("store", "string"), ("item", "string")], ["a", "b"], "is_string"),
     ],
 )
 def test_pyarrow_string_type(
-    input_schema: list[tuple[str, pa.DataType]],
+    input_schema: list[tuple[str, str]],
     input_values: list[object],
-    expected_function: Callable[[pa.DataType], bool],
+    expected_function: str,
 ) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    input_schema_: list[tuple[str, pa.DataType]] = [
+        (t[0], getattr(pa, t[1])()) for t in input_schema
+    ]
     df = pa.table(
-        {"store": ["foo", "bar"], "item": input_values}, schema=pa.schema(input_schema)
+        {"store": ["foo", "bar"], "item": input_values}, schema=pa.schema(input_schema_)
     )
     result = (
         nw.from_native(df)
@@ -97,4 +102,7 @@ def test_pyarrow_string_type(
         .to_native()
         .schema
     )
-    assert expected_function(result.field("store_item").type)
+    expected_function_: Callable[[pa.DataType], bool] = getattr(
+        pa.types, expected_function
+    )
+    assert expected_function_(result.field("store_item").type)

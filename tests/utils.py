@@ -8,16 +8,16 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-import pandas as pd
-import pyarrow as pa
-
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version
+from narwhals.dependencies import get_pandas, get_pyarrow
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
+    import modin.pandas as mpd
+    import pandas as pd
     from typing_extensions import TypeAlias
 
     from narwhals.typing import DataFrameLike, Frame, NativeFrame, NativeLazyFrame
@@ -53,8 +53,10 @@ def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
 
 
 def _to_comparable_list(column_values: Any) -> Any:
-    if isinstance(column_values, nw.Series) and isinstance(
-        column_values.to_native(), pa.Array
+    if (
+        isinstance(column_values, nw.Series)
+        and (pa := get_pyarrow()) is not None
+        and isinstance(column_values.to_native(), pa.Array)
     ):  # pragma: no cover
         # Narwhals Series for PyArrow should be backed by ChunkedArray, not Array.
         msg = "Did not expect to see Arrow Array here"
@@ -70,18 +72,11 @@ def _to_comparable_list(column_values: Any) -> Any:
 
 
 def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
-    is_duckdb = (
-        hasattr(result, "_compliant_frame")
-        and result._compliant_frame._implementation is Implementation.DUCKDB
-    )
-    is_ibis = (
-        hasattr(result, "_compliant_frame")
-        and result._compliant_frame._implementation is Implementation.IBIS
-    )
-    is_spark_like = (
-        hasattr(result, "_compliant_frame")
-        and result._compliant_frame._implementation.is_spark_like()
-    )
+    is_lazyframe = isinstance(result, nw.LazyFrame)
+    is_duckdb = is_lazyframe and result.implementation.is_duckdb()
+    is_ibis = is_lazyframe and result.implementation.is_ibis()
+    is_spark_like = is_lazyframe and result.implementation.is_spark_like()
+
     if is_duckdb:
         result = from_native(result.to_native().arrow())
     if is_ibis:
@@ -123,7 +118,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = all(
                     left_side == right_side for left_side, right_side in zip(lhs, rhs)
                 )
-            elif pd.isna(lhs):
+            elif (pd := get_pandas()) is not None and pd.isna(lhs):
                 are_equivalent_values = pd.isna(rhs)
             elif type(lhs) is date and type(rhs) is datetime:
                 are_equivalent_values = datetime(lhs.year, lhs.month, lhs.day) == rhs
@@ -146,7 +141,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             )
 
 
-def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
+def maybe_get_modin_df(df_pandas: pd.DataFrame) -> mpd.DataFrame:
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
         import modin.pandas as mpd

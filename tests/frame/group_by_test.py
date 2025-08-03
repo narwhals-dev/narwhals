@@ -6,8 +6,6 @@ import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -29,20 +27,27 @@ if TYPE_CHECKING:
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
-df_pandas = pd.DataFrame(data)
-
 POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
-def test_group_by_complex() -> None:
+def test_group_by_complex_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
 
-    df = nw.from_native(df_pandas)
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.warns(UserWarning, match="complex group-by"):
         result_pd = nw.to_native(
             df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
         )
     assert_equal_data(result_pd, expected)
+
+
+def test_group_by_complex_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     with pytest.raises(ValueError, match="complex aggregation"):
         nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
             (nw.col("b") - nw.col("c").mean()).mean()
@@ -64,8 +69,9 @@ def test_group_by_complex_polars() -> None:
 def test_invalid_group_by_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
-    df_dask = dd.from_pandas(df_pandas)
+    df_dask = dd.from_pandas(pd.DataFrame(data))
 
     with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
@@ -94,6 +100,9 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
 
 
 def test_group_by_iter_non_str_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     expected = {"a": {0: [1], 1: ["a"]}, "b": {0: [2], 1: ["b"]}}
     df = nw.from_native(pd.DataFrame({0: [1, 2], 1: ["a", "b"]}))
     groups: dict[Any, Any] = {keys[0]: df for keys, df in df.group_by(1)}  # type: ignore[call-overload]
@@ -227,6 +236,9 @@ def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
 
 
 def test_group_by_same_name_twice() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     pattern = re.compile(
         "expected unique.+names.+'b'.+2 times", re.IGNORECASE | re.DOTALL
@@ -236,6 +248,9 @@ def test_group_by_same_name_twice() -> None:
 
 
 def test_group_by_empty_result_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df_any = pd.DataFrame({"a": [1, 2, 3], "b": [4, 3, 2]})
     df = nw.from_native(df_any, eager_only=True)
     with pytest.raises(ValueError, match="No results"):
@@ -421,6 +436,9 @@ def test_all_kind_of_aggs(
 
 
 def test_pandas_group_by_index_and_column_overlap() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = pd.DataFrame(
         {"a": [1, 1, 2], "b": [4, 5, 6]}, index=pd.Index([0, 1, 2], name="a")
     )

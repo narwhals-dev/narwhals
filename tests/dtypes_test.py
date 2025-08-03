@@ -5,8 +5,6 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -158,7 +156,10 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     assert df.collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
 
 
-def test_second_time_unit() -> None:
+def test_second_time_unit_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
@@ -166,14 +167,19 @@ def test_second_time_unit() -> None:
     )
     assert result.dtype == nw.Datetime(expected_unit)
 
+    s = pd.Series(np.array([np.timedelta64(1, "s")]))
+    result = nw.from_native(s, series_only=True)
+    assert result.dtype == nw.Duration(expected_unit)
+
+
+def test_second_time_unit_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     ts_sec = pa.timestamp("s")
     s = pa.chunked_array([pa.array([datetime(2020, 1, 1)], type=ts_sec)], type=ts_sec)
     result = nw.from_native(s, series_only=True)
     assert result.dtype == nw.Datetime("s")
-
-    s = pd.Series(np.array([np.timedelta64(1, "s")]))
-    result = nw.from_native(s, series_only=True)
-    assert result.dtype == nw.Duration(expected_unit)
 
     dur_sec = pa.duration("s")
     s = pa.chunked_array([pa.array([timedelta(1)], type=dur_sec)], type=dur_sec)
@@ -191,6 +197,9 @@ def test_second_time_unit() -> None:
 )
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
 def test_pandas_inplace_modification_1267() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     s = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
@@ -199,6 +208,10 @@ def test_pandas_inplace_modification_1267() -> None:
 
 
 def test_pandas_fixed_offset_1302() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
     result = nw.from_native(
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
@@ -367,10 +380,14 @@ def test_huge_int_to_native() -> None:
 
 def test_cast_decimal_to_native() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
+    import pandas as pd
     import polars as pl
+    import pyarrow as pa
 
     data = {"a": [1, 2, 3]}
 
@@ -427,6 +444,9 @@ def test_enum_categories_immutable() -> None:
 
 
 def test_enum_repr_pd() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame(
             {"a": ["broccoli", "cabbage"]}, dtype=pd.CategoricalDtype(ordered=True)

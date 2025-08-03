@@ -227,6 +227,7 @@ def test_validate_not_duplicated_columns_arrow() -> None:
 
 def test_validate_not_duplicated_columns_duckdb() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
     import duckdb
 
     rel = duckdb.sql("SELECT 1 AS a, 2 AS a")

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -298,6 +296,9 @@ def test_over_anonymous_reduction(
 
 
 def test_over_unsupported() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     dfpd = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
     with pytest.raises(NotImplementedError):
         nw.from_native(dfpd).select(nw.col("a").null_count().over("a"))
@@ -306,6 +307,7 @@ def test_over_unsupported() -> None:
 def test_over_unsupported_dask() -> None:
     pytest.importorskip("dask")
     import dask.dataframe as dd
+    import pandas as pd
 
     df = dd.from_pandas(pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(NotImplementedError):
@@ -390,11 +392,21 @@ def test_over_raise_len_change(constructor: Constructor) -> None:
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 
-def test_unsupported_over() -> None:
+def test_unsupported_over_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
     df = pd.DataFrame(data)
     with pytest.raises(NotImplementedError, match="elementary"):
         nw.from_native(df).select(nw.col("a").shift(1).cum_sum().over("b"))
+
+
+def test_unsupported_over_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
     tbl = pa.table(data)  # type: ignore[arg-type]
     with pytest.raises(NotImplementedError, match="aggregation or literal"):
         nw.from_native(tbl).select(nw.col("a").shift(1).cum_sum().over("b"))

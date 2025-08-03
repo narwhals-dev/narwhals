@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -22,6 +21,10 @@ from narwhals.dependencies import (
     is_pyarrow_chunked_array,
     is_pyarrow_table,
 )
+
+pytest.importorskip("pandas")
+
+import pandas as pd
 
 
 @pytest.mark.parametrize(

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
-import pyarrow as pa
 import pytest
 
 import narwhals as nw
@@ -35,6 +33,9 @@ def test_empty_select(constructor_eager: ConstructorEager) -> None:
 
 
 def test_non_string_select() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     result = nw.to_native(df.select(nw.col(0)))  # type: ignore[arg-type]
     expected = pd.Series([1, 2], name=0).to_frame()
@@ -42,6 +43,9 @@ def test_non_string_select() -> None:
 
 
 def test_int_select_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({0: [1, 2], "b": [3, 4]}))
     with pytest.raises(InvalidIntoExprError, match="\n\nHint:\n- if you were trying"):
         nw.to_native(df.select(0))  # type: ignore[arg-type]
@@ -54,6 +58,9 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
 
 
 def test_select_boolean_cols() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
     result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
@@ -62,6 +69,9 @@ def test_select_boolean_cols() -> None:
 
 
 def test_select_boolean_cols_multi_group_by() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
     )
@@ -75,10 +85,21 @@ def test_select_boolean_cols_multi_group_by() -> None:
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
 
 
-def test_comparison_with_list_error_message() -> None:
+def test_comparison_with_list_error_message_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     msg = "Expected Series or scalar, got list."
     with pytest.raises(TypeError, match=msg):
         nw.from_native(pa.chunked_array([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
+
+
+def test_comparison_with_list_error_message_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    msg = "Expected Series or scalar, got list."
+
     with pytest.raises(TypeError, match=msg):
         nw.from_native(pd.Series([[1, 2, 3]]), series_only=True) == [1, 2, 3]  # noqa: B015
 
