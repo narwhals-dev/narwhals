@@ -360,7 +360,10 @@ def test_imports() -> None:
     ids=str,
 )
 def test_series_from_iterable(
-    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+    eager_backend: EagerAllowed,
+    dtype: IntoDType | None,
+    expected: Sequence[Any],
+    request: pytest.FixtureRequest,
 ) -> None:
     data = expected
     name = "abc"
@@ -368,5 +371,13 @@ def test_series_from_iterable(
     assert result._version is Version.V2
     assert isinstance(result, nw_v2.Series)
     if dtype:
+        request.applymarker(
+            pytest.mark.xfail(
+                result.implementation.is_pandas_like()
+                and dtype.is_temporal()
+                and PANDAS_VERSION < (2,),
+                reason='Pandas does not support "ms" or "us" time units before version 2.0',
+            )
+        )
         assert result.dtype == dtype
     assert_equal_series(result, expected, name)
