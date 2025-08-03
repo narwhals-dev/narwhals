@@ -49,6 +49,7 @@ def test_interchange_ibis(
 ) -> None:  # pragma: no cover
     pytest.importorskip("polars")
     pytest.importorskip("ibis")
+    pytest.importorskip("pyarrow")
 
     import ibis
     import polars as pl
@@ -73,6 +74,7 @@ def test_interchange_ibis(
 def test_interchange_duckdb() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
 
     import duckdb
     import polars as pl

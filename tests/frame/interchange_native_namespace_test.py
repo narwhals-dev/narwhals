@@ -38,6 +38,7 @@ def test_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     pytest.importorskip("ibis")
+    pytest.importorskip("pyarrow")
     import ibis
 
     try:
@@ -58,6 +59,7 @@ def test_ibis(
 
 def test_duckdb() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
     import duckdb
 
     df_pl = pl.DataFrame(data)  # noqa: F841

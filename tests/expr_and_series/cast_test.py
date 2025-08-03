@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
@@ -275,7 +276,9 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     data = {
@@ -325,7 +328,9 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     if any(
@@ -340,7 +345,9 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):

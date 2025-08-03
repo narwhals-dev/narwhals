@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import pytest
@@ -19,5 +20,10 @@ def test_write_parquet(
     constructor_eager: ConstructorEager, tmpdir: pytest.TempdirFactory
 ) -> None:
     path = tmpdir / "foo.parquet"  # type: ignore[operator]
-    nw.from_native(constructor_eager(data), eager_only=True).write_parquet(str(path))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+
+    if "pandas" in str(constructor_eager) and not find_spec("pyarrow"):
+        pytest.skip()
+
+    df.write_parquet(str(path))
     assert path.exists()

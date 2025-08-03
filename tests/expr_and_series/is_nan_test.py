@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import nullcontext as does_not_raise
+from importlib.util import find_spec
 from typing import Any
 
 import pytest
@@ -98,38 +99,43 @@ def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest)
         ("pyspark" in str(constructor))
         or "duckdb" in str(constructor)
         or "ibis" in str(constructor)
+        or ("pandas" in str(constructor) and not find_spec("pyarrow"))
     ):
         request.applymarker(pytest.mark.xfail)
-    from pyarrow.lib import ArrowNotImplementedError
 
     from narwhals.exceptions import InvalidOperationError
 
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor(data))
 
-    exc = (
-        ArrowNotImplementedError
-        if "pyarrow_table" in str(constructor)
-        else InvalidOperationError
-    )
+    if df.implementation.is_pyarrow():
+        from pyarrow.lib import ArrowNotImplementedError
+
+        exc = ArrowNotImplementedError
+    else:
+        exc = InvalidOperationError
 
     with pytest.raises(exc):
         df.select(nw.col("a").is_nan()).lazy().collect()
 
 
-def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
-    from pyarrow.lib import ArrowNotImplementedError
+def test_nan_non_float_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pandas" in str(constructor_eager) and not find_spec("pyarrow"):
+        request.applymarker(pytest.mark.xfail)
 
     from narwhals.exceptions import InvalidOperationError
 
     data = {"a": ["x", "y"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    exc = (
-        ArrowNotImplementedError
-        if "pyarrow_table" in str(constructor_eager)
-        else InvalidOperationError
-    )
+    if df.implementation.is_pyarrow():
+        from pyarrow.lib import ArrowNotImplementedError
+
+        exc = ArrowNotImplementedError
+    else:
+        exc = InvalidOperationError
 
     with pytest.raises(exc):
         df["a"].is_nan()

@@ -83,6 +83,7 @@ def test_actual_object(
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
 def test_dtypes() -> None:
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
     import polars as pl
 
     df_pl = pl.DataFrame(
@@ -241,6 +242,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
 def test_nested_dtypes() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
     import polars as pl

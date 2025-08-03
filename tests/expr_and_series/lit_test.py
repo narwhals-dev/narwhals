@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -121,6 +122,9 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1]}))
+    if df.implementation.is_pandas() and not find_spec("pyarrow"):
+        pytest.skip()
+
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
     if df.implementation.is_cudf():
         # cudf has no date dtype

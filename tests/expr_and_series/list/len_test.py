@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
+
 import pandas as pd
 import pytest
 
@@ -14,7 +16,9 @@ def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     result = nw.from_native(constructor(data)).select(
@@ -30,7 +34,9 @@ def test_len_series(
     if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor_eager) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -40,7 +46,7 @@ def test_len_series(
 
 
 def test_pandas_preserve_index(request: pytest.FixtureRequest) -> None:
-    if PANDAS_VERSION < (2, 2):
+    if PANDAS_VERSION < (2, 2) or not find_spec("pyarrow"):
         request.applymarker(pytest.mark.xfail)
 
     index = pd.Index(["a", "b", "c", "d", "e"])

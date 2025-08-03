@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,5 +19,9 @@ data = {"a": [1, 2, 3]}
 def test_sink_parquet(constructor: Constructor, tmpdir: pytest.TempdirFactory) -> None:
     path = tmpdir / "foo.parquet"  # type: ignore[operator]
     df = nw.from_native(constructor(data))
+
+    if df.implementation.is_pandas() and not find_spec("pyarrow"):
+        pytest.skip()
+
     df.lazy().sink_parquet(str(path))
     assert path.exists()

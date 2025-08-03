@@ -120,6 +120,7 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
 
 def test_replace_time_zone_to_connection_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
 
     import duckdb
 

@@ -29,6 +29,8 @@ TEST_EAGER_BACKENDS = [
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
 def test_read_csv(tmpdir: pytest.TempdirFactory, backend: Implementation | str) -> None:
+    pytest.importorskip(Implementation.from_backend(backend).value)
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -39,6 +41,7 @@ def test_read_csv(tmpdir: pytest.TempdirFactory, backend: Implementation | str) 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -89,6 +92,8 @@ def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> No
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
@@ -104,6 +109,10 @@ def test_read_parquet(
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw.from_native(constructor_eager(data))
+
+    if df.implementation.is_pandas_like():
+        pytest.importorskip("pyarrow")
+
     backend = nw.get_native_namespace(df)
     result = nw.read_parquet(filepath, backend=backend)
     assert_equal_data(result, data)
@@ -112,6 +121,8 @@ def test_read_parquet(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
@@ -154,6 +165,10 @@ def test_scan_parquet(tmpdir: pytest.TempdirFactory, constructor: Constructor) -
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)
     df = nw.from_native(constructor(data))
+
+    if df.implementation.is_pandas_like():
+        pytest.importorskip("pyarrow")
+
     backend = nw.get_native_namespace(df)
     result = nw.scan_parquet(filepath, backend=backend, **kwargs)
     assert_equal_data(result, data)
@@ -162,6 +177,8 @@ def test_scan_parquet(tmpdir: pytest.TempdirFactory, constructor: Constructor) -
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
     df_pl.write_parquet(filepath)

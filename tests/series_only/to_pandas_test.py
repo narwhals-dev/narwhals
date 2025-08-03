@@ -19,6 +19,7 @@ data = [1, 3, 2]
 def test_convert(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
+    pytest.importorskip("pyarrow")
     if any(
         cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")

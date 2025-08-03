@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 import pytest
@@ -41,7 +42,9 @@ def test_explode_single_col(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     result = (
@@ -99,7 +102,9 @@ def test_explode_multiple_cols(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     result = (
@@ -120,7 +125,9 @@ def test_explode_shape_error(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor) and (
+        PANDAS_VERSION < (2, 2) or not find_spec("pyarrow")
+    ):
         pytest.skip()
 
     with pytest.raises(

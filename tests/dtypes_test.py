@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime, timedelta, timezone
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -131,7 +132,10 @@ def test_struct_hashes() -> None:
 
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     version_conditions = [
-        (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
+        (
+            PANDAS_VERSION < (2, 2) or not find_spec("pyarrow"),
+            "Requires pandas 2.2+ and pyarrow for 2D array support",
+        ),
         (
             "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,),
             "PyArrow 14+ required for 2D array support",
@@ -234,6 +238,7 @@ def test_pandas_fixed_offset_1302() -> None:
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
     import polars as pl
@@ -270,6 +275,7 @@ def test_huge_int() -> None:
 def test_decimal() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
     import polars as pl
@@ -351,6 +357,7 @@ def test_dtype_is_x() -> None:
 def test_huge_int_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
 
     import duckdb
     import polars as pl

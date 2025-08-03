@@ -10,6 +10,8 @@ data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
 
 def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
+    pytest.importorskip("pyarrow")
+
     if PANDAS_VERSION < (1, 5, 0):
         request.applymarker(pytest.mark.xfail)
     df_raw = pd.DataFrame(data)
@@ -21,6 +23,7 @@ def test_interchange_to_pandas(request: pytest.FixtureRequest) -> None:
 def test_interchange_ibis_to_pandas(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
+    pytest.importorskip("pyarrow")
     if PANDAS_VERSION < (1, 5, 0):
         pytest.skip()
     if PANDAS_VERSION >= (3,):
