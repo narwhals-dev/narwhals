@@ -8,6 +8,7 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
+from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -16,7 +17,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -43,9 +43,7 @@ if TYPE_CHECKING:
 
 
 class IbisLazyFrame(
-    CompliantLazyFrame[
-        "IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"
-    ],
+    SQLLazyFrame["IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"],
     ValidateBackendVersion,
 ):
     _implementation = Implementation.IBIS

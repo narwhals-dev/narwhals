@@ -13,6 +13,7 @@ from narwhals._utils import (
     ValidateBackendVersion,
     _remap_full_join_keys,
     check_column_names_are_unique,
+    check_columns_exist,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
+    from narwhals.exceptions import ColumnNotFoundError
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
 
 Incomplete: TypeAlias = "Any"
@@ -96,6 +98,9 @@ class DaskLazyFrame(
 
     def _with_native(self, df: Any) -> Self:
         return self.__class__(df, version=self._version)
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
     def _iter_columns(self) -> Iterator[dx.Series]:
         for _col, ser in self.native.items():  # noqa: PERF102
