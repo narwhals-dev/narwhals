@@ -269,6 +269,9 @@ class Series(Generic[IntoSeriesT]):
 
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
+
+        Returns:
+            A PyCapsule containing a C ArrowArrayStream representation of the object.
         """
         native_series = self._compliant_series.native
         if supports_arrow_c_stream(native_series):
@@ -774,6 +777,9 @@ class Series(Generic[IntoSeriesT]):
     def arg_min(self) -> int:
         """Returns the index of the minimum value.
 
+        Returns:
+            The index of the min value in the Series.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -786,6 +792,9 @@ class Series(Generic[IntoSeriesT]):
 
     def arg_max(self) -> int:
         """Returns the index of the maximum value.
+
+        Returns:
+            The index of the max value in the Series.
 
         Examples:
             >>> import polars as pl
@@ -820,7 +829,7 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements.
+                    where N represents the number of elements.
 
         Returns:
             The standard deviation of all elements in the Series.
@@ -840,7 +849,10 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements.
+                    where N represents the number of elements.
+
+        Returns:
+            The variance of all elements in the Series.
 
         Examples:
             >>> import pyarrow as pa

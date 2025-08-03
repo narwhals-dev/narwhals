@@ -113,7 +113,8 @@ class BaseFrame(Generic[_FrameT]):
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
-        """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        # Process `args` and `kwargs`, extracting underlying objects as we go.
+        # NOTE: Strings are interpreted as column names.
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
@@ -701,6 +702,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
+
+        Returns:
+            A PyCapsule containing a C ArrowArrayStream representation of the object.
         """
         native_frame = self._compliant_frame._native_frame
         if supports_arrow_c_stream(native_frame):
@@ -946,9 +950,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import pyarrow as pa
@@ -1506,7 +1507,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            DataFrame: A new DataFrame with the columns added.
+            New DataFrame with the columns added.
 
         Note:
             Creating a new DataFrame using this method does not create a new copy of
@@ -2791,7 +2792,7 @@ class LazyFrame(BaseFrame[FrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            LazyFrame: A new LazyFrame with the columns added.
+            New LazyFrame with the columns added.
 
         Note:
             Creating a new LazyFrame using this method does not create a new copy of
@@ -3090,9 +3091,6 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import polars as pl
