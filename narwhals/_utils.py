@@ -8,6 +8,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from operator import attrgetter
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -21,9 +22,9 @@ from typing import (
     cast,
     overload,
 )
-from warnings import warn
 
 from narwhals._enum import NoAutoEnum
+from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cudf,
@@ -43,15 +44,8 @@ from narwhals.dependencies import (
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_polars_series,
-    is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    DuplicateError,
-    InvalidOperationError,
-    PerformanceWarning,
-)
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -1255,7 +1249,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import polars as pl
         >>> data = ["x", "y"]
         >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
+        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
 
         Let's define a library-agnostic function:
 
@@ -1268,7 +1262,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> func(s_pd)
         True
         >>> func(s_pl)
-        True
+        False
     """
     from narwhals._interchange.series import InterchangeSeries
 
@@ -1286,11 +1280,15 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         result = False
     else:
         native = series.to_native()
-        if is_polars_series(native):
+        impl = series.implementation
+        if impl.is_polars() and impl._backend_version() < (1, 32):
+            # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
+            # Since version 1.32.0, ordering parameter is ignored and
+            # it always behaves as if 'lexical' was passed.
             result = cast("pl.Categorical", native.dtype).ordering == "physical"
-        elif is_pandas_like_series(native):
+        elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
-        elif is_pyarrow_chunked_array(native):
+        elif impl.is_pyarrow():
             from narwhals._arrow.utils import is_dictionary
 
             result = is_dictionary(native.type) and native.type.ordered
@@ -1429,68 +1427,6 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
         and (first := next(iter(obj), None))
         and isinstance(first, tp)
     )
-
-
-def find_stacklevel() -> int:
-    """Find the first place in the stack that is not inside narwhals.
-
-    Returns:
-        Stacklevel.
-
-    Taken from:
-    https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
-    """
-    import inspect
-    from pathlib import Path
-
-    import narwhals as nw
-
-    pkg_dir = str(Path(nw.__file__).parent)
-
-    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
-    frame = inspect.currentframe()
-    n = 0
-    try:
-        while frame:
-            fname = inspect.getfile(frame)
-            if fname.startswith(pkg_dir) or (
-                (qualname := getattr(frame.f_code, "co_qualname", None))
-                # ignore @singledispatch wrappers
-                and qualname.startswith("singledispatch.")
-            ):
-                frame = frame.f_back
-                n += 1
-            else:  # pragma: no cover
-                break
-        else:  # pragma: no cover
-            pass
-    finally:
-        # https://docs.python.org/3/library/inspect.html
-        # > Though the cycle detector will catch these, destruction of the frames
-        # > (and local variables) can be made deterministic by removing the cycle
-        # > in a finally clause.
-        del frame
-    return n
-
-
-def issue_deprecation_warning(message: str, _version: str) -> None:  # pragma: no cover
-    """Issue a deprecation warning.
-
-    Arguments:
-        message: The message associated with the warning.
-        _version: Narwhals version when the warning was introduced. Just used for internal
-            bookkeeping.
-    """
-    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
-
-
-def issue_performance_warning(message: str) -> None:
-    """Issue a performance warning.
-
-    Arguments:
-        message: The message associated with the warning.
-    """
-    warn(message=message, category=PerformanceWarning, stacklevel=find_stacklevel())
 
 
 def validate_strict_and_pass_though(
@@ -1769,7 +1705,7 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
-    return hasattr(obj, "__native_namespace__")
+    return _hasattr_static(obj, "__native_namespace__")
 
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
@@ -2130,3 +2066,14 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+@lru_cache(maxsize=64)
+def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
+    name = ".".join((attr, *nested)) if nested else attr
+    return attrgetter(name)
+
+
+def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
+    """Perform a nested attribute lookup on `obj`."""
+    return deep_attrgetter(name_1, *nested)(obj)
