@@ -19,7 +19,7 @@ from narwhals._polars.utils import (
     native_to_narwhals_dtype,
 )
 from narwhals._utils import Implementation, requires
-from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -164,9 +164,13 @@ class PolarsSeries:
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        # NOTE: `Iterable` is fine, annotation is overly narrow
-        # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
-        iterable = cast("Sequence[Any]", data)
+        if BACKEND_VERSION < (0, 20, 7) and is_pandas_index(data):  # pragma: no cover
+            # NOTE: Fixed in https://github.com/pola-rs/polars/pull/14087
+            iterable: pd.Series[Any] | Sequence[Any] = data.to_series()
+        else:
+            # NOTE: `Iterable` is *mostly* fine, annotation is overly narrow
+            # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
+            iterable = cast("Sequence[Any]", data)
         native = pl.Series(name=name, values=iterable)
         if dtype:
             native = native.cast(narwhals_to_native_dtype(dtype, version))
