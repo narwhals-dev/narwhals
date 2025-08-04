@@ -33,4 +33,24 @@ class PandasLikeSeriesListNamespace(
         return self.with_native(result.astype(dtype)).alias(self.native.name)
 
     unique = not_implemented()
+
     contains = not_implemented()
+
+    def get(self, index: int) -> PandasLikeSeries:
+        native = self.native
+        native_cls = type(native)
+
+        import pyarrow.compute as pc
+
+        from narwhals._arrow.utils import native_to_narwhals_dtype
+
+        ca = native.array._pa_array
+        result_arr = pc.list_element(ca, index)
+        nw_dtype = native_to_narwhals_dtype(result_arr.type, self.version)
+        out_dtype = narwhals_to_native_dtype(
+            nw_dtype, "pyarrow", self.implementation, self.version
+        )
+        result_native = native_cls(
+            result_arr, dtype=out_dtype, index=native.index, name=native.name
+        )
+        return self.with_native(result_native)
