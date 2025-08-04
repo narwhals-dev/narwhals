@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from narwhals._compliant.expr import NativeExpr
 
 if TYPE_CHECKING:
-    from narwhals._sql.dataframe import SQLLazyFrame
-    from narwhals._sql.expr import SQLExpr
-    from narwhals.dtypes import Boolean
     from typing_extensions import Self
 
-    # TODO: check we 
+    from narwhals._sql.dataframe import SQLLazyFrame
+    from narwhals._sql.expr import SQLExpr
+
+    # TODO: check we
     SQLExprAny = SQLExpr[Any, Any]
     SQLLazyFrameAny = SQLLazyFrame[Any, Any, Any]
 
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)
 SQLLazyFrameT = TypeVar("SQLLazyFrameT", bound="SQLLazyFrameAny")
-NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr") 
+NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr")
+
 
 class NativeSQLExpr(NativeExpr, Protocol):
-    # both Self because we're comparing an expression with an expression? 
+    # both Self because we're comparing an expression with an expression?
     def __gt__(self, value: Any, /) -> Self: ...
 
     def __lt__(self, value: Any, /) -> Self: ...
@@ -43,7 +44,4 @@ class NativeSQLExpr(NativeExpr, Protocol):
 
     # def __mul__(self, value: Self) -> Self: ...
 
-    #def __invert__(self) -> Self: ...
-
-
-
+    # def __invert__(self) -> Self: ...

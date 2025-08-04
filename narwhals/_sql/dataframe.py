@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant.dataframe import CompliantLazyFrame
-from narwhals._compliant.typing import CompliantExprT_contra, NativeExprT, NativeFrameT
+from narwhals._compliant.typing import CompliantExprT_contra, NativeFrameT
 from narwhals._translate import ToNarwhalsT_co
 from narwhals._utils import check_columns_exist
 
