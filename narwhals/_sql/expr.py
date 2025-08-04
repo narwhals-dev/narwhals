@@ -28,15 +28,17 @@ if TYPE_CHECKING:
     from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
-
-class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
-    _call: EvalSeries[SQLLazyFrameT, NativeExprT]
+# am I right in thinking we need to pass NativeSQLExprT here, not NativeExprT? since NativeSQLExprT 
+# inherits from it, I can use that througout in the code and it will also have its parents functionality. 
+# though at the moment there are still problems with the class..
+class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, NativeSQLExprT]):
+    _call: EvalSeries[SQLLazyFrameT, NativeSQLExprT]
     _evaluate_output_names: EvalNames[SQLLazyFrameT]
     _alias_output_names: AliasNames | None
     _version: Version
     _implementation: Implementation
     _metadata: ExprMetadata | None
-    _window_function: WindowFunction[SQLLazyFrameT, NativeExprT] | None
+    _window_function: WindowFunction[SQLLazyFrameT, NativeSQLExprT] | None
 
     def __init__(
         self,

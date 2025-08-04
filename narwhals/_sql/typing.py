@@ -35,8 +35,11 @@ if TYPE_CHECKING:
     # TODO: @mp, understand why these are here & if we need one for NativeSQLExprT;
     # seem to reflect number of different 'catgories' each of the parent class has
     # tbc! since NativeExpr only has Protocol, I don't think we need this for NativeSQLExpr
+    # NativeSQLExpr isn't accepting Any arguments :) I need to go back to the reading on 
+    # cov-, contra- & invariance
     SQLExprAny = SQLExpr[Any, Any]
     SQLLazyFrameAny = SQLLazyFrame[Any, Any, Any]
+    NativeSQLExprAny = NativeSQLExpr
 
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)
