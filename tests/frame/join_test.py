@@ -96,7 +96,11 @@ def test_full_join(
     df_left = nw.from_native(constructor(df1))
     df_right = nw.from_native(constructor(df2))
     result = df_left.join(
-        df_right, on=on, left_on=left_on, right_on=right_on, how="full"
+        df_right,  # type: ignore[arg-type]
+        on=on,
+        left_on=left_on,
+        right_on=right_on,
+        how="full",
     ).sort("id", nulls_last=True)
     assert_equal_data(result, expected)
 
@@ -135,12 +139,12 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(
-        df_right,
+        df_right,  # type: ignore[arg-type]
         left_on=["antananarivo", "bob"],
         right_on=["antananarivo", "bob"],
         how="inner",
     )
-    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")
+    result_on = df.join(df_right, on=["antananarivo", "bob"], how="inner")  # type: ignore[arg-type]
     result = result.sort("idx").drop("idx_right")
     result_on = result_on.sort("idx").drop("idx_right")
     expected = {
@@ -164,9 +168,12 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(
-        df_right, left_on="antananarivo", right_on="antananarivo", how="inner"
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        how="inner",
     ).sort("idx")
-    result_on = df.join(df_right, on="antananarivo", how="inner").sort("idx")
+    result_on = df.join(df_right, on="antananarivo", how="inner").sort("idx")  # type: ignore[arg-type]
     result = result.drop("idx_right")
     result_on = result_on.drop("idx_right")
     expected = {
@@ -186,7 +193,7 @@ def test_cross_join(constructor: Constructor) -> None:
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
-    result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")
+    result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")  # type: ignore[arg-type]
     expected = {
         "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
         "antananarivo_right": [1, 2, 3, 1, 2, 3, 1, 2, 3],
@@ -196,7 +203,7 @@ def test_cross_join(constructor: Constructor) -> None:
     with pytest.raises(
         ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
     ):
-        df.join(df, how="cross", left_on="antananarivo")
+        df.join(df, how="cross", left_on="antananarivo")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("how", ["inner", "left"])
@@ -208,7 +215,7 @@ def test_suffix(
     df = nw.from_native(constructor(data))
     df_right = df
     result = df.join(
-        df_right,
+        df_right,  # type: ignore[arg-type]
         left_on=["antananarivo", "bob"],
         right_on=["antananarivo", "bob"],
         how=how,
@@ -224,7 +231,7 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
     df = nw.from_native(constructor(data))
-    result = df.join(df, how="cross", suffix=suffix).sort(
+    result = df.join(df, how="cross", suffix=suffix).sort(  # type: ignore[arg-type]
         "antananarivo", f"antananarivo{suffix}"
     )
     expected = {
@@ -275,7 +282,7 @@ def test_anti_join(
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
-    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)
+    result = df.join(other, how="anti", left_on=join_key, right_on=join_key)  # type: ignore[arg-type]
     assert_equal_data(result, expected)
 
 
@@ -313,7 +320,7 @@ def test_semi_join(
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
     other = df.filter(filter_expr)
-    result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(
+    result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(  # type: ignore[arg-type]
         "antananarivo"
     )
     assert_equal_data(result, expected)
@@ -346,7 +353,7 @@ def test_left_join(constructor: Constructor) -> None:
     }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on="bob", right_on="co", how="left")
+    result = df_left.join(df_right, left_on="bob", right_on="co", how="left")  # type: ignore[arg-type]
     result = result.sort("idx")
     result = result.drop("idx_right")
     expected = {
@@ -355,7 +362,7 @@ def test_left_join(constructor: Constructor) -> None:
         "idx": [0, 1, 2],
         "antananarivo_right": [1, 2, None],
     }
-    result_on_list = df_left.join(df_right, on=["antananarivo", "idx"], how="left")
+    result_on_list = df_left.join(df_right, on=["antananarivo", "idx"], how="left")  # type: ignore[arg-type]
     result_on_list = result_on_list.sort("idx")
     expected_on_list = {
         "antananarivo": [1, 2, 3],
@@ -373,7 +380,7 @@ def test_left_join_multiple_column(constructor: Constructor) -> None:
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
     result = df_left.join(
-        df_right,
+        df_right,  # type: ignore[arg-type]
         left_on=["antananarivo", "bob"],
         right_on=["antananarivo", "c"],
         how="left",
@@ -399,7 +406,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
     }
     df_left = nw.from_native(constructor(data_left))
     df_right = nw.from_native(constructor(data_right))
-    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")
+    result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")  # type: ignore[arg-type]
     result = result.drop("idx_right")
     expected: dict[str, list[Any]] = {
         "antananarivo": [1, 2, 3],
@@ -410,7 +417,7 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "d_right": [1, 4, 2],
     }
     assert_equal_data(result, expected)
-    result = df_left.join(df_right, left_on="antananarivo", right_on="d", how="left")
+    result = df_left.join(df_right, left_on="antananarivo", right_on="d", how="left")  # type: ignore[arg-type]
     result = result.sort("idx")
     result = result.drop("idx_right")
     expected = {
@@ -500,9 +507,12 @@ def test_joinasof_numeric(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
     result = df.join_asof(
-        df_right, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        strategy=strategy,
     )
-    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)
+    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)  # type: ignore[arg-type]
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_on.sort(by="antananarivo"), expected)
 
@@ -589,9 +599,12 @@ def test_joinasof_time(
         )
     ).sort("datetime")
     result = df.join_asof(
-        df_right, left_on="datetime", right_on="datetime", strategy=strategy
+        df_right,  # type: ignore[arg-type]
+        left_on="datetime",
+        right_on="datetime",
+        strategy=strategy,
     )
-    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)
+    result_on = df.join_asof(df_right, on="datetime", strategy=strategy)  # type: ignore[arg-type]
     assert_equal_data(result.sort(by="datetime"), expected)
     assert_equal_data(result_on.sort(by="datetime"), expected)
 
@@ -617,8 +630,8 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
             {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
         )
     ).sort("antananarivo")
-    result = df.join_asof(df_right, on="antananarivo", by_left="bob", by_right="bob")
-    result_by = df.join_asof(df_right, on="antananarivo", by="bob")
+    result = df.join_asof(df_right, on="antananarivo", by_left="bob", by_right="bob")  # type: ignore[arg-type]
+    result_by = df.join_asof(df_right, on="antananarivo", by="bob")  # type: ignore[arg-type]
     expected = {
         "antananarivo": [1, 5, 7, 10],
         "bob": ["D", "D", "C", "A"],
@@ -645,7 +658,10 @@ def test_joinasof_suffix(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
     result = df.join_asof(
-        df_right, left_on="antananarivo", right_on="antananarivo", suffix="_y"
+        df_right,  # type: ignore[arg-type]
+        left_on="antananarivo",
+        right_on="antananarivo",
+        suffix="_y",
     )
     expected = {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
     assert_equal_data(result.sort(by="antananarivo"), expected)
@@ -663,7 +679,10 @@ def test_joinasof_not_implemented(
         match=rf"Only the following strategies are supported: \('backward', 'forward', 'nearest'\); found '{strategy}'.",
     ):
         df.join_asof(
-            df, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+            df,  # type: ignore[arg-type]
+            left_on="antananarivo",
+            right_on="antananarivo",
+            strategy=strategy,
         )
 
 
@@ -675,31 +694,34 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
         ValueError,
         match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
-        df.join_asof(df, left_on="antananarivo")
+        df.join_asof(df, left_on="antananarivo")  # type: ignore[arg-type]
     with pytest.raises(
         ValueError,
         match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
-        df.join_asof(df, right_on="antananarivo")
+        df.join_asof(df, right_on="antananarivo")  # type: ignore[arg-type]
     with pytest.raises(
         ValueError,
         match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
     ):
-        df.join_asof(df)
+        df.join_asof(df)  # type: ignore[arg-type]
     with pytest.raises(
         ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
         df.join_asof(
-            df, left_on="antananarivo", right_on="antananarivo", on="antananarivo"
+            df,  # type: ignore[arg-type]
+            left_on="antananarivo",
+            right_on="antananarivo",
+            on="antananarivo",
         )
     with pytest.raises(
         ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
-        df.join_asof(df, left_on="antananarivo", on="antananarivo")
+        df.join_asof(df, left_on="antananarivo", on="antananarivo")  # type: ignore[arg-type]
     with pytest.raises(
         ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
     ):
-        df.join_asof(df, right_on="antananarivo", on="antananarivo")
+        df.join_asof(df, right_on="antananarivo", on="antananarivo")  # type: ignore[arg-type]
 
 
 def test_joinasof_by_exceptions(constructor: Constructor) -> None:
@@ -708,35 +730,35 @@ def test_joinasof_by_exceptions(constructor: Constructor) -> None:
     with pytest.raises(
         ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by_right="bob", by="bob")
+        df.join_asof(df, on="antananarivo", by_left="bob", by_right="bob", by="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
         match="Can not specify only `by_left` or `by_right`, you need to specify both.",
     ):
-        df.join_asof(df, on="antananarivo", by_left="bob")
+        df.join_asof(df, on="antananarivo", by_left="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError,
         match="Can not specify only `by_left` or `by_right`, you need to specify both.",
     ):
-        df.join_asof(df, on="antananarivo", by_right="bob")
+        df.join_asof(df, on="antananarivo", by_right="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by="bob")
+        df.join_asof(df, on="antananarivo", by_left="bob", by="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
     ):
-        df.join_asof(df, on="antananarivo", by_right="bob", by="bob")
+        df.join_asof(df, on="antananarivo", by_right="bob", by="bob")  # type: ignore[arg-type]
 
     with pytest.raises(
         ValueError, match="`by_left` and `by_right` must have the same length."
     ):
         df.join_asof(
-            df,
+            df,  # type: ignore[arg-type]
             on="antananarivo",
             by_left=["antananarivo", "bob"],
             by_right=["antananarivo"],
@@ -781,4 +803,4 @@ def test_join_duplicate_column_names(
     df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
     dfn = nw.from_native(df)
     with pytest.raises(exception):
-        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()
+        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()  # type: ignore[arg-type]
