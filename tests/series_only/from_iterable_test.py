@@ -8,7 +8,6 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
-from narwhals.dtypes import DType
 from tests.utils import PANDAS_VERSION, assert_equal_series
 
 if TYPE_CHECKING:
@@ -111,16 +110,6 @@ def _ids_into_iter(obj: Any) -> str:
     return name.removeprefix(__name__).strip(".")
 
 
-def _ids_values_dtype(obj: object) -> str:
-    if isinstance(obj, DType):  # pragma: no cover
-        return obj.__class__.__name__
-    if isinstance(obj, type) and issubclass(obj, DType):
-        return obj.__name__
-    return str(obj)
-
-
-# TODO @dangotbanned: Fix the impl for `pyarrow`
-# Forgot to handle being passed own constructor + a downcast
 @pytest.mark.parametrize(
     ("values", "dtype"),
     [
@@ -129,7 +118,7 @@ def _ids_values_dtype(obj: object) -> str:
         ((2.1, 2.7, 2.0), nw.Float64),
         (("one", "two"), nw.String),
     ],
-    ids=_ids_values_dtype,
+    ids=["Int32", "no-dtype", "Float64", "String"],
 )
 @pytest.mark.parametrize("into_iter", INTO_ITER, ids=_ids_into_iter)
 def test_series_from_iterable(
