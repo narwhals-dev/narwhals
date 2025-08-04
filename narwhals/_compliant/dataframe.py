@@ -11,6 +11,7 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
+    NativeDataFrameT,
     NativeFrameT,
     NativeSeriesT,
 )
@@ -353,10 +354,12 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
+    CompliantDataFrame[
+        EagerSeriesT, EagerExprT, NativeDataFrameT, "DataFrame[NativeDataFrameT]"
+    ],
+    CompliantLazyFrame[EagerExprT, NativeDataFrameT, "DataFrame[NativeDataFrameT]"],
     ValidateBackendVersion,
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
+    Protocol[EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -364,13 +367,15 @@ class EagerDataFrame(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
+    ) -> EagerNamespace[
+        Self, EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT
+    ]: ...
 
-    def to_narwhals(self) -> DataFrame[NativeFrameT]:
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
 
     def _with_native(
-        self, df: NativeFrameT, *, validate_column_names: bool = True
+        self, df: NativeDataFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:

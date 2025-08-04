@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike, Frame, NativeFrame, NativeLazyFrame
+    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -40,8 +40,8 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 
 
