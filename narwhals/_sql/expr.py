@@ -249,7 +249,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             end = 0
 
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             if func_name in {"sum", "mean"}:
                 func_: str = func_name
