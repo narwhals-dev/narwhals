@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._sql.expr import SQLExpr
+    from narwhals._sql.typing import NativeSQLExprT
 
     Incomplete: TypeAlias = Any
 
@@ -21,10 +22,10 @@ class SQLLazyFrame(
 ):
     def _evaluate_window_expr(
         self,
-        expr: SQLExpr[Self, NativeExprT],
+        expr: SQLExpr[Self, NativeSQLExprT],
         /,
-        window_inputs: WindowInputs[NativeExprT],
-    ) -> NativeExprT:
+        window_inputs: WindowInputs[NativeSQLExprT],
+    ) -> NativeSQLExprT:
         result = expr.window_function(self, window_inputs)
         assert len(result) == 1  # debug assertion  # noqa: S101
         return result[0]
