@@ -109,13 +109,12 @@ class PandasLikeSeriesDateTimeNamespace(
     def _get_total_seconds(self) -> Any:
         if hasattr(self.native.dt, "total_seconds"):
             return self.native.dt.total_seconds()
-        else:  # pragma: no cover
-            return (
-                self.native.dt.days * SECONDS_PER_DAY
-                + self.native.dt.seconds
-                + (self.native.dt.microseconds / US_PER_SECOND)
-                + (self.native.dt.nanoseconds / NS_PER_SECOND)
-            )
+        return (  # pragma: no cover
+            self.native.dt.days * SECONDS_PER_DAY
+            + self.native.dt.seconds
+            + (self.native.dt.microseconds / US_PER_SECOND)
+            + (self.native.dt.nanoseconds / NS_PER_SECOND)
+        )
 
     def total_minutes(self) -> PandasLikeSeries:
         s = self._get_total_seconds()

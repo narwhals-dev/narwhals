@@ -174,8 +174,7 @@ class SparkLikeExprDateTimeNamespace(
             return self.compliant._with_elementwise(
                 lambda expr: expr.cast("timestamp_ntz")
             )
-        else:
-            return self._no_op_time_zone(time_zone)
+        return self._no_op_time_zone(time_zone)
 
     def _format_iso_week_with_day(self, expr: Column) -> Column:
         """Format datetime as ISO week string with day."""

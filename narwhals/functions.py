@@ -227,7 +227,7 @@ def _new_series_impl(
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return series.to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             native_series: NativeSeries = _native_namespace.new_series(
@@ -299,7 +299,7 @@ def from_dict(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -395,7 +395,7 @@ def from_numpy(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns.from_numpy(data, schema).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -468,7 +468,7 @@ def from_arrow(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
