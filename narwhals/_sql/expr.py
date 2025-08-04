@@ -102,7 +102,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
         return window_f
 
     def _with_window_function(
-        self, window_function: WindowFunction[SQLLazyFrameT, NativeExprT]
+        self, window_function: WindowFunction[SQLLazyFrameT, NativeSQLExprT]
     ) -> Self:
         return self.__class__(
             self._call,
@@ -165,10 +165,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
         )
 
     @property
-    def window_function(self) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
+    def window_function(self) -> WindowFunction[SQLLazyFrameT, NativeSQLExprT]:
         def default_window_func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
-        ) -> Sequence[NativeExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
+        ) -> Sequence[NativeSQLExprT]:
             assert not inputs.order_by  # noqa: S101
             return [
                 self._window_expression(expr, inputs.partition_by, inputs.order_by)
@@ -277,7 +277,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
             }
             return [
                 self._when(
-                    self._window_expression(  # type: ignore[operator]
+                    self._window_expression(  
                         self._function("count", expr), **window_kwargs
                     )
                     >= self._lit(min_samples),
@@ -308,8 +308,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
             return [func(cols)]
 
         def window_function(
-            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
-        ) -> Sequence[NativeExprT]:
+            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeSQLExprT]
+        ) -> Sequence[NativeSQLExprT]:
             cols = (
                 col for _expr in exprs for col in _expr.window_function(df, window_inputs)
             )
@@ -513,14 +513,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
         return self._with_elementwise(lambda expr: self._function("exp", expr))
 
     def log(self, base: float) -> Self:
-        def _log(expr: NativeExprT) -> NativeExprT:
+        def _log(expr: NativeSQLExprT) -> NativeSQLExprT:
             return self._when(
-                expr < self._lit(0),  # type: ignore[operator]
+                expr < self._lit(0),  
                 self._lit(float("nan")),
                 self._when(
-                    cast("NativeExprT", expr == self._lit(0)),
+                    cast("NativeSQLExprT", expr == self._lit(0)),
                     self._lit(float("-inf")),
-                    self._function("log", expr) / self._function("log", self._lit(base)),  # type: ignore[operator]
+                    self._function("log", expr) / self._function("log", self._lit(base)),  
                 ),
             )
 
@@ -576,10 +576,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
     # Other window functions
     def diff(self) -> Self:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
-        ) -> Sequence[NativeExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
+        ) -> Sequence[NativeSQLExprT]:
             return [
-                expr  # type: ignore[operator]
+                expr
                 - self._window_expression(
                     self._function("lag", expr), inputs.partition_by, inputs.order_by
                 )
@@ -651,13 +651,13 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
             func = self._function("row_number")
 
         def _rank(
-            expr: NativeExprT,
-            partition_by: Sequence[str | NativeExprT] = (),
-            order_by: Sequence[str | NativeExprT] = (),
+            expr: NativeSQLExprT,
+            partition_by: Sequence[str | NativeSQLExprT] = (),
+            order_by: Sequence[str | NativeSQLExprT] = (),
             *,
             descending: Sequence[bool],
             nulls_last: Sequence[bool],
-        ) -> NativeExprT:
+        ) -> NativeSQLExprT:
             count_expr = self._count_star()
             window_kwargs: dict[str, Any] = {
                 "partition_by": partition_by,
@@ -668,25 +668,26 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, N
             count_window_kwargs: dict[str, Any] = {"partition_by": (*partition_by, expr)}
             if method == "max":
                 rank_expr = (
-                    self._window_expression(func, **window_kwargs)  # type: ignore[operator]
+                    self._window_expression(func, **window_kwargs)  
                     + self._window_expression(count_expr, **count_window_kwargs)
                     - self._lit(1)
                 )
             elif method == "average":
                 rank_expr = self._window_expression(func, **window_kwargs) + (
-                    self._window_expression(count_expr, **count_window_kwargs)  # type: ignore[operator]
+                    self._window_expression(count_expr, **count_window_kwargs)  
                     - self._lit(1)
                 ) / self._lit(2.0)
             else:
                 rank_expr = self._window_expression(func, **window_kwargs)
-            return self._when(~self._function("isnull", expr), rank_expr)  # type: ignore[operator]
+                # TODO: @mp, thought I added this to NativeSQLExprT but not working? 
+            return self._when(~self._function("isnull", expr), rank_expr)  # type: ignore[operator] 
 
-        def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
+        def _unpartitioned_rank(expr: NativeSQLExprT) -> NativeSQLExprT:
             return _rank(expr, descending=[descending], nulls_last=[True])
 
         def _partitioned_rank(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
-        ) -> Sequence[NativeExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
+        ) -> Sequence[NativeSQLExprT]:
             # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
             # https://github.com/narwhals-dev/narwhals/issues/2790
             return [

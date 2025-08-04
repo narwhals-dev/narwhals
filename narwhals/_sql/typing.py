@@ -26,6 +26,8 @@ class NativeSQLExpr(NativeExpr):
 
     def __mul__(self, value: Self) -> Self: ...
 
+    def __invert__(self, value: Self) -> Self: ...
+
 if TYPE_CHECKING:
     from narwhals._sql.dataframe import SQLLazyFrame
     from narwhals._sql.expr import SQLExpr
