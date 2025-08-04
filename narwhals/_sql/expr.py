@@ -500,7 +500,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeSQLExprT) -> NativeSQLExprT:
             return self._when(
-                expr < self._lit(0),  
+                expr < self._lit(0),  # type: ignore[operator]
                 self._lit(float("nan")),
                 self._function("sqrt", expr),
             )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar, Self
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from narwhals._compliant.expr import NativeExpr
 
@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from narwhals._sql.dataframe import SQLLazyFrame
     from narwhals._sql.expr import SQLExpr
     from narwhals.dtypes import Boolean
+    from typing_extensions import Self
 
     # TODO: @mp, understand why these are here & if we need one for NativeSQLExprT
     SQLExprAny = SQLExpr[Any, Any]
