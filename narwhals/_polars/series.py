@@ -164,10 +164,12 @@ class PolarsSeries:
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
         # NOTE: `Iterable` is fine, annotation is overly narrow
         # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
-        native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
+        iterable = cast("Sequence[Any]", data)
+        native = pl.Series(name=name, values=iterable)
+        if dtype:
+            native = native.cast(narwhals_to_native_dtype(dtype, version))
         return cls.from_native(native, context=context)
 
     @staticmethod
