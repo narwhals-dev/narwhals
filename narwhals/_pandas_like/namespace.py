@@ -72,8 +72,7 @@ class PandasLikeNamespace(
             import numpy as np
 
             return np
-        else:
-            return import_array_module(self._implementation)
+        return import_array_module(self._implementation)
 
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
