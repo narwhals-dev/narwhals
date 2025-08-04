@@ -188,11 +188,8 @@ def from_native(
 ) -> Series[IntoSeriesT]: ...
 
 
-# NOTE: Seems like `mypy` is giving a false positive
-# Following this advice will introduce overlapping overloads?
-# > note: Flipping the order of overloads will fix this error
 @overload
-def from_native(  # type: ignore[overload-overlap]
+def from_native(
     native_object: IntoLazyFrameT,
     *,
     pass_through: Literal[False] = ...,
