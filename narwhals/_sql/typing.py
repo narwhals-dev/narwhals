@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)
 SQLLazyFrameT = TypeVar("SQLLazyFrameT", bound="SQLLazyFrameAny")
-# TODO: @mp, should this be contravariant as to do with function arguments? think through!
 NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr") 
 
 class NativeSQLExpr(NativeExpr, Protocol):
@@ -44,7 +43,7 @@ class NativeSQLExpr(NativeExpr, Protocol):
 
     # def __mul__(self, value: Self) -> Self: ...
 
-    # def __invert__(self, value: Self) -> Self: ...
+    #def __invert__(self) -> Self: ...
 
 
 
