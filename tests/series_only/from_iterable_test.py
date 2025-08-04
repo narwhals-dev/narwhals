@@ -117,7 +117,14 @@ def _ids_values_dtype(obj: object) -> str:
 # TODO @dangotbanned: Fix the impl for `pyarrow`
 # Forgot to handle being passed own constructor + a downcast
 @pytest.mark.parametrize(
-    ("values", "dtype"), [((4, 1, 2), nw.Int32)], ids=_ids_values_dtype
+    ("values", "dtype"),
+    [
+        ((4, 1, 2), nw.Int32),
+        ((-1, 5, 100), None),
+        ((2.1, 2.7, 2.0), nw.Float64),
+        (("one", "two"), nw.String),
+    ],
+    ids=_ids_values_dtype,
 )
 @pytest.mark.parametrize("into_iter", INTO_ITER, ids=_ids_into_iter)
 def test_series_from_iterable(
@@ -137,7 +144,8 @@ def test_series_from_iterable(
         )
     )
     result = nw.Series.from_iterable(name, iterable, dtype, backend=eager_implementation)
-    assert result.dtype == dtype
+    if dtype:
+        assert result.dtype == dtype
     assert_equal_series(result, values, name)
 
 
