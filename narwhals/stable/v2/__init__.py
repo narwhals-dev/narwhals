@@ -596,9 +596,8 @@ def narwhalify(
 
     if func is None:
         return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    # If func is not None, it means the decorator is used without arguments
+    return decorator(func)
 
 
 def all() -> Expr:

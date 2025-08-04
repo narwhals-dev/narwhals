@@ -181,6 +181,5 @@ def __getattr__(name: _t.Literal["__version__"]) -> str:  # type: ignore[misc]
 
         __version__ = metadata.version(__name__)
         return __version__
-    else:
-        msg = f"module {__name__!r} has no attribute {name!r}"
-        raise AttributeError(msg)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
