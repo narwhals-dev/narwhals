@@ -45,3 +45,10 @@ class ExprListNamespace(Generic[ExprT]):
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.len()
         )
+    
+    def unique(self) -> ExprT:
+        """Get the unique/distinct values in the list.
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).list.unique()
+        )

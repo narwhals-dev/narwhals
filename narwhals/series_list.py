@@ -36,3 +36,10 @@ class SeriesListNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.len()
         )
+
+    def unique(self) -> SeriesT:
+        """Get the unique/distinct values in the list.
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.list.unique()
+        )

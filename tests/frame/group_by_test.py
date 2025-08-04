@@ -658,3 +658,20 @@ def test_group_by_no_preserve_dtype(
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
     assert_equal_data(result, expected)
+
+
+def test_group_by_null_count(constructor: Constructor) -> None:
+    data = {"a": [-1, 2, 2], "b": [None, None, None]}
+    result = (
+        nw.from_native(constructor(data))
+        .group_by("a")
+        .agg(
+            nw.col("b").null_count(),
+        )
+        .sort("a")
+    )
+    expected = {
+        "a": [-1, 2],
+        "b": [1, 2],
+    }
+    assert_equal_data(result, expected)

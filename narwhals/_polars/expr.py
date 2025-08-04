@@ -414,6 +414,9 @@ class PolarsExprListNamespace(
             native_result = native_result.cast(pl.UInt32())
 
         return self.compliant._with_native(native_result)
+    
+    def unique(self) -> PolarsExpr:
+        return self.native.list.unique()
 
 
 class PolarsExprStructNamespace(

@@ -4,10 +4,11 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._duckdb.utils import F
+from narwhals._duckdb.utils import F, lit, when
 
 if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
+    from duckdb import Expression
 
 
 class DuckDBExprListNamespace(
@@ -15,3 +16,9 @@ class DuckDBExprListNamespace(
 ):
     def len(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("len", expr))
+    
+    def unique(self) -> DuckDBExpr:
+        def func(expr: Expression) -> Expression:
+            expr_distinct = F("list_distinct", expr)
+            return when(F("array_position", expr, lit(None)).isnotnull(), F("list_append", expr_distinct, lit(None))).otherwise(expr_distinct)
+        return self.compliant._with_elementwise(func)
