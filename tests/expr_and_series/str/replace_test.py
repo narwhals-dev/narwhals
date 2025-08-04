@@ -191,7 +191,7 @@ def test_str_replace_series_multivalue(
     request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    if "pyarrow_table" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor_eager} does not support multivalue replacement",
@@ -217,7 +217,7 @@ def test_str_replace_all_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor_eager} only supports `replace_all`.",
@@ -252,7 +252,7 @@ def test_str_replace_expr_multivalue(
                 raises=NotImplementedError,
             )
         )
-    elif any(x in str(constructor) for x in ["pyarrow_table", "dask"]):
+    elif any(x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} does not support multivalue replacement",
@@ -281,7 +281,7 @@ def test_str_replace_all_expr_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ["pyarrow_table", "dask"]):
+    if any(x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} does not support multivalue replacement",
@@ -310,18 +310,16 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
     df["a"].str.replace("ab", "XYZ", n=1)
     df["a"].str.replace("ab", "XYZ", n=2)
 
-    # pyarrow does not support multivalue replacement
-    context = (
-        only_str_supported if "pyarrow_table" in str(constructor_eager) else nullcontext()
-    )
+    # pyarrow & pandas does not support multivalue replacement
+    context = nullcontext()
+    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
+        context = only_str_supported
     with context:
         df["a"].str.replace("ab", df["a"])
 
-    # no backends support multivalue AND n > 1
+    # no backends support multivalue AND n > 1; others error out on multivalue
     context = (
-        only_str_supported
-        if "pyarrow_table" in str(constructor_eager)
-        else multivalue_binary_n
+        multivalue_binary_n if "polars" in str(constructor_eager) else only_str_supported
     )
     with context:
         df["a"].str.replace("ab", df["a"], n=2)
@@ -329,9 +327,11 @@ def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
     ## .str.replace_all; all eager backends support scalar replacement
     df["a"].str.replace_all("ab", "XYZ")
 
-    # pyarrow does not support multivalue replacement
+    # pyarrow, pandas, modin do not support multivalue replacement
     context = (
-        only_str_supported if "pyarrow_table" in str(constructor_eager) else nullcontext()
+        only_str_supported
+        if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"])
+        else nullcontext()
     )
     with context:
         df["a"].str.replace_all("ab", df["a"])
@@ -359,7 +359,7 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     context = nullcontext()
     if any(x in str(constructor) for x in ["duckdb", "ibis", "pyspark"]):
         context = not_implemented
-    elif any(x in str(constructor) for x in ["dask", "pyarrow_table"]):
+    elif any(x in str(constructor) for x in ["dask", "pyarrow_table", "pandas", "modin"]):
         context = only_str_supported
 
     with context:
@@ -371,7 +371,9 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     ## .str.replace_all multivalue
     context = (
         only_str_supported
-        if any(x in str(constructor) for x in ["pyarrow_table", "dask"])
+        if any(
+            x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]
+        )
         else nullcontext()
     )
     with context:
