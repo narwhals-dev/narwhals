@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):  # type: ignore[operator]
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):  # pyright: ignore[reportInvalidTypeArguments]
     _implementation = Implementation.IBIS
 
     def __init__(
