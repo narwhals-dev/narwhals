@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):  # type: ignore[operator]
     _implementation = Implementation.IBIS
 
     def __init__(
