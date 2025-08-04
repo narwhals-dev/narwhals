@@ -56,28 +56,33 @@ def dict_values(iterable: Iterable[Any]) -> ValuesView[Any]:
 
 _INTO_ITER_3RD_PARTY: list[IntoIterable] = []
 
-if find_spec("numpy"):
+if find_spec("numpy"):  # pragma: no cover
     import numpy as np
 
     _INTO_ITER_3RD_PARTY.append(np.array)
-if find_spec("pandas"):
+else:  # pragma: no cover
+    ...
+if find_spec("pandas"):  # pragma: no cover
     import pandas as pd
 
     _INTO_ITER_3RD_PARTY.extend([pd.Index, pd.array, pd.Series])
-
-if find_spec("polars"):
+else:  # pragma: no cover
+    ...
+if find_spec("polars"):  # pragma: no cover
     import polars as pl
 
     _INTO_ITER_3RD_PARTY.append(pl.Series)
-
-if find_spec("pyarrow"):
+else:  # pragma: no cover
+    ...
+if find_spec("pyarrow"):  # pragma: no cover
     import pyarrow as pa
 
     def chunked_array(iterable: Any) -> Iterable[Any]:
         return pa.chunked_array([iterable])
 
     _INTO_ITER_3RD_PARTY.extend([pa.array, chunked_array])
-
+else:  # pragma: no cover
+    ...
 
 _INTO_ITER_STDLIB: tuple[IntoIterable, ...] = (
     list,
