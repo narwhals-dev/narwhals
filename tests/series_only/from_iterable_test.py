@@ -114,6 +114,8 @@ def _ids_values_dtype(obj: object) -> str:
     return str(obj)
 
 
+# TODO @dangotbanned: Fix the impl for `pyarrow`
+# Forgot to handle being passed own constructor + a downcast
 @pytest.mark.parametrize(
     ("values", "dtype"), [((4, 1, 2), nw.Int32)], ids=_ids_values_dtype
 )
@@ -123,9 +125,17 @@ def test_series_from_iterable(
     values: Sequence[Any],
     dtype: IntoDType,
     into_iter: IntoIterable,
+    request: pytest.FixtureRequest,
 ) -> None:
     name = "b"
     iterable = into_iter(values)
+    request.applymarker(
+        pytest.mark.xfail(
+            ("polars-pandas" in request.node.name and "array" in request.node.name),
+            raises=TypeError,
+            reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
+        )
+    )
     result = nw.Series.from_iterable(name, iterable, dtype, backend=eager_implementation)
     assert result.dtype == dtype
     assert_equal_series(result, values, name)
