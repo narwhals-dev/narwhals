@@ -15,7 +15,6 @@ from narwhals._polars.utils import (
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
-    check_columns_exist,
     convert_str_slice_to_int_slice,
     is_compliant_series,
     is_index_selector,
@@ -165,11 +164,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
 
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(  # pragma: no cover
-            subset, available=self.columns
-        )
-
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
@@ -262,9 +256,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     # Can't do that here 😟
     write_csv: Method[Any]
     write_parquet: Method[None]
-
-    # CompliantDataFrame
-    _evaluate_aliases: Any
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
@@ -557,10 +548,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
-    # CompliantLazyFrame
     sink_parquet: Method[None]
-    _evaluate_expr: Any
-    _evaluate_aliases: Any
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:
