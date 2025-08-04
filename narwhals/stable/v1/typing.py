@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
 if TYPE_CHECKING:
     import sys
+    from collections.abc import Sized
 
     from narwhals.stable.v1 import DataFrame, LazyFrame
 
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
+
     class NativeSeries(Protocol):
         def __len__(self) -> int: ...
 
@@ -40,7 +43,7 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
+IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrame[Any]", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
