@@ -9,7 +9,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import qualified_type_name
 from narwhals.dtypes import DType
-from tests.utils import assert_equal_series
+from tests.utils import PANDAS_VERSION, assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -146,6 +146,19 @@ def test_series_from_iterable(
             ("polars-pandas" in request.node.name and "array" in request.node.name),
             raises=TypeError,
             reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
+        )
+    )
+    request.applymarker(
+        pytest.mark.xfail(
+            (
+                "pandas-polars" in request.node.name
+                and "String" in request.node.name
+                and PANDAS_VERSION >= (3,)
+            ),
+            reason=(
+                "Pandas nightly suddenly raising on String `pl.Series` in:\n"
+                "https://github.com/pandas-dev/pandas/blob/3ea783ea21e22035cf0a3605cfde3178e9348ee1/pandas/core/arrays/string_arrow.py#L202-L204"
+            ),
         )
     )
     result = nw.Series.from_iterable(name, iterable, dtype, backend=eager_implementation)
