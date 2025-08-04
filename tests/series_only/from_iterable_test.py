@@ -112,7 +112,7 @@ def _ids_into_iter(obj: Any) -> str:
 
 
 def _ids_values_dtype(obj: object) -> str:
-    if isinstance(obj, DType):
+    if isinstance(obj, DType):  # pragma: no cover
         return obj.__class__.__name__
     if isinstance(obj, type) and issubclass(obj, DType):
         return obj.__name__
