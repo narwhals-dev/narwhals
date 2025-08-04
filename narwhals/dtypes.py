@@ -95,6 +95,10 @@ class DType:
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
 
+    @classmethod
+    def is_boolean(cls: type[Self]) -> bool:
+        return issubclass(cls, Boolean)
+
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals._utils import isinstance_or_issubclass
 
