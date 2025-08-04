@@ -421,6 +421,7 @@ class PolarsExprListNamespace(
 
         return self.compliant._with_native(native_result)
 
+
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
 ): ...
