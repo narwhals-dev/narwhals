@@ -219,12 +219,11 @@ class Series(Generic[IntoSeriesT]):
                 values, context=ns, name=name, dtype=dtype
             )
             return cls(compliant, level="full")
-        else:
-            msg = (
-                f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
-                "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-                f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
-            )
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
         raise ValueError(msg)
 
     @property
