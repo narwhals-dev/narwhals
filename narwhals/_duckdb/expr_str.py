@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._duckdb.utils import F, lit, when
+from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -13,14 +12,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
 
 
-class DuckDBExprStringNamespace(
-    LazyExprNamespace["DuckDBExpr"], StringNamespace["DuckDBExpr"]
-):
-    def starts_with(self, prefix: str) -> DuckDBExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: F("starts_with", expr, lit(prefix))
-        )
-
+class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
     def ends_with(self, suffix: str) -> DuckDBExpr:
         return self.compliant._with_elementwise(
             lambda expr: F("ends_with", expr, lit(suffix))
