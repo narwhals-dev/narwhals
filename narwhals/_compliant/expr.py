@@ -1052,6 +1052,9 @@ class EagerExprListNamespace(
     def unique(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "unique")
 
+    def contains(self, item: Any) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "contains", item)
+
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
     _ExprNamespace[CompliantExprT_co],

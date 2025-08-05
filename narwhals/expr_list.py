@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -78,4 +78,38 @@ class ExprListNamespace(Generic[ExprT]):
         """
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.unique()
+        )
+
+    def contains(self, item: Any) -> ExprT:
+        """Check if sublists contain the given item.
+
+        Arguments:
+            item: Item that will be checked for membership.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [[1, 2], None, []]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_contains_1=nw.col("a").list.contains(1))
+            ┌────────────────────────────┐
+            |     Narwhals DataFrame     |
+            |----------------------------|
+            |shape: (3, 2)               |
+            |┌───────────┬──────────────┐|
+            |│ a         ┆ a_contains_1 │|
+            |│ ---       ┆ ---          │|
+            |│ list[i64] ┆ bool         │|
+            |╞═══════════╪══════════════╡|
+            |│ [1, 2]    ┆ true         │|
+            |│ null      ┆ null         │|
+            |│ []        ┆ false        │|
+            |└───────────┴──────────────┘|
+            └────────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).list.contains(item)
         )

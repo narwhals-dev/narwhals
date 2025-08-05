@@ -742,6 +742,11 @@ class PolarsSeriesListNamespace(
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.unique()).get_column(name)
 
+    def contains(self, item: Any) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
+
 
 class PolarsSeriesStructNamespace(
     PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]

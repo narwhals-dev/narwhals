@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._utils import CompliantT_co, _StoresCompliant
 
@@ -54,6 +54,7 @@ class DateTimeNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]
 class ListNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def len(self) -> CompliantT_co: ...
     def unique(self) -> CompliantT_co: ...
+    def contains(self, item: Any) -> CompliantT_co: ...
 
 
 class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Generic
 
-from narwhals.typing import SeriesT
+from narwhals.typing import Any, SeriesT
 
 
 class SeriesListNamespace(Generic[SeriesT]):
@@ -62,4 +62,31 @@ class SeriesListNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.unique()
+        )
+
+    def contains(self, item: Any) -> SeriesT:
+        """Check if sublists contain the given item.
+
+        Arguments:
+            item: Item that will be checked for membership.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([[1, 2], None, []])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.list.contains(1).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [bool]
+            [
+                    true
+                    null
+                    false
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.list.contains(item)
         )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
@@ -27,3 +27,8 @@ class DuckDBExprListNamespace(
             ).otherwise(expr_distinct)
 
         return self.compliant._with_callable(func)
+
+    def contains(self, item: Any) -> DuckDBExpr:
+        return self.compliant._with_elementwise(
+            lambda expr: F("list_contains", expr, item)
+        )
