@@ -9,7 +9,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._sql.typing import NativeSQLExprT, SQLLazyFrameT
+from narwhals._sql.typing import SQLLazyFrameT
 from narwhals._utils import Implementation, Version, not_implemented
 
 if TYPE_CHECKING:
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         AliasNames,
         EvalNames,
         EvalSeries,
+        NativeExprT,
         WindowFunction,
     )
     from narwhals._expression_parsing import ExprMetadata
@@ -29,20 +30,20 @@ if TYPE_CHECKING:
 
 
 class SQLExpr(
-    LazyExpr[SQLLazyFrameT, NativeSQLExprT], Protocol[SQLLazyFrameT, NativeSQLExprT]
+    LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]
 ):
-    _call: EvalSeries[SQLLazyFrameT, NativeSQLExprT]
+    _call: EvalSeries[SQLLazyFrameT, NativeExprT]
     _evaluate_output_names: EvalNames[SQLLazyFrameT]
     _alias_output_names: AliasNames | None
     _version: Version
     _implementation: Implementation
     _metadata: ExprMetadata | None
-    _window_function: WindowFunction[SQLLazyFrameT, NativeSQLExprT] | None
+    _window_function: WindowFunction[SQLLazyFrameT, NativeExprT] | None
 
     def __init__(
         self,
-        call: EvalSeries[SQLLazyFrameT, NativeSQLExprT],
-        window_function: WindowFunction[SQLLazyFrameT, NativeSQLExprT] | None = None,
+        call: EvalSeries[SQLLazyFrameT, NativeExprT],
+        window_function: WindowFunction[SQLLazyFrameT, NativeExprT] | None = None,
         *,
         evaluate_output_names: EvalNames[SQLLazyFrameT],
         alias_output_names: AliasNames | None,
@@ -50,17 +51,17 @@ class SQLExpr(
         implementation: Implementation = Implementation.DUCKDB,
     ) -> None: ...
 
-    def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeSQLExprT]:
+    def __call__(self, df: SQLLazyFrameT) -> Sequence[NativeExprT]:
         return self._call(df)
 
     def __narwhals_namespace__(
         self,
-    ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeSQLExprT]: ...
+    ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
-        self, call: Callable[..., NativeSQLExprT], /, **expressifiable_args: Self | Any
-    ) -> EvalSeries[SQLLazyFrameT, NativeSQLExprT]:
-        def func(df: SQLLazyFrameT) -> list[NativeSQLExprT]:
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> EvalSeries[SQLLazyFrameT, NativeExprT]:
+        def func(df: SQLLazyFrameT) -> list[NativeExprT]:
             native_series_list = self(df)
             other_native_series = {
                 key: df._evaluate_expr(value)
@@ -76,11 +77,11 @@ class SQLExpr(
         return func
 
     def _push_down_window_function(
-        self, call: Callable[..., NativeSQLExprT], /, **expressifiable_args: Self | Any
-    ) -> WindowFunction[SQLLazyFrameT, NativeSQLExprT]:
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+    ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def window_f(
-            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             # If a function `f` is elementwise, and `g` is another function, then
             # - `f(g) over (window)`
             # - `f(g over (window))
@@ -101,7 +102,7 @@ class SQLExpr(
         return window_f
 
     def _with_window_function(
-        self, window_function: WindowFunction[SQLLazyFrameT, NativeSQLExprT]
+        self, window_function: WindowFunction[SQLLazyFrameT, NativeExprT]
     ) -> Self:
         return self.__class__(
             self._call,
@@ -113,7 +114,7 @@ class SQLExpr(
         )
 
     def _with_callable(
-        self, call: Callable[..., NativeSQLExprT], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
     ) -> Self:
         return self.__class__(
             self._callable_to_eval_series(call, **expressifiable_args),
@@ -124,7 +125,7 @@ class SQLExpr(
         )
 
     def _with_elementwise(
-        self, call: Callable[..., NativeSQLExprT], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
     ) -> Self:
         return self.__class__(
             self._callable_to_eval_series(call, **expressifiable_args),
@@ -135,7 +136,7 @@ class SQLExpr(
             implementation=self._implementation,
         )
 
-    def _with_binary(self, op: Callable[..., NativeSQLExprT], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self:
         return self.__class__(
             self._callable_to_eval_series(op, other=other),
             self._push_down_window_function(op, other=other),
@@ -164,10 +165,10 @@ class SQLExpr(
         )
 
     @property
-    def window_function(self) -> WindowFunction[SQLLazyFrameT, NativeSQLExprT]:
+    def window_function(self) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def default_window_func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             assert not inputs.order_by  # noqa: S101
             return [
                 self._window_expression(expr, inputs.partition_by, inputs.order_by)
@@ -177,47 +178,47 @@ class SQLExpr(
         return self._window_function or default_window_func
 
     def _function(
-        self, name: str, *args: NativeSQLExprT | PythonLiteral
-    ) -> NativeSQLExprT:
+        self, name: str, *args: NativeExprT | PythonLiteral
+    ) -> NativeExprT:
         return self.__narwhals_namespace__()._function(name, *args)
 
-    def _lit(self, value: Any) -> NativeSQLExprT:
+    def _lit(self, value: Any) -> NativeExprT:
         return self.__narwhals_namespace__()._lit(value)
 
-    def _coalesce(self, *expr: NativeSQLExprT) -> NativeSQLExprT:
+    def _coalesce(self, *expr: NativeExprT) -> NativeExprT:
         return self.__narwhals_namespace__()._coalesce(*expr)
 
-    def _count_star(self) -> NativeSQLExprT: ...
+    def _count_star(self) -> NativeExprT: ...
 
     def _when(
         self,
-        condition: NativeSQLExprT,
-        value: NativeSQLExprT,
-        otherwise: NativeSQLExprT | None = None,
-    ) -> NativeSQLExprT:
+        condition: NativeExprT,
+        value: NativeExprT,
+        otherwise: NativeExprT | None = None,
+    ) -> NativeExprT:
         return self.__narwhals_namespace__()._when(condition, value, otherwise)
 
     def _window_expression(
         self,
-        expr: NativeSQLExprT,
-        partition_by: Sequence[str | NativeSQLExprT] = (),
-        order_by: Sequence[str | NativeSQLExprT] = (),
+        expr: NativeExprT,
+        partition_by: Sequence[str | NativeExprT] = (),
+        order_by: Sequence[str | NativeExprT] = (),
         rows_start: int | None = None,
         rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
-    ) -> NativeSQLExprT: ...
+    ) -> NativeExprT: ...
 
     def _cum_window_func(
         self,
         func_name: Literal["sum", "max", "min", "count", "product"],
         *,
         reverse: bool,
-    ) -> WindowFunction[SQLLazyFrameT, NativeSQLExprT]:
+    ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 self._window_expression(
                     self._function(func_name, expr),
@@ -240,7 +241,7 @@ class SQLExpr(
         ddof: int | None = None,
         *,
         center: bool,
-    ) -> WindowFunction[SQLLazyFrameT, NativeSQLExprT]:
+    ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         supported_funcs = ["sum", "mean", "std", "var"]
         if center:
             half = (window_size - 1) // 2
@@ -252,8 +253,8 @@ class SQLExpr(
             end = 0
 
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             if func_name in {"sum", "mean"}:
                 func_: str = func_name
             elif func_name == "var" and ddof == 0:
@@ -298,19 +299,19 @@ class SQLExpr(
         return self._implementation._backend_version()
 
     @classmethod
-    def _alias_native(cls, expr: NativeSQLExprT, name: str, /) -> NativeSQLExprT: ...
+    def _alias_native(cls, expr: NativeExprT, name: str, /) -> NativeExprT: ...
 
     @classmethod
     def _from_elementwise_horizontal_op(
-        cls, func: Callable[[Iterable[NativeSQLExprT]], NativeSQLExprT], *exprs: Self
+        cls, func: Callable[[Iterable[NativeExprT]], NativeExprT], *exprs: Self
     ) -> Self:
-        def call(df: SQLLazyFrameT) -> Sequence[NativeSQLExprT]:
+        def call(df: SQLLazyFrameT) -> Sequence[NativeExprT]:
             cols = (col for _expr in exprs for col in _expr(df))
             return [func(cols)]
 
         def window_function(
-            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             cols = (
                 col for _expr in exprs for col in _expr.window_function(df, window_inputs)
             )
@@ -391,12 +392,12 @@ class SQLExpr(
 
     # Aggregations
     def all(self) -> Self:
-        def f(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def f(expr: NativeExprT) -> NativeExprT:
             return self._coalesce(self._function("bool_and", expr), self._lit(True))  # noqa: FBT003
 
         def window_f(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 self._coalesce(
                     self._window_expression(
@@ -410,12 +411,12 @@ class SQLExpr(
         return self._with_callable(f)._with_window_function(window_f)
 
     def any(self) -> Self:
-        def f(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def f(expr: NativeExprT) -> NativeExprT:
             return self._coalesce(self._function("bool_or", expr), self._lit(False))  # noqa: FBT003
 
         def window_f(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 self._coalesce(
                     self._window_expression(
@@ -444,12 +445,12 @@ class SQLExpr(
         return self._with_callable(lambda expr: self._function("count", expr))
 
     def sum(self) -> Self:
-        def f(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def f(expr: NativeExprT) -> NativeExprT:
             return self._coalesce(self._function("sum", expr), self._lit(0))
 
         def window_f(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 self._coalesce(
                     self._window_expression(
@@ -471,15 +472,15 @@ class SQLExpr(
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        def _clip_lower(expr: NativeSQLExprT, lower_bound: Any) -> NativeSQLExprT:
+        def _clip_lower(expr: NativeExprT, lower_bound: Any) -> NativeExprT:
             return self._function("greatest", expr, lower_bound)
 
-        def _clip_upper(expr: NativeSQLExprT, upper_bound: Any) -> NativeSQLExprT:
+        def _clip_upper(expr: NativeExprT, upper_bound: Any) -> NativeExprT:
             return self._function("least", expr, upper_bound)
 
         def _clip_both(
-            expr: NativeSQLExprT, lower_bound: Any, upper_bound: Any
-        ) -> NativeSQLExprT:
+            expr: NativeExprT, lower_bound: Any, upper_bound: Any
+        ) -> NativeExprT:
             return self._function(
                 "greatest", self._function("least", expr, upper_bound), lower_bound
             )
@@ -500,9 +501,9 @@ class SQLExpr(
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
 
-    # WIP: trying new NativeSQLExprT
+    # WIP: trying new NativeExprT
     def sqrt(self) -> Self:
-        def _sqrt(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def _sqrt(expr: NativeExprT) -> NativeExprT:
             return self._when(
                 expr < self._lit(0), self._lit(float("nan")), self._function("sqrt", expr)
             )
@@ -513,12 +514,12 @@ class SQLExpr(
         return self._with_elementwise(lambda expr: self._function("exp", expr))
 
     def log(self, base: float) -> Self:
-        def _log(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def _log(expr: NativeExprT) -> NativeExprT:
             return self._when(
                 expr < self._lit(0),
                 self._lit(float("nan")),
                 self._when(
-                    cast("NativeSQLExprT", expr == self._lit(0)),
+                    cast("NativeExprT", expr == self._lit(0)),
                     self._lit(float("-inf")),
                     self._function("log", expr) / self._function("log", self._lit(base)),
                 ),
@@ -576,8 +577,8 @@ class SQLExpr(
     # Other window functions
     def diff(self) -> Self:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 expr
                 - self._window_expression(
@@ -590,8 +591,8 @@ class SQLExpr(
 
     def shift(self, n: int) -> Self:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 self._window_expression(
                     self._function("lag", expr, n), inputs.partition_by, inputs.order_by
@@ -603,12 +604,12 @@ class SQLExpr(
 
     def is_first_distinct(self) -> Self:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             # pyright checkers think the return type is `list[bool]` because of `==`
             return [
                 cast(
-                    "NativeSQLExprT",
+                    "NativeExprT",
                     self._window_expression(
                         self._function("row_number"),
                         (*inputs.partition_by, expr),
@@ -623,11 +624,11 @@ class SQLExpr(
 
     def is_last_distinct(self) -> Self:
         def func(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             return [
                 cast(
-                    "NativeSQLExprT",
+                    "NativeExprT",
                     self._window_expression(
                         self._function("row_number"),
                         (*inputs.partition_by, expr),
@@ -651,13 +652,13 @@ class SQLExpr(
             func = self._function("row_number")
 
         def _rank(
-            expr: NativeSQLExprT,
-            partition_by: Sequence[str | NativeSQLExprT] = (),
-            order_by: Sequence[str | NativeSQLExprT] = (),
+            expr: NativeExprT,
+            partition_by: Sequence[str | NativeExprT] = (),
+            order_by: Sequence[str | NativeExprT] = (),
             *,
             descending: Sequence[bool],
             nulls_last: Sequence[bool],
-        ) -> NativeSQLExprT:
+        ) -> NativeExprT:
             count_expr = self._count_star()
             window_kwargs: dict[str, Any] = {
                 "partition_by": partition_by,
@@ -679,15 +680,15 @@ class SQLExpr(
                 ) / self._lit(2.0)
             else:
                 rank_expr = self._window_expression(func, **window_kwargs)
-                # TODO: @mp, thought I added this to NativeSQLExprT but not working?
+                # TODO: @mp, thought I added this to NativeExprT but not working?
             return self._when(~self._function("isnull", expr), rank_expr)  # type: ignore[operator]
 
-        def _unpartitioned_rank(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
             return _rank(expr, descending=[descending], nulls_last=[True])
 
         def _partitioned_rank(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
             # https://github.com/narwhals-dev/narwhals/issues/2790
             return [
@@ -707,20 +708,20 @@ class SQLExpr(
 
     def is_unique(self) -> Self:
         def _is_unique(
-            expr: NativeSQLExprT, *partition_by: str | NativeSQLExprT
-        ) -> NativeSQLExprT:
+            expr: NativeExprT, *partition_by: str | NativeExprT
+        ) -> NativeExprT:
             return cast(
-                "NativeSQLExprT",
+                "NativeExprT",
                 self._window_expression(self._count_star(), (expr, *partition_by))
                 == self._lit(1),
             )
 
-        def _unpartitioned_is_unique(expr: NativeSQLExprT) -> NativeSQLExprT:
+        def _unpartitioned_is_unique(expr: NativeExprT) -> NativeExprT:
             return _is_unique(expr)
 
         def _partitioned_is_unique(
-            df: SQLLazyFrameT, inputs: WindowInputs[NativeSQLExprT]
-        ) -> Sequence[NativeSQLExprT]:
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
             assert not inputs.order_by  # noqa: S101
             return [_is_unique(expr, *inputs.partition_by) for expr in self(df)]
 
@@ -730,9 +731,9 @@ class SQLExpr(
 
     # Other
     def over(
-        self, partition_by: Sequence[str | NativeSQLExprT], order_by: Sequence[str]
+        self, partition_by: Sequence[str | NativeExprT], order_by: Sequence[str]
     ) -> Self:
-        def func(df: SQLLazyFrameT) -> Sequence[NativeSQLExprT]:
+        def func(df: SQLLazyFrameT) -> Sequence[NativeExprT]:
             return self.window_function(df, WindowInputs(partition_by, order_by))
 
         return self.__class__(
