@@ -473,8 +473,8 @@ def test_renamed_taxicab_norm_dataframe() -> None:
     result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))._l1_norm()
     expected = {"a": [15]}
     assert_equal_data(result, expected)
-    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
-    assert_equal_data(result, expected)
+    result_lazy = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
+    assert_equal_data(result_lazy, expected)
 
 
 def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
