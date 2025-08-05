@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
-from narwhals.typing import Any, SeriesT
+from narwhals.typing import SeriesT
+
+if TYPE_CHECKING:
+    from narwhals.typing import NonNestedLiteral
 
 
 class SeriesListNamespace(Generic[SeriesT]):
@@ -64,7 +67,7 @@ class SeriesListNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.list.unique()
         )
 
-    def contains(self, item: Any) -> SeriesT:
+    def contains(self, item: NonNestedLiteral) -> SeriesT:
         """Check if sublists contain the given item.
 
         Arguments:

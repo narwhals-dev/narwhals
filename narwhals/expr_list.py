@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
+    from narwhals.typing import NonNestedLiteral
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -80,7 +81,7 @@ class ExprListNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).list.unique()
         )
 
-    def contains(self, item: Any) -> ExprT:
+    def contains(self, item: NonNestedLiteral) -> ExprT:
         """Check if sublists contain the given item.
 
         Arguments:
