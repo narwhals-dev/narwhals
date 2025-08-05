@@ -107,8 +107,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -116,8 +115,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self) -> type[Window]:  # noqa: N802
@@ -125,8 +123,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             from sqlframe.base.window import Window
 
             return Window
-        else:
-            return import_window(self._implementation)
+        return import_window(self._implementation)
 
     def _sort(
         self,
@@ -376,24 +373,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         return self._with_elementwise(_fill_constant, value=value)
-
-    def log(self, base: float) -> Self:
-        def _log(expr: Column) -> Column:
-            return (
-                self._F.when(expr < 0, self._F.lit(float("nan")))
-                .when(expr == 0, self._F.lit(float("-inf")))
-                .otherwise(self._F.log(float(base), expr))
-            )
-
-        return self._with_elementwise(_log)
-
-    def sqrt(self) -> Self:
-        def _sqrt(expr: Column) -> Column:
-            return self._F.when(expr < 0, self._F.lit(float("nan"))).otherwise(
-                self._F.sqrt(expr)
-            )
-
-        return self._with_elementwise(_sqrt)
 
     @property
     def str(self) -> SparkLikeExprStringNamespace:

@@ -7,12 +7,17 @@ from datetime import timezone
 from itertools import starmap
 from typing import TYPE_CHECKING
 
-from narwhals._utils import _DeferredIterable, isinstance_or_issubclass
+from narwhals._utils import (
+    _DeferredIterable,
+    isinstance_or_issubclass,
+    qualified_type_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
+    from typing import Any
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeIs
 
     from narwhals.typing import IntoDType, TimeUnit
 
@@ -23,6 +28,34 @@ def _validate_dtype(dtype: DType | type[DType]) -> None:
             f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
             "Hint: if you were trying to cast to a type, use e.g. nw.Int64 instead of 'int64'."
         )
+        raise TypeError(msg)
+
+
+def _is_into_dtype(obj: Any) -> TypeIs[IntoDType]:
+    return isinstance(obj, DType) or (
+        isinstance(obj, type)
+        and issubclass(obj, DType)
+        and not issubclass(obj, NestedType)
+    )
+
+
+def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
+    return isinstance(obj, type) and issubclass(obj, NestedType)
+
+
+def _validate_into_dtype(dtype: Any) -> None:
+    if not _is_into_dtype(dtype):
+        if _is_nested_type(dtype):
+            name = f"nw.{dtype.__name__}"
+            msg = (
+                f"{name!r} is not valid in this context.\n\n"
+                f"Hint: instead of:\n\n"
+                f"    {name}\n\n"
+                "use:\n\n"
+                f"    {name}(...)"
+            )
+        else:
+            msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
         raise TypeError(msg)
 
 
@@ -61,6 +94,10 @@ class DType:
     @classmethod
     def is_nested(cls: type[Self]) -> bool:
         return issubclass(cls, NestedType)
+
+    @classmethod
+    def is_boolean(cls: type[Self]) -> bool:
+        return issubclass(cls, Boolean)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
         from narwhals._utils import isinstance_or_issubclass
@@ -378,10 +415,9 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         # allow comparing object instances to class
         if type(other) is _DatetimeMeta:
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.time_unit == other.time_unit and self.time_zone == other.time_zone
-        else:  # pragma: no cover
-            return False
+        return False  # pragma: no cover
 
     def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit, self.time_zone))
@@ -431,10 +467,9 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         # allow comparing object instances to class
         if type(other) is _DurationMeta:
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.time_unit == other.time_unit
-        else:  # pragma: no cover
-            return False
+        return False  # pragma: no cover
 
     def __hash__(self) -> int:  # pragma: no cover
         return hash((self.__class__, self.time_unit))
@@ -483,12 +518,11 @@ class Enum(DType):
     def categories(self) -> tuple[str, ...]:
         if cached := self._cached_categories:
             return cached
-        elif delayed := self._delayed_categories:
+        if delayed := self._delayed_categories:
             self._cached_categories = delayed.to_tuple()
             return self._cached_categories
-        else:  # pragma: no cover
-            msg = f"Internal structure of {type(self).__name__!r} is invalid."
-            raise TypeError(msg)
+        msg = f"Internal structure of {type(self).__name__!r} is invalid."  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     def __eq__(self, other: object) -> bool:
         # allow comparing object instances to class
@@ -569,10 +603,9 @@ class Struct(NestedType):
         # as being equal. (See the List type for more info).
         if type(other) is type and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.fields == other.fields
-        else:
-            return False
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, tuple(self.fields)))
@@ -628,10 +661,9 @@ class List(NestedType):
         # allow comparing object instances to class
         if type(other) is type and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             return self.inner == other.inner
-        else:
-            return False
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, self.inner))
@@ -689,13 +721,11 @@ class Array(NestedType):
         # allow comparing object instances to class
         if type(other) is type and issubclass(other, self.__class__):
             return True
-        elif isinstance(other, self.__class__):
+        if isinstance(other, self.__class__):
             if self.shape != other.shape:
                 return False
-            else:
-                return self.inner == other.inner
-        else:
-            return False
+            return self.inner == other.inner
+        return False
 
     def __hash__(self) -> int:
         return hash((self.__class__, self.inner, self.shape))

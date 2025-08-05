@@ -63,8 +63,15 @@ class DuckDBNamespace(
     def _lit(self, value: Any) -> Expression:
         return lit(value)
 
-    def _when(self, condition: Expression, value: Expression) -> Expression:
-        return when(condition, value)
+    def _when(
+        self,
+        condition: Expression,
+        value: Expression,
+        otherwise: Expression | None = None,
+    ) -> Expression:
+        if otherwise is None:
+            return when(condition, value)
+        return when(condition, value).otherwise(otherwise)
 
     def _coalesce(self, *exprs: Expression) -> Expression:
         return CoalesceOperator(*exprs)
@@ -100,8 +107,7 @@ class DuckDBNamespace(
                     for y in x
                 ]
                 return [when(~null_mask_result, concat_str(*cols_separated))]
-            else:
-                return [concat_str(*cols, separator=separator)]
+            return [concat_str(*cols, separator=separator)]
 
         return self._expr(
             call=func,

@@ -13,8 +13,8 @@ from typing import (
     TypeVar,
     overload,
 )
-from warnings import warn
 
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
     all_exprs_are_scalar_like,
@@ -24,7 +24,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
-    find_stacklevel,
+    check_columns_exist,
     flatten,
     generate_repr,
     is_compliant_dataframe,
@@ -34,7 +34,6 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
-    issue_performance_warning,
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import (
@@ -43,7 +42,12 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.exceptions import InvalidIntoExprError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    InvalidIntoExprError,
+    InvalidOperationError,
+    PerformanceWarning,
+)
 from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
 from narwhals.series import Series
@@ -110,7 +114,8 @@ class BaseFrame(Generic[_FrameT]):
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
-        """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        # Process `args` and `kwargs`, extracting underlying objects as we go.
+        # NOTE: Strings are interpreted as column names.
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
@@ -126,6 +131,9 @@ class BaseFrame(Generic[_FrameT]):
     @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
     @property
     def schema(self) -> Schema:
@@ -174,7 +182,7 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                if error := self._compliant_frame._check_columns_exist(flat_exprs):
+                if error := self._check_columns_exist(flat_exprs):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
@@ -698,6 +706,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
+
+        Returns:
+            A PyCapsule containing a C ArrowArrayStream representation of the object.
         """
         native_frame = self._compliant_frame._native_frame
         if supports_arrow_c_stream(native_frame):
@@ -897,9 +908,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import pyarrow as pa
@@ -1457,7 +1465,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            DataFrame: A new DataFrame with the columns added.
+            New DataFrame with the columns added.
 
         Note:
             Creating a new DataFrame using this method does not create a new copy of
@@ -2196,7 +2204,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
                 "You can safely remove this argument."
             )
-            warn(message=msg, category=UserWarning, stacklevel=find_stacklevel())
+            issue_warning(msg, UserWarning)
         on = [on] if isinstance(on, str) else on
         values = [values] if isinstance(values, str) else values
         index = [index] if isinstance(index, str) else index
@@ -2692,7 +2700,7 @@ class LazyFrame(BaseFrame[FrameT]):
                 "Resolving the schema of a LazyFrame is a potentially expensive operation. "
                 "Use `LazyFrame.collect_schema()` to get the schema without this warning."
             )
-            issue_performance_warning(msg)
+            issue_warning(msg, PerformanceWarning)
         return super().schema
 
     def collect_schema(self) -> Schema:
@@ -2742,7 +2750,7 @@ class LazyFrame(BaseFrame[FrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            LazyFrame: A new LazyFrame with the columns added.
+            New LazyFrame with the columns added.
 
         Note:
             Creating a new LazyFrame using this method does not create a new copy of
@@ -3041,9 +3049,6 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import polars as pl

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import warnings
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any
 
+from narwhals._exceptions import issue_warning
 from narwhals._namespace import is_native_spark_like
 from narwhals._spark_like.utils import (
     catch_pyspark_connect_exception,
@@ -19,7 +19,6 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
-    find_stacklevel,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -83,8 +82,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -92,8 +90,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self) -> type[Window]:  # noqa: N802
@@ -101,8 +98,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base.window import Window
 
             return Window
-        else:
-            return import_window(self._implementation)
+        return import_window(self._implementation)
 
     @staticmethod
     def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
@@ -156,9 +152,9 @@ class SparkLikeLazyFrame(
                 # We can avoid the check when we introduce `nw.Null` dtype.
                 null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
                 if not isinstance(native_spark_dtype, null_type):
-                    warnings.warn(
+                    issue_warning(
                         f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
-                        stacklevel=find_stacklevel(),
+                        UserWarning,
                     )
                 schema.append((key, pa.null()))
             else:
@@ -178,8 +174,7 @@ class SparkLikeLazyFrame(
                     data: dict[str, list[Any]] = {k: [] for k in self.columns}
                     pa_schema = self._to_arrow_schema()
                     return pa.Table.from_pydict(data, schema=pa_schema)
-                else:  # pragma: no cover
-                    raise
+                raise  # pragma: no cover
         elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
@@ -216,7 +211,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is None or backend is Implementation.PYARROW:
+        if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
@@ -226,7 +221,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is Implementation.POLARS:
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -475,7 +470,7 @@ class SparkLikeLazyFrame(
                     ]
                 )
             )
-        elif self._implementation.is_sqlframe():
+        if self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
             # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
             # therefore we simply explode the array column which will ignore nulls and
@@ -504,9 +499,8 @@ class SparkLikeLazyFrame(
                     )
                 )
             )
-        else:  # pragma: no cover
-            msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+        msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
+        raise AssertionError(msg)
 
     def unpivot(
         self,

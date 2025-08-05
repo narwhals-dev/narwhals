@@ -223,13 +223,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def _std(expr: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return expr.std(how="pop")
-            elif ddof == 1:
+            if ddof == 1:
                 return expr.std(how="sample")
-            else:
-                n_samples = expr.count()
-                std_pop = expr.std(how="pop")
-                ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
-                return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
+            n_samples = expr.count()
+            std_pop = expr.std(how="pop")
+            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
 
         return self._with_callable(lambda expr: _std(expr, ddof))
 
@@ -237,13 +236,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def _var(expr: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return expr.var(how="pop")
-            elif ddof == 1:
+            if ddof == 1:
                 return expr.var(how="sample")
-            else:
-                n_samples = expr.count()
-                var_pop = expr.var(how="pop")
-                ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
-                return var_pop * n_samples / (n_samples - ddof_lit)
+            n_samples = expr.count()
+            var_pop = expr.var(how="pop")
+            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            return var_pop * n_samples / (n_samples - ddof_lit)
 
         return self._with_callable(lambda expr: _var(expr, ddof))
 
@@ -323,23 +321,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             return cast("ir.Column", ibis.cases((expr.notnull(), rank_)))
 
         return self._with_callable(_rank)
-
-    def log(self, base: float) -> Self:
-        def _log(expr: ir.NumericColumn) -> ir.Value:
-            otherwise = expr.log(cast("ir.NumericValue", lit(base)))
-            return ibis.cases(
-                (expr < lit(0), lit(float("nan"))),
-                (expr == lit(0), lit(float("-inf"))),
-                else_=otherwise,
-            )
-
-        return self._with_callable(_log)
-
-    def sqrt(self) -> Self:
-        def _sqrt(expr: ir.NumericColumn) -> ir.Value:
-            return ibis.cases((expr < lit(0), lit(float("nan"))), else_=expr.sqrt())
-
-        return self._with_callable(_sqrt)
 
     @property
     def str(self) -> IbisExprStringNamespace:
