@@ -676,7 +676,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 ) / self._lit(2.0)
             else:
                 rank_expr = self._window_expression(func, **window_kwargs)
-                # TODO: @mp, thought I added this to NativeExprT but not working?
             return self._when(~self._function("isnull", expr), rank_expr)  # type: ignore[operator]
 
         def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
