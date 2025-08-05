@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar
 
-#from narwhals._compliant.expr import NativeExpr
+# from narwhals._compliant.expr import NativeExpr
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
 
     from narwhals._sql.dataframe import SQLLazyFrame
     from narwhals._sql.expr import SQLExpr

@@ -6,11 +6,10 @@ from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import (
     AliasNames,
     EvalNames,
-    WindowFunction, 
-    EvalSeries, 
-    NativeExprT, 
-    WindowFunction
-    )
+    EvalSeries,
+    NativeExprT,
+    WindowFunction,
+)
 from narwhals._compliant.window import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -30,9 +29,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
 
-class SQLExpr(
-    LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]
-):
+class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
     _call: EvalSeries[SQLLazyFrameT, NativeExprT]
     _evaluate_output_names: EvalNames[SQLLazyFrameT]
     _alias_output_names: AliasNames | None
@@ -178,9 +175,7 @@ class SQLExpr(
 
         return self._window_function or default_window_func
 
-    def _function(
-        self, name: str, *args: NativeExprT | PythonLiteral
-    ) -> NativeExprT:
+    def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT:
         return self.__narwhals_namespace__()._function(name, *args)
 
     def _lit(self, value: Any) -> NativeExprT:
