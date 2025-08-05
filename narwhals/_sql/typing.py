@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, TypeVar
 # from narwhals._compliant.expr import NativeExpr
 
 if TYPE_CHECKING:
-
     from narwhals._sql.dataframe import SQLLazyFrame
     from narwhals._sql.expr import SQLExpr
 
