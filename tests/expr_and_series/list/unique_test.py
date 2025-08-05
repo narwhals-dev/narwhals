@@ -1,31 +1,34 @@
 from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None]]}
-expected = {"a": [[None, 2, 3]]}
-expected_nulls_first= {"a": [None, 2, 3]}
-expected_nulls_last= {'a': [[2, 3, None]]}
+expected = {2, 3, None}
 
 
 def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
-
-    result = nw.from_native(constructor(data)).select(
-        nw.col("a").cast(nw.List(nw.Int32())).list.unique()
+    result = (
+        nw.from_native(constructor(data))
+        .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique())
+        .lazy()
+        .collect()["a"]
+        .to_list()
     )
-    if any(backend in str(constructor) for backend in ("duckdb", "sqlframe", "pyspark", "polars", "ibis")):
-        result = result.explode("a").sort("a")
-        assert_equal_data(result, expected_nulls_first)
-    elif any(backend in str(constructor) for backend in ("pandas", "pyarrow")):
-        assert_equal_data(result, expected_nulls_last)
-    else:
-        assert_equal_data(result, expected)
+    # We don't yet have `.list.sort` to get deterministic order, and pyarrow
+    # doesn't support `explode`, so we can't guarantee the order of elements.
+    # However, we can check that the unique values are present.
+    assert len(result) == 1
+    assert len(result[0]) == 3
+    assert set(result[0]) == {2, 3, None}
 
 
 def test_unique_series(
@@ -33,11 +36,8 @@ def test_unique_series(
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor_eager(data), eager_only=True)
-
-    result = df["a"].cast(nw.List(nw.Int32())).list.unique()
-    if any(backend in str(constructor_eager) for backend in ("pandas", "pyarrow")):
-        assert_equal_data({"a": result}, expected_nulls_last)
-    else:
-        assert_equal_data({"a": result}, expected)
+    result = df["a"].cast(nw.List(nw.Int32())).list.unique().to_list()
+    assert len(result) == 1
+    assert len(result[0]) == 3
+    assert set(result[0]) == {2, 3, None}
