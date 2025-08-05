@@ -1053,7 +1053,7 @@ class EagerExprListNamespace(
         return self.compliant._reuse_series_namespace("list", "unique")
 
     def get(self, index: int) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("list", "get")
+        return self.compliant._reuse_series_namespace("list", "get", index=index)
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
