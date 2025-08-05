@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -230,10 +230,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     raise AssertionError(msg)
 
 
-class ArrowToPandas(
-    CompliantToPandas[ToPandasFromT_co, ToPandasToT_co],
-    Generic[ToPandasFromT_co, ToPandasToT_co],
-):
+class ArrowToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
     def to_pandas(
         self,
         *,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 import pandas as pd
 
@@ -678,10 +678,7 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
 
 
 class PandasLikeToPandas(
-    _StoresNative[Any],
-    _StoresImplementation,
-    ToPandas[ToPandasToT_co],
-    Generic[ToPandasToT_co],
+    _StoresNative[Any], _StoresImplementation, ToPandas[ToPandasToT_co]
 ):
     def to_pandas(
         self,

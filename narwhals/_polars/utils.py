@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Generic,
-    Literal,
-    Protocol,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar, overload
 
 import polars as pl
 
@@ -264,10 +255,7 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     return exception
 
 
-class PolarsToPandas(
-    CompliantToPandas[ToPandasFromT_co, ToPandasToT_co],
-    Generic[ToPandasFromT_co, ToPandasToT_co],
-):
+class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
     def to_pandas(
         self,
         *,
