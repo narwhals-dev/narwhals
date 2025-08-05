@@ -13,11 +13,6 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
-    def ends_with(self, suffix: str) -> DuckDBExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: F("ends_with", expr, lit(suffix))
-        )
-
     def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
             if literal:
@@ -47,12 +42,6 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
 
     def len_chars(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("length", expr))
-
-    def to_lowercase(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("lower", expr))
-
-    def to_uppercase(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("upper", expr))
 
     def strip_chars(self, characters: str | None) -> DuckDBExpr:
         import string

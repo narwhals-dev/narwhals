@@ -3,9 +3,8 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._spark_like.utils import strptime_to_pyspark_format
+from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
@@ -14,9 +13,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
-class SparkLikeExprStringNamespace(
-    LazyExprNamespace["SparkLikeExpr"], StringNamespace["SparkLikeExpr"]
-):
+class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def len_chars(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.char_length)
 
@@ -41,16 +38,6 @@ class SparkLikeExprStringNamespace(
             return self.compliant._F.btrim(expr, self.compliant._F.lit(to_remove))
 
         return self.compliant._with_elementwise(func)
-
-    def starts_with(self, prefix: str) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: self.compliant._F.startswith(expr, self.compliant._F.lit(prefix))
-        )
-
-    def ends_with(self, suffix: str) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: self.compliant._F.endswith(expr, self.compliant._F.lit(suffix))
-        )
 
     def contains(self, pattern: str, *, literal: bool) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
@@ -81,12 +68,6 @@ class SparkLikeExprStringNamespace(
         return self.compliant._with_elementwise(
             lambda expr: self.compliant._F.split(expr, by)
         )
-
-    def to_uppercase(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.upper)
-
-    def to_lowercase(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.lower)
 
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
