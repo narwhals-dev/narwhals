@@ -38,14 +38,11 @@ class SQLExprStringNamespace(
         )
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> SQLExprT:
+        options = [self._lit("g")] if self.compliant._implementation.is_duckdb() else []
         if not literal:
             return self.compliant._with_elementwise(
                 lambda expr: self._function(
-                    "regexp_replace",
-                    expr,
-                    self._lit(pattern),
-                    self._lit(value),
-                    self._lit("g"),
+                    "regexp_replace", expr, self._lit(pattern), self._lit(value), *options
                 )
             )
         return self.compliant._with_elementwise(
