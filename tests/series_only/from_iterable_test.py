@@ -130,9 +130,10 @@ def test_series_from_iterable(
 ) -> None:
     name = "b"
     iterable = into_iter(values)
+    test_name = request.node.name
     request.applymarker(
         pytest.mark.xfail(
-            ("polars-pandas" in request.node.name and "array" in request.node.name),
+            ("polars-pandas" in test_name and "array" in test_name),
             raises=TypeError,
             reason="Polars doesn't support `pd.array`.\nhttps://github.com/pola-rs/polars/issues/22757",
         )
@@ -140,8 +141,8 @@ def test_series_from_iterable(
     request.applymarker(
         pytest.mark.xfail(
             (
-                "pandas-polars" in request.node.name
-                and "String" in request.node.name
+                "pandas-polars" in test_name
+                and "String" in test_name
                 and PANDAS_VERSION >= (3,)
             ),
             reason=(
@@ -150,6 +151,14 @@ def test_series_from_iterable(
             ),
         )
     )
+    if (
+        "pandas-pyarrow" in test_name
+        and "array-String" in test_name
+        and PANDAS_VERSION < (2, 1)
+    ):  # pragma: no cover
+        pytest.skip(
+            "pandas being pandas with strings https://github.com/narwhals-dev/narwhals/pull/2933#issuecomment-3156009516"
+        )
     result = nw.Series.from_iterable(name, iterable, dtype, backend=eager_implementation)
     if dtype:
         assert result.dtype == dtype
