@@ -6,12 +6,13 @@ import narwhals as nw
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 1), reason="requires polars 1.1+")
 def test_ew_mean(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 1):
+        pytest.skip()
 
     data = {
         "time": [
