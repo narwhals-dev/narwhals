@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol, cast
 
 from narwhals._compliant.expr import LazyExpr
-from narwhals._compliant.typing import AliasNames, WindowFunction
+from narwhals._compliant.typing import (
+    AliasNames,
+    EvalNames,
+    WindowFunction, 
+    EvalSeries, 
+    NativeExprT, 
+    WindowFunction
+    )
 from narwhals._compliant.window import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -17,13 +24,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant.typing import (
-        AliasNames,
-        EvalNames,
-        EvalSeries,
-        NativeExprT,
-        WindowFunction,
-    )
+    from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
