@@ -53,6 +53,7 @@ class DateTimeNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]
 
 class ListNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def len(self) -> CompliantT_co: ...
+    def unique(self) -> CompliantT_co: ...
 
 
 class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
