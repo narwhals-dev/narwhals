@@ -29,6 +29,15 @@ if TYPE_CHECKING:
     from narwhals._utils import Implementation, Version
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
 
+# Adjust slight SQL vs PySpark differences
+FUNCTION_REMAPPINGS = {
+    "starts_with": "startswith",
+    "ends_with": "endswith",
+    "trim": "btrim",
+    "str_split": "split",
+    "regexp_matches": "regexp",
+}
+
 
 class SparkLikeNamespace(
     SQLNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame", "Column"]
@@ -66,7 +75,7 @@ class SparkLikeNamespace(
         return import_native_dtypes(self._implementation)
 
     def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
-        return getattr(self._F, name)(*args)
+        return getattr(self._F, FUNCTION_REMAPPINGS.get(name, name))(*args)
 
     def _lit(self, value: Any) -> Column:
         return self._F.lit(value)
