@@ -86,6 +86,25 @@ class SeriesListNamespace(Generic[SeriesT]):
         )
 
     def get(self, index: int) -> SeriesT:
+        """Return the value by index in each list.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([[1, 2], [3, 4, None], [None, 5]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.list.get(1).to_native()
+            shape: (3,)
+            Series: '' [i64]
+            [
+                    2
+                    4
+                    5
+            ]
+        """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.get(index)
         )

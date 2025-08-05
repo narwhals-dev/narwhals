@@ -107,6 +107,32 @@ class ExprListNamespace(Generic[ExprT]):
         )
 
     def get(self, index: int) -> ExprT:
+        """Return the value by index in each list.
+
+        Returns:
+            A new expression.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [[1, 2], [3, 4, None], [None, 5]]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_first=nw.col("a").list.get(0))
+            ┌──────────────────────────┐
+            |    Narwhals DataFrame    |
+            |--------------------------|
+            |shape: (3, 2)             |
+            |┌──────────────┬─────────┐|
+            |│ a            ┆ a_first │|
+            |│ ---          ┆ ---     │|
+            |│ list[i64]    ┆ i64     │|
+            |╞══════════════╪═════════╡|
+            |│ [1, 2]       ┆ 1       │|
+            |│ [3, 4, null] ┆ 3       │|
+            |│ [null, 5]    ┆ null    │|
+            |└──────────────┴─────────┘|
+            └──────────────────────────┘
+        """
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.get(index)
         )
