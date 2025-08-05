@@ -248,10 +248,9 @@ class ArrowToPandas(
                 found = requires._unparse_version(pd_version)
                 msg = f"`to_pandas(use_pyarrow_extension_array=True)` is only available in 'pandas>=1.5.0', found version {found!r}."
                 raise NotImplementedError(msg)
-            types_mapper = kwds.pop(
+            kwds["types_mapper"] = kwds.pop(
                 "types_mapper", lambda pa_dtype: pd.ArrowDtype(pa_dtype)
             )
-            kwds["types_mapper"] = types_mapper
         return self.native.to_pandas(**kwds)
 
 
