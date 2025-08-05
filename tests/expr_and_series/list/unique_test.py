@@ -9,7 +9,7 @@ import narwhals as nw
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
-data = {"a": [[2, 2, 3, None, None], None, []]}
+data = {"a": [[2, 2, 3, None, None], None, [], [None]]}
 expected = {2, 3, None}
 
 
@@ -30,11 +30,12 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     # We don't yet have `.list.sort` to get deterministic order, and pyarrow
     # doesn't support `explode`, so we can't guarantee the order of elements.
     # However, we can check that the unique values are present.
-    assert len(result) == 3
+    assert len(result) == 4
     assert len(result[0]) == 3
     assert set(result[0]) == {2, 3, None}
     assert result[1] is None
     assert len(result[2]) == 0
+    assert len(result[3]) == 1
 
 
 def test_unique_series(
@@ -47,8 +48,9 @@ def test_unique_series(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.unique().to_list()
-    assert len(result) == 3
+    assert len(result) == 4
     assert len(result[0]) == 3
     assert set(result[0]) == {2, 3, None}
     assert result[1] is None
     assert len(result[2]) == 0
+    assert len(result[3]) == 1

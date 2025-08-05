@@ -26,4 +26,4 @@ class DuckDBExprListNamespace(
                 F("list_append", expr_distinct, lit(None)),
             ).otherwise(expr_distinct)
 
-        return self.compliant._with_elementwise(func)
+        return self.compliant._with_callable(func)
