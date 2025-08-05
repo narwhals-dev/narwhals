@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import native_to_narwhals_dtype, to_pandas_types_mapper
+from narwhals._arrow.utils import ArrowToPandas, native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
 from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
@@ -30,9 +30,9 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import pandas as pd
+    import pandas as pd  # noqa: F401
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
@@ -53,7 +53,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
-        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _1DArray,
         _2DArray,
@@ -75,7 +74,8 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(
-    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"]
+    ArrowToPandas["pa.Table", "pd.DataFrame"],
+    EagerDataFrame["ArrowSeries", "ArrowExpr", "pa.Table", "ChunkedArrayAny"],
 ):
     _implementation = Implementation.PYARROW
 
@@ -442,17 +442,6 @@ class ArrowDataFrame(
             self.native.sort_by(sorting, null_placement=null_placement),
             validate_column_names=False,
         )
-
-    def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
-    ) -> pd.DataFrame:
-        if use_pyarrow_extension_array:
-            types_mapper = kwds.pop("types_mapper", to_pandas_types_mapper)
-            kwds["types_mapper"] = types_mapper
-        return self.native.to_pandas(**kwds)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import

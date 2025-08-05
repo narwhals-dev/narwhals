@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    ArrowToPandas,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -20,7 +21,6 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
-    to_pandas_types_mapper,
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
@@ -122,7 +122,9 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
+class ArrowSeries(
+    ArrowToPandas["ChunkedArrayAny", "pd.Series[Any]"], EagerSeries["ChunkedArrayAny"]
+):
     _implementation = Implementation.PYARROW
 
     def __init__(
@@ -700,10 +702,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> pd.Series[Any]:
-        if use_pyarrow_extension_array:
-            types_mapper = kwds.pop("types_mapper", to_pandas_types_mapper)
-            kwds["types_mapper"] = types_mapper
-        series = self.native.to_pandas(**kwds)
+        series = super().to_pandas(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
         series.name = self.name
         return series
 

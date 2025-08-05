@@ -190,17 +190,12 @@ def test_to_pandas_use_pyarrow(
     assert_equal_data(result, data)
 
 
-# NOTE: Trying to see what if raising makes more sense via ci
-# https://github.com/narwhals-dev/narwhals/pull/2879#discussion_r2247491274
-@pytest.mark.skipif(
-    not PANDAS_LT_1_5, reason="Testing converting to regular pandas dtypes"
-)
+@pytest.mark.skipif(not PANDAS_LT_1_5)
 def test_to_pandas_no_arrow_dtype() -> None:  # pragma: no cover
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     data: dict[str, Any] = {"a": [1, 2, 3], "b": ["four", "five", "six"]}
     df_pa = nw.from_native(pa.table(data))
-    result = df_pa.to_pandas(use_pyarrow_extension_array=True)
-    assert_equal_data(result, data)
-    assert nw.from_native(result).schema == {"a": nw.Int64(), "b": nw.String()}
+    with pytest.raises(NotImplementedError, match="1.5"):
+        df_pa.to_pandas(use_pyarrow_extension_array=True)

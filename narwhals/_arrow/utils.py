@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Generic, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import Implementation, isinstance_or_issubclass
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
+from narwhals._utils import Implementation, isinstance_or_issubclass, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from pandas.api.extensions import ExtensionDtype as PandasDType
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral, ToPandasArrowKwds
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -230,20 +230,29 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     raise AssertionError(msg)
 
 
-def to_pandas_types_mapper(dtype: pa.DataType, /) -> PandasDType | None:
-    """Default overrides `pyarrow` -> `pandas` dtype conversion.
+class ArrowToPandas(
+    CompliantToPandas[ToPandasFromT_co, ToPandasToT_co],
+    Generic[ToPandasFromT_co, ToPandasToT_co],
+):
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasToT_co:
+        import pandas as pd  # ignore-banned-import
 
-    Should be passed as `types_mapper` in [`Table.to_pandas`] and [`ChunkedArray.to_pandas`].
-
-    [`Table.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas
-    [`ChunkedArray.to_pandas`]: https://arrow.apache.org/docs/python/generated/pyarrow.ChunkedArray.html#pyarrow.ChunkedArray.to_pandas
-    """
-    import pandas as pd  # ignore-banned-import
-
-    if Implementation.PANDAS._backend_version() < (1, 5):
-        # `pd.ArrowDType` added https://github.com/pandas-dev/pandas/pull/46774
-        return None
-    return pd.ArrowDtype(dtype)
+        if use_pyarrow_extension_array:
+            pd_version = Implementation.PANDAS._backend_version()
+            if pd_version < (1, 5):  # pragma: no cover
+                found = requires._unparse_version(pd_version)
+                msg = f"`to_pandas(use_pyarrow_extension_array=True)` is only available in 'pandas>=1.5.0', found version {found!r}."
+                raise NotImplementedError(msg)
+            types_mapper = kwds.pop(
+                "types_mapper", lambda pa_dtype: pd.ArrowDtype(pa_dtype)
+            )
+            kwds["types_mapper"] = types_mapper
+        return self.native.to_pandas(**kwds)
 
 
 def extract_native(
