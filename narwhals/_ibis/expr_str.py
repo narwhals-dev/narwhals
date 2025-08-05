@@ -14,12 +14,6 @@ if TYPE_CHECKING:
 
 
 class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
-    def split(self, by: str) -> IbisExpr:
-        def fn(expr: ir.StringColumn) -> ir.ArrayValue:
-            return expr.split(by)
-
-        return self.compliant._with_callable(fn)
-
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"

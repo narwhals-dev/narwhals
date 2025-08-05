@@ -73,6 +73,7 @@ FUNCTION_REMAPPING = {
     "starts_with": "startswith",
     "ends_with": "endswith",
     "regexp_matches": "re_search",
+    "str_split": "split",
 }
 
 
