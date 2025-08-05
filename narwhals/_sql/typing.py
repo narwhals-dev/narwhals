@@ -20,7 +20,6 @@ NativeSQLExprT = TypeVar("NativeSQLExprT", bound="NativeSQLExpr")
 
 
 class NativeSQLExpr(NativeExpr, Protocol):
-    # both Self because we're comparing an expression with an expression?
     def __gt__(self, value: Any, /) -> Self: ...
 
     def __lt__(self, value: Any, /) -> Self: ...
