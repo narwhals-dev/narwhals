@@ -112,7 +112,6 @@ class SQLExprStringNamespace(
             )
             return self._when(
                 starts_with_minus & less_than_width,
-                # substring,
                 self._function("concat", hyphen, padded_substring),
                 self._when(
                     starts_with_plus & less_than_width,
