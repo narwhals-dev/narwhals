@@ -34,6 +34,9 @@ def test_unique_expr_agg(
     result = df.select(nw.col("a").unique().sum())
     expected = {"a": [3]}
     assert_equal_data(result, expected)
+    result = df.drop_nulls().select(nw.col("a").unique().len())
+    expected = {"a": [2]}
+    assert_equal_data(result, expected)
 
 
 def test_unique_illegal_combination(constructor: Constructor) -> None:
@@ -49,10 +52,16 @@ def test_unique_series(constructor_eager: ConstructorEager) -> None:
     result = series.unique(maintain_order=True)
     expected = {"a": ["x", "y", None]}
     assert_equal_data({"a": result}, expected)
+    result = series.drop_nulls().unique(maintain_order=True)
+    expected = {"a": ["x", "y"]}
+    assert_equal_data({"a": result}, expected)
 
 
 def test_unique_series_numeric(constructor_eager: ConstructorEager) -> None:
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.unique(maintain_order=True)
     expected = {"a": [1, None, 2]}
+    assert_equal_data({"a": result}, expected)
+    result = series.drop_nulls().unique(maintain_order=True)
+    expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
