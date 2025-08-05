@@ -59,13 +59,13 @@ class ExprListNamespace(Generic[ExprT]):
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [[1, 1, 2], [3, 3, None], None, []]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(a_len=nw.col("a").list.unique())
+            >>> df.with_columns(a_unique=nw.col("a").list.unique())
             ┌────────────────────────────┐
             |     Narwhals DataFrame     |
             |----------------------------|
             |shape: (4, 2)               |
             |┌──────────────┬───────────┐|
-            |│ a            ┆ a_len     │|
+            |│ a            ┆ a_unique  │|
             |│ ---          ┆ ---       │|
             |│ list[i64]    ┆ list[i64] │|
             |╞══════════════╪═══════════╡|
