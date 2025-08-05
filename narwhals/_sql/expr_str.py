@@ -11,13 +11,83 @@ class SQLExprStringNamespace(
     LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
 ):
     def _lit(self, value: Any) -> SQLExprT:
-        return self._lit(value)  # type: ignore[no-any-return]
+        return self.compliant._lit(value)  # type: ignore[no-any-return]
 
     def _function(self, name: str, *args: Any) -> SQLExprT:
         return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
     def _when(self, condition: Any, value: Any, otherwise: Any | None = None) -> SQLExprT:
         return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
+
+    def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
+        def func(expr: Any) -> Any:
+            if literal:
+                return self._function("contains", expr, self._lit(pattern))
+            return self._function("regexp_matches", expr, self._lit(pattern))
+
+        return self.compliant._with_elementwise(func)
+
+    def ends_with(self, suffix: str) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("ends_with", expr, self._lit(suffix))
+        )
+
+    def len_chars(self) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("length", expr)
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SQLExprT:
+        if not literal:
+            return self.compliant._with_elementwise(
+                lambda expr: self._function(
+                    "regexp_replace",
+                    expr,
+                    self._lit(pattern),
+                    self._lit(value),
+                    self._lit("g"),
+                )
+            )
+        return self.compliant._with_elementwise(
+            lambda expr: self._function(
+                "replace", expr, self._lit(pattern), self._lit(value)
+            )
+        )
+
+    def slice(self, offset: int, length: int | None) -> SQLExprT:
+        def func(expr: SQLExprT) -> SQLExprT:
+            col_length = self._function("length", expr)
+
+            _offset = (
+                col_length + self._lit(offset + 1)
+                if offset < 0
+                else self._lit(offset + 1)
+            )
+            _length = self._lit(length) if length is not None else col_length
+            return self._function("substr", expr, _offset, _length)
+
+        return self.compliant._with_elementwise(func)
+
+    def split(self, by: str) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("str_split", expr, self._lit(by))
+        )
+
+    def starts_with(self, prefix: str) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("starts_with", expr, self._lit(prefix))
+        )
+
+    def strip_chars(self, characters: str | None) -> SQLExprT:
+        import string
+
+        return self.compliant._with_elementwise(
+            lambda expr: self._function(
+                "trim",
+                expr,
+                self._lit(string.whitespace if characters is None else characters),
+            )
+        )
 
     def to_lowercase(self) -> SQLExprT:
         return self.compliant._with_elementwise(
@@ -27,16 +97,6 @@ class SQLExprStringNamespace(
     def to_uppercase(self) -> SQLExprT:
         return self.compliant._with_elementwise(
             lambda expr: self._function("upper", expr)
-        )
-
-    def starts_with(self, prefix: str) -> SQLExprT:
-        return self.compliant._with_elementwise(
-            lambda expr: self._function("starts_with", expr, self._lit(prefix))
-        )
-
-    def ends_with(self, suffix: str) -> SQLExprT:
-        return self.compliant._with_elementwise(
-            lambda expr: self._function("ends_with", expr, self._lit(suffix))
         )
 
     def zfill(self, width: int) -> SQLExprT:
@@ -71,63 +131,3 @@ class SQLExprStringNamespace(
         # can't use `_with_elementwise` due to `when` operator.
         # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
-
-    def len_chars(self) -> SQLExprT:
-        return self.compliant._with_elementwise(
-            lambda expr: self._function("length", expr)
-        )
-
-    def strip_chars(self, characters: str | None) -> SQLExprT:
-        import string
-
-        return self.compliant._with_elementwise(
-            lambda expr: self._function(
-                "trim",
-                expr,
-                self._lit(string.whitespace if characters is None else characters),
-            )
-        )
-
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SQLExprT:
-        if not literal:
-            return self.compliant._with_elementwise(
-                lambda expr: self._function(
-                    "regexp_replace",
-                    expr,
-                    self._lit(pattern),
-                    self._lit(value),
-                    self._lit("g"),
-                )
-            )
-        return self.compliant._with_elementwise(
-            lambda expr: self._function(
-                "replace", expr, self._lit(pattern), self._lit(value)
-            )
-        )
-
-    def split(self, by: str) -> SQLExprT:
-        return self.compliant._with_elementwise(
-            lambda expr: self._function("str_split", expr, self._lit(by))
-        )
-
-    def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
-        def func(expr: Any) -> Any:
-            if literal:
-                return self._function("contains", expr, self._lit(pattern))
-            return self._function("regexp_matches", expr, self._lit(pattern))
-
-        return self.compliant._with_elementwise(func)
-
-    def slice(self, offset: int, length: int | None) -> SQLExprT:
-        def func(expr: SQLExprT) -> SQLExprT:
-            col_length = self._function("length", expr)
-
-            _offset = (
-                col_length + self._lit(offset + 1)
-                if offset < 0
-                else self._lit(offset + 1)
-            )
-            _length = self._lit(length) if length is not None else col_length
-            return self._function("substr", expr, _offset, _length)
-
-        return self.compliant._with_elementwise(func)
