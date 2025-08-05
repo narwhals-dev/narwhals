@@ -8,7 +8,7 @@ from narwhals._sql.typing import SQLExprT
 
 
 class SQLExprStringNamespace(
-    LazyExprNamespace["SQLExprT"], StringNamespace["SQLExprT"], Generic[SQLExprT]
+    LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
 ):
     def _lit(self, value: Any) -> SQLExprT:
         return self.compliant._lit(value)
