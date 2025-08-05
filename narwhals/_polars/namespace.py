@@ -33,9 +33,7 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
 
-    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
-    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
-    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
     _implementation = Implementation.POLARS
 
@@ -84,13 +82,12 @@ class PolarsNamespace:
     ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
-        elif self._series._is_native(data):
+        if self._series._is_native(data):
             return self._series.from_native(data, context=self)
-        elif self._lazyframe._is_native(data):
+        if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        else:  # pragma: no cover
-            msg = f"Unsupported type: {type(data).__name__!r}"
-            raise TypeError(msg)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     @overload
     def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> PolarsSeries: ...

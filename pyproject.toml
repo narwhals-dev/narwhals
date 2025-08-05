@@ -72,7 +72,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
-  "polars==1.30.0",
+  "polars==1.32.0",
   "uv",
   "narwhals[ibis]",
 ]
@@ -153,7 +153,6 @@ select = ["ALL"]
 ignore = [
   "A001",    # builtin-variable-shadowing
   "A004",    # builtin-import-shadowing
-  "A005",    # stdlib-module-shadowing
   "ARG002",  # unused-method-argument
   "ANN401",  # any-type
   "COM812",  # missing-trailing-comma
@@ -167,15 +166,12 @@ ignore = [
   "DTZ001",  # call-datetime-without-tzinfo
   "E501",    # line-too-long
   "FIX",     # flake8-fixme
-  "ISC001",  # single-line-implicit-string-concatenation
-  "PD003",   # pandas-use-of-dot-is-null
   "PD010",   # pandas-use-of-dot-pivot-or-unstack
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
   "PLC0415", # `import` should be at the top-level of a file
   "PLR0913", # too-many-arguments
   "PLR2004", # magic-value-comparison
   "PLW1641", # Object does not implement `__hash__` method
-  "RET505",  # superfluous-else-return
   "SLF001",  # private-member-access
   "TD003",   # missing-todo-link
   "TD004",   # missing-todo-colon

@@ -1086,9 +1086,9 @@ class Expr:
         ) -> CompliantExpr[Any, Any]:
             if closed == "left":
                 return (compliant_expr >= lb) & (compliant_expr < ub)
-            elif closed == "right":
+            if closed == "right":
                 return (compliant_expr > lb) & (compliant_expr <= ub)
-            elif closed == "none":
+            if closed == "none":
                 return (compliant_expr > lb) & (compliant_expr < ub)
             return (compliant_expr >= lb) & (compliant_expr <= ub)
 
@@ -1137,9 +1137,8 @@ class Expr:
                     to_native(other, pass_through=True)
                 )
             )
-        else:
-            msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
-            raise NotImplementedError(msg)
+        msg = "Narwhals `is_in` doesn't accept expressions as an argument, as opposed to Polars. You should provide an iterable instead."
+        raise NotImplementedError(msg)
 
     def filter(self, *predicates: Any) -> Self:
         """Filters elements based on a condition, returning a new expression.

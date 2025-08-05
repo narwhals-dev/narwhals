@@ -64,8 +64,7 @@ class SparkLikeNamespace(
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -73,8 +72,7 @@ class SparkLikeNamespace(
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
         return getattr(self._F, FUNCTION_REMAPPINGS.get(name, name))(*args)

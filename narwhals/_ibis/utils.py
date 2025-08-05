@@ -135,8 +135,7 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
                 native_to_narwhals_dtype(ibis_dtype.value_type, version),
                 ibis_dtype.length,
             )
-        else:
-            return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
+        return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
     if is_struct(ibis_dtype):
         return dtypes.Struct(
             [

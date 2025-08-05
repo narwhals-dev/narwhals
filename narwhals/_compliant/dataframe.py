@@ -258,13 +258,6 @@ class CompliantDataFrame(
     def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
 
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=self.columns)
-
 
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
@@ -357,17 +350,6 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
-    def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
-        result = expr(self)
-        assert len(result) == 1  # debug assertion  # noqa: S101
-        return result[0]
-
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(
@@ -390,6 +372,9 @@ class EagerDataFrame(
     def _with_native(
         self, df: NativeFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
