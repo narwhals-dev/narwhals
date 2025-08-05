@@ -103,3 +103,16 @@ class SQLExprStringNamespace(
                 "replace", expr, self._lit(pattern), self._lit(value)
             )
         )
+
+    def split(self, by: str) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("str_split", expr, self._lit(by))
+        )
+
+    def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
+        def func(expr: Any) -> Any:
+            if literal:
+                return self._function("contains", expr, self._lit(pattern))
+            return self._function("regexp_matches", expr, self._lit(pattern))
+
+        return self.compliant._with_elementwise(func)

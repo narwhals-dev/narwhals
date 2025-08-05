@@ -34,6 +34,8 @@ FUNCTION_REMAPPINGS = {
     "starts_with": "startswith",
     "ends_with": "endswith",
     "trim": "btrim",
+    "str_split": "split",
+    "regexp_matches": "regexp",
 }
 
 

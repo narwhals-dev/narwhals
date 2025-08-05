@@ -13,14 +13,6 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
-    def contains(self, pattern: str, *, literal: bool) -> DuckDBExpr:
-        def func(expr: Expression) -> Expression:
-            if literal:
-                return F("contains", expr, lit(pattern))
-            return F("regexp_matches", expr, lit(pattern))
-
-        return self.compliant._with_elementwise(func)
-
     def slice(self, offset: int, length: int | None) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
             offset_lit = lit(offset)
@@ -34,11 +26,6 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
             )
 
         return self.compliant._with_elementwise(func)
-
-    def split(self, by: str) -> DuckDBExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: F("str_split", expr, lit(by))
-        )
 
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:

@@ -14,15 +14,6 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
-    def contains(self, pattern: str, *, literal: bool) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:
-            contains_func = (
-                self.compliant._F.contains if literal else self.compliant._F.regexp
-            )
-            return contains_func(expr, self.compliant._F.lit(pattern))
-
-        return self.compliant._with_elementwise(func)
-
     def slice(self, offset: int, length: int | None) -> SparkLikeExpr:
         # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
         # The position is not zero based, but 1 based index.
@@ -38,11 +29,6 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             return expr.substr(_offset, _length)
 
         return self.compliant._with_elementwise(func)
-
-    def split(self, by: str) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: self.compliant._F.split(expr, by)
-        )
 
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
