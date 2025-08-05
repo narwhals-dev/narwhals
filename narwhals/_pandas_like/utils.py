@@ -26,7 +26,7 @@ from narwhals._utils import (
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -677,24 +677,6 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
     raise AssertionError(msg)
 
 
-# NOTE: Maybe gate this behind `pandas>=2.0`?
-def should_use_pyarrow_extension_array(
-    *, use_pyarrow_extension_array: bool, kwds: ToPandasArrowKwds
-) -> bool:
-    """Return True if this arg combination should output `[pyarrow]` dtypes.
-
-    `polars` and `pyarrow` have granular options for converting dtypes in `.to_pandas()`.
-
-    Only [`cuDF`] has an option *vaguely* resembling the same behavior, but all
-    `PandasLike*` can at least use:
-
-        pandas_like_nd_frame.convert_dtypes(dtype_backend="pyarrow")
-
-    [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
-    """
-    return use_pyarrow_extension_array or bool(kwds and "types_mapper" in kwds)
-
-
 class ToPandas(_StoresNative[Any], _StoresImplementation, Generic[ToPandasT]):
     """Shared `(Series|DataFrame).to_pandas` implementation."""
 
@@ -704,9 +686,19 @@ class ToPandas(_StoresNative[Any], _StoresImplementation, Generic[ToPandasT]):
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> ToPandasT:
-        use_pyarrow = should_use_pyarrow_extension_array(
-            use_pyarrow_extension_array=use_pyarrow_extension_array, kwds=kwds
-        )
+        """`polars` and `pyarrow` have granular options for converting dtypes in `.to_pandas()`.
+
+        Only [`cuDF`] has an option *vaguely* resembling the same behavior, but all
+        `PandasLike*` can at least use:
+
+            pandas_like_nd_frame.convert_dtypes(dtype_backend="pyarrow")
+
+        [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
+        """
+        if kwds:
+            msg = "Only `to_pandas(use_pyarrow_extension_array=...)` supported for pandas-like objects."
+            raise InvalidOperationError(msg)
+        use_pyarrow = use_pyarrow_extension_array
         if self._implementation is Implementation.PANDAS:
             nd_frame = self.native
         elif self._implementation is Implementation.CUDF:
