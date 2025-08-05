@@ -8,6 +8,7 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
+    ToPandas,
     catch_polars_exception,
     extract_args_kwargs,
     native_to_narwhals_dtype,
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Callable
 
-    import pandas as pd
+    import pandas as pd  # noqa: F401
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
@@ -85,7 +86,6 @@ INHERITED_METHODS = frozenset(
         "sort",
         "tail",
         "to_arrow",
-        "to_pandas",
         "unique",
         "with_columns",
         "write_csv",
@@ -239,7 +239,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(result)
 
 
-class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
+class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame], ToPandas["pd.DataFrame"]):
     clone: Method[Self]
     collect: Method[CompliantDataFrameAny]
     estimated_size: Method[int | float]
@@ -251,7 +251,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     rows: Method[Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]]
     sample: Method[Self]
     to_arrow: Method[pa.Table]
-    to_pandas: Method[pd.DataFrame]
     # NOTE: `write_csv` requires an `@overload` for `str | None`
     # Can't do that here 😟
     write_csv: Method[Any]
