@@ -8,6 +8,8 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import ToPandasArrowKwds
 from tests.utils import (
     PANDAS_LT_1_5,
     PANDAS_LT_2,
@@ -93,6 +95,7 @@ def test_pyarrow_to_pandas_use_pyarrow(
 
 
 @pytest.mark.skipif(PANDAS_LT_1_5, reason="too old for pyarrow")
+@pytest.mark.parametrize("kwds", [{}, ToPandasArrowKwds(self_destruct=True)])
 @pytest.mark.parametrize(
     ("data", "pandas_dtypes"),
     [
@@ -135,9 +138,17 @@ def test_to_pandas_use_pyarrow(
     constructor_eager: ConstructorEager,
     data: dict[str, list[Any]],
     pandas_dtypes: dict[str, Sequence[str]],
+    kwds: ToPandasArrowKwds,
     request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("pyarrow")
+    request.applymarker(
+        pytest.mark.xfail(
+            is_pandas(constructor_eager) and bool(kwds),
+            reason="Only `convert_dtypes` behavior is supported for pandas-like",
+            raises=InvalidOperationError,
+        )
+    )
     request.applymarker(
         pytest.mark.xfail(
             PANDAS_LT_2
@@ -172,7 +183,7 @@ def test_to_pandas_use_pyarrow(
         )
     )
     frame = nw.from_native(constructor_eager(data))
-    result = frame.to_pandas(use_pyarrow_extension_array=True)
+    result = frame.to_pandas(use_pyarrow_extension_array=True, **kwds)
     for column, dtypes in pandas_dtypes.items():
         actual_name = result[column].dtype.name
         assert actual_name in dtypes
