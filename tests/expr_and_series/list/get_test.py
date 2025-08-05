@@ -7,15 +7,15 @@ import pytest
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-data = {"str": [["a", "b"], [None, "b"]]}
-expected = {"str": ["a", None]}
+data = {"int": [[1, 2], [None, 3], [None]]}
+expected = {"int": [1, None, None]}
 
 
 def test_get_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data)).select(
-        nw.col("str").cast(nw.List(nw.String())).list.get(0)
+        nw.col("int").cast(nw.List(nw.Int32())).list.get(0)
     )
 
     assert_equal_data(result, expected)
@@ -34,10 +34,10 @@ def test_get_series(
         df = nw.from_native(constructor_eager(data), eager_only=True)
         msg = re.escape("Series must be of PyArrow List type to support list namespace.")
         with pytest.raises(TypeError, match=msg):
-            df["str"].list.get(0)
+            df["int"].list.get(0)
         return
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df["str"].cast(nw.List(nw.String())).list.get(0)
+    result = df["int"].cast(nw.List(nw.Int32())).list.get(0)
 
-    assert_equal_data({"str": result}, expected)
+    assert_equal_data({"int": result}, expected)
