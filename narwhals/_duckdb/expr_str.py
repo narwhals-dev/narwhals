@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import F, lit, when
+from narwhals._duckdb.utils import F, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented
 
@@ -76,34 +76,5 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
 
         compliant_expr = self.compliant
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
-
-    def zfill(self, width: int) -> DuckDBExpr:
-        # DuckDB does not have a built-in zfill function, so we need to implement it manually
-        # using string manipulation functions.
-
-        def func(expr: Expression) -> Expression:
-            less_than_width = F("length", expr) < lit(width)
-            zero, hyphen, plus = lit("0"), lit("-"), lit("+")
-
-            starts_with_minus = F("starts_with", expr, hyphen)
-            starts_with_plus = F("starts_with", expr, plus)
-            substring = F("substr", expr, lit(2))
-            padded_substring = F("lpad", substring, lit(width - 1), zero)
-            return (
-                when(
-                    starts_with_minus & less_than_width,
-                    F("concat", hyphen, padded_substring),
-                )
-                .when(
-                    starts_with_plus & less_than_width,
-                    F("concat", plus, padded_substring),
-                )
-                .when(less_than_width, F("lpad", expr, lit(width), zero))
-                .otherwise(expr)
-            )
-
-        # can't use `_with_elementwise` due to `when` operator.
-        # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
-        return self.compliant._with_callable(func)
 
     replace = not_implemented()

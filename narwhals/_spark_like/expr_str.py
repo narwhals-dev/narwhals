@@ -90,33 +90,4 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
-    def zfill(self, width: int) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:
-            F = self.compliant._F  # noqa: N806
-
-            length = F.length(expr)
-            less_than_width = length < width
-            hyphen, plus = F.lit("-"), F.lit("+")
-            starts_with_minus = F.startswith(expr, hyphen)
-            starts_with_plus = F.startswith(expr, plus)
-            sub_length = length - F.lit(1)
-            # NOTE: `len` annotated as `int`, but `Column.substr` accepts `int | Column`
-            substring = F.substring(expr, 2, sub_length)  # pyright: ignore[reportArgumentType]
-            padded_substring = F.lpad(substring, width - 1, "0")
-            return (
-                F.when(
-                    starts_with_minus & less_than_width,
-                    F.concat(hyphen, padded_substring),
-                )
-                .when(
-                    starts_with_plus & less_than_width, F.concat(plus, padded_substring)
-                )
-                .when(less_than_width, F.lpad(expr, width, "0"))
-                .otherwise(expr)
-            )
-
-        # can't use `_with_elementwise` due to `when` operator.
-        # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
-        return self.compliant._with_callable(func)
-
     replace = not_implemented()
