@@ -71,13 +71,16 @@ class DuckDBExprStringNamespace(
             )
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
-        if not literal:
+    def replace_all(
+        self, pattern: str, value: str | DuckDBExpr, *, literal: bool
+    ) -> DuckDBExpr:
+        fname, fargs = ("replace", []) if literal else ("regexp_replace", [lit("g")])
+        if isinstance(value, str):
             return self.compliant._with_elementwise(
-                lambda expr: F("regexp_replace", expr, lit(pattern), lit(value), lit("g"))
+                lambda expr: F(fname, expr, lit(pattern), lit(value), *fargs)
             )
         return self.compliant._with_elementwise(
-            lambda expr: F("replace", expr, lit(pattern), lit(value))
+            lambda expr, value: F(fname, expr, lit(pattern), value, *fargs), value=value
         )
 
     def to_datetime(self, format: str | None) -> DuckDBExpr:
