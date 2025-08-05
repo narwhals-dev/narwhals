@@ -32,4 +32,8 @@ class DuckDBExprListNamespace(
     def contains(self, item: NonNestedLiteral) -> DuckDBExpr:
         return self.compliant._with_elementwise(
             lambda expr: F("list_contains", expr, lit(item))
-        )
+    
+    def get(self, index: int) -> DuckDBExpr:
+        return self.compliant._with_elementwise(
+            lambda expr: F("list_extract", expr, lit(index + 1))
+                    )
