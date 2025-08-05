@@ -696,7 +696,7 @@ class PandasLikeToPandas(
         [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
         """
         if kwds:
-            msg = "Only `to_pandas(use_pyarrow_extension_array=...)` supported for pandas-like objects."
+            msg = "Only `to_pandas(use_pyarrow_extension_array=...)` is supported for pandas-like objects."
             raise InvalidOperationError(msg)
         use_pyarrow = use_pyarrow_extension_array
         if self._implementation is Implementation.PANDAS:
