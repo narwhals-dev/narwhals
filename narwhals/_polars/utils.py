@@ -240,13 +240,13 @@ def _is_cudf_exception(exception: Exception) -> bool:
 def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
-    elif isinstance(exception, pl.exceptions.ShapeError):
+    if isinstance(exception, pl.exceptions.ShapeError):
         return ShapeError(str(exception))
-    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+    if isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
-    elif isinstance(exception, pl.exceptions.DuplicateError):
+    if isinstance(exception, pl.exceptions.DuplicateError):
         return DuplicateError(str(exception))
-    elif isinstance(exception, pl.exceptions.ComputeError):
+    if isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if _is_polars_exception(exception) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover

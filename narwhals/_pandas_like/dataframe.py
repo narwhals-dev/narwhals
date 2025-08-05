@@ -274,8 +274,7 @@ class PandasLikeDataFrame(
             import numpy as np
 
             return np
-        else:
-            return import_array_module(self._implementation)
+        return import_array_module(self._implementation)
 
     def get_column(self, name: str) -> PandasLikeSeries:
         return PandasLikeSeries.from_native(self.native[name], context=self)
@@ -765,7 +764,7 @@ class PandasLikeDataFrame(
         pandas_df = self.to_pandas()
         if backend is None:
             return self
-        elif backend is Implementation.DUCKDB:
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -775,7 +774,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend is Implementation.POLARS:
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -785,7 +784,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend is Implementation.DASK:
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -795,7 +794,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend.is_ibis():
+        if backend.is_ibis():
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -900,7 +899,7 @@ class PandasLikeDataFrame(
                 raise ValueError(msg)
             return self.native.iloc[0, 0]
 
-        elif row is None or column is None:
+        if row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 
@@ -1003,7 +1002,7 @@ class PandasLikeDataFrame(
     ) -> pd.DataFrame:
         if aggregate_function is None:
             return self.native.pivot(columns=on, index=index, values=values)
-        elif aggregate_function == "len":
+        if aggregate_function == "len":
             return (
                 self.native.groupby([*on, *index], as_index=False)
                 .agg(dict.fromkeys(values, "size"))
@@ -1108,29 +1107,26 @@ class PandasLikeDataFrame(
             return self._with_native(
                 self.native.explode(columns[0]), validate_column_names=False
             )
-        else:
-            native_frame = self.native
-            anchor_series = native_frame[columns[0]].list.len()
+        native_frame = self.native
+        anchor_series = native_frame[columns[0]].list.len()
 
-            if not all(
-                (native_frame[col_name].list.len() == anchor_series).all()
-                for col_name in columns[1:]
-            ):
-                msg = "exploded columns must have matching element counts"
-                raise ShapeError(msg)
+        if not all(
+            (native_frame[col_name].list.len() == anchor_series).all()
+            for col_name in columns[1:]
+        ):
+            msg = "exploded columns must have matching element counts"
+            raise ShapeError(msg)
 
-            original_columns = self.columns
-            other_columns = [c for c in original_columns if c not in columns]
+        original_columns = self.columns
+        other_columns = [c for c in original_columns if c not in columns]
 
-            exploded_frame = native_frame[[*other_columns, columns[0]]].explode(
-                columns[0]
-            )
-            exploded_series = [
-                native_frame[col_name].explode().to_frame() for col_name in columns[1:]
-            ]
+        exploded_frame = native_frame[[*other_columns, columns[0]]].explode(columns[0])
+        exploded_series = [
+            native_frame[col_name].explode().to_frame() for col_name in columns[1:]
+        ]
 
-            plx = self.__native_namespace__()
-            return self._with_native(
-                plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns],
-                validate_column_names=False,
-            )
+        plx = self.__native_namespace__()
+        return self._with_native(
+            plx.concat([exploded_frame, *exploded_series], axis=1)[original_columns],
+            validate_column_names=False,
+        )

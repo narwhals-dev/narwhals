@@ -82,8 +82,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base import functions
 
             return functions
-        else:
-            return import_functions(self._implementation)
+        return import_functions(self._implementation)
 
     @property
     def _native_dtypes(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -91,8 +90,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base import types
 
             return types
-        else:
-            return import_native_dtypes(self._implementation)
+        return import_native_dtypes(self._implementation)
 
     @property
     def _Window(self) -> type[Window]:  # noqa: N802
@@ -100,8 +98,7 @@ class SparkLikeLazyFrame(
             from sqlframe.base.window import Window
 
             return Window
-        else:
-            return import_window(self._implementation)
+        return import_window(self._implementation)
 
     @staticmethod
     def _is_native(obj: SQLFrameDataFrame | Any) -> TypeIs[SQLFrameDataFrame]:
@@ -177,8 +174,7 @@ class SparkLikeLazyFrame(
                     data: dict[str, list[Any]] = {k: [] for k in self.columns}
                     pa_schema = self._to_arrow_schema()
                     return pa.Table.from_pydict(data, schema=pa_schema)
-                else:  # pragma: no cover
-                    raise
+                raise  # pragma: no cover
         elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
             import pyarrow as pa  # ignore-banned-import
 
@@ -215,7 +211,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is None or backend is Implementation.PYARROW:
+        if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
@@ -225,7 +221,7 @@ class SparkLikeLazyFrame(
                 validate_column_names=True,
             )
 
-        elif backend is Implementation.POLARS:
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
@@ -474,7 +470,7 @@ class SparkLikeLazyFrame(
                     ]
                 )
             )
-        elif self._implementation.is_sqlframe():
+        if self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
             # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
             # therefore we simply explode the array column which will ignore nulls and
@@ -503,9 +499,8 @@ class SparkLikeLazyFrame(
                     )
                 )
             )
-        else:  # pragma: no cover
-            msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"
-            raise AssertionError(msg)
+        msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
+        raise AssertionError(msg)
 
     def unpivot(
         self,

@@ -24,6 +24,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
+    check_columns_exist,
     flatten,
     generate_repr,
     is_compliant_dataframe,
@@ -42,6 +43,7 @@ from narwhals.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.exceptions import (
+    ColumnNotFoundError,
     InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
@@ -131,6 +133,9 @@ class BaseFrame(Generic[_FrameT]):
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
 
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
+
     @property
     def schema(self) -> Schema:
         return Schema(self._compliant_frame.schema.items())
@@ -178,7 +183,7 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                if error := self._compliant_frame._check_columns_exist(flat_exprs):
+                if error := self._check_columns_exist(flat_exprs):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)

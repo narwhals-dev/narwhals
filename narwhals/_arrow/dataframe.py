@@ -517,11 +517,10 @@ class ArrowDataFrame(
         df = self.native
         if n >= 0:
             return self._with_native(df.slice(0, n), validate_column_names=False)
-        else:
-            num_rows = df.num_rows
-            return self._with_native(
-                df.slice(0, max(0, num_rows + n)), validate_column_names=False
-            )
+        num_rows = df.num_rows
+        return self._with_native(
+            df.slice(0, max(0, num_rows + n)), validate_column_names=False
+        )
 
     def tail(self, n: int) -> Self:
         df = self.native
@@ -530,13 +529,12 @@ class ArrowDataFrame(
             return self._with_native(
                 df.slice(max(0, num_rows - n)), validate_column_names=False
             )
-        else:
-            return self._with_native(df.slice(abs(n)), validate_column_names=False)
+        return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
     def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
-        elif backend is Implementation.DUCKDB:
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -545,7 +543,7 @@ class ArrowDataFrame(
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        elif backend is Implementation.POLARS:
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -555,7 +553,7 @@ class ArrowDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend is Implementation.DASK:
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -565,7 +563,7 @@ class ArrowDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend.is_ibis():
+        if backend.is_ibis():
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -629,7 +627,7 @@ class ArrowDataFrame(
                 raise ValueError(msg)
             return maybe_extract_py_scalar(self.native[0][0], return_py_scalar=True)
 
-        elif row is None or column is None:
+        if row is None or column is None:
             msg = "cannot call `.item()` with only one of `row` or `column`"
             raise ValueError(msg)
 

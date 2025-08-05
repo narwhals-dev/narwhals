@@ -240,8 +240,7 @@ class PandasLikeSeries(ToPandas["pd.Series[Any]"], EagerSeries[Any]):
             import numpy as np
 
             return np
-        else:
-            return import_array_module(self._implementation)
+        return import_array_module(self._implementation)
 
     def ewm_mean(
         self,
@@ -523,27 +522,25 @@ class PandasLikeSeries(ToPandas["pd.Series[Any]"], EagerSeries[Any]):
         ser_not_null = self.native.dropna()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        elif len(ser_not_null) == 2:
+        if len(ser_not_null) == 2:
             return 0.0
-        else:
-            m = ser_not_null - ser_not_null.mean()
-            m2 = (m**2).mean()
-            m3 = (m**3).mean()
-            return m3 / (m2**1.5) if m2 != 0 else float("nan")
+        m = ser_not_null - ser_not_null.mean()
+        m2 = (m**2).mean()
+        m3 = (m**3).mean()
+        return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def kurtosis(self) -> float | None:
         ser_not_null = self.native.dropna()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        else:
-            m = ser_not_null - ser_not_null.mean()
-            m2 = (m**2).mean()
-            m4 = (m**4).mean()
-            return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
+        m = ser_not_null - ser_not_null.mean()
+        m2 = (m**2).mean()
+        m4 = (m**4).mean()
+        return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
 
     def len(self) -> int:
         return len(self.native)
@@ -729,8 +726,7 @@ class PandasLikeSeries(ToPandas["pd.Series[Any]"], EagerSeries[Any]):
 
         if descending:
             return self.native.is_monotonic_decreasing
-        else:
-            return self.native.is_monotonic_increasing
+        return self.native.is_monotonic_increasing
 
     def value_counts(
         self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
