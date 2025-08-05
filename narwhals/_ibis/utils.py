@@ -69,6 +69,8 @@ UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "ns": "ns",
 }
 
+FUNCTION_REMAPPING = {"starts_with": "startswith", "ends_with": "endswith"}
+
 
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
     native_results: list[tuple[str, ir.Value]] = []
@@ -256,4 +258,4 @@ def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
         return cast("ir.NumericColumn", expr).std(how="pop")
     if name == "stddev_samp":
         return cast("ir.NumericColumn", expr).std(how="sample")
-    return getattr(expr, name)(*args[1:])
+    return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])
