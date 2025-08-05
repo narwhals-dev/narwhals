@@ -290,7 +290,9 @@ class ToPandas(_StoresNative[_ToPandasNative[ToPandasT]], Generic[ToPandasT]):
                 raise InvalidOperationError(msg)
             for kwd in always_true:
                 user_defined = kwds.pop(kwd, True)
-                if user_defined is False:
+                # NOTE: The `pyarrow` default is False, but `ToPandasArrowKwds` is typed to only accept True
+                # `polars` will always use `True` with `use_pyarrow_extension_array`
+                if user_defined is False:  # pragma: no cover
                     msg = f"`use_pyarrow_extension_array` cannot be used with `{kwd}={user_defined}`."
                     raise InvalidOperationError(msg)
         return self.native.to_pandas(
