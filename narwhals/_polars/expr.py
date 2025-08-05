@@ -415,6 +415,9 @@ class PolarsExprListNamespace(
 
         return self.compliant._with_native(native_result)
 
+    def unique(self) -> PolarsExpr:
+        return self.compliant._with_native(self.native.list.unique())
+
 
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
