@@ -69,7 +69,11 @@ UNITS_DICT_TRUNCATE: Mapping[IntervalUnit, TruncateUnit] = {
     "ns": "ns",
 }
 
-FUNCTION_REMAPPING = {"starts_with": "startswith", "ends_with": "endswith"}
+FUNCTION_REMAPPING = {
+    "starts_with": "startswith",
+    "ends_with": "endswith",
+    "regexp_matches": "re_search",
+}
 
 
 def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
@@ -243,6 +247,7 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
 
 
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
+    # Workaround SQL vs Ibis differences.
     if name == "row_number":
         return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
     if name == "least":
@@ -258,4 +263,7 @@ def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
         return cast("ir.NumericColumn", expr).std(how="pop")
     if name == "stddev_samp":
         return cast("ir.NumericColumn", expr).std(how="sample")
+    if name == "substr":
+        # Ibis is 0-indexed here, SQL is 1-indexed
+        return cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # pyright: ignore[reportOperatorIssue, reportArgumentType]
     return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])

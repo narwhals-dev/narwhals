@@ -7,26 +7,10 @@ from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from duckdb import Expression
-
     from narwhals._duckdb.expr import DuckDBExpr
 
 
 class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
-    def slice(self, offset: int, length: int | None) -> DuckDBExpr:
-        def func(expr: Expression) -> Expression:
-            offset_lit = lit(offset)
-            return F(
-                "array_slice",
-                expr,
-                lit(offset + 1)
-                if offset >= 0
-                else F("length", expr) + offset_lit + lit(1),
-                F("length", expr) if length is None else lit(length) + offset_lit,
-            )
-
-        return self.compliant._with_elementwise(func)
-
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."

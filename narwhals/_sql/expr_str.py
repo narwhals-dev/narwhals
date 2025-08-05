@@ -55,6 +55,7 @@ class SQLExprStringNamespace(
             )
             return self._when(
                 starts_with_minus & less_than_width,
+                # substring,
                 self._function("concat", hyphen, padded_substring),
                 self._when(
                     starts_with_plus & less_than_width,
@@ -114,5 +115,19 @@ class SQLExprStringNamespace(
             if literal:
                 return self._function("contains", expr, self._lit(pattern))
             return self._function("regexp_matches", expr, self._lit(pattern))
+
+        return self.compliant._with_elementwise(func)
+
+    def slice(self, offset: int, length: int | None) -> SQLExprT:
+        def func(expr: SQLExprT) -> SQLExprT:
+            col_length = self._function("length", expr)
+
+            _offset = (
+                col_length + self._lit(offset + 1)
+                if offset < 0
+                else self._lit(offset + 1)
+            )
+            _length = self._lit(length) if length is not None else col_length
+            return self._function("substr", expr, _offset, _length)
 
         return self.compliant._with_elementwise(func)

@@ -8,28 +8,10 @@ from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
-    from sqlframe.base.column import Column
-
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
-    def slice(self, offset: int, length: int | None) -> SparkLikeExpr:
-        # From the docs: https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.substring.html
-        # The position is not zero based, but 1 based index.
-        def func(expr: Column) -> Column:
-            col_length = self.compliant._F.char_length(expr)
-
-            _offset = (
-                col_length + self.compliant._F.lit(offset + 1)
-                if offset < 0
-                else self.compliant._F.lit(offset + 1)
-            )
-            _length = self.compliant._F.lit(length) if length is not None else col_length
-            return expr.substr(_offset, _length)
-
-        return self.compliant._with_elementwise(func)
-
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
         F = self.compliant._F  # noqa: N806
         if not format:
