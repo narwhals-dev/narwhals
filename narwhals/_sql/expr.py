@@ -743,13 +743,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     # Namespaces
     @property
-    def str(
-        self,
-    ) -> SQLExprStringNamespace[Self]: ...  # return SQLExprStringNamespace(self)
+    def str(self) -> SQLExprStringNamespace[Self]: ...
+
+    # Not implemented
 
     arg_max: not_implemented = not_implemented()
     arg_min: not_implemented = not_implemented()
     arg_true: not_implemented = not_implemented()
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
     drop_nulls: not_implemented = not_implemented()
     ewm_mean: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
@@ -761,6 +762,3 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     tail: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     unique: not_implemented = not_implemented()
-
-    # namespaces
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
