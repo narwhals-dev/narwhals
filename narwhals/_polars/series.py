@@ -12,7 +12,7 @@ from narwhals._polars.utils import (
     PolarsListNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
-    ToPandas,
+    PolarsToPandas,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -122,7 +122,7 @@ INHERITED_METHODS = frozenset(
 )
 
 
-class PolarsSeries(ToPandas["pd.Series[Any]"]):
+class PolarsSeries(PolarsToPandas[pl.Series, "pd.Series[Any]"]):
     _implementation = Implementation.POLARS
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:

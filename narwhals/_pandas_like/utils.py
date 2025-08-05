@@ -16,7 +16,7 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
-from narwhals._pandas_like.typing import ToPandasT
+from narwhals._translate import ToPandas, ToPandasToT_co
 from narwhals._utils import (
     Implementation,
     Version,
@@ -677,15 +677,18 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
     raise AssertionError(msg)
 
 
-class ToPandas(_StoresNative[Any], _StoresImplementation, Generic[ToPandasT]):
-    """Shared `(Series|DataFrame).to_pandas` implementation."""
-
+class PandasLikeToPandas(
+    _StoresNative[Any],
+    _StoresImplementation,
+    ToPandas[ToPandasToT_co],
+    Generic[ToPandasToT_co],
+):
     def to_pandas(
         self,
         *,
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
-    ) -> ToPandasT:
+    ) -> ToPandasToT_co:
         """`polars` and `pyarrow` have granular options for converting dtypes in `.to_pandas()`.
 
         Only [`cuDF`] has an option *vaguely* resembling the same behavior, but all

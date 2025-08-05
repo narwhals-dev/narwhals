@@ -190,7 +190,7 @@ def test_to_pandas_use_pyarrow(
     assert_equal_data(result, data)
 
 
-@pytest.mark.skipif(not PANDAS_LT_1_5)
+@pytest.mark.skipif(not PANDAS_LT_1_5, reason="testing inverse of another test")
 def test_to_pandas_no_arrow_dtype() -> None:  # pragma: no cover
     pytest.importorskip("pyarrow")
     import pyarrow as pa

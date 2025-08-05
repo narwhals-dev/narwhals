@@ -16,6 +16,7 @@ from typing import (
 import polars as pl
 
 from narwhals._duration import Interval
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
 from narwhals._utils import (
     Implementation,
     Version,
@@ -37,7 +38,6 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    import pandas as pd
     from typing_extensions import TypeIs, Unpack
 
     from narwhals._polars.dataframe import Method
@@ -52,8 +52,6 @@ if TYPE_CHECKING:
         "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
     )
 
-ToPandasT = TypeVar("ToPandasT", "pd.Series[Any]", "pd.DataFrame")
-ToPandasT_co = TypeVar("ToPandasT_co", "pd.Series[Any]", "pd.DataFrame", covariant=True)
 NativeT_co = TypeVar("NativeT_co", "pl.Series", "pl.Expr", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", "PolarsSeries", "PolarsExpr", covariant=True)
 CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
@@ -266,20 +264,16 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     return exception
 
 
-# NOTE: Used to match (`pl.DataFrame` -> `pd.DataFrame`), (`pl.Series` -> `pd.Series`)
-class _ToPandasNative(Protocol[ToPandasT_co]):
-    def to_pandas(self, **kwds: Any) -> ToPandasT_co: ...
-
-
-class ToPandas(_StoresNative[_ToPandasNative[ToPandasT]], Generic[ToPandasT]):
-    """Shared `(Series|DataFrame).to_pandas` implementation."""
-
+class PolarsToPandas(
+    CompliantToPandas[ToPandasFromT_co, ToPandasToT_co],
+    Generic[ToPandasFromT_co, ToPandasToT_co],
+):
     def to_pandas(
         self,
         *,
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
-    ) -> ToPandasT:
+    ) -> ToPandasToT_co:
         always_true: tuple[Literal["self_destruct", "split_blocks"], ...] = (
             "self_destruct",
             "split_blocks",
@@ -295,7 +289,7 @@ class ToPandas(_StoresNative[_ToPandasNative[ToPandasT]], Generic[ToPandasT]):
                 if user_defined is False:  # pragma: no cover
                     msg = f"`use_pyarrow_extension_array` cannot be used with `{kwd}={user_defined}`."
                     raise InvalidOperationError(msg)
-        return self.native.to_pandas(
+        return self.native.to_pandas(  # type: ignore[no-any-return]
             use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
         )
 

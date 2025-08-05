@@ -9,7 +9,7 @@ import numpy as np
 from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
-    ToPandas,
+    PandasLikeToPandas,
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
@@ -95,7 +95,7 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(
-    ToPandas["pd.DataFrame"],
+    PandasLikeToPandas["pd.DataFrame"],
     EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"],
 ):
     def __init__(
