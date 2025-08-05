@@ -59,8 +59,8 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -93,7 +93,8 @@ if TYPE_CHECKING:
 IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
-class DataFrame(NwDataFrame[IntoDataFrameT]):
+# NOTE legit
+class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     _version = Version.V1
 
     @inherit_doc(NwDataFrame)
@@ -453,7 +454,7 @@ class Schema(NwSchema):
 
 
 @overload
-def _stableify(obj: NwDataFrame[IntoDataFrameT]) -> DataFrame[IntoDataFrameT]: ...
+def _stableify(obj: NwDataFrame[IntoDataFrameT]) -> DataFrame[IntoDataFrameT]: ...  # type: ignore[type-var]
 @overload
 def _stableify(obj: NwLazyFrame[IntoLazyFrameT]) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
@@ -463,7 +464,7 @@ def _stableify(obj: NwExpr) -> Expr: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoDataFrameT]
+    obj: NwDataFrame[IntoDataFrameT]  # type: ignore[type-var]
     | NwLazyFrame[IntoLazyFrameT]
     | NwSeries[IntoSeriesT]
     | NwExpr,
