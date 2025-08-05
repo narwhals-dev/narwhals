@@ -14,31 +14,6 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
-    def len_chars(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.char_length)
-
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SparkLikeExpr:
-        def func(expr: Column) -> Column:
-            replace_all_func = (
-                self.compliant._F.replace if literal else self.compliant._F.regexp_replace
-            )
-            return replace_all_func(
-                expr,
-                self.compliant._F.lit(pattern),  # pyright: ignore[reportArgumentType]
-                self.compliant._F.lit(value),  # pyright: ignore[reportArgumentType]
-            )
-
-        return self.compliant._with_elementwise(func)
-
-    def strip_chars(self, characters: str | None) -> SparkLikeExpr:
-        import string
-
-        def func(expr: Column) -> Column:
-            to_remove = characters if characters is not None else string.whitespace
-            return self.compliant._F.btrim(expr, self.compliant._F.lit(to_remove))
-
-        return self.compliant._with_elementwise(func)
-
     def contains(self, pattern: str, *, literal: bool) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             contains_func = (

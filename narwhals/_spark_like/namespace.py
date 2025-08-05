@@ -30,7 +30,11 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
-FUNCTION_REMAPPINGS = {"starts_with": "startswith", "ends_with": "endswith"}
+FUNCTION_REMAPPINGS = {
+    "starts_with": "startswith",
+    "ends_with": "endswith",
+    "trim": "btrim",
+}
 
 
 class SparkLikeNamespace(

@@ -70,3 +70,36 @@ class SQLExprStringNamespace(
         # can't use `_with_elementwise` due to `when` operator.
         # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
+
+    def len_chars(self) -> SQLExprT:
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("length", expr)
+        )
+
+    def strip_chars(self, characters: str | None) -> SQLExprT:
+        import string
+
+        return self.compliant._with_elementwise(
+            lambda expr: self._function(
+                "trim",
+                expr,
+                self._lit(string.whitespace if characters is None else characters),
+            )
+        )
+
+    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SQLExprT:
+        if not literal:
+            return self.compliant._with_elementwise(
+                lambda expr: self._function(
+                    "regexp_replace",
+                    expr,
+                    self._lit(pattern),
+                    self._lit(value),
+                    self._lit("g"),
+                )
+            )
+        return self.compliant._with_elementwise(
+            lambda expr: self._function(
+                "replace", expr, self._lit(pattern), self._lit(value)
+            )
+        )

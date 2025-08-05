@@ -40,27 +40,6 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
             lambda expr: F("str_split", expr, lit(by))
         )
 
-    def len_chars(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("length", expr))
-
-    def strip_chars(self, characters: str | None) -> DuckDBExpr:
-        import string
-
-        return self.compliant._with_elementwise(
-            lambda expr: F(
-                "trim", expr, lit(string.whitespace if characters is None else characters)
-            )
-        )
-
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> DuckDBExpr:
-        if not literal:
-            return self.compliant._with_elementwise(
-                lambda expr: F("regexp_replace", expr, lit(pattern), lit(value), lit("g"))
-            )
-        return self.compliant._with_elementwise(
-            lambda expr: F("replace", expr, lit(pattern), lit(value))
-        )
-
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."
