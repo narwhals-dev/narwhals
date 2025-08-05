@@ -11,13 +11,13 @@ class SQLExprStringNamespace(
     LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
 ):
     def _lit(self, value: Any) -> SQLExprT:
-        return self.compliant._lit(value)
+        return self._lit(value)  # type: ignore[no-any-return]
 
     def _function(self, name: str, *args: Any) -> SQLExprT:
-        return self.compliant._function(name, *args)
+        return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
-    def _when(self, *args: Any, **kwargs: Any) -> SQLExprT:
-        return self.compliant._when(*args, **kwargs)
+    def _when(self, condition: Any, value: Any, otherwise: Any | None = None) -> SQLExprT:
+        return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
     def to_lowercase(self) -> SQLExprT:
         return self.compliant._with_elementwise(
