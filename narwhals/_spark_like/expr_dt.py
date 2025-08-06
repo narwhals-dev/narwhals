@@ -60,8 +60,8 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
 
         return self.compliant._with_elementwise(_to_string)
 
-    def date(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.to_date)
+    # def date(self) -> SparkLikeExpr:
+    #     return self.compliant._with_elementwise(self.compliant._F.to_date)
 
     def millisecond(self) -> SparkLikeExpr:
         def _millisecond(expr: Column) -> Column:

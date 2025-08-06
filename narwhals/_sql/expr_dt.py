@@ -36,5 +36,8 @@ class SQLExprDateTimeNamesSpace(
 
     def ordinal_day(self):
         return self.compliant._with_elementwise(lambda expr: self._function("dayofyear", expr))
+    
+    def date(self):
+        return self.compliant._with_elementwise(lambda expr: self._function("to_date", expr))
 
 
