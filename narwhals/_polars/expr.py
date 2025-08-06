@@ -402,8 +402,6 @@ class PolarsExprNameNamespace(PolarsExprNamespace):
 class PolarsExprListNamespace(
     PolarsExprNamespace, PolarsListNamespace[PolarsExpr, pl.Expr]
 ):
-    unique: Method[PolarsExpr]
-
     def len(self) -> PolarsExpr:
         native_expr = self.native
         native_result = native_expr.list.len()
