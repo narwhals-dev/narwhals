@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.conftest import (
+from narwhals.testing._constructors import (
     dask_lazy_p1_constructor,
     dask_lazy_p2_constructor,
     modin_constructor,
