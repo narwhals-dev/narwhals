@@ -12,6 +12,7 @@ from narwhals._spark_like.utils import (
     strptime_to_pyspark_format,
 )
 from narwhals._utils import not_implemented
+from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,9 +22,10 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
 
-
+# TODO: @mp: since SQLExprDateTimeNamesSpace inherits from DateTimeNamespace I thought below should work, 
+# but 'cannot create create consistent method ordering' message shows not. currently trying to understand this error in context
 class SparkLikeExprDateTimeNamespace(
-    LazyExprNamespace["SparkLikeExpr"], DateTimeNamespace["SparkLikeExpr"]
+    LazyExprNamespace["SparkLikeExpr"], SQLExprDateTimeNamesSpace["SparkLikeExpr"]
 ):
     def _weekday(self, expr: Column) -> Column:
         # PySpark's dayofweek returns 1-7 for Sunday-Saturday
@@ -66,8 +68,8 @@ class SparkLikeExprDateTimeNamespace(
     def date(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.to_date)
 
-    def year(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.year)
+    # def year(self) -> SparkLikeExpr:
+    #     return self.compliant._with_elementwise(self.compliant._F.year)
 
     def month(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.month)

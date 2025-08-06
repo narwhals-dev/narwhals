@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._sql.expr_str import SQLExprStringNamespace
+    from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 
@@ -744,6 +745,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     # Namespaces
     @property
     def str(self) -> SQLExprStringNamespace[Self]: ...
+
+    @property
+    def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
     # Not implemented
 

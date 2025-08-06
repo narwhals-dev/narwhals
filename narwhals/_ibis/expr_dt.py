@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 class IbisExprDateTimeNamespace(
     LazyExprNamespace["IbisExpr"], DateTimeNamespace["IbisExpr"]
 ):
-    def year(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.year())
+    # def year(self) -> IbisExpr:
+    #     return self.compliant._with_callable(lambda expr: expr.year())
 
     def month(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.month())

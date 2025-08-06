@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 class DuckDBExprDateTimeNamespace(
     LazyExprNamespace["DuckDBExpr"], DateTimeNamespace["DuckDBExpr"]
 ):
-    def year(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("year", expr))
+    # def year(self) -> DuckDBExpr:
+    #     return self.compliant._with_elementwise(lambda expr: F("year", expr))
 
     def month(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("month", expr))
