@@ -1069,6 +1069,26 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def sqrt(self) -> Self:
         return self._with_native(pc.sqrt(self.native))
 
+    def is_close(
+        self,
+        other: Self | NonNestedLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        ser, other_ = extract_native(self, other)
+        left = pc.abs(pc.subtract(ser, other_))
+        _max = pc.max_element_wise(pc.abs(ser), pc.abs(other_))
+        right = pc.max_element_wise(pc.multiply(rel_tol, _max), abs_tol)
+        result = left <= right
+
+        if nans_equal:
+            left_is_nan, right_is_nan = pc.is_nan(ser), pc.is_nan(other_)
+            result = pc.or_kleene(result, pc.and_kleene(left_is_nan, right_is_nan))
+
+        return self._with_native(result)
+
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)

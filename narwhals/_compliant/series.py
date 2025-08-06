@@ -284,6 +284,15 @@ class CompliantSeries(
         """`Series.hist(bins=None, bin_count=...)`."""
         ...
 
+    def is_close(
+        self,
+        other: Self | NonNestedLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self: ...
+
     @property
     def str(self) -> StringNamespace[Self]: ...
     @property

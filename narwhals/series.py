@@ -2763,6 +2763,66 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.sqrt())
 
+    def is_close(
+        self,
+        other: Self | NonNestedLiteral,
+        *,
+        abs_tol: float = 0.0,
+        rel_tol: float = 1e-09,
+        nans_equal: bool = False,
+    ) -> Self:
+        r"""Get a boolean mask of the values being close to the other values.
+
+        Two values `a` and `b` are considered close if the following condition holds:
+
+        $$|a-b| \le max \{ \text{rel_tol} \cdot max \{ |a|, |b| \}, \text{abs_tol} \}$$
+
+        Arguments:
+            other: Values to compare with.
+            abs_tol: Absolute tolerance. This is the maximum allowed absolute difference
+                between two values. Must be non-negative.
+            rel_tol: Relative tolerance. This is the maximum allowed difference between
+                two values, relative to the larger absolute value. Must be in the range [0, 1).
+            nans_equal: Whether NaN values should be considered equal.
+
+        Returns:
+            Series of Boolean data type.
+
+        Notes:
+            The implementation of this method is symmetric and mirrors the behavior of
+            `math.isclose`.
+
+        Examples: # TODO
+            >>> s = pl.Series("s", [1.0, 1.2, 1.4, 1.45, 1.6])
+            >>> s.is_close(1.4, abs_tol=0.1)
+            shape: (5,)
+            Series: 's' [bool]
+            [
+                false
+                false
+                true
+                true
+                false
+            ]
+        """
+        if not self.dtype.is_numeric():
+            from narwhals.exceptions import InvalidOperationError
+
+            msg = (
+                f"is_close operation not supported for dtype `{self.dtype}`\n\n"
+                "Hint: `is_close` is only supported for numeric types"
+            )
+            raise InvalidOperationError(msg)
+
+        return self._with_compliant(
+            self._compliant_series.is_close(
+                self._extract_native(other),
+                abs_tol=abs_tol,
+                rel_tol=rel_tol,
+                nans_equal=nans_equal,
+            )
+        )
+
     @property
     def str(self) -> SeriesStringNamespace[Self]:
         return SeriesStringNamespace(self)
