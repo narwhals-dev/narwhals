@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._duration import Interval
 from narwhals._ibis.utils import (
     UNITS_DICT_BUCKET,
     UNITS_DICT_TRUNCATE,
     timedelta_to_ibis_interval,
 )
+from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -19,11 +18,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.utils import BucketUnit, TruncateUnit
 
 
-class IbisExprDateTimeNamespace(
-    LazyExprNamespace["IbisExpr"], DateTimeNamespace["IbisExpr"]
-):
-    # def year(self) -> IbisExpr:
-    #     return self.compliant._with_callable(lambda expr: expr.year())
+class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
 
     def month(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.month())

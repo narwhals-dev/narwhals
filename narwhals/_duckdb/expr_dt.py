@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,
@@ -14,6 +12,7 @@ from narwhals._constants import (
 )
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit
 from narwhals._duration import Interval
+from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -25,11 +24,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
 
 
-class DuckDBExprDateTimeNamespace(
-    LazyExprNamespace["DuckDBExpr"], DateTimeNamespace["DuckDBExpr"]
-):
-    # def year(self) -> DuckDBExpr:
-    #     return self.compliant._with_elementwise(lambda expr: F("year", expr))
+class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     def month(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("month", expr))
