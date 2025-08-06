@@ -886,7 +886,27 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             Pass `use_pyarrow_extension_array=True` to preserve nested and/or null values:
 
-            >>> df_nested.to_pandas(use_pyarrow_extension_array=True).dtypes
+            >>> result = df_nested.to_pandas(use_pyarrow_extension_array=True)
+            >>> result.dtypes
+            egg    struct<foo: int64, bar: double, ham: large_str...
+            dtype: object
+
+            Additional arguments *may* be provided for `polars` and `pyarrow` **only**.
+
+            However, we can keep our code *mostly* dataframe-agnostic with:
+
+            >>> from narwhals.typing import ToPandasArrowKwds
+            >>>
+            >>> kwds: dict[nw.Implementation, ToPandasArrowKwds] = {
+            ...     nw.Implementation.POLARS: {"zero_copy_only": True},
+            ...     nw.Implementation.PYARROW: {
+            ...         "zero_copy_only": True,
+            ...         "date_as_object": False,
+            ...     },
+            ... }
+            >>> df = nw.from_native(result)
+            >>> kwargs = kwds.get(df.implementation, {})
+            >>> df.to_pandas(use_pyarrow_extension_array=True, **kwargs).dtypes
             egg    struct<foo: int64, bar: double, ham: large_str...
             dtype: object
         """
