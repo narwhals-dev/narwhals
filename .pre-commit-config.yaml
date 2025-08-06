@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.12.4'
+  rev: 'v0.12.7'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -26,21 +26,18 @@ repos:
     hooks:
     -   id: flake8
         additional_dependencies: [darglint==1.8.1, Flake8-pyproject]
-        entry: flake8 --select DAR --ignore DAR101,DAR402,DAR401
+        entry: flake8 --select DAR --ignore DAR101,DAR401,DAR402
         exclude: |
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/series\.py|
-                # TODO: gradually enable
-                narwhals/dataframe\.py|
-                # TODO: gradually enable
                 narwhals/dependencies\.py|
-                # TODO: gradually enable
-                narwhals/stable/v1/dependencies\.py|
-                # private, so less urgent to document too well
+                # Private, so less urgent to document too well
                 narwhals/_.*|
-                ^utils/.*
+                # Internal use only, less urgent
+                ^utils/.*|
+                # Soft-deprecated, so less crucial to document so carefully
+                narwhals/stable/v1/.*
             )$
 - repo: local
   hooks:
@@ -69,15 +66,15 @@ repos:
             from\ narwhals\ import\ dtypes|
             from\ narwhals.dtypes\ import\ [^D_]+|
             import\ narwhals.stable.v1.dtypes|
-            from\ narwhals.stable.v1\ import\ dtypes|
-            from\ narwhals.stable.v1.dtypes\ import
+            from\ narwhals.stable\.v.\ import\ dtypes|
+            from\ narwhals.stable\.v.\.dtypes\ import
       language: pygrep
       files: ^narwhals/
       exclude: |
         (?x)
           ^(
             narwhals/_utils\.py|
-            narwhals/stable/v1/_dtypes.py|
+            narwhals/stable/v./_?dtypes.py|
             narwhals/.*__init__.py|
             narwhals/.*typing\.py
           )

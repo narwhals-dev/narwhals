@@ -22,15 +22,11 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
 
-    BaseSchema = OrderedDict[str, DType]
-else:
-    # Python 3.8 does not support generic OrderedDict at runtime
-    BaseSchema = OrderedDict
 
 __all__ = ["Schema"]
 
 
-class Schema(BaseSchema):
+class Schema(OrderedDict[str, "DType"]):
     """Ordered mapping of column names to their data type.
 
     Arguments:
@@ -147,31 +143,28 @@ class Schema(BaseSchema):
                 name: to_native_dtype(dtype=dtype, dtype_backend=dtype_backend)
                 for name, dtype in self.items()
             }
-        else:
-            backends = tuple(dtype_backend)
-            if len(backends) != len(self):
-                from itertools import chain, islice, repeat
+        backends = tuple(dtype_backend)
+        if len(backends) != len(self):
+            from itertools import chain, islice, repeat
 
-                n_user, n_actual = len(backends), len(self)
-                suggestion = tuple(
-                    islice(
-                        chain.from_iterable(islice(repeat(backends), n_actual)), n_actual
-                    )
-                )
-                msg = (
-                    f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
-                    "Hint: instead of\n"
-                    f"    schema.to_pandas({backends})\n"
-                    "you may want to use\n"
-                    f"    schema.to_pandas({backends[0]})\n"
-                    f"or\n"
-                    f"    schema.to_pandas({suggestion})"
-                )
-                raise ValueError(msg)
-            return {
-                name: to_native_dtype(dtype=dtype, dtype_backend=backend)
-                for name, dtype, backend in zip(self.keys(), self.values(), backends)
-            }
+            n_user, n_actual = len(backends), len(self)
+            suggestion = tuple(
+                islice(chain.from_iterable(islice(repeat(backends), n_actual)), n_actual)
+            )
+            msg = (
+                f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
+                "Hint: instead of\n"
+                f"    schema.to_pandas({backends})\n"
+                "you may want to use\n"
+                f"    schema.to_pandas({backends[0]})\n"
+                f"or\n"
+                f"    schema.to_pandas({suggestion})"
+            )
+            raise ValueError(msg)
+        return {
+            name: to_native_dtype(dtype=dtype, dtype_backend=backend)
+            for name, dtype, backend in zip(self.keys(), self.values(), backends)
+        }
 
     def to_polars(self) -> pl.Schema:
         """Convert Schema to a polars Schema.

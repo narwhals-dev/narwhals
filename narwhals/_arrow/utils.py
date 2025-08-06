@@ -88,8 +88,7 @@ def chunked_array(
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(arr, dtype)
-    else:
-        return pa.chunked_array([arr], arr.type)
+    return pa.chunked_array([arr], arr.type)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -98,6 +97,10 @@ def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
     Uses the type of `series`, without upseting `mypy`.
     """
     return pa.nulls(n, series.native.type)
+
+
+def zeros(n: int, /) -> pa.Int64Array:
+    return pa.repeat(0, n)
 
 
 @lru_cache(maxsize=16)
@@ -383,7 +386,7 @@ def _parse_date_format(arr: pc.StringArray) -> str:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
             return date_fmt
-        elif (
+        if (
             pc.all(matches.is_valid()).as_py()
             and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
             and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1

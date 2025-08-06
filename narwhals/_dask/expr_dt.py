@@ -94,12 +94,12 @@ class DaskExprDateTimeNamespace(
             )
             if dtype.time_zone is None:  # type: ignore[attr-defined]
                 return s.dt.tz_localize("UTC").dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
-            else:
-                return s.dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
+            return s.dt.tz_convert(time_zone)  # pyright: ignore[reportAttributeAccessIssue]
 
         return self.compliant._with_callable(func, "tz_convert", time_zone=time_zone)
 
-    def timestamp(self, time_unit: TimeUnit) -> DaskExpr:
+    # ignoring coverage due to https://github.com/narwhals-dev/narwhals/issues/2808.
+    def timestamp(self, time_unit: TimeUnit) -> DaskExpr:  # pragma: no cover
         def func(s: dx.Series, time_unit: TimeUnit) -> dx.Series:
             dtype = native_to_narwhals_dtype(
                 s.dtype, self.compliant._version, Implementation.DASK

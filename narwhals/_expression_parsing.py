@@ -1,6 +1,7 @@
 # Utilities for expression parsing
 # Useful for backends which don't have any concept of expressions, such
 # and pandas or PyArrow.
+# ! Any change to this module will trigger the pyspark and pyspark-connect tests in CI
 from __future__ import annotations
 
 from enum import Enum, auto

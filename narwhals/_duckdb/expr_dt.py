@@ -150,8 +150,7 @@ class DuckDBExprDateTimeNamespace(
     def replace_time_zone(self, time_zone: str | None) -> DuckDBExpr:
         if time_zone is None:
             return self.compliant._with_elementwise(lambda expr: expr.cast("timestamp"))
-        else:
-            return self._no_op_time_zone(time_zone)
+        return self._no_op_time_zone(time_zone)
 
     total_nanoseconds = not_implemented()
     timestamp = not_implemented()

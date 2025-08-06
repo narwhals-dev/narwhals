@@ -169,12 +169,20 @@ class DaskExpr(
         )
 
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
+        alias_output_names = (
+            None
+            if func is None
+            else func
+            if current_alias_output_names is None
+            else lambda output_names: func(current_alias_output_names(output_names))
+        )
         return type(self)(
             call=self._call,
             depth=self._depth,
             function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=func,
+            alias_output_names=alias_output_names,
             version=self._version,
             scalar_kwargs=self._scalar_kwargs,
         )
@@ -426,9 +434,8 @@ class DaskExpr(
                 ).var(),
                 "rolling_var",
             )
-        else:
-            msg = "Dask backend only supports `ddof=1` for `rolling_var`"
-            raise NotImplementedError(msg)
+        msg = "Dask backend only supports `ddof=1` for `rolling_var`"
+        raise NotImplementedError(msg)
 
     def rolling_std(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
@@ -440,9 +447,8 @@ class DaskExpr(
                 ).std(),
                 "rolling_std",
             )
-        else:
-            msg = "Dask backend only supports `ddof=1` for `rolling_std`"
-            raise NotImplementedError(msg)
+        msg = "Dask backend only supports `ddof=1` for `rolling_std`"
+        raise NotImplementedError(msg)
 
     def sum(self) -> Self:
         return self._with_callable(lambda expr: expr.sum().to_series(), "sum")
@@ -549,9 +555,8 @@ class DaskExpr(
                 ).to_series()  # pragma: no cover
 
             return self._with_callable(func, "quantile", quantile=quantile)
-        else:
-            msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
-            raise NotImplementedError(msg)
+        msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
+        raise NotImplementedError(msg)
 
     def is_first_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:

@@ -4,11 +4,12 @@ import os
 import uuid
 from copy import deepcopy
 from functools import lru_cache
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
-from narwhals._utils import generate_temporary_column_name
+from narwhals._utils import Implementation, generate_temporary_column_name
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
+    from narwhals._namespace import EagerAllowed
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.typing import NativeFrame, NativeLazyFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
@@ -308,3 +310,20 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
+
+
+TEST_EAGER_BACKENDS: list[EagerAllowed] = []
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PANDAS, "pandas") if find_spec("pandas") is not None else ()
+)
+TEST_EAGER_BACKENDS.extend(
+    (Implementation.PYARROW, "pyarrow") if find_spec("pyarrow") is not None else ()
+)
+
+
+@pytest.fixture(params=TEST_EAGER_BACKENDS)
+def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
+    return request.param  # type: ignore[no-any-return]

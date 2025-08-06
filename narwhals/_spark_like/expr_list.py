@@ -14,3 +14,6 @@ class SparkLikeExprListNamespace(
 ):
     def len(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.array_size)
+
+    def unique(self) -> SparkLikeExpr:
+        return self.compliant._with_elementwise(self.compliant._F.array_distinct)

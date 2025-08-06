@@ -7,8 +7,8 @@ from operator import methodcaller
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._compliant import EagerGroupBy
+from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import find_stacklevel
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -263,8 +263,7 @@ class PandasLikeGroupBy(
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)  # type: ignore[call-overload]
-        else:  # pragma: no cover
-            return apply(func)
+        return apply(func)  # pragma: no cover
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
@@ -310,12 +309,11 @@ def empty_results_error() -> ValueError:
 
 
 def warn_complex_group_by() -> None:
-    warnings.warn(
+    issue_warning(
         "Found complex group-by expression, which can't be expressed efficiently with the "
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
         "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
         UserWarning,
-        stacklevel=find_stacklevel(),
     )

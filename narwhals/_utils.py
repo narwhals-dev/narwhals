@@ -8,6 +8,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from operator import attrgetter
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -21,9 +22,9 @@ from typing import (
     cast,
     overload,
 )
-from warnings import warn
 
 from narwhals._enum import NoAutoEnum
+from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cudf,
@@ -43,15 +44,8 @@ from narwhals.dependencies import (
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_polars_series,
-    is_pyarrow_chunked_array,
 )
-from narwhals.exceptions import (
-    ColumnNotFoundError,
-    DuplicateError,
-    InvalidOperationError,
-    PerformanceWarning,
-)
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -217,6 +211,7 @@ class ValidateBackendVersion(_StoresImplementation, Protocol):
 
 class Version(Enum):
     V1 = auto()
+    V2 = auto()
     MAIN = auto()
 
     @property
@@ -225,6 +220,10 @@ class Version(Enum):
             from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
             return NamespaceV1
+        if self is Version.V2:
+            from narwhals.stable.v2._namespace import Namespace as NamespaceV2
+
+            return NamespaceV2
         from narwhals._namespace import Namespace
 
         return Namespace
@@ -235,6 +234,10 @@ class Version(Enum):
             from narwhals.stable.v1 import dtypes as dtypes_v1
 
             return dtypes_v1
+        if self is Version.V2:
+            from narwhals.stable.v2 import dtypes as dtypes_v2
+
+            return dtypes_v2
         from narwhals import dtypes
 
         return dtypes
@@ -245,6 +248,10 @@ class Version(Enum):
             from narwhals.stable.v1 import DataFrame as DataFrameV1
 
             return DataFrameV1
+        if self is Version.V2:
+            from narwhals.stable.v2 import DataFrame as DataFrameV2
+
+            return DataFrameV2
         from narwhals.dataframe import DataFrame
 
         return DataFrame
@@ -255,6 +262,10 @@ class Version(Enum):
             from narwhals.stable.v1 import LazyFrame as LazyFrameV1
 
             return LazyFrameV1
+        if self is Version.V2:
+            from narwhals.stable.v2 import LazyFrame as LazyFrameV2
+
+            return LazyFrameV2
         from narwhals.dataframe import LazyFrame
 
         return LazyFrame
@@ -265,6 +276,10 @@ class Version(Enum):
             from narwhals.stable.v1 import Series as SeriesV1
 
             return SeriesV1
+        if self is Version.V2:
+            from narwhals.stable.v2 import Series as SeriesV2
+
+            return SeriesV2
         from narwhals.series import Series
 
         return Series
@@ -1046,7 +1061,7 @@ def maybe_set_index(
         return df_any._with_compliant(
             df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
-    elif is_pandas_like_series(native_obj):
+    if is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
 
         if column_names:
@@ -1059,8 +1074,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
-    else:
-        return df_any
+    return df_any
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -1194,17 +1208,16 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     """
     if unit in {"b", "bytes"}:
         return sz
-    elif unit in {"kb", "kilobytes"}:
+    if unit in {"kb", "kilobytes"}:
         return sz / 1024
-    elif unit in {"mb", "megabytes"}:
+    if unit in {"mb", "megabytes"}:
         return sz / 1024**2
-    elif unit in {"gb", "gigabytes"}:
+    if unit in {"gb", "gigabytes"}:
         return sz / 1024**3
-    elif unit in {"tb", "terabytes"}:
+    if unit in {"tb", "terabytes"}:
         return sz / 1024**4
-    else:
-        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
-        raise ValueError(msg)
+    msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+    raise ValueError(msg)
 
 
 def is_ordered_categorical(series: Series[Any]) -> bool:
@@ -1234,7 +1247,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import polars as pl
         >>> data = ["x", "y"]
         >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
+        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
 
         Let's define a library-agnostic function:
 
@@ -1247,7 +1260,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> func(s_pd)
         True
         >>> func(s_pl)
-        True
+        False
     """
     from narwhals._interchange.series import InterchangeSeries
 
@@ -1265,11 +1278,15 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         result = False
     else:
         native = series.to_native()
-        if is_polars_series(native):
+        impl = series.implementation
+        if impl.is_polars() and impl._backend_version() < (1, 32):
+            # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
+            # Since version 1.32.0, ordering parameter is ignored and
+            # it always behaves as if 'lexical' was passed.
             result = cast("pl.Categorical", native.dtype).ordering == "physical"
-        elif is_pandas_like_series(native):
+        elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
-        elif is_pyarrow_chunked_array(native):
+        elif impl.is_pyarrow():
             from narwhals._arrow.utils import is_dictionary
 
             result = is_dictionary(native.type) and native.type.ordered
@@ -1410,85 +1427,15 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
     )
 
 
-def find_stacklevel() -> int:
-    """Find the first place in the stack that is not inside narwhals.
-
-    Returns:
-        Stacklevel.
-
-    Taken from:
-    https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
-    """
-    import inspect
-    from pathlib import Path
-
-    import narwhals as nw
-
-    pkg_dir = str(Path(nw.__file__).parent)
-
-    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
-    frame = inspect.currentframe()
-    n = 0
-    try:
-        while frame:
-            fname = inspect.getfile(frame)
-            if fname.startswith(pkg_dir) or (
-                (qualname := getattr(frame.f_code, "co_qualname", None))
-                # ignore @singledispatch wrappers
-                and qualname.startswith("singledispatch.")
-            ):
-                frame = frame.f_back
-                n += 1
-            else:  # pragma: no cover
-                break
-        else:  # pragma: no cover
-            pass
-    finally:
-        # https://docs.python.org/3/library/inspect.html
-        # > Though the cycle detector will catch these, destruction of the frames
-        # > (and local variables) can be made deterministic by removing the cycle
-        # > in a finally clause.
-        del frame
-    return n
-
-
-def issue_deprecation_warning(message: str, _version: str) -> None:
-    """Issue a deprecation warning.
-
-    Arguments:
-        message: The message associated with the warning.
-        _version: Narwhals version when the warning was introduced. Just used for internal
-            bookkeeping.
-    """
-    warn(message=message, category=DeprecationWarning, stacklevel=find_stacklevel())
-
-
-def issue_performance_warning(message: str) -> None:
-    """Issue a performance warning.
-
-    Arguments:
-        message: The message associated with the warning.
-    """
-    warn(message=message, category=PerformanceWarning, stacklevel=find_stacklevel())
-
-
 def validate_strict_and_pass_though(
     strict: bool | None,  # noqa: FBT001
     pass_through: bool | None,  # noqa: FBT001
     *,
     pass_through_default: bool,
-    emit_deprecation_warning: bool,
 ) -> bool:
     if strict is None and pass_through is None:
         pass_through = pass_through_default
     elif strict is not None and pass_through is None:
-        if emit_deprecation_warning:
-            msg = (
-                "`strict` in `from_native` is deprecated, please use `pass_through` instead.\n\n"
-                "Note: `strict` will remain available in `narwhals.stable.v1`.\n"
-                "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
-            )
-            issue_deprecation_warning(msg, _version="1.13.0")
         pass_through = not strict
     elif strict is None and pass_through is not None:
         pass
@@ -1714,7 +1661,7 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
 
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
-    return hasattr(obj, "__native_namespace__")
+    return _hasattr_static(obj, "__native_namespace__")
 
 
 def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
@@ -1760,9 +1707,8 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
-    else:  # pragma: no cover
-        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
-        raise ModuleNotFoundError(msg)
+    msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
+    raise ModuleNotFoundError(msg)  # pragma: no cover
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -1998,13 +1944,12 @@ def inherit_doc(
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
-        else:  # pragma: no cover
-            msg = (
-                f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
-                f"Method: {init_child.__qualname__!r}\n"
-                f"Parent: {tp_parent!r}"
-            )
-            raise TypeError(msg)
+        msg = (  # pragma: no cover
+            f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
+            f"Method: {init_child.__qualname__!r}\n"
+            f"Parent: {tp_parent!r}"
+        )
+        raise TypeError(msg)  # pragma: no cover
 
     return decorate
 
@@ -2075,3 +2020,14 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+@lru_cache(maxsize=64)
+def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
+    name = ".".join((attr, *nested)) if nested else attr
+    return attrgetter(name)
+
+
+def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
+    """Perform a nested attribute lookup on `obj`."""
+    return deep_attrgetter(name_1, *nested)(obj)
