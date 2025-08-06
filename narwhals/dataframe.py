@@ -648,7 +648,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not _is_into_schema(schema):
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "IntoSchema | Sequence[str]. "
+                "Mapping[str, DType] | Schema | Sequence[str]. "
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
