@@ -33,9 +33,6 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
         return self.compliant._with_callable(lambda expr: expr.day_of_week.index() + 1)
 
-    def ordinal_day(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.day_of_year())
-
     def date(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.date())
 

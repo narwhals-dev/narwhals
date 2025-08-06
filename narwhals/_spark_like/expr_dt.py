@@ -83,9 +83,6 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
 
         return self.compliant._with_elementwise(_nanosecond)
 
-    def ordinal_day(self) -> SparkLikeExpr:
-        return self.compliant._with_elementwise(self.compliant._F.dayofyear)
-
     def weekday(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self._weekday)
 

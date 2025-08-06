@@ -49,9 +49,6 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
     def weekday(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: F("isodow", expr))
 
-    def ordinal_day(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("dayofyear", expr))
-
     def date(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(lambda expr: expr.cast("date"))
 
