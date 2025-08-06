@@ -20,21 +20,6 @@ if TYPE_CHECKING:
 
 class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
 
-    def month(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.month())
-
-    def day(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.day())
-
-    def hour(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.hour())
-
-    def minute(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.minute())
-
-    def second(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.second())
-
     def millisecond(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.millisecond())
 

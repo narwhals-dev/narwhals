@@ -16,3 +16,19 @@ class SQLExprDateTimeNamesSpace(
 
     def year(self) -> SQLExprT:
         return self.compliant._with_elementwise(lambda expr: self._function("year", expr))
+    
+    def month(self) -> SQLExprT:
+        return self.compliant._with_elementwise(lambda expr: self._function("month", expr))
+
+    def day(self) -> SQLExprT:
+        return self.compliant._with_elementwise(lambda expr: self._function("day", expr))
+
+    def hour(self) -> SQLExprT:
+        return self.compliant._with_elementwise(lambda expr: self._function("hour", expr))
+
+    def minute(self) -> SQLExprT:
+        return self.compliant._with_elementwise(lambda expr: self._function("minute", expr))
+
+    def second(self) -> SQLExprT:
+        return self.compliant._with_elementwise(lambda expr: self._function("second", expr))
+

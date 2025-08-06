@@ -26,21 +26,6 @@ if TYPE_CHECKING:
 
 class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
-    def month(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("month", expr))
-
-    def day(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("day", expr))
-
-    def hour(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("hour", expr))
-
-    def minute(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("minute", expr))
-
-    def second(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(lambda expr: F("second", expr))
-
     def millisecond(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
             lambda expr: F("millisecond", expr) - F("second", expr) * lit(MS_PER_SECOND)
