@@ -339,6 +339,7 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def len(self) -> CompliantT: ...
 
+    contains: Method[CompliantT]
     unique: Method[CompliantT]
 
 
