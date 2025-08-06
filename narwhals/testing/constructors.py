@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._utils import Implementation
 
@@ -14,9 +13,11 @@ if not ("pytest" in sys.modules or find_spec("pytest")):
     raise ModuleNotFoundError(msg)
 
 
+from typing import TYPE_CHECKING
+
 import pytest
 
-from narwhals.testing._constructors import (
+from narwhals.testing._utils import (
     MIN_PANDAS_NULLABLE_VERSION,
     PANDAS_VERSION,
     PYARROW_AVAILABLE,
@@ -25,18 +26,7 @@ from narwhals.testing._constructors import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
-
-    Data: TypeAlias = "dict[str, Any]"
-
-    Constructor: TypeAlias = Callable[
-        [Any], "NativeLazyFrame | NativeFrame | DataFrameLike"
-    ]
-    ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
-    ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
-
+    from narwhals.testing.typing import Constructor, ConstructorEager, ConstructorLazy
 
 selected_constructors: list[str] = []
 
@@ -70,13 +60,43 @@ eager_constructors, eager_ids, lazy_constructors, lazy_ids = get_constructors(
 
 @pytest.fixture(params=eager_constructors.copy(), ids=eager_ids.copy())
 def eager_constructor(request: pytest.FixtureRequest) -> ConstructorEager:
-    """Provides a (eager) dataframe constructor configured for testing, based on installed libraries."""
+    """Pytest fixture that returns all eager dataframe constructors supported by Narwhals and are installed.
+
+    Notes:
+        This function is intended to be used in unit tests and requires pytest to be installed.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> from narwhals.testing.constructors import eager_constructor
+        >>> from narwhals.testing.typing import ConstructorEager
+        >>>
+        >>> def test_shape(eager_constructor: ConstructorEager) -> None:
+        ...     data = {"x": [1, 2, 3], "y": [7.1, 8.2, 9.3]}
+        ...     native_frame = eager_constructor(data)
+        ...     nw_frame = nw.from_native(native_frame, eager_only=True)
+        ...     assert nw_frame.shape == (3, 2)
+    """
     return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(params=lazy_constructors.copy(), ids=lazy_ids.copy())
-def lazy_constructor(request: pytest.FixtureRequest) -> Constructor:
-    """Provides a lazyframe constructor configured for testing, based on installed libraries."""
+def lazy_constructor(request: pytest.FixtureRequest) -> ConstructorLazy:
+    """Pytest fixture that returns all lazy dataframe constructors supported by Narwhals and are installed.
+
+    Notes:
+        This function is intended to be used in unit tests and requires pytest to be installed.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> from narwhals.testing.constructors import lazy_constructor
+        >>> from narwhals.testing.typing import ConstructorLazy
+        >>>
+        >>> def test_schema(lazy_constructor: ConstructorLazy) -> None:
+        ...     data = {"x": [1, 2, 3], "y": [7.1, 8.2, 9.3]}
+        ...     native_frame = lazy_constructor(data)
+        ...     nw_frame = nw.from_native(native_frame)
+        ...     assert nw_frame.collect_schema() == {"x": nw.Int64(), "y": nw.Float64()}
+    """
     return request.param  # type: ignore[no-any-return]
 
 
@@ -84,5 +104,20 @@ def lazy_constructor(request: pytest.FixtureRequest) -> Constructor:
     params=[*eager_constructors, *lazy_constructors], ids=[*eager_ids, *lazy_ids]
 )
 def frame_constructor(request: pytest.FixtureRequest) -> Constructor:
-    """Provides a eager or lazy frame constructor configured for testing, based on installed libraries."""
+    """Pytest fixture that returns all eager and lazy dataframe constructors supported by Narwhals and are installed.
+
+    Notes:
+        This function is intended to be used in unit tests and requires pytest to be installed.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> from narwhals.testing.constructors import frame_constructor
+        >>> from narwhals.testing.typing import Constructor
+        >>>
+        >>> def test_schema(frame_constructor: Constructor) -> None:
+        ...     data = {"x": [1, 2, 3], "y": [7.1, 8.2, 9.3]}
+        ...     native_frame = frame_constructor(data)
+        ...     nw_frame = nw.from_native(native_frame)
+        ...     assert nw_frame.collect_schema() == {"x": nw.Int64(), "y": nw.Float64()}
+    """
     return request.param  # type: ignore[no-any-return]

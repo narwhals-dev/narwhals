@@ -9,7 +9,7 @@ from hypothesis import assume, given
 from hypothesis.extra.numpy import arrays
 
 import narwhals as nw
-from narwhals.testing._constructors import pandas_constructor, pyarrow_table_constructor
+from narwhals.testing._utils import pandas_constructor, pyarrow_table_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:

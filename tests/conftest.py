@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 from narwhals._utils import Implementation
-from narwhals.testing._constructors import (
+from narwhals.testing._utils import (
     EAGER_CONSTRUCTORS,
     GPU_CONSTRUCTORS,
     LAZY_CONSTRUCTORS,
@@ -23,8 +23,6 @@ if TYPE_CHECKING:
     from tests.utils import Constructor
 
     Data: TypeAlias = "dict[str, list[Any]]"
-
-MIN_PANDAS_NULLABLE_VERSION = (2,)
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us

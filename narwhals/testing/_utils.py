@@ -7,10 +7,8 @@ from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Any, Callable, cast
 from warnings import warn
 
-import pytest
-
 from narwhals._exceptions import find_stacklevel
-from narwhals._utils import Implementation, generate_temporary_column_name, parse_version
+from narwhals._utils import Implementation, generate_temporary_column_name
 
 if TYPE_CHECKING:
     import duckdb
@@ -20,18 +18,13 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import DataFrame as PySparkDataFrame
-    from typing_extensions import TypeAlias
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame
+    from narwhals.testing.typing import ConstructorEager, ConstructorLazy, Data
+    from narwhals.typing import NativeFrame, NativeLazyFrame
 
-    Data: TypeAlias = "dict[str, Any]"
 
-    Constructor: TypeAlias = Callable[
-        [Any], "NativeLazyFrame | NativeFrame | DataFrameLike"
-    ]
-    ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
-    ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+MIN_PANDAS_NULLABLE_VERSION: tuple[int, ...] = (2, 0, 0)
 
 
 def pandas_constructor(obj: Data) -> pd.DataFrame:
@@ -116,7 +109,6 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
 
 
 def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
-    pytest.importorskip("pyspark")
     import warnings
     from atexit import register
 
@@ -210,15 +202,6 @@ LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
-MIN_PANDAS_NULLABLE_VERSION = (2,)
-
-
-def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
-    try:
-        return parse_version(__import__(module_name).__version__)
-    except ImportError:
-        return (0, 0, 0)
-
 
 @cache
 def backend_is_available(impl: Implementation) -> bool:
@@ -238,22 +221,51 @@ def backend_is_available(impl: Implementation) -> bool:
     return backend_is_available
 
 
-PANDAS_VERSION = get_module_version_as_tuple("pandas")
+PANDAS_VERSION = (
+    Implementation.PANDAS._backend_version()
+    if backend_is_available(Implementation.PANDAS)
+    else (0, 0, 0)
+)
 PYARROW_AVAILABLE = backend_is_available(Implementation.PYARROW)
 
 
 def get_constructors(
     selected_constructors: list[str],
-) -> tuple[list[ConstructorEager], list[str], list[Constructor], list[str]]:
+) -> tuple[list[ConstructorEager], list[str], list[ConstructorLazy], list[str]]:
+    """Filter and organize constructors based on selected constructor names.
+
+    This function takes a list of constructor names and separates them into
+    eager and lazy constructors, along with their corresponding names. It handles
+    special cases for pandas nullable/pyarrow versions and pyspark constructors.
+
+    Arguments:
+        selected_constructors: List of constructor identifier strings to filter
+            and organize. Expected to contain names from EAGER_CONSTRUCTORS or
+            LAZY_CONSTRUCTORS dictionaries.
+
+    Returns:
+        A tuple containing:
+            - List of eager constructor functions
+            - List of eager constructor names
+            - List of lazy constructor functions
+            - List of lazy constructor names
+
+    Notes:
+        - Pandas nullable/pyarrow constructors are skipped if the pandas version
+          is below MIN_PANDAS_NULLABLE_VERSION
+        - Pyspark constructors ("pyspark", "pyspark[connect]") receive special
+          handling through pyspark_lazy_constructor()
+    """
     eager_constructors: list[ConstructorEager] = []
+    lazy_constructors: list[ConstructorLazy] = []
+
     eager_ids: list[str] = []
-    lazy_constructors: list[Constructor] = []
     lazy_ids: list[str] = []
 
     for _id in selected_constructors:
         if (
             _id in {"pandas[nullable]", "pandas[pyarrow]"}
-            and MIN_PANDAS_NULLABLE_VERSION > PANDAS_VERSION
+            and PANDAS_VERSION < MIN_PANDAS_NULLABLE_VERSION
         ):
             continue  # pragma: no cover
 
