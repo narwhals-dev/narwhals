@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntoDType
 
 
 class PolarsExpr:
@@ -418,8 +418,14 @@ class PolarsExprListNamespace(
     def unique(self) -> PolarsExpr:
         return self.compliant._with_native(self.native.list.unique())
 
-    def contains(self, item: NonNestedLiteral) -> PolarsExpr:
-        return self.compliant._with_native(self.native.list.contains(item))
+    def contains(self, item: Any) -> PolarsExpr:
+        if self.compliant._backend_version < (1, 28):
+            result: pl.Expr = pl.when(self.native.is_not_null()).then(
+                self.native.list.contains(item)
+            )
+        else:
+            result = self.native.list.contains(item)
+        return self.compliant._with_native(result)
 
 
 class PolarsExprStructNamespace(

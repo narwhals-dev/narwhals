@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -18,7 +18,7 @@ def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor)
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ) or ("polars" in str(constructor) and POLARS_VERSION < (1, 28, 0)):
+    ):
         request.applymarker(pytest.mark.xfail)
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.contains(2)
@@ -32,7 +32,7 @@ def test_contains_series(
     if any(
         backend in str(constructor_eager)
         for backend in ("modin", "cudf", "pyarrow", "pandas")
-    ) or ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 28, 0)):
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.contains(2)
