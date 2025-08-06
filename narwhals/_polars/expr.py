@@ -415,9 +415,6 @@ class PolarsExprListNamespace(
 
         return self.compliant._with_native(native_result)
 
-    def unique(self) -> PolarsExpr:
-        return self.compliant._with_native(self.native.list.unique())
-
     def contains(self, item: Any) -> PolarsExpr:
         if self.compliant._backend_version < (1, 28):
             result: pl.Expr = pl.when(self.native.is_not_null()).then(
