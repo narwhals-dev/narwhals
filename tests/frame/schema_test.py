@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
+from narwhals._utils import Implementation
 from narwhals.exceptions import PerformanceWarning
 from tests.utils import PANDAS_VERSION, POLARS_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
@@ -465,4 +466,39 @@ def test_schema_from_arrow(target_schema: nw.Schema) -> None:
     }
     native = pa.schema(fields)
     schema = nw.Schema.from_arrow(native)
+    assert schema == target_schema
+
+
+@pytest.mark.skip(reason="need to experiment with modin")
+def test_schema_from_pandas(
+    target_schema: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
+) -> None:  # pragma: no cover
+    name_pandas_like = {
+        "pandas_constructor",
+        "pandas_nullable_constructor",
+        "pandas_pyarrow_constructor",
+        "modin_constructor",
+        "modin_pyarrow_constructor",
+        "cudf_constructor",
+    }
+    impl_pandas_like = Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF
+    if constructor_eager.__name__ not in name_pandas_like:
+        pytest.skip(f"{constructor_eager.__name__!r} is not a pandas-like constructor")
+
+    data = {
+        "a": [2, 1],
+        "b": ["hello", "hi"],
+        "c": [False, True],
+        "d": [date(2003, 1, 1), date(2004, 1, 1)],
+        "e": [time(10, 1, 1), time(14, 1, 1)],
+        "f": [datetime(2003, 1, 1), datetime(2004, 1, 1)],
+    }
+    df_pd = constructor_eager(data)
+    df_nw = nw.from_native(df_pd).with_columns(
+        nw.col("d").cast(nw.Date()), nw.col("e").cast(nw.Time())
+    )
+    native = df_nw.to_native().dtypes.to_dict()
+    impl = df_nw.implementation
+    assert impl in impl_pandas_like
+    schema = nw.Schema.from_pandas(native, backend=impl)
     assert schema == target_schema
