@@ -500,5 +500,5 @@ def test_schema_from_pandas(
     native = df_nw.to_native().dtypes.to_dict()
     impl = df_nw.implementation
     assert impl in impl_pandas_like
-    schema = nw.Schema.from_pandas(native, backend=impl)
+    schema = nw.Schema.from_pandas(native, backend=impl)  # type: ignore[arg-type]
     assert schema == target_schema
