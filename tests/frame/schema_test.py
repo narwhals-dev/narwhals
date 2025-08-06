@@ -418,7 +418,21 @@ def test_schema_to_pandas_invalid() -> None:
         schema.to_pandas("cabbage")  # type: ignore[arg-type]
 
 
-def test_schema_from_polars() -> None:
+@pytest.fixture
+def target_schema() -> nw.Schema:
+    return nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Date(),
+            "e": nw.Time(),
+            "f": nw.Datetime("ns"),
+        }
+    )
+
+
+def test_schema_from_polars(target_schema: nw.Schema) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
@@ -430,15 +444,25 @@ def test_schema_from_polars() -> None:
             "c": pl.Boolean(),
             "d": pl.Date(),
             "e": pl.Time(),
-            "f": pl.Datetime("ms"),
+            "f": pl.Datetime("ns"),
         }
     )
     schema = nw.Schema.from_polars(native)
-    assert schema == {
-        "a": nw.Int64(),
-        "b": nw.String(),
-        "c": nw.Boolean(),
-        "d": nw.Date(),
-        "e": nw.Time(),
-        "f": nw.Datetime("ms"),
+    assert schema == target_schema
+
+
+def test_schema_from_arrow(target_schema: nw.Schema) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    fields: dict[str, pa.DataType] = {
+        "a": pa.int64(),
+        "b": pa.string(),
+        "c": pa.bool_(),
+        "d": pa.date32(),
+        "e": pa.time64("ns"),
+        "f": pa.timestamp("ns"),
     }
+    native = pa.schema(fields)
+    schema = nw.Schema.from_arrow(native)
+    assert schema == target_schema
