@@ -414,37 +414,33 @@ MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 class ToPandasArrowKwds(TypedDict, total=False):
-    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas).
-
-    Important:
-        Only *default-overriding* values are documented.
-    """
+    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas)."""
 
     types_mapper: Callable[[pa.DataType], PandasDType | None] | None
     """Used to override the default pandas type for conversion of built-in pyarrow types or in absence of pandas_metadata in the `Table` schema."""
-    zero_copy_only: Literal[True]
+    zero_copy_only: bool
     """Raise an `ArrowException` if this function call would require copying the underlying data."""
-    self_destruct: Literal[True]
+    self_destruct: bool
     """**EXPERIMENTAL**: Attempt to deallocate the originating Arrow memory while converting the Arrow object to pandas.
 
     If you use the object after calling to_pandas with this option it will crash your program.
     Note that you may not see always memory usage improvements.
     For example, if multiple columns share an underlying allocation, memory can't be freed until all columns are converted.
     """
-    split_blocks: Literal[True]
+    split_blocks: bool
     """Generate one internal "block" for each column when creating a `pandas.DataFrame` from a `RecordBatch` or `Table`.
 
     While this can temporarily reduce memory note that various pandas operations can trigger "consolidation" which may balloon memory use.
     """
-    use_threads: Literal[False]
-    safe: Literal[False]
+    use_threads: bool
+    safe: bool
     """For certain data types, a cast is needed in order to store the data in a `pandas.DataFrame` or `Series` (e.g. timestamps are always stored as nanoseconds in pandas).
 
     This option controls whether it is a safe cast or not."""
     memory_pool: pa.MemoryPool
-    deduplicate_objects: Literal[False]
+    deduplicate_objects: bool
     maps_as_pydicts: Literal["None", "lossy", "strict"]
-    date_as_object: Literal[False]
+    date_as_object: bool
     """Cast `Date` types to `numpy.dtypes.ObjectDType`.
 
     If False, convert to datetime64 dtype with the equivalent time unit (if supported).
@@ -452,18 +448,18 @@ class ToPandasArrowKwds(TypedDict, total=False):
     Note:
         in pandas version < 2.0, only datetime64[ns] conversion is supported.
     """
-    strings_to_categorical: Literal[True]
+    strings_to_categorical: bool
     """Cast all `String`, `Binary` types to `pandas.Categorical`."""
-    integer_object_nulls: Literal[True]
+    integer_object_nulls: bool
     """Cast `Int`, `UInt` types with nulls to `numpy.dtypes.ObjectDType`."""
-    timestamp_as_object: Literal[True]
+    timestamp_as_object: bool
     """Cast non-nanosecond timestamps (np.datetime64) to `numpy.dtypes.ObjectDType`.
 
     This is useful in pandas version 1.x if you have timestamps that don't fit in the normal date range of nanosecond timestamps (1678 CE-2262 CE).
     Non-nanosecond timestamps are supported in pandas version 2.0.
     If False, all timestamps are converted to datetime64 dtype.
     """
-    coerce_temporal_nanoseconds: Literal[True]
+    coerce_temporal_nanoseconds: bool
     """Only applicable to pandas version >= 2.0.
 
     A legacy option to coerce date32, date64, duration, and timestamp time units to nanoseconds when converting to pandas.
@@ -476,7 +472,7 @@ class ToPandasArrowKwds(TypedDict, total=False):
     Note:
         Has no effect on `Series`.
     """
-    ignore_metadata: Literal[True]
+    ignore_metadata: bool
 
 
 __all__ = [

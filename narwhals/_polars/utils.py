@@ -272,8 +272,7 @@ class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
                 raise InvalidOperationError(msg)
             for kwd in always_true:
                 user_defined = kwds.pop(kwd, True)
-                # NOTE: The `pyarrow` default is False, but `ToPandasArrowKwds` is typed to only accept True
-                # `polars` will always use `True` with `use_pyarrow_extension_array`
+                # NOTE: The `pyarrow` default is False, but `polars` will always use `True` with `use_pyarrow_extension_array`
                 if user_defined is False:  # pragma: no cover
                     msg = f"`use_pyarrow_extension_array` cannot be used with `{kwd}={user_defined}`."
                     raise InvalidOperationError(msg)
