@@ -5,7 +5,7 @@ import re
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"int": [[1, 2], [None, 3], [None]]}
 expected = {"int": [1, None, None]}
@@ -14,6 +14,9 @@ expected = {"int": [1, None, None]}
 def test_get_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        pytest.skip()
+
     result = nw.from_native(constructor(data)).select(
         nw.col("int").cast(nw.List(nw.Int32())).list.get(0)
     )
@@ -26,6 +29,9 @@ def test_get_series(
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
+
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+        pytest.skip()
 
     if (
         constructor_eager.__name__.startswith("pandas")
