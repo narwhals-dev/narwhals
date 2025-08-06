@@ -36,3 +36,30 @@ class SeriesListNamespace(Generic[SeriesT]):
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.len()
         )
+
+    def unique(self) -> SeriesT:
+        """Get the unique/distinct values in the list.
+
+        Null values are included in the result. The order of unique values is not guaranteed.
+
+        Returns:
+            A new series.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([[1, 1, 2], [3, 3, None], None, []])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.list.unique().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [list[i64]]
+            [
+               [1, 2]
+               [null, 3]
+               null
+               []
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.list.unique()
+        )
