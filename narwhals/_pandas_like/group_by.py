@@ -263,8 +263,7 @@ class PandasLikeGroupBy(
         apply = self._grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)  # type: ignore[call-overload]
-        else:  # pragma: no cover
-            return apply(func)
+        return apply(func)  # pragma: no cover
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()

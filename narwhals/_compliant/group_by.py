@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import re
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
     CompliantDataFrameT_co,
     CompliantExprT_contra,
+    CompliantFrameT,
     CompliantFrameT_co,
     CompliantLazyFrameAny,
     DepthTrackingExprAny,
@@ -17,7 +19,9 @@ from narwhals._compliant.typing import (
 from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
+
+    from narwhals._compliant.expr import CompliantExpr
 
     _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
@@ -30,6 +34,13 @@ NativeAggregationT_co = TypeVar(
 
 
 _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
+
+
+def _evaluate_aliases(
+    frame: CompliantFrameT, exprs: Iterable[CompliantExpr[CompliantFrameT, Any]], /
+) -> list[str]:
+    it = (expr._evaluate_aliases(frame) for expr in exprs)
+    return list(chain.from_iterable(it))
 
 
 class CompliantGroupBy(Protocol[CompliantFrameT_co, CompliantExprT_contra]):
@@ -70,8 +81,7 @@ class ParseKeysGroupBy(
         if is_sequence_of(keys, str):
             keys_str = list(keys)
             return compliant_frame, keys_str, keys_str.copy()
-        else:
-            return self._parse_expr_keys(compliant_frame, keys=keys)
+        return self._parse_expr_keys(compliant_frame, keys=keys)
 
     @staticmethod
     def _parse_expr_keys(
@@ -98,7 +108,7 @@ class ParseKeysGroupBy(
             key_str = str(key)  # pandas allows non-string column names :sob:
             return f"_{key_str}_tmp{'_' * (tmp_name_length - len(key_str) - 5)}"
 
-        output_names = compliant_frame._evaluate_aliases(*keys)
+        output_names = _evaluate_aliases(compliant_frame, keys)
 
         safe_keys = [
             # multi-output expression cannot have duplicate names, hence it's safe to suffix
@@ -110,7 +120,7 @@ class ParseKeysGroupBy(
         ]
         return (
             compliant_frame.with_columns(*safe_keys),
-            compliant_frame._evaluate_aliases(*safe_keys),
+            _evaluate_aliases(compliant_frame, safe_keys),
             output_names,
         )
 

@@ -357,7 +357,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return version.dataframe(
             native_object.__narwhals_dataframe__()._with_version(version), level="full"
         )
-    elif is_compliant_lazyframe(native_object):
+    if is_compliant_lazyframe(native_object):
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with lazyframe"
@@ -371,7 +371,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return version.lazyframe(
             native_object.__narwhals_lazyframe__()._with_version(version), level="full"
         )
-    elif is_compliant_series(native_object):
+    if is_compliant_series(native_object):
         if not allow_series:
             if not pass_through:
                 msg = "Please set `allow_series=True` or `series_only=True`"
@@ -382,7 +382,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # Polars
-    elif is_native_polars(native_object):
+    if is_native_polars(native_object):
         if series_only and not is_polars_series(native_object):
             if not pass_through:
                 msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
@@ -407,7 +407,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # PandasLike
-    elif is_native_pandas_like(native_object):
+    if is_native_pandas_like(native_object):
         if is_pandas_like_dataframe(native_object):
             if series_only:
                 if not pass_through:
@@ -426,7 +426,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # PyArrow
-    elif is_native_arrow(native_object):
+    if is_native_arrow(native_object):
         if is_pyarrow_table(native_object):
             if series_only:
                 if not pass_through:
@@ -445,7 +445,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # Dask
-    elif is_dask_dataframe(native_object):
+    if is_dask_dataframe(native_object):
         if series_only:
             if not pass_through:
                 msg = "Cannot only use `series_only` with dask DataFrame"
@@ -469,7 +469,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # DuckDB
-    elif is_duckdb_relation(native_object):
+    if is_duckdb_relation(native_object):
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with DuckDBPyRelation"
@@ -482,7 +482,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # Ibis
-    elif is_ibis_table(native_object):
+    if is_ibis_table(native_object):
         if eager_only or series_only:  # pragma: no cover
             if not pass_through:
                 msg = "Cannot only use `series_only=True` or `eager_only=False` with ibis.Table"
@@ -495,7 +495,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         )
 
     # PySpark
-    elif is_native_spark_like(native_object):  # pragma: no cover
+    if is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = version.namespace.from_native_object(native_object)
         if series_only or eager_only or eager_or_interchange_only:
             if not pass_through:
@@ -508,7 +508,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
-    elif _supports_dataframe_interchange(native_object):
+    if _supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
@@ -532,7 +532,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    elif not pass_through:
+    if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
         raise TypeError(msg)
     return native_object
@@ -681,9 +681,8 @@ def narwhalify(
 
     if func is None:
         return decorator
-    else:
-        # If func is not None, it means the decorator is used without arguments
-        return decorator(func)
+    # If func is not None, it means the decorator is used without arguments
+    return decorator(func)
 
 
 def to_py_scalar(scalar_like: Any) -> Any:
