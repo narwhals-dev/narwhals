@@ -10,8 +10,8 @@ from narwhals._sql.typing import SQLExprT
 class SQLExprDateTimeNamesSpace(
     LazyExprNamespace[SQLExprT], DateTimeNamespace[SQLExprT], Generic[SQLExprT]
 ):
-    def _function(self, name: str, *args: Any) -> SQLExprT:  # type: ignore[no-any-return]
-        return self.compliant._function(name, *args)
+    def _function(self, name: str, *args: Any) -> SQLExprT:
+        return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
     def year(self) -> SQLExprT:
         return self.compliant._with_elementwise(lambda expr: self._function("year", expr))
