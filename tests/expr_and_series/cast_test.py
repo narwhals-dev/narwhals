@@ -59,19 +59,19 @@ SCHEMA = {
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
+MODIN_INCOMPATIBLE_COLUMNS = {"o", "k"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_cast(constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         pytest.skip()
-    if "modin_constructor" in str(constructor):
-        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
-        request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor):
+    if "modin_constructor" in str(constructor):
+        incompatible_columns = MODIN_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    elif "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "duckdb" in str(constructor):
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
@@ -119,16 +119,19 @@ def test_cast_series(
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if "modin_constructor" in str(constructor_eager):
-        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
-        request.applymarker(pytest.mark.xfail)
+        incompatible_columns = MODIN_INCOMPATIBLE_COLUMNS  # pragma: no cover
+    else:
+        incompatible_columns = set()
+
+    data = {c: v for c, v in DATA.items() if c not in incompatible_columns}
+    schema = {c: t for c, t in SCHEMA.items() if c not in incompatible_columns}
     df = (
-        nw.from_native(constructor_eager(DATA))
-        .select(nw.col(key).cast(value) for key, value in SCHEMA.items())
+        nw.from_native(constructor_eager(data))
+        .select(nw.col(key).cast(value) for key, value in schema.items())
         .lazy()
         .collect()
     )
-
-    expected = {
+    cast_map = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -146,25 +149,9 @@ def test_cast_series(
         "o": nw.String,
         "p": nw.Duration,
     }
-    result = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Int8),
-        df["o"].cast(nw.String),
-        df["p"].cast(nw.Duration),
-    )
-    assert result.schema == expected
+    cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
+    result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items())
+    assert result.schema == cast_map
 
 
 def test_cast_string() -> None:
