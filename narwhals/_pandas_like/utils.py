@@ -545,7 +545,10 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
-        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+        if implementation in {
+            Implementation.PANDAS,
+            Implementation.MODIN,
+        } and Implementation.PANDAS._backend_version() >= (2, 2):
             try:
                 import pandas as pd
                 import pyarrow as pa  # ignore-banned-import  # noqa: F401
