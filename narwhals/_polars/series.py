@@ -36,7 +36,13 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        NumericLiteral,
+        _1DArray,
+    )
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
@@ -84,6 +90,7 @@ INHERITED_METHODS = frozenset(
         "gather_every",
         "head",
         "is_between",
+        "is_close",
         "is_finite",
         "is_first_distinct",
         "is_in",
@@ -124,6 +131,11 @@ INHERITED_METHODS = frozenset(
 
 class PolarsSeries:
     _implementation = Implementation.POLARS
+
+    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
+        True: ["breakpoint", "count"],
+        False: ["count"],
+    }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
         self._native_series: pl.Series = series
@@ -472,10 +484,32 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
-        True: ["breakpoint", "count"],
-        False: ["count"],
-    }
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        kwargs = {
+            "other": extract_native(other),
+            "abs_tol": abs_tol,
+            "rel_tol": rel_tol,
+            "nans_equal": nans_equal,
+        }
+        if self._backend_version < (1, 32, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            result = (
+                self.to_frame()
+                .select(ns.col(name).is_close(**kwargs))
+                .get_column(name)
+                .native
+            )
+        else:
+            result = self.native.is_close(**kwargs)
+        return self._with_native(result)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool

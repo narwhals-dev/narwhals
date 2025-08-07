@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, NumericLiteral
 
 
 class PolarsExpr:
@@ -231,6 +231,54 @@ class PolarsExpr:
         from narwhals._polars.namespace import PolarsNamespace
 
         return PolarsNamespace(version=self._version)
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        native_expr = self.native
+        other_expr = (
+            extract_native(other) if isinstance(other, PolarsExpr) else pl.lit(other)
+        )
+
+        if self._backend_version < (1, 32, 0):
+            abs_diff = (native_expr - other_expr).abs()
+            rel_threshold = native_expr.abs().clip(lower_bound=other_expr.abs()) * rel_tol
+            tolerance = rel_threshold.clip(lower_bound=pl.lit(abs_tol))
+
+            self_is_inf, other_is_inf = (
+                native_expr.is_infinite(),
+                other_expr.is_infinite(),
+            )
+
+            # Values are close if abs_diff <= tolerance, and both finite
+            is_close = (abs_diff <= tolerance) & self_is_inf.not_() & other_is_inf.not_()
+
+            # Handle infinity cases: infinities are "close" only if they have the same sign
+            self_sign, other_sign = native_expr.sign(), other_expr.sign()
+            both_inf = self_is_inf & other_is_inf
+            is_same_inf = both_inf & (self_sign == other_sign)
+            result = is_close | is_same_inf
+
+            # Handle nan cases:
+            #   * nans_equals = True => if both values are NaN, then True
+            #   * nans_equals = False => if any value is NaN, then False
+            if nans_equal:
+                both_nan = native_expr.is_nan() & other_expr.is_nan()
+                result = result | both_nan
+            else:
+                either_nan = native_expr.is_nan() | other_expr.is_nan()
+                result = result & either_nan.not_()
+
+        else:
+            result = native_expr.is_close(
+                other=other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            )
+        return self._with_native(result)
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
