@@ -270,9 +270,7 @@ def test_cast_datetime_utc(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -328,9 +326,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
 
-    if any(
-        backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "pyspark", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
@@ -343,7 +339,7 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
 
-    if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
+    if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": ["test1", "test2"]}
