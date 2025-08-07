@@ -675,6 +675,7 @@ class DaskExpr(
     ewm_mean: not_implemented = not_implemented()
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
+    is_close: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
     mode: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()

@@ -367,6 +367,59 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
             return self._gather(item)
         assert_never(item)
 
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        from decimal import Decimal
+
+        if isinstance(other, (float, int, Decimal)):
+            from math import isinf, isnan
+
+            other_abs, other_is_nan, other_is_inf = abs(other), isnan(other), isinf(other)
+
+            # Define the other_is_not_inf variable to prevent triggering:
+            # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be removed in
+            # > Python 3.16. This returns the bitwise inversion of the underlying int object and is usually
+            # > not what you expect from negating a bool. Use the 'not' operator for boolean negation or
+            # > ~int(x) if you really want the bitwise inversion of the underlying int.
+            other_is_not_inf = not other_is_inf
+
+        else:
+            other_abs, other_is_nan = other.abs(), other.is_nan()
+            other_is_not_inf = other.is_finite() | other_is_nan
+            other_is_inf = ~other_is_not_inf
+
+        rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
+        tolerance = rel_threshold.clip(lower_bound=abs_tol, upper_bound=None)
+
+        self_is_nan = self.is_nan()
+        self_is_inf = ~(self.is_finite() | self_is_nan)
+
+        # Values are close if abs_diff <= tolerance, and both finite
+        is_close = ((self - other).abs() <= tolerance) & (~self_is_inf) & other_is_not_inf
+
+        # Handle infinity cases: infinities are "close" only if they have the same sign
+        self_sign, other_sign = self > 0, other > 0
+        is_same_inf = self_is_inf & other_is_inf & (self_sign == other_sign)
+        result = is_close | is_same_inf
+
+        # Handle nan cases:
+        #   * nans_equals = True => if both values are NaN, then True
+        #   * nans_equals = False => if any value is NaN, then False
+        if nans_equal:
+            both_nan = self_is_nan & other_is_nan
+            result = result | both_nan
+        else:
+            either_nan = self_is_nan | other_is_nan
+            result = result & ~either_nan
+
+        return result
+
     @property
     def str(self) -> EagerSeriesStringNamespace[Self, NativeSeriesT]: ...
     @property

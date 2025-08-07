@@ -260,8 +260,7 @@ class PolarsExpr:
 
             # Handle infinity cases: infinities are "close" only if they have the same sign
             self_sign, other_sign = native_expr.sign(), other_expr.sign()
-            both_inf = self_is_inf & other_is_inf
-            is_same_inf = both_inf & (self_sign == other_sign)
+            is_same_inf = self_is_inf & other_is_inf & (self_sign == other_sign)
             result = is_close | is_same_inf
 
             # Handle nan cases:

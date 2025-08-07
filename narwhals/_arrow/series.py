@@ -1069,46 +1069,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def sqrt(self) -> Self:
         return self._with_native(pc.sqrt(self.native))
 
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        ser, other_ = extract_native(self, other)
-        abs_diff = pc.abs(pc.subtract(ser, other_))
-        rel_threshold = pc.multiply(
-            lit(rel_tol), pc.max_element_wise(pc.abs(ser), pc.abs(other_))
-        )
-        tolerance = pc.max_element_wise(rel_threshold, lit(abs_tol))
-        ser_is_inf, other_is_inf = pc.is_inf(ser), pc.is_inf(other_)
-
-        # Values are close if abs_diff <= tolerance, and both finite
-        is_close = pc.and_kleene(
-            pc.less_equal(abs_diff, tolerance),
-            pc.and_kleene(pc.invert(ser_is_inf), pc.invert(other_is_inf)),
-        )
-
-        # Handle infinity cases: infinities are "close" only if they have the same sign
-        ser_sign, other_sign = pc.sign(ser), pc.sign(other_)
-        both_inf = pc.and_kleene(ser_is_inf, other_is_inf)
-        is_same_inf = pc.and_kleene(both_inf, pc.equal(ser_sign, other_sign))
-        result = pc.or_kleene(is_close, is_same_inf)
-
-        # Handle nan cases:
-        #   * nans_equals = True => if both values are NaN, then True
-        #   * nans_equals = False => if any value is NaN, then False
-        if nans_equal:
-            both_nan = pc.and_kleene(pc.is_nan(ser), pc.is_nan(other_))
-            result = pc.or_kleene(result, both_nan)
-        else:
-            either_nan = pc.or_kleene(pc.is_nan(ser), pc.is_nan(other_))
-            result = pc.and_kleene(result, pc.invert(either_nan))
-
-        return self._with_native(result)
-
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:
         return ArrowSeriesDateTimeNamespace(self)

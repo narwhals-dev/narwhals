@@ -2782,7 +2782,8 @@ class Series(Generic[IntoSeriesT]):
             abs_tol: Absolute tolerance. This is the maximum allowed absolute difference
                 between two values. Must be non-negative.
             rel_tol: Relative tolerance. This is the maximum allowed difference between
-                two values, relative to the larger absolute value. Must be in the range [0, 1).
+                two values, relative to the larger absolute value. Must be in the range
+                [0, 1).
             nans_equal: Whether NaN values should be considered equal.
 
         Returns:
@@ -2790,20 +2791,31 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             The implementation of this method is symmetric and mirrors the behavior of
-            `math.isclose`.
+            `math.isclose`. Specifically note that this behavior is different to
+            `numpy.isclose`.
 
-        Examples: # TODO
-            >>> s = pl.Series("s", [1.0, 1.2, 1.4, 1.45, 1.6])
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = [1.0, float("inf"), 1.41, None, float("nan")]
+            >>> s_native = pa.chunked_array([data])
+            >>> s = nw.from_native(s_native, series_only=True)
             >>> s.is_close(1.4, abs_tol=0.1)
-            shape: (5,)
-            Series: 's' [bool]
-            [
-                false
-                false
-                true
-                true
-                false
-            ]
+            ┌────────────────────────────────────────────────┐
+            |                Narwhals Series                 |
+            |------------------------------------------------|
+            |<pyarrow.lib.ChunkedArray object at 0x10e2ca980>|
+            |[                                               |
+            |  [                                             |
+            |    false,                                      |
+            |    false,                                      |
+            |    true,                                       |
+            |    null,                                       |
+            |    false                                       |
+            |  ]                                             |
+            |]                                               |
+            └────────────────────────────────────────────────┘
         """
         if not self.dtype.is_numeric():
             msg = (

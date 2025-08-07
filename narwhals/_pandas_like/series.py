@@ -1028,30 +1028,6 @@ class PandasLikeSeries(EagerSeries[Any]):
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
 
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        left = (self - other).abs()
-
-        other_is_series = isinstance(other, PandasLikeSeries)
-        other_abs = other.abs() if other_is_series else abs(other)
-        _max = self.abs().clip(lower_bound=other_abs, upper_bound=None)
-        right = (_max * rel_tol).clip(lower_bound=abs_tol, upper_bound=None)
-        result = left <= right
-
-        if nans_equal:
-            import math
-
-            self_is_nan = self.is_nan()
-            other_is_nan = other.is_nan() if other_is_series else math.isnan(other)
-            result = result | (self_is_nan & other_is_nan)
-        return result
-
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:
         return PandasLikeSeriesStringNamespace(self)
