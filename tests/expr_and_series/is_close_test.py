@@ -78,8 +78,7 @@ def test_is_close_raise_invalid_rel_tol(
         df.select(nw.col("x").is_close(nw.col("y"), rel_tol=rel_tol))
 
 
-# Series
-@pytest.mark.parametrize(
+cases_columnar = pytest.mark.parametrize(
     ("abs_tol", "rel_tol", "nans_equal", "expected"),
     [
         (0.1, 0.0, False, [True, None, False, True, False, False]),
@@ -88,6 +87,19 @@ def test_is_close_raise_invalid_rel_tol(
         (0.0, 0.001, True, [False, None, True, True, False, False]),
     ],
 )
+cases_scalar = pytest.mark.parametrize(
+    ("other", "abs_tol", "rel_tol", "nans_equal", "expected"),
+    [
+        (1.0, 0.1, 0.0, False, [True, None, False, False, False, False]),
+        (1.0, 0.0001, 0.0, True, [False, None, False, False, False, False]),
+        (2.9, 0.0, 0.1, False, [False, None, False, False, True, False]),
+        (2.9, 0.0, 0.001, True, [False, None, False, False, False, False]),
+    ],
+)
+
+
+# Series
+@cases_columnar
 def test_is_close_series_with_series(
     constructor_eager: ConstructorEager,
     abs_tol: float,
@@ -117,15 +129,7 @@ def test_is_close_series_with_series(
     assert_equal_data({"result": result}, {"result": expected})
 
 
-@pytest.mark.parametrize(
-    ("other", "abs_tol", "rel_tol", "nans_equal", "expected"),
-    [
-        (1.0, 0.1, 0.0, False, [True, None, False, False, False, False]),
-        (1.0, 0.0001, 0.0, True, [False, None, False, False, False, False]),
-        (2.9, 0.0, 0.1, False, [False, None, False, False, True, False]),
-        (2.9, 0.0, 0.001, True, [False, None, False, False, False, False]),
-    ],
-)
+@cases_scalar
 def test_is_close_series_with_scalar(
     constructor_eager: ConstructorEager,
     other: NumericLiteral,
@@ -156,15 +160,7 @@ def test_is_close_series_with_scalar(
 
 
 # Expr
-@pytest.mark.parametrize(
-    ("abs_tol", "rel_tol", "nans_equal", "expected"),
-    [
-        (0.1, 0.0, False, [True, None, False, True, False, False]),
-        (0.0001, 0.0, True, [False, None, True, True, False, False]),
-        (0.0, 0.1, False, [True, None, False, True, False, False]),
-        (0.0, 0.001, True, [False, None, True, True, False, False]),
-    ],
-)
+@cases_columnar
 def test_is_close_expr_with_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -192,8 +188,8 @@ def test_is_close_expr_with_expr(
             y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5),
         )
         .with_columns(
-            x=nw.when(x != NULL_PLACEHOLDER).then(x).otherwise(None),
-            y=nw.when(y != NULL_PLACEHOLDER).then(y).otherwise(None),
+            x=nw.when(x != NULL_PLACEHOLDER).then(x),
+            y=nw.when(y != NULL_PLACEHOLDER).then(y),
         )
         .select(
             "idx",
@@ -206,15 +202,7 @@ def test_is_close_expr_with_expr(
     assert_equal_data(result, {"idx": data["idx"], "result": expected})
 
 
-@pytest.mark.parametrize(
-    ("other", "abs_tol", "rel_tol", "nans_equal", "expected"),
-    [
-        (1.0, 0.1, 0.0, False, [True, None, False, False, False, False]),
-        (1.0, 0.0001, 0.0, True, [False, None, False, False, False, False]),
-        (2.9, 0.0, 0.1, False, [False, None, False, False, True, False]),
-        (2.9, 0.0, 0.001, True, [False, None, False, False, False, False]),
-    ],
-)
+@cases_scalar
 def test_is_close_expr_with_scalar(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -239,7 +227,7 @@ def test_is_close_expr_with_scalar(
         #   * Square rooting a negative number will generate a NaN
         #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
         .with_columns(y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5))
-        .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y).otherwise(None))
+        .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y))
         .select(
             "idx",
             result=y.is_close(
