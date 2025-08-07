@@ -194,6 +194,15 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self: ...
 
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self: ...
+
     def __and__(self, other: Any) -> Self: ...
     def __or__(self, other: Any) -> Self: ...
     def __add__(self, other: Any) -> Self: ...
@@ -891,6 +900,22 @@ class EagerExpr(
 
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        return self._reuse_series(
+            "is_close",
+            other=other,
+            abs_tol=abs_tol,
+            rel_tol=rel_tol,
+            nans_equal=nans_equal,
+        )
 
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:

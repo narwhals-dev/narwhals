@@ -286,7 +286,7 @@ class CompliantSeries(
 
     def is_close(
         self,
-        other: Self | NonNestedLiteral,
+        other: Self | NumericLiteral,
         *,
         abs_tol: float,
         rel_tol: float,

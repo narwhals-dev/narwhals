@@ -1071,7 +1071,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def is_close(
         self,
-        other: Self | NonNestedLiteral,
+        other: Self | NumericLiteral,
         *,
         abs_tol: float,
         rel_tol: float,
@@ -1081,11 +1081,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         left = pc.abs(pc.subtract(ser, other_))
         _max = pc.max_element_wise(pc.abs(ser), pc.abs(other_))
         right = pc.max_element_wise(pc.multiply(rel_tol, _max), abs_tol)
-        result = left <= right
+        result = pc.less_equal(left, right)
 
         if nans_equal:
-            left_is_nan, right_is_nan = pc.is_nan(ser), pc.is_nan(other_)
-            result = pc.or_kleene(result, pc.and_kleene(left_is_nan, right_is_nan))
+            self_is_nan, other_is_nan = pc.is_nan(ser), pc.is_nan(other_)
+            result = pc.or_kleene(result, pc.and_kleene(self_is_nan, other_is_nan))
 
         return self._with_native(result)
 

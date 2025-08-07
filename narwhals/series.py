@@ -2765,7 +2765,7 @@ class Series(Generic[IntoSeriesT]):
 
     def is_close(
         self,
-        other: Self | NonNestedLiteral,
+        other: Self | NumericLiteral,
         *,
         abs_tol: float = 0.0,
         rel_tol: float = 1e-09,
