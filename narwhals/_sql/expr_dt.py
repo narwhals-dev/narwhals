@@ -10,7 +10,6 @@ from narwhals._sql.typing import SQLExprT
 class SQLExprDateTimeNamesSpace(
     LazyExprNamespace[SQLExprT], DateTimeNamespace[SQLExprT], Generic[SQLExprT]
 ):
-    # TODO: @mp, since this is same as in SQLExprStringNamespace, should this be imported from that class?
     def _function(self, name: str, *args: Any) -> SQLExprT:
         return self.compliant._function(name, *args)
 
@@ -38,14 +37,12 @@ class SQLExprDateTimeNamesSpace(
             lambda expr: self._function("second", expr)
         )
 
-    # TODO: @mp, try if > second units can move too
-
-    def ordinal_day(self):
+    def ordinal_day(self) -> SQLExprT:
         return self.compliant._with_elementwise(
             lambda expr: self._function("dayofyear", expr)
         )
 
-    def date(self):
+    def date(self) -> SQLExprT:
         return self.compliant._with_elementwise(
             lambda expr: self._function("to_date", expr)
         )
