@@ -2083,16 +2083,15 @@ def _is_close_impl(
     # Handle infinity cases: infinities are "close" only if they have the same sign
     self_sign, other_sign = self > 0, other > 0
     is_same_inf = (~self_is_not_inf) & other_is_inf & (self_sign == other_sign)
-    result = is_close | is_same_inf
 
     # Handle nan cases:
     #   * nans_equals = True => if both values are NaN, then True
     #   * nans_equals = False => if any value is NaN, then False
+    either_nan = self_is_nan | other_is_nan
+    result = (is_close | is_same_inf) & ~either_nan
+
     if nans_equal:
         both_nan = self_is_nan & other_is_nan
         result = result | both_nan
-    else:
-        either_nan = self_is_nan | other_is_nan
-        result = result & ~either_nan
 
     return result

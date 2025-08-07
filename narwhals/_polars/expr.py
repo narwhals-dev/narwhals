@@ -261,18 +261,16 @@ class PolarsExpr:
             # Handle infinity cases: infinities are "close" only if they have the same sign
             self_sign, other_sign = native_expr.sign(), other_expr.sign()
             is_same_inf = self_is_inf & other_is_inf & (self_sign == other_sign)
-            result = is_close | is_same_inf
 
             # Handle nan cases:
             #   * nans_equals = True => if both values are NaN, then True
             #   * nans_equals = False => if any value is NaN, then False
+            either_nan = native_expr.is_nan() | other_expr.is_nan()
+            result = (is_close | is_same_inf) & either_nan.not_()
+
             if nans_equal:
                 both_nan = native_expr.is_nan() & other_expr.is_nan()
                 result = result | both_nan
-            else:
-                either_nan = native_expr.is_nan() | other_expr.is_nan()
-                result = result & either_nan.not_()
-
         else:
             result = native_expr.is_close(
                 other=other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
