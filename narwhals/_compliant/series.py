@@ -377,16 +377,22 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     ) -> Self:
         from decimal import Decimal
 
+        other_abs: Self | NumericLiteral
+        other_is_nan: Self | bool
+        other_is_inf: Self | bool
+        other_is_not_inf: Self | bool
+
         if isinstance(other, (float, int, Decimal)):
             from math import isinf, isnan
 
-            other_abs, other_is_nan, other_is_inf = abs(other), isnan(other), isinf(other)
+            other_abs, other_is_nan, other_is_inf = abs(other), isnan(other), isinf(other)  # type: ignore[assignment]
 
-            # Define the other_is_not_inf variable to prevent triggering:
-            # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be removed in
-            # > Python 3.16. This returns the bitwise inversion of the underlying int object and is usually
-            # > not what you expect from negating a bool. Use the 'not' operator for boolean negation or
-            # > ~int(x) if you really want the bitwise inversion of the underlying int.
+            # Define the other_is_not_inf variable to prevent triggering the following warning:
+            # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be
+            # >     removed in Python 3.16. This returns the bitwise inversion of the
+            # >     underlying int object and is usually not what you expect from negating
+            # >     a bool. Use the 'not' operator for boolean negation or ~int(x) if you
+            # >     really want the bitwise inversion of the underlying int.
             other_is_not_inf = not other_is_inf
 
         else:

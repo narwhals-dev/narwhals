@@ -492,23 +492,31 @@ class PolarsSeries:
         rel_tol: float,
         nans_equal: bool,
     ) -> Self:
-        kwargs = {
-            "other": extract_native(other),
-            "abs_tol": abs_tol,
-            "rel_tol": rel_tol,
-            "nans_equal": nans_equal,
-        }
+        other_native = extract_native(other)
+
         if self._backend_version < (1, 32, 0):
             name = self.name
             ns = self.__narwhals_namespace__()
             result = (
                 self.to_frame()
-                .select(ns.col(name).is_close(**kwargs))
+                .select(
+                    ns.col(name).is_close(
+                        other=other_native,  # type: ignore[arg-type]
+                        abs_tol=abs_tol,
+                        rel_tol=rel_tol,
+                        nans_equal=nans_equal,
+                    )
+                )
                 .get_column(name)
                 .native
             )
         else:
-            result = self.native.is_close(**kwargs)
+            result = self.native.is_close(
+                other=other_native,  # pyright: ignore[reportArgumentType]
+                abs_tol=abs_tol,
+                rel_tol=rel_tol,
+                nans_equal=nans_equal,
+            )
         return self._with_native(result)
 
     def hist_from_bins(
