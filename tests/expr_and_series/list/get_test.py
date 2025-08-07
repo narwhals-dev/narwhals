@@ -12,7 +12,7 @@ expected = {"int": [1, None, None]}
 
 
 def test_get_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "modin", "cudf")):
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
@@ -27,7 +27,7 @@ def test_get_expr(request: pytest.FixtureRequest, constructor: Constructor) -> N
 def test_get_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("modin", "cudf")):
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
