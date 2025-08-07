@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
@@ -12,6 +14,9 @@ from tests.conftest import (
 )
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
+if TYPE_CHECKING:
+    from narwhals.typing import NumericLiteral
+
 NON_NULLABLE_CONSTRUCTORS = (
     pandas_constructor,
     dask_lazy_p1_constructor,
@@ -22,49 +27,58 @@ NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
 INF_POS, INF_NEG = float("inf"), float("-inf")
 
 data = {
-    "left": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, INF_NEG, INF_POS],
-    "right": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, 3.0, INF_NEG],
+    "x": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, INF_NEG, INF_POS],
+    "y": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, 3.0, INF_NEG],
     "non_numeric": list("number"),
     "idx": list(range(6)),
 }
 
 
+# Exceptions
 def test_is_close_series_raise_non_numeric(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    left, right = df["non_numeric"], df["right"]
+    x, y = df["non_numeric"], df["y"]
 
     msg = "is_close operation not supported for dtype"
     with pytest.raises(InvalidOperationError, match=msg):
-        left.is_close(right)
+        x.is_close(y)
 
 
-def test_is_close_series_raise_negative_abs_tol(
-    constructor_eager: ConstructorEager,
-) -> None:
+def test_is_close_raise_negative_abs_tol(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    left, right = df["left"], df["right"]
+    x, y = df["x"], df["y"]
 
     abs_tol = -2
     msg = rf"`abs_tol` must be non-negative but got {abs_tol}"
     with pytest.raises(ComputeError, match=msg):
-        left.is_close(right, abs_tol=abs_tol)
+        x.is_close(y, abs_tol=abs_tol)
 
     with pytest.raises(ComputeError, match=msg):
-        left.is_close(right, abs_tol=abs_tol, rel_tol=999)
+        x.is_close(y, abs_tol=abs_tol, rel_tol=999)
+
+    with pytest.raises(ComputeError, match=msg):
+        df.select(nw.col("x").is_close(nw.col("y"), abs_tol=abs_tol))
+
+    with pytest.raises(ComputeError, match=msg):
+        df.select(nw.col("x").is_close(nw.col("y"), abs_tol=abs_tol, rel_tol=999))
 
 
 @pytest.mark.parametrize("rel_tol", [-0.0001, 1.0, 1.1])
-def test_is_close_series_raise_invalid_rel_tol(
+def test_is_close_raise_invalid_rel_tol(
     constructor_eager: ConstructorEager, rel_tol: float
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    left, right = df["left"], df["right"]
+    x, y = df["x"], df["y"]
 
     msg = rf"`rel_tol` must be in the range \[0, 1\) but got {rel_tol}"
     with pytest.raises(ComputeError, match=msg):
-        left.is_close(right, rel_tol=rel_tol)
+        x.is_close(y, rel_tol=rel_tol)
+
+    with pytest.raises(ComputeError, match=msg):
+        df.select(nw.col("x").is_close(nw.col("y"), rel_tol=rel_tol))
 
 
+# Series
 @pytest.mark.parametrize(
     ("abs_tol", "rel_tol", "nans_equal", "expected"),
     [
@@ -83,33 +97,65 @@ def test_is_close_series_with_series(
     expected: list[float],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    left, right = df["left"], df["right"]
+    x, y = df["x"], df["y"]
 
     nulls = nw.new_series(
         name="nulls",
-        values=[None] * len(left),
+        values=[None] * len(x),
         dtype=nw.Float64(),
         backend=df.implementation,
     )
     # Tricks to generate nan's and null's for pandas with nullable backends:
     #   * Square rooting a negative number will generate a NaN
     #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
-    left = left.zip_with(~left.is_finite(), left**0.5).zip_with(
-        left != NULL_PLACEHOLDER, nulls
+    x = x.zip_with(x != NAN_PLACEHOLDER, x**0.5).zip_with(x != NULL_PLACEHOLDER, nulls)
+    y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
+    result = x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
+
+    if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
+        expected = [v if v is not None else nans_equal for v in expected]
+    assert_equal_data({"result": result}, {"result": expected})
+
+
+@pytest.mark.parametrize(
+    ("other", "abs_tol", "rel_tol", "nans_equal", "expected"),
+    [
+        (1.0, 0.1, 0.0, False, [True, None, False, False, False, False]),
+        (1.0, 0.0001, 0.0, True, [False, None, False, False, False, False]),
+        (2.9, 0.0, 0.1, False, [False, None, False, False, True, False]),
+        (2.9, 0.0, 0.001, True, [False, None, False, False, False, False]),
+    ],
+)
+def test_is_close_series_with_scalar(
+    constructor_eager: ConstructorEager,
+    other: NumericLiteral,
+    abs_tol: float,
+    rel_tol: float,
+    *,
+    nans_equal: bool,
+    expected: list[float],
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    y = df["y"]
+
+    nulls = nw.new_series(
+        name="nulls",
+        values=[None] * len(y),
+        dtype=nw.Float64(),
+        backend=df.implementation,
     )
-    right = right.zip_with(~right.is_finite(), right**0.5).zip_with(
-        left != NULL_PLACEHOLDER, nulls
-    )
-    result = left.is_close(right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
+    # Tricks to generate nan's and null's for pandas with nullable backends:
+    #   * Square rooting a negative number will generate a NaN
+    #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
+    y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
+    result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
-    assert_equal_data({"x": result}, {"x": expected})
+    assert_equal_data({"result": result}, {"result": expected})
 
 
-def test_is_close_series_with_scalar() -> None: ...  # TODO
-
-
+# Expr
 @pytest.mark.parametrize(
     ("abs_tol", "rel_tol", "nans_equal", "expected"),
     [
@@ -120,6 +166,7 @@ def test_is_close_series_with_scalar() -> None: ...  # TODO
     ],
 )
 def test_is_close_expr_with_expr(
+    request: pytest.FixtureRequest,
     constructor: Constructor,
     abs_tol: float,
     rel_tol: float,
@@ -127,28 +174,80 @@ def test_is_close_expr_with_expr(
     nans_equal: bool,
     expected: list[float],
 ) -> None:
-    _left, _right = nw.col("left"), nw.col("right")
+    if "sqlframe" in str(constructor):
+        # TODO(FBruzzesi): Figure out a MRE and report upstream
+        reason = (
+            "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    x, y = nw.col("x"), nw.col("y")
     result = (
         nw.from_native(constructor(data))
         # Tricks to generate nan's and null's for pandas with nullable backends:
         #   * Square rooting a negative number will generate a NaN
         #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
         .with_columns(
-            left=nw.when(_left != NULL_PLACEHOLDER).then(_left).otherwise(None),
-            right=nw.when(_right != NULL_PLACEHOLDER).then(_right).otherwise(None),
+            x=nw.when(x != NAN_PLACEHOLDER).then(x).otherwise(x**0.5),
+            y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5),
         )
         .with_columns(
-            left=nw.when(~_left.is_finite()).then(_left).otherwise(_left**0.5),
-            right=nw.when(~_right.is_finite()).then(_right).otherwise(_right**0.5),
+            x=nw.when(x != NULL_PLACEHOLDER).then(x).otherwise(None),
+            y=nw.when(y != NULL_PLACEHOLDER).then(y).otherwise(None),
         )
         .select(
             "idx",
-            x=_left.is_close(
-                _right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            result=x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal),
+        )
+        .sort("idx")
+    )
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
+        expected = [v if v is not None else nans_equal for v in expected]
+    assert_equal_data(result, {"idx": data["idx"], "result": expected})
+
+
+@pytest.mark.parametrize(
+    ("other", "abs_tol", "rel_tol", "nans_equal", "expected"),
+    [
+        (1.0, 0.1, 0.0, False, [True, None, False, False, False, False]),
+        (1.0, 0.0001, 0.0, True, [False, None, False, False, False, False]),
+        (2.9, 0.0, 0.1, False, [False, None, False, False, True, False]),
+        (2.9, 0.0, 0.001, True, [False, None, False, False, False, False]),
+    ],
+)
+def test_is_close_expr_with_scalar(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    other: NumericLiteral,
+    abs_tol: float,
+    rel_tol: float,
+    *,
+    nans_equal: bool,
+    expected: list[float],
+) -> None:
+    if "sqlframe" in str(constructor):
+        # TODO(FBruzzesi): Figure out a MRE and report upstream
+        reason = (
+            "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    y = nw.col("y")
+    result = (
+        nw.from_native(constructor(data))
+        # Tricks to generate nan's and null's for pandas with nullable backends:
+        #   * Square rooting a negative number will generate a NaN
+        #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
+        .with_columns(y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5))
+        .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y).otherwise(None))
+        .select(
+            "idx",
+            result=y.is_close(
+                other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             ),
         )
         .sort("idx")
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
-    assert_equal_data(result, {"idx": data["idx"], "x": expected})
+    assert_equal_data(result, {"idx": data["idx"], "result": expected})

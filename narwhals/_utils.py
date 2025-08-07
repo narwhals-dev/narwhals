@@ -2071,18 +2071,18 @@ def _is_close_impl(
         other_is_not_inf = other.is_finite() | other_is_nan
         other_is_inf = ~other_is_not_inf
 
-    rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
+    rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol  # type: ignore[arg-type]
     tolerance = rel_threshold.clip(lower_bound=abs_tol, upper_bound=None)
 
     self_is_nan = self.is_nan()
-    self_is_inf = ~(self.is_finite() | self_is_nan)
+    self_is_not_inf = self.is_finite() | self_is_nan
 
     # Values are close if abs_diff <= tolerance, and both finite
-    is_close = ((self - other).abs() <= tolerance) & (~self_is_inf) & other_is_not_inf
+    is_close = ((self - other).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
 
     # Handle infinity cases: infinities are "close" only if they have the same sign
     self_sign, other_sign = self > 0, other > 0
-    is_same_inf = self_is_inf & other_is_inf & (self_sign == other_sign)
+    is_same_inf = (~self_is_not_inf) & other_is_inf & (self_sign == other_sign)
     result = is_close | is_same_inf
 
     # Handle nan cases:
