@@ -1078,14 +1078,34 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         nans_equal: bool,
     ) -> Self:
         ser, other_ = extract_native(self, other)
-        left = pc.abs(pc.subtract(ser, other_))
-        _max = pc.max_element_wise(pc.abs(ser), pc.abs(other_))
-        right = pc.max_element_wise(pc.multiply(rel_tol, _max), abs_tol)
-        result = pc.less_equal(left, right)
+        abs_diff = pc.abs(pc.subtract(ser, other_))
+        rel_threshold = pc.multiply(
+            lit(rel_tol), pc.max_element_wise(pc.abs(ser), pc.abs(other_))
+        )
+        tolerance = pc.max_element_wise(rel_threshold, lit(abs_tol))
+        ser_is_inf, other_is_inf = pc.is_inf(ser), pc.is_inf(other_)
 
+        # Values are close if abs_diff <= tolerance, and both finite
+        is_close = pc.and_kleene(
+            pc.less_equal(abs_diff, tolerance),
+            pc.and_kleene(pc.invert(ser_is_inf), pc.invert(other_is_inf)),
+        )
+
+        # Handle infinity cases: infinities are "close" only if they have the same sign
+        ser_sign, other_sign = pc.sign(ser), pc.sign(other_)
+        both_inf = pc.and_kleene(ser_is_inf, other_is_inf)
+        is_same_inf = pc.and_kleene(both_inf, pc.equal(ser_sign, other_sign))
+        result = pc.or_kleene(is_close, is_same_inf)
+
+        # Handle nan cases:
+        #   * nans_equals = True => if both values are NaN, then True
+        #   * nans_equals = False => if any value is NaN, then False
         if nans_equal:
-            self_is_nan, other_is_nan = pc.is_nan(ser), pc.is_nan(other_)
-            result = pc.or_kleene(result, pc.and_kleene(self_is_nan, other_is_nan))
+            both_nan = pc.and_kleene(pc.is_nan(ser), pc.is_nan(other_))
+            result = pc.or_kleene(result, both_nan)
+        else:
+            either_nan = pc.or_kleene(pc.is_nan(ser), pc.is_nan(other_))
+            result = pc.and_kleene(result, pc.invert(either_nan))
 
         return self._with_native(result)
 

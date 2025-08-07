@@ -17,7 +17,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -2806,13 +2806,19 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         if not self.dtype.is_numeric():
-            from narwhals.exceptions import InvalidOperationError
-
             msg = (
                 f"is_close operation not supported for dtype `{self.dtype}`\n\n"
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
+
+        if abs_tol < 0:
+            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
+            raise ComputeError(msg)
+
+        if not (0 <= rel_tol < 1):
+            msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"
+            raise ComputeError(msg)
 
         return self._with_compliant(
             self._compliant_series.is_close(
