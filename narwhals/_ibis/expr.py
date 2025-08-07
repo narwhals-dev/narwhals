@@ -34,16 +34,16 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
-    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]  # pyright: ignore[reportInvalidTypeArguments]
-    IbisWindowInputs = WindowInputs[ir.Value]  # pyright: ignore[reportInvalidTypeArguments]
+    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
+    IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):  # pyright: ignore[reportInvalidTypeArguments]
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
 
     def __init__(
         self,
-        call: EvalSeries[IbisLazyFrame, ir.Value],  # pyright: ignore[reportInvalidTypeArguments]
+        call: EvalSeries[IbisLazyFrame, ir.Value],
         window_function: IbisWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
