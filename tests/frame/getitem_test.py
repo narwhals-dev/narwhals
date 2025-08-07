@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import _1DArray
@@ -301,9 +301,12 @@ def test_triple_tuple(constructor_eager: ConstructorEager) -> None:
 def test_slice_with_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager):
-        # https://github.com/pandas-dev/pandas/issues/61311
-        request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(
+            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
+            reason="https://github.com/pandas-dev/pandas/issues/61311",
+        )
+    )
     data = {"a": [1, 2, 3], "c": [0, 2, 1]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[nw_df["c"]]
@@ -325,9 +328,12 @@ def test_horizontal_slice_with_series(constructor_eager: ConstructorEager) -> No
 def test_horizontal_slice_with_series_2(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager):
-        # https://github.com/pandas-dev/pandas/issues/61311
-        request.applymarker(pytest.mark.xfail)
+    request.applymarker(
+        pytest.mark.xfail(
+            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
+            reason="https://github.com/pandas-dev/pandas/issues/61311",
+        )
+    )
     data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
     nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[:, nw_df["c"]]
