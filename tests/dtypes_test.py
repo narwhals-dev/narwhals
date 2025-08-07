@@ -143,7 +143,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         if condition:
             pytest.skip(reason)
 
-    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"

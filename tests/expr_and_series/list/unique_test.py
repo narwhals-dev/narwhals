@@ -18,7 +18,6 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
-        # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/460
         request.applymarker(pytest.mark.xfail)
     result = (
         nw.from_native(constructor(data))
