@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
     try:
+        if module_name == "polars":
+            return Implementation.POLARS._backend_version()
         return parse_version(__import__(module_name).__version__)
     except ImportError:
         return (0, 0, 0)
