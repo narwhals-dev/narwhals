@@ -4,18 +4,28 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from tests.conftest import modin_constructor, pandas_constructor
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.conftest import (
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+    pandas_constructor,
+)
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-NON_NULLABLE_CONSTRUCTORS = (pandas_constructor, modin_constructor)
-NULL_PLACEHOLDER = 999.0
-NAN_PLACEHOLDER = -1.0
-INF = float("inf")
+NON_NULLABLE_CONSTRUCTORS = (
+    pandas_constructor,
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+)
+NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
+INF_POS, INF_NEG = float("inf"), float("-inf")
 
 data = {
-    "left": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF, -INF, INF],
-    "right": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF, 3.0, -INF],
+    "left": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, INF_NEG, INF_POS],
+    "right": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, 3.0, INF_NEG],
     "non_numeric": list("number"),
+    "idx": list(range(6)),
 }
 
 
@@ -95,3 +105,50 @@ def test_is_close_series_with_series(
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
     assert_equal_data({"x": result}, {"x": expected})
+
+
+def test_is_close_series_with_scalar() -> None: ...  # TODO
+
+
+@pytest.mark.parametrize(
+    ("abs_tol", "rel_tol", "nans_equal", "expected"),
+    [
+        (0.1, 0.0, False, [True, None, False, True, False, False]),
+        (0.0001, 0.0, True, [False, None, True, True, False, False]),
+        (0.0, 0.1, False, [True, None, False, True, False, False]),
+        (0.0, 0.001, True, [False, None, True, True, False, False]),
+    ],
+)
+def test_is_close_expr_with_expr(
+    constructor: Constructor,
+    abs_tol: float,
+    rel_tol: float,
+    *,
+    nans_equal: bool,
+    expected: list[float],
+) -> None:
+    _left, _right = nw.col("left"), nw.col("right")
+    result = (
+        nw.from_native(constructor(data))
+        # Tricks to generate nan's and null's for pandas with nullable backends:
+        #   * Square rooting a negative number will generate a NaN
+        #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
+        .with_columns(
+            left=nw.when(_left != NULL_PLACEHOLDER).then(_left).otherwise(None),
+            right=nw.when(_right != NULL_PLACEHOLDER).then(_right).otherwise(None),
+        )
+        .with_columns(
+            left=nw.when(~_left.is_finite()).then(_left).otherwise(_left**0.5),
+            right=nw.when(~_right.is_finite()).then(_right).otherwise(_right**0.5),
+        )
+        .select(
+            "idx",
+            x=_left.is_close(
+                _right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            ),
+        )
+        .sort("idx")
+    )
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
+        expected = [v if v is not None else False for v in expected]
+    assert_equal_data(result, {"idx": data["idx"], "x": expected})
