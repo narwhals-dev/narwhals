@@ -16,7 +16,7 @@ expected = {2, 3, None}
 def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
         backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas", "sqlframe")
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         # sqlframe issue: https://github.com/eakmanrq/sqlframe/issues/460
         request.applymarker(pytest.mark.xfail)
