@@ -14,11 +14,13 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._utils import Implementation
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
+
+    TimeUnit: TypeAlias = Literal["ns", "us"]
 
 
 data = {"a": [datetime(2020, 1, 1)], "b": [datetime(2020, 1, 1, tzinfo=timezone.utc)]}
@@ -421,8 +423,17 @@ def test_schema_to_pandas_invalid() -> None:
         schema.to_pandas("cabbage")  # type: ignore[arg-type]
 
 
+@pytest.fixture(scope="session")
+def time_unit() -> TimeUnit:
+    """Backcompat for `pandas>=3` breaking change.
+
+    https://pandas.pydata.org/docs/dev/whatsnew/v3.0.0.html#datetime-resolution-inference
+    """
+    return "us" if PANDAS_VERSION >= (3,) else "ns"
+
+
 @pytest.fixture
-def target_schema() -> nw.Schema:
+def target_schema(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
             "a": nw.Int64(),
@@ -430,25 +441,25 @@ def target_schema() -> nw.Schema:
             "c": nw.Boolean(),
             "d": nw.Date(),
             "e": nw.Time(),
-            "f": nw.Datetime("ns"),
+            "f": nw.Datetime(time_unit),
         }
     )
 
 
 @pytest.fixture
-def target_schema_pandas() -> nw.Schema:
+def target_schema_pandas(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
             "a": nw.Int64(),
             "b": nw.Float64(),
             "c": nw.Boolean(),
             "d": nw.Object(),
-            "e": nw.Datetime("ns"),
+            "e": nw.Datetime(time_unit),
         }
     )
 
 
-def test_schema_from_polars(target_schema: nw.Schema) -> None:
+def test_schema_from_polars(target_schema: nw.Schema, time_unit: TimeUnit) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
@@ -460,14 +471,14 @@ def test_schema_from_polars(target_schema: nw.Schema) -> None:
             "c": pl.Boolean(),
             "d": pl.Date(),
             "e": pl.Time(),
-            "f": pl.Datetime("ns"),
+            "f": pl.Datetime(time_unit),
         }
     )
     schema = nw.Schema.from_polars(native)
     assert schema == target_schema
 
 
-def test_schema_from_arrow(target_schema: nw.Schema) -> None:
+def test_schema_from_arrow(target_schema: nw.Schema, time_unit: TimeUnit) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
@@ -477,7 +488,7 @@ def test_schema_from_arrow(target_schema: nw.Schema) -> None:
         "c": pa.bool_(),
         "d": pa.date32(),
         "e": pa.time64("ns"),
-        "f": pa.timestamp("ns"),
+        "f": pa.timestamp(time_unit),
     }
     native = pa.schema(fields)
     schema = nw.Schema.from_arrow(native)
