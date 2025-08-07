@@ -2378,7 +2378,37 @@ class Expr:
             `math.isclose`. Specifically note that this behavior is different to
             `numpy.isclose`.
 
-        Examples:  TODO
+        Examples:
+            >>> import duckdb
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {
+            ...     "x": [1.0, float("inf"), 1.41, None, float("nan")],
+            ...     "y": [1.2, float("inf"), 1.40, None, float("nan")],
+            ... }
+            >>> _table = pa.table(data)
+            >>> df_native = duckdb.table("_table")
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     is_close=nw.col("x").is_close(
+            ...         nw.col("y"), abs_tol=0.1, nans_equal=True
+            ...     )
+            ... )
+            ┌──────────────────────────────┐
+            |      Narwhals LazyFrame      |
+            |------------------------------|
+            |┌────────┬────────┬──────────┐|
+            |│   x    │   y    │ is_close │|
+            |│ double │ double │ boolean  │|
+            |├────────┼────────┼──────────┤|
+            |│    1.0 │    1.2 │ false    │|
+            |│    inf │    inf │ true     │|
+            |│   1.41 │    1.4 │ true     │|
+            |│   NULL │   NULL │ NULL     │|
+            |│    nan │    nan │ true     │|
+            |└────────┴────────┴──────────┘|
+            └──────────────────────────────┘
         """
         if abs_tol < 0:
             msg = f"`abs_tol` must be non-negative but got {abs_tol}"

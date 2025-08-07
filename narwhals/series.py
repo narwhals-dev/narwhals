@@ -2801,21 +2801,17 @@ class Series(Generic[IntoSeriesT]):
             >>> data = [1.0, float("inf"), 1.41, None, float("nan")]
             >>> s_native = pa.chunked_array([data])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.is_close(1.4, abs_tol=0.1)
-            ┌────────────────────────────────────────────────┐
-            |                Narwhals Series                 |
-            |------------------------------------------------|
-            |<pyarrow.lib.ChunkedArray object at 0x10e2ca980>|
-            |[                                               |
-            |  [                                             |
-            |    false,                                      |
-            |    false,                                      |
-            |    true,                                       |
-            |    null,                                       |
-            |    false                                       |
-            |  ]                                             |
-            |]                                               |
-            └────────────────────────────────────────────────┘
+            >>> s.is_close(1.4, abs_tol=0.1).to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                null,
+                false
+              ]
+            ]
         """
         if not self.dtype.is_numeric():
             msg = (
