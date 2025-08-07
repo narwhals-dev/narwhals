@@ -39,5 +39,8 @@ class SQLExprDateTimeNamesSpace(
     
     def date(self):
         return self.compliant._with_elementwise(lambda expr: self._function("to_date", expr))
+    # shouldn't this be elementwise?
+    def convert_time_zone(self, time_zone: str) -> SQLExprT:  
+        return self.compliant._function(time_zone)
 
 

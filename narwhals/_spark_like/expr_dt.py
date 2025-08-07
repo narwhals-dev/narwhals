@@ -140,8 +140,8 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
             implementation=self.compliant._implementation,
         )
 
-    def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
-        return self._no_op_time_zone(time_zone)
+    # def convert_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
+    #     return self._no_op_time_zone(time_zone)
 
     def replace_time_zone(
         self, time_zone: str | None
