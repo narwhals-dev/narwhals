@@ -59,7 +59,7 @@ SCHEMA = {
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
-MODIN_INCOMPATIBLE_COLUMNS = {"o", "k"}
+MODIN_XFAIL_COLUMNS = {"o", "k"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
@@ -69,9 +69,7 @@ def test_cast(constructor: Constructor) -> None:
     ):  # pragma: no cover
         pytest.skip()
 
-    if "modin_constructor" in str(constructor):
-        incompatible_columns = MODIN_INCOMPATIBLE_COLUMNS  # pragma: no cover
-    elif "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
     elif "duckdb" in str(constructor):
         incompatible_columns = DUCKDB_INCOMPATIBLE_COLUMNS  # pragma: no cover
@@ -107,8 +105,18 @@ def test_cast(constructor: Constructor) -> None:
     }
     cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
 
-    result = df.select(*[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()])
-    assert dict(result.collect_schema()) == cast_map
+    result = df.select(
+        *[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()]
+    ).collect_schema()
+
+    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+        if "modin_constructor" in str(constructor) and key in MODIN_XFAIL_COLUMNS:
+            # TODO(unassigned): in modin we end up with `'<U0'` dtype
+            # This block will act similarly to an xfail i.e. if we fix the issue, the
+            # assert will fail
+            assert ltype != rtype
+        else:
+            assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
 
 
 def test_cast_series(
@@ -118,16 +126,10 @@ def test_cast_series(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin_constructor" in str(constructor_eager):
-        incompatible_columns = MODIN_INCOMPATIBLE_COLUMNS  # pragma: no cover
-    else:
-        incompatible_columns = set()
 
-    data = {c: v for c, v in DATA.items() if c not in incompatible_columns}
-    schema = {c: t for c, t in SCHEMA.items() if c not in incompatible_columns}
     df = (
-        nw.from_native(constructor_eager(data))
-        .select(nw.col(key).cast(value) for key, value in schema.items())
+        nw.from_native(constructor_eager(DATA))
+        .select(nw.col(key).cast(value) for key, value in SCHEMA.items())
         .lazy()
         .collect()
     )
@@ -149,9 +151,16 @@ def test_cast_series(
         "o": nw.String,
         "p": nw.Duration,
     }
-    cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
-    result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items())
-    assert result.schema == cast_map
+    result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items()).schema
+
+    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+        if "modin_constructor" in str(constructor_eager) and key in MODIN_XFAIL_COLUMNS:
+            # TODO(unassigned): in modin we end up with `'<U0'` dtype
+            # This block will act similarly to an xfail i.e. if we fix the issue, the
+            # assert will fail
+            assert ltype != rtype
+        else:
+            assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
 
 
 def test_cast_string() -> None:
