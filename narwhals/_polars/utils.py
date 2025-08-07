@@ -338,13 +338,13 @@ class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     get_categories: Method[CompliantT]
 
 
-# NOTE: Use `Protocol` if we **only** have defs to implement
-class PolarsListNamespace(
-    PolarsAnyNamespace[CompliantT_co, NativeT_co], Protocol[CompliantT_co, NativeT_co]
-):
+class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[NativeAccessor] = "list"
 
-    def len(self) -> CompliantT_co: ...
+    @abc.abstractmethod
+    def len(self) -> CompliantT: ...
+
+    unique: Method[CompliantT]
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
