@@ -75,7 +75,7 @@ FUNCTION_REMAPPING = {
     "regexp_matches": "re_search",
     "str_split": "split",
     "dayofyear": "day_of_year",
-    "to_date": "date"
+    "to_date": "date",
 }
 
 

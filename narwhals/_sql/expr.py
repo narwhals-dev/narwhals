@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
-    from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
+    from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
     from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
 

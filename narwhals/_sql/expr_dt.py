@@ -16,9 +16,11 @@ class SQLExprDateTimeNamesSpace(
 
     def year(self) -> SQLExprT:
         return self.compliant._with_elementwise(lambda expr: self._function("year", expr))
-    
+
     def month(self) -> SQLExprT:
-        return self.compliant._with_elementwise(lambda expr: self._function("month", expr))
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("month", expr)
+        )
 
     def day(self) -> SQLExprT:
         return self.compliant._with_elementwise(lambda expr: self._function("day", expr))
@@ -27,20 +29,27 @@ class SQLExprDateTimeNamesSpace(
         return self.compliant._with_elementwise(lambda expr: self._function("hour", expr))
 
     def minute(self) -> SQLExprT:
-        return self.compliant._with_elementwise(lambda expr: self._function("minute", expr))
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("minute", expr)
+        )
 
     def second(self) -> SQLExprT:
-        return self.compliant._with_elementwise(lambda expr: self._function("second", expr))
-    
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("second", expr)
+        )
+
     # TODO: @mp, try if > second units can move too
 
     def ordinal_day(self):
-        return self.compliant._with_elementwise(lambda expr: self._function("dayofyear", expr))
-    
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("dayofyear", expr)
+        )
+
     def date(self):
-        return self.compliant._with_elementwise(lambda expr: self._function("to_date", expr))
+        return self.compliant._with_elementwise(
+            lambda expr: self._function("to_date", expr)
+        )
+
     # shouldn't this be elementwise?
-    def convert_time_zone(self, time_zone: str) -> SQLExprT:  
+    def convert_time_zone(self, time_zone: str) -> SQLExprT:
         return self.compliant._function(time_zone)
-
-

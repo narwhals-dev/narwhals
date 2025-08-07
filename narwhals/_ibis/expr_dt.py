@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 
 class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
-
     def millisecond(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.millisecond())
 
