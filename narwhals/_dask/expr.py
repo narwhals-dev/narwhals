@@ -42,14 +42,14 @@ if TYPE_CHECKING:
 
 
 class DaskExpr(
-    LazyExpr["DaskLazyFrame", "dx.Series"],
-    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],
+    LazyExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
+    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
 ):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
         self,
-        call: EvalSeries[DaskLazyFrame, dx.Series],
+        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
         *,
         depth: int,
         function_name: str,

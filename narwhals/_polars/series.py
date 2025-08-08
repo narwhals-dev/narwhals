@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         MultiIndexSelector,
+        NonNestedLiteral,
         PythonLiteral,
         _1DArray,
     )
@@ -752,6 +753,11 @@ class PolarsSeriesListNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.len()).get_column(name)
+
+    def contains(self, item: NonNestedLiteral) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
 
 
 class PolarsSeriesStructNamespace(
