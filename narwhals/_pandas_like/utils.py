@@ -571,6 +571,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
             f"{implementation} and version {version}."
         )
         raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Object):
+        return "object"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
