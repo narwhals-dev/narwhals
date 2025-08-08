@@ -114,9 +114,6 @@ CompliantSeriesOrNativeExprT_co = TypeVar(
     bound=CompliantSeriesOrNativeExprAny,
     covariant=True,
 )
-CompliantSeriesOrExprT = TypeVar(
-    "CompliantSeriesOrExprT", bound="CompliantSeriesOrExprAny"
-)
 CompliantFrameT = TypeVar("CompliantFrameT", bound=CompliantFrameAny)
 CompliantFrameT_co = TypeVar(
     "CompliantFrameT_co", bound=CompliantFrameAny, covariant=True

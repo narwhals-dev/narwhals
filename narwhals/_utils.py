@@ -72,7 +72,7 @@ if TYPE_CHECKING:
         NativeFrameT_co,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import CompliantSeriesOrExprT, EvalNames
+    from narwhals._compliant.typing import EvalNames
     from narwhals._namespace import EagerAllowedImplementation, Namespace
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -2038,20 +2038,42 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
+@overload
 def _is_close_impl(
-    self: CompliantSeriesOrExprT,
-    other: CompliantSeriesOrExprT | NumericLiteral,
+    self: CompliantExprT,
+    other: CompliantExprT | NumericLiteral,
     *,
     abs_tol: float,
     rel_tol: float,
     nans_equal: bool,
-) -> CompliantSeriesOrExprT:
+) -> CompliantExprT: ...
+
+
+@overload
+def _is_close_impl(
+    self: CompliantSeriesT,
+    other: CompliantSeriesT | NumericLiteral,
+    *,
+    abs_tol: float,
+    rel_tol: float,
+    nans_equal: bool,
+) -> CompliantSeriesT: ...
+
+
+def _is_close_impl(
+    self: CompliantExprT | CompliantSeriesT,
+    other: CompliantExprT | CompliantSeriesT | NumericLiteral,
+    *,
+    abs_tol: float,
+    rel_tol: float,
+    nans_equal: bool,
+) -> CompliantExprT | CompliantSeriesT:
     from decimal import Decimal
 
-    other_abs: CompliantSeriesOrExprT | NumericLiteral
-    other_is_nan: CompliantSeriesOrExprT | bool
-    other_is_inf: CompliantSeriesOrExprT | bool
-    other_is_not_inf: CompliantSeriesOrExprT | bool
+    other_abs: CompliantExprT | CompliantSeriesT | NumericLiteral
+    other_is_nan: CompliantExprT | CompliantSeriesT | bool
+    other_is_inf: CompliantExprT | CompliantSeriesT | bool
+    other_is_not_inf: CompliantExprT | CompliantSeriesT | bool
 
     if isinstance(other, (float, int, Decimal)):
         from math import isinf, isnan
