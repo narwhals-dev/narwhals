@@ -67,13 +67,13 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
         MultiColSelector as _MultiColSelector,
@@ -531,7 +531,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | None = None,
         *,
         backend: ModuleType | Implementation | str | None = None,
     ) -> DataFrame[Any]:
@@ -593,7 +593,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_numpy(
         cls,
         data: _2DArray,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
         *,
         backend: ModuleType | Implementation | str,
     ) -> DataFrame[Any]:
