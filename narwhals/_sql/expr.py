@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # ruff: noqa: N806
-import operator as op
 from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
 
 from narwhals._compliant.expr import LazyExpr
@@ -520,7 +519,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 self._when(
                     expr == self._lit(0),
                     self._lit(float("-inf")),
-                    op.truediv(F("log", expr), F("log", self._lit(base))),
+                    F("log", expr) / F("log", self._lit(base)),
                 ),
             )
 
@@ -581,7 +580,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             F = self._function
             window = self._window_expression
             return [
-                op.sub(expr, window(F("lag", expr), inputs.partition_by, inputs.order_by))
+                expr - window(F("lag", expr), inputs.partition_by, inputs.order_by)
                 for expr in self(df)
             ]
 
@@ -662,24 +661,19 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             window = self._window_expression
             F = self._function
             if method == "max":
-                rank_expr = op.sub(
-                    op.add(
-                        window(func, **window_kwargs),
-                        window(count_expr, **count_window_kwargs),
-                    ),
-                    self._lit(1),
+                rank_expr = (
+                    window(func, **window_kwargs)
+                    + window(count_expr, **count_window_kwargs)
+                    - self._lit(1)
                 )
             elif method == "average":
-                rank_expr = op.add(
-                    window(func, **window_kwargs),
-                    op.truediv(
-                        op.sub(window(count_expr, **count_window_kwargs), self._lit(1)),
-                        self._lit(2.0),
-                    ),
+                rank_expr = window(func, **window_kwargs) + (
+                    (window(count_expr, **count_window_kwargs) - self._lit(1))
+                    / self._lit(2.0)
                 )
             else:
                 rank_expr = window(func, **window_kwargs)
-            return self._when(~F("isnull", expr), rank_expr)  # type: ignore[operator]
+            return self._when(~F("isnull", expr), rank_expr)
 
         def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
             return _rank(expr, descending=[descending], nulls_last=[True])

@@ -96,9 +96,9 @@ class IbisLazyFrame(
 
         return IbisInterchangeSeries(self.native.select(name), version=self._version)
 
-    def _iter_columns(self) -> Iterator[ir.Expr]:
+    def _iter_columns(self) -> Iterator[ir.Deferred]:
         for name in self.columns:
-            yield self.native[name]
+            yield cast("ir.Deferred", self.native[name])
 
     def collect(
         self, backend: ModuleType | Implementation | str | None, **kwargs: Any
@@ -144,7 +144,7 @@ class IbisLazyFrame(
 
     def aggregate(self, *exprs: IbisExpr) -> Self:
         selection = [
-            cast("ir.Scalar", val.name(name))
+            cast("ir.Deferred", val.name(name))
             for name, val in evaluate_exprs(self, *exprs)
         ]
         return self._with_native(self.native.aggregate(selection))
@@ -342,7 +342,7 @@ class IbisLazyFrame(
         for i in range(len(by)):
             direction_fn = ibis.desc if descending[i] else ibis.asc
             col = direction_fn(by[i], nulls_first=not nulls_last)
-            sort_cols.append(cast("ir.Column", col))
+            sort_cols.append(cast("ir.Deferred", col))
 
         return self._with_native(self.native.order_by(*sort_cols))
 

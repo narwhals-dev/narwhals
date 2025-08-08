@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisExpr
 
 
-class IbisGroupBy(SQLGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
+class IbisGroupBy(SQLGroupBy["IbisLazyFrame", "IbisExpr", "ir.Deferred"]):
     def __init__(
         self,
         df: IbisLazyFrame,

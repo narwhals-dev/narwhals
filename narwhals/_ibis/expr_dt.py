@@ -59,14 +59,14 @@ class IbisExprDateTimeNamespace(
     def date(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.date())
 
-    def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
+    def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             return expr.bucket(**kwds)
 
         return fn
 
-    def _truncate(self, unit: TruncateUnit, /) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
+    def _truncate(self, unit: TruncateUnit, /) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             return expr.truncate(unit)
 
         return fn
