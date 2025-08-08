@@ -21,16 +21,16 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
 
         return self.compliant._with_callable(lambda expr: expr.strip())
 
-    def _replace_all(self, pattern: str, value: str) -> Callable[..., ir.StringValue]:
-        def fn(expr: ir.StringColumn) -> ir.StringValue:
+    def _replace_all(self, pattern: str, value: str) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             return expr.re_replace(pattern, value)
 
         return fn
 
     def _replace_all_literal(
         self, pattern: str, value: str
-    ) -> Callable[..., ir.StringValue]:
-        def fn(expr: ir.StringColumn) -> ir.StringValue:
+    ) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             return expr.replace(pattern, value)  # pyright: ignore[reportArgumentType]
 
         return fn
@@ -39,14 +39,14 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         fn = self._replace_all_literal if literal else self._replace_all
         return self.compliant._with_callable(fn(pattern, value))
 
-    def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.StringColumn) -> ir.TimestampValue:
-            return expr.as_timestamp(format)
+    def _to_datetime(self, format: str) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
+            return expr.as_timestamp(format)  # pyright: ignore[reportReturnType]
 
         return fn
 
-    def _to_datetime_naive(self, format: str) -> Callable[..., ir.TimestampValue]:
-        def fn(expr: ir.StringColumn) -> ir.TimestampValue:
+    def _to_datetime_naive(self, format: str) -> Callable[..., ir.Deferred]:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             dtype: Any = Timestamp(timezone=None)
             return expr.as_timestamp(format).cast(dtype)
 
@@ -64,7 +64,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
             msg = "Cannot infer format with Ibis backend"
             raise NotImplementedError(msg)
 
-        def fn(expr: ir.StringColumn) -> ir.DateValue:
+        def fn(expr: ir.Deferred) -> ir.Deferred:
             return expr.as_date(format)
 
         return self.compliant._with_callable(fn)

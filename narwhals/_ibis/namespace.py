@@ -23,11 +23,13 @@ from narwhals._utils import Implementation, requires
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
+    from ibis import Deferred
+
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferred"]):
+class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "Deferred"]):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:
@@ -45,21 +47,23 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferr
     def _lazyframe(self) -> type[IbisLazyFrame]:
         return IbisLazyFrame
 
-    def _function(self, name: str, *args: ir.Deferred | PythonLiteral) -> ir.Deferred:
+    def _function(self, name: str, *args: Deferred | PythonLiteral) -> Deferred:
         return function(name, *args)
 
-    def _lit(self, value: Any) -> ir.Deferred:
-        return lit(value)
+    def _lit(self, value: Any) -> Deferred:
+        return lit(value)  # pyright: ignore[reportReturnType]
 
     def _when(
-        self, condition: ir.Deferred, value: ir.Deferred, otherwise: ir.Expr | None = None
+        self, condition: Deferred, value: Deferred, otherwise: ir.Deferred | None = None
     ) -> ir.Deferred:
         if otherwise is None:
-            return ibis.cases((condition, value))
-        return ibis.cases((condition, value), else_=otherwise)  # pragma: no cover
+            return ibis.cases((condition, value))  # pyright: ignore[reportReturnType]
+        return ibis.cases(
+            (condition, value), else_=otherwise
+        )  # pragma: no cover  # pyright: ignore[reportReturnType]
 
     def _coalesce(self, *exprs: ir.Deferred) -> ir.Deferred:
-        return ibis.coalesce(*exprs)
+        return ibis.coalesce(*exprs)  # pyright: ignore[reportReturnType]
 
     def concat(
         self, items: Iterable[IbisLazyFrame], *, how: ConcatMethod
@@ -88,7 +92,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferr
                 for col in cols_casted[1:]:
                     result = result + separator + col
             else:
-                sep = cast("ir.StringValue", lit(separator))
+                sep = cast("ir.Deferred", lit(separator))
                 result = sep.join(cols_casted)
 
             return [result]
@@ -116,7 +120,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferr
     def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> Sequence[ir.Deferred]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
-            return [lit(value, ibis_dtype)]
+            return [lit(value, ibis_dtype)]  # pyright: ignore[reportReturnType]
 
         return self._expr(
             func,
@@ -127,7 +131,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferr
 
     def len(self) -> IbisExpr:
         def func(_df: IbisLazyFrame) -> list[ir.Deferred]:
-            return [_df.native.count()]
+            return [_df.native.count()]  # pyright: ignore[reportReturnType]
 
         return self._expr(
             call=func,
@@ -155,7 +159,7 @@ class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Deferred", IbisExpr]):
         else:
             otherwise = df._evaluate_expr(other_) if is_expr(other_) else lit(other_)
             result = ibis.cases((condition, then), else_=otherwise)
-        return [result]
+        return [result]  # pyright: ignore[reportReturnType]
 
 
 class IbisThen(SQLThen["IbisLazyFrame", "ir.Deferred", IbisExpr], IbisExpr): ...

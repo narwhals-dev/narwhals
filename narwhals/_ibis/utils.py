@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
+import ibis.expr.types as ir
 
 from narwhals._utils import isinstance_or_issubclass
 
@@ -12,7 +13,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from datetime import timedelta
 
-    import ibis.expr.types as ir
     from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
     from typing_extensions import TypeAlias, TypeIs
@@ -251,21 +251,24 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
 def function(name: str, *args: ir.Deferred | PythonLiteral) -> ir.Deferred:
     # Workaround SQL vs Ibis differences.
     if name == "row_number":
-        return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
-    if name == "least":
-        return ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
-    if name == "greatest":
-        return ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
-    expr = args[0]
-    if name == "var_pop":
-        return cast("ir.NumericColumn", expr).var(how="pop")
-    if name == "var_samp":
-        return cast("ir.NumericColumn", expr).var(how="sample")
-    if name == "stddev_pop":
-        return cast("ir.NumericColumn", expr).std(how="pop")
-    if name == "stddev_samp":
-        return cast("ir.NumericColumn", expr).std(how="sample")
-    if name == "substr":
-        # Ibis is 0-indexed here, SQL is 1-indexed
-        return cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # type: ignore[operator]  # pyright: ignore[reportArgumentType]
-    return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])
+        res = ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+    elif name == "least":
+        res = ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
+    elif name == "greatest":
+        res = ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
+    else:
+        expr = args[0]
+        if name == "var_pop":
+            res = cast("ir.Deferred", expr).var(how="pop")
+        elif name == "var_samp":
+            res = cast("ir.Deferred", expr).var(how="sample")
+        elif name == "stddev_pop":
+            res = cast("ir.Deferred", expr).std(how="pop")
+        elif name == "stddev_samp":
+            res = cast("ir.Deferred", expr).std(how="sample")
+        elif name == "substr":
+            # Ibis is 0-indexed here, SQL is 1-indexed
+            res = cast("ir.StringColumn", expr).substr(args[1] - 1, *args[2:])  # type: ignore[operator]  # pyright: ignore[reportArgumentType]
+        else:
+            return getattr(expr, FUNCTION_REMAPPING.get(name, name))(*args[1:])
+    return cast("ir.Deferred", res)

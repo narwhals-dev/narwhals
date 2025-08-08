@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class IbisExprStructNamespace(LazyExprNamespace["IbisExpr"], StructNamespace["IbisExpr"]):
     def field(self, name: str) -> IbisExpr:
-        def func(expr: ir.StructColumn) -> ir.Deferred:
-            return expr[name]
+        def func(expr: ir.Deferred) -> ir.Deferred:
+            return expr[name]  # pyright: ignore[reportReturnType]
 
         return self.compliant._with_callable(func).alias(name)

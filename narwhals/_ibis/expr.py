@@ -229,7 +229,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Deferred"]):
                 return expr.std(how="sample")
             n_samples = expr.count()
             std_pop = expr.std(how="pop")
-            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            ddof_lit = cast("ir.Deferred", ibis.literal(ddof))
             return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
 
         return self._with_callable(lambda expr: _std(expr, ddof))
@@ -242,7 +242,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Deferred"]):
                 return expr.var(how="sample")
             n_samples = expr.count()
             var_pop = expr.var(how="pop")
-            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            ddof_lit = cast("ir.Deferred", ibis.literal(ddof))
             return var_pop * n_samples / (n_samples - ddof_lit)
 
         return self._with_callable(lambda expr: _var(expr, ddof))
@@ -274,7 +274,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Deferred"]):
             msg = "`limit` is not supported for the Ibis backend"  # pragma: no cover
             raise NotImplementedError(msg)
 
-        def _fill_null(expr: ir.Deferred, value: ir.Scalar) -> ir.Deferred:
+        def _fill_null(expr: ir.Deferred, value: ir.Deferred) -> ir.Deferred:
             return expr.fill_null(value)
 
         return self._with_callable(_fill_null, value=value)
@@ -300,25 +300,23 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Deferred"]):
             if method == "dense":
                 rank_ = order_by.dense_rank()
             elif method == "ordinal":
-                rank_ = cast("ir.IntegerColumn", ibis.row_number().over(window))
+                rank_ = cast("ir.Deferred", ibis.row_number().over(window))
             else:
                 rank_ = order_by.rank()
 
             # Ibis uses 0-based ranking. Add 1 to match polars 1-based rank.
-            rank_ = rank_ + cast("ir.IntegerValue", lit(1))
+            rank_ = rank_ + cast("ir.Deferred", lit(1))
 
             # For "max" and "average", adjust using the count of rows in the partition.
             if method == "max":
                 # Define a window partitioned by expr (i.e. each distinct value)
                 partition = ibis.window(group_by=[expr])
-                cnt = cast("ir.IntegerValue", expr.count().over(partition))
-                rank_ = rank_ + cnt - cast("ir.IntegerValue", lit(1))
+                cnt = cast("ir.Deferred", expr.count().over(partition))
+                rank_ = rank_ + cnt - cast("ir.Deferred", lit(1))
             elif method == "average":
                 partition = ibis.window(group_by=[expr])
-                cnt = cast("ir.IntegerValue", expr.count().over(partition))
-                avg = cast(
-                    "ir.NumericValue", (cnt - cast("ir.IntegerScalar", lit(1))) / lit(2.0)
-                )
+                cnt = cast("ir.Deferred", expr.count().over(partition))
+                avg = cast("ir.Deferred", (cnt - cast("ir.Deferred", lit(1))) / lit(2.0))
                 rank_ = rank_ + avg
 
             return cast("ir.Deferred", ibis.cases((expr.notnull(), rank_)))
