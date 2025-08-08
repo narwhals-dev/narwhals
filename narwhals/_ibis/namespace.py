@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
 
 
-class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"]):
+class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Deferred"]):
     _implementation: Implementation = Implementation.IBIS
 
     def __init__(self, *, version: Version) -> None:
@@ -45,20 +45,20 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def _lazyframe(self) -> type[IbisLazyFrame]:
         return IbisLazyFrame
 
-    def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
+    def _function(self, name: str, *args: ir.Deferred | PythonLiteral) -> ir.Deferred:
         return function(name, *args)
 
-    def _lit(self, value: Any) -> ir.Value:
+    def _lit(self, value: Any) -> ir.Deferred:
         return lit(value)
 
     def _when(
-        self, condition: ir.Value, value: ir.Value, otherwise: ir.Expr | None = None
-    ) -> ir.Value:
+        self, condition: ir.Deferred, value: ir.Deferred, otherwise: ir.Expr | None = None
+    ) -> ir.Deferred:
         if otherwise is None:
             return ibis.cases((condition, value))
         return ibis.cases((condition, value), else_=otherwise)  # pragma: no cover
 
-    def _coalesce(self, *exprs: ir.Value) -> ir.Value:
+    def _coalesce(self, *exprs: ir.Deferred) -> ir.Deferred:
         return ibis.coalesce(*exprs)
 
     def concat(
@@ -79,7 +79,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
     ) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Value]:
+        def func(df: IbisLazyFrame) -> list[ir.Deferred]:
             cols = list(chain.from_iterable(expr(df) for expr in exprs))
             cols_casted = [s.cast("string") for s in cols]
 
@@ -101,7 +101,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         )
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
-        def func(cols: Iterable[ir.Value]) -> ir.Value:
+        def func(cols: Iterable[ir.Deferred]) -> ir.Deferred:
             cols = list(cols)
             return reduce(operator.add, (col.fill_null(lit(0)) for col in cols)) / reduce(
                 operator.add, (col.isnull().ifelse(lit(0), lit(1)) for col in cols)
@@ -114,7 +114,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         return IbisWhen.from_expr(predicate, context=self)
 
     def lit(self, value: Any, dtype: IntoDType | None) -> IbisExpr:
-        def func(_df: IbisLazyFrame) -> Sequence[ir.Value]:
+        def func(_df: IbisLazyFrame) -> Sequence[ir.Deferred]:
             ibis_dtype = narwhals_to_native_dtype(dtype, self._version) if dtype else None
             return [lit(value, ibis_dtype)]
 
@@ -126,7 +126,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         )
 
     def len(self) -> IbisExpr:
-        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+        def func(_df: IbisLazyFrame) -> list[ir.Deferred]:
             return [_df.native.count()]
 
         return self._expr(
@@ -137,14 +137,14 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
         )
 
 
-class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
+class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Deferred", IbisExpr]):
     lit = lit
 
     @property
     def _then(self) -> type[IbisThen]:
         return IbisThen
 
-    def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Value]:
+    def __call__(self, df: IbisLazyFrame) -> Sequence[ir.Deferred]:
         is_expr = self._condition._is_expr
         condition = df._evaluate_expr(self._condition)
         then_ = self._then_value
@@ -158,4 +158,4 @@ class IbisWhen(SQLWhen["IbisLazyFrame", "ir.Value", IbisExpr]):
         return [result]
 
 
-class IbisThen(SQLThen["IbisLazyFrame", "ir.Value", IbisExpr], IbisExpr): ...
+class IbisThen(SQLThen["IbisLazyFrame", "ir.Deferred", IbisExpr], IbisExpr): ...

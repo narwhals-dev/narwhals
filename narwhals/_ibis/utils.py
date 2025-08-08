@@ -77,8 +77,10 @@ FUNCTION_REMAPPING = {
 }
 
 
-def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir.Value]]:
-    native_results: list[tuple[str, ir.Value]] = []
+def evaluate_exprs(
+    df: IbisLazyFrame, /, *exprs: IbisExpr
+) -> list[tuple[str, ir.Deferred]]:
+    native_results: list[tuple[str, ir.Deferred]] = []
     for expr in exprs:
         native_series_list = expr(df)
         output_names = expr._evaluate_output_names(df)
@@ -246,7 +248,7 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
     return ibis.interval(days=td.days, seconds=td.seconds, microseconds=td.microseconds)
 
 
-def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
+def function(name: str, *args: ir.Deferred | PythonLiteral) -> ir.Deferred:
     # Workaround SQL vs Ibis differences.
     if name == "row_number":
         return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]

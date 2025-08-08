@@ -12,14 +12,14 @@ if TYPE_CHECKING:
     from narwhals._ibis.expr import IbisWindowFunction
 
 
-class IbisSelectorNamespace(LazySelectorNamespace["IbisLazyFrame", "ir.Value"]):
+class IbisSelectorNamespace(LazySelectorNamespace["IbisLazyFrame", "ir.Deferred"]):
     @property
     def _selector(self) -> type[IbisSelector]:
         return IbisSelector
 
 
 class IbisSelector(  # type: ignore[misc]
-    CompliantSelector["IbisLazyFrame", "ir.Value"], IbisExpr
+    CompliantSelector["IbisLazyFrame", "ir.Deferred"], IbisExpr
 ):
     _window_function: IbisWindowFunction | None = None
 

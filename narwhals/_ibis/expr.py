@@ -5,6 +5,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
+import ibis.expr.types as ir
 
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
@@ -17,7 +18,6 @@ from narwhals._utils import Implementation, Version, not_implemented
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    import ibis.expr.types as ir
     from typing_extensions import Self
 
     from narwhals._compliant import WindowInputs
@@ -33,17 +33,17 @@ if TYPE_CHECKING:
     from narwhals._utils import _LimitedContext
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
-    ExprT = TypeVar("ExprT", bound=ir.Value)
-    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
-    IbisWindowInputs = WindowInputs[ir.Value]
+    ExprT = TypeVar("ExprT", bound=ir.Deferred)
+    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Deferred]
+    IbisWindowInputs = WindowInputs[ir.Deferred]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Deferred"]):
     _implementation = Implementation.IBIS
 
     def __init__(
         self,
-        call: EvalSeries[IbisLazyFrame, ir.Value],
+        call: EvalSeries[IbisLazyFrame, ir.Deferred],
         window_function: IbisWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
@@ -62,7 +62,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def window_function(self) -> IbisWindowFunction:
         def default_window_func(
             df: IbisLazyFrame, window_inputs: IbisWindowInputs
-        ) -> Sequence[ir.Value]:
+        ) -> Sequence[ir.Deferred]:
             return [
                 expr.over(
                     ibis.window(
@@ -77,15 +77,15 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def _window_expression(
         self,
-        expr: ir.Value,
-        partition_by: Sequence[str | ir.Value] = (),
-        order_by: Sequence[str | ir.Column] = (),
+        expr: ir.Deferred,
+        partition_by: Sequence[str | ir.Deferred] = (),
+        order_by: Sequence[str | ir.Deferred] = (),
         rows_start: int | None = None,
         rows_end: int | None = None,
         *,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
-    ) -> ir.Value:
+    ) -> ir.Deferred:
         if rows_start is not None and rows_end is not None:
             rows_between = {"preceding": -rows_start, "following": rows_end}
         elif rows_end is not None:
@@ -114,10 +114,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def _sort(
         self,
-        *cols: ir.Column | str,
+        *cols: ir.Deferred | str,
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
-    ) -> Iterator[ir.Column]:
+    ) -> Iterator[ir.Deferred]:
         descending = descending or [False] * len(cols)
         nulls_last = nulls_last or [False] * len(cols)
         mapping = {
@@ -127,7 +127,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             (True, True): partial(ibis.desc, nulls_first=False),
         }
         yield from (
-            cast("ir.Column", mapping[(_desc, _nulls_last)](col))
+            cast("ir.Deferred", mapping[(_desc, _nulls_last)](col))  # pyright: ignore[reportArgumentType]
             for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
         )
 
@@ -139,8 +139,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         *,
         context: _LimitedContext,
     ) -> Self:
-        def func(df: IbisLazyFrame) -> Sequence[ir.Column]:
-            return [df.native[name] for name in evaluate_column_names(df)]
+        def func(df: IbisLazyFrame) -> Sequence[ir.Deferred]:
+            return [
+                cast("ir.Deferred", df.native[name]) for name in evaluate_column_names(df)
+            ]
 
         return cls(
             func,
@@ -151,8 +153,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     @classmethod
     def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
-        def func(df: IbisLazyFrame) -> Sequence[ir.Column]:
-            return [df.native[i] for i in column_indices]
+        def func(df: IbisLazyFrame) -> Sequence[ir.Deferred]:
+            return [cast("ir.Deferred", df.native[i]) for i in column_indices]
 
         return cls(
             func,
@@ -161,11 +163,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=context._version,
         )
 
-    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., ir.Deferred], other: Self | Any) -> Self:
         return self._with_callable(op, other=other)
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self | Any
+        self, op: Callable[..., ir.Deferred], /, **expressifiable_args: Self | Any
     ) -> Self:
         return self._with_callable(op, **expressifiable_args)
 
@@ -174,7 +176,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return cast("ExprT", expr.name(name))
 
     def __invert__(self) -> Self:
-        invert = cast("Callable[..., ir.Value]", operator.invert)
+        invert = cast("Callable[..., ir.Deferred]", operator.invert)
         return self._with_callable(invert)
 
     def all(self) -> Self:
@@ -193,8 +195,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
         def _clip(
-            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
-        ) -> ir.NumericValue:
+            expr: ir.Deferred, lower: Any | None = None, upper: Any | None = None
+        ) -> ir.Deferred:
             return expr.clip(lower=lower, upper=upper)
 
         if lower_bound is None:
@@ -209,8 +211,8 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def len(self) -> Self:
-        def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
-            return [df.native.count()]
+        def func(df: IbisLazyFrame) -> Sequence[ir.Deferred]:
+            return [cast("ir.Deferred", df.native.count())]
 
         return self.__class__(
             func,
@@ -220,7 +222,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def std(self, ddof: int) -> Self:
-        def _std(expr: ir.NumericColumn, ddof: int) -> ir.Value:
+        def _std(expr: ir.Deferred, ddof: int) -> ir.Deferred:
             if ddof == 0:
                 return expr.std(how="pop")
             if ddof == 1:
@@ -233,7 +235,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(lambda expr: _std(expr, ddof))
 
     def var(self, ddof: int) -> Self:
-        def _var(expr: ir.NumericColumn, ddof: int) -> ir.Value:
+        def _var(expr: ir.Deferred, ddof: int) -> ir.Deferred:
             if ddof == 0:
                 return expr.var(how="pop")
             if ddof == 1:
@@ -249,9 +251,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(lambda expr: expr.isnull().sum())
 
     def is_nan(self) -> Self:
-        def func(expr: ir.FloatingValue | Any) -> ir.Value:
-            otherwise = expr.isnan() if is_floating(expr.type()) else False
-            return ibis.ifelse(expr.isnull(), None, otherwise)
+        def func(expr: ir.Deferred | Any) -> ir.Deferred:
+            _is_floating = is_floating(expr.type())  # pyright: ignore[reportArgumentType]
+            otherwise = expr.isnan() if _is_floating else False
+            return cast("ir.Deferred", ibis.ifelse(expr.isnull(), None, otherwise))
 
         return self._with_callable(func)
 
@@ -271,13 +274,13 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             msg = "`limit` is not supported for the Ibis backend"  # pragma: no cover
             raise NotImplementedError(msg)
 
-        def _fill_null(expr: ir.Value, value: ir.Scalar) -> ir.Value:
+        def _fill_null(expr: ir.Deferred, value: ir.Scalar) -> ir.Deferred:
             return expr.fill_null(value)
 
         return self._with_callable(_fill_null, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _func(expr: ir.Column) -> ir.Value:
+        def _func(expr: ir.Deferred) -> ir.Deferred:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             # ibis `cast` overloads do not include DataType, only literals
             return expr.cast(native_dtype)  # type: ignore[unused-ignore]
@@ -290,7 +293,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        def _rank(expr: ir.Column) -> ir.Column:
+        def _rank(expr: ir.Deferred) -> ir.Deferred:
             order_by = next(self._sort(expr, descending=[descending], nulls_last=[True]))
             window = ibis.window(order_by=order_by)
 
@@ -318,7 +321,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
                 )
                 rank_ = rank_ + avg
 
-            return cast("ir.Column", ibis.cases((expr.notnull(), rank_)))
+            return cast("ir.Deferred", ibis.cases((expr.notnull(), rank_)))
 
         return self._with_callable(_rank)
 
