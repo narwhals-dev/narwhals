@@ -45,13 +45,12 @@ if TYPE_CHECKING:
     from narwhals._namespace import _NativeDuckDB, _NativeIbis
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
         IntoDType,
         IntoExpr,
+        IntoSchema,
         NativeDataFrame,
         NativeLazyFrame,
         NativeSeries,
@@ -60,7 +59,7 @@ if TYPE_CHECKING:
         _2DArray,
     )
 
-    _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
+    _IntoSchema: TypeAlias = "IntoSchema | Sequence[str] | None"
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -246,7 +245,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -333,7 +332,7 @@ def _from_dict_no_backend(
 
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
     backend: ModuleType | Implementation | str,
 ) -> DataFrame[Any]:
@@ -387,7 +386,7 @@ def from_numpy(
     if not _is_into_schema(schema):
         msg = (
             "`schema` is expected to be one of the following types: "
-            "Mapping[str, DType] | Schema | Sequence[str]. "
+            "IntoSchema | Sequence[str]. "
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
