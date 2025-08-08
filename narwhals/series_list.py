@@ -96,7 +96,7 @@ class SeriesListNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pl.Series([[1, 2], [3, 4, None], [None, 5]])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.list.get(1).to_native()
+            >>> s.list.get(1).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [i64]
             [
