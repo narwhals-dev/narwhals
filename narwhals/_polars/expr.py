@@ -423,6 +423,15 @@ class PolarsExprListNamespace(
 
         return self.compliant._with_native(native_result)
 
+    def contains(self, item: Any) -> PolarsExpr:
+        if self.compliant._backend_version < (1, 28):
+            result: pl.Expr = pl.when(self.native.is_not_null()).then(
+                self.native.list.contains(item)
+            )
+        else:
+            result = self.native.list.contains(item)
+        return self.compliant._with_native(result)
+
 
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]

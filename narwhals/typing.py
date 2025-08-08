@@ -6,7 +6,7 @@ from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, Complian
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Sequence, Sized
+    from collections.abc import Iterable, Mapping, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
 
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals import dtypes
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
+    from narwhals.schema import Schema
     from narwhals.series import Series
 
     # All dataframes supported by Narwhals have a
@@ -388,6 +389,36 @@ Examples:
     |│ 3   ┆ [6, 0]   │|
     |└─────┴──────────┘|
     └──────────────────┘
+"""
+
+# TODO @dangotbanned: fix this?
+# Constructor allows tuples, but we don't support that *everywhere* yet
+IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
+"""Anything that can be converted into a Narwhals Schema.
+
+Defined by column names and their associated *instantiated* Narwhals DType.
+
+Examples:
+    >>> import narwhals as nw
+    >>> import pyarrow as pa
+    >>> data = {"a": [1, 2, 3], "b": [None, "hi", "howdy"], "c": [2.1, 2.0, None]}
+    >>> nw.DataFrame.from_dict(
+    ...     data,
+    ...     schema={"a": nw.UInt8(), "b": nw.String(), "c": nw.Float32()},
+    ...     backend="pyarrow",
+    ... )
+    ┌────────────────────────┐
+    |   Narwhals DataFrame   |
+    |------------------------|
+    |pyarrow.Table           |
+    |a: uint8                |
+    |b: string               |
+    |c: float                |
+    |----                    |
+    |a: [[1,2,3]]            |
+    |b: [[null,"hi","howdy"]]|
+    |c: [[2.1,2,null]]       |
+    └────────────────────────┘
 """
 
 

@@ -35,10 +35,7 @@ def test_explode_single_col(
     column: str,
     expected_values: list[int | None],
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -87,15 +84,7 @@ def test_explode_multiple_cols(
 ) -> None:
     if any(
         backend in str(constructor)
-        for backend in (
-            "dask",
-            "modin",
-            "cudf",
-            "pyarrow_table",
-            "duckdb",
-            "pyspark",
-            "ibis",
-        )
+        for backend in ("dask", "cudf", "pyarrow_table", "duckdb", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
@@ -114,10 +103,7 @@ def test_explode_multiple_cols(
 def test_explode_shape_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow_table")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):

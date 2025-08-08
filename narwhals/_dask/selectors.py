@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame  # noqa: F401
 
 
-class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):
+class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     @property
     def _selector(self) -> type[DaskSelector]:
         return DaskSelector
