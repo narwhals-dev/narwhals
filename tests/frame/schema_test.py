@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._utils import Implementation
-    from narwhals.schema import IntoPolarsSchema
+    from narwhals.schema import IntoArrowSchema, IntoPolarsSchema
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
 
@@ -445,11 +445,27 @@ def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
     return (dict,)
 
 
+def _arrow_schema() -> Sequence[Callable[..., IntoArrowSchema]]:
+    if find_spec("pyarrow"):
+        import pyarrow as pa
+
+        return (pa.schema, dict)
+    return (dict,)
+
+
 @pytest.fixture(scope="session", params=_polars_schema())
 def polars_schema_constructor(
     request: pytest.FixtureRequest,
 ) -> type[pl.Schema | dict[str, pl.DataType]]:
     pytest.importorskip("polars")
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(scope="session", params=_arrow_schema())
+def arrow_schema_constructor(
+    request: pytest.FixtureRequest,
+) -> Callable[..., IntoArrowSchema]:
+    pytest.importorskip("pyarrow")
     return request.param  # type: ignore[no-any-return]
 
 
@@ -488,6 +504,25 @@ def origin_polars(
 
 
 @pytest.fixture
+def origin_arrow(
+    arrow_schema_constructor: Callable[..., IntoArrowSchema], time_unit: TimeUnit
+) -> IntoArrowSchema:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    return arrow_schema_constructor(
+        {
+            "a": pa.int64(),
+            "b": pa.string(),
+            "c": pa.bool_(),
+            "d": pa.date32(),
+            "e": pa.time64("ns"),
+            "f": pa.timestamp(time_unit),
+        }
+    )
+
+
+@pytest.fixture
 def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
@@ -510,21 +545,14 @@ def test_schema_from_polars(
     assert from_native == from_polars
 
 
-def test_schema_from_arrow(target_narwhals: nw.Schema, time_unit: TimeUnit) -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
-    fields: dict[str, pa.DataType] = {
-        "a": pa.int64(),
-        "b": pa.string(),
-        "c": pa.bool_(),
-        "d": pa.date32(),
-        "e": pa.time64("ns"),
-        "f": pa.timestamp(time_unit),
-    }
-    native = pa.schema(fields)
-    schema = nw.Schema.from_arrow(native)
-    assert schema == target_narwhals
+def test_schema_from_arrow(
+    origin_arrow: IntoArrowSchema, target_narwhals: nw.Schema
+) -> None:
+    from_arrow = nw.Schema.from_arrow(origin_arrow)
+    from_native = nw.Schema.from_native(origin_arrow)
+    assert from_arrow == target_narwhals
+    assert from_native == target_narwhals
+    assert from_native == from_arrow
 
 
 def _is_pandas_like_impl(
