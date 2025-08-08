@@ -27,3 +27,8 @@ class DuckDBExprListNamespace(
             ).otherwise(expr_distinct)
 
         return self.compliant._with_callable(func)
+
+    def get(self, index: int) -> DuckDBExpr:
+        return self.compliant._with_elementwise(
+            lambda expr: F("list_extract", expr, lit(index + 1))
+        )

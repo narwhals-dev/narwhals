@@ -6,6 +6,8 @@ from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import ListNamespace
 
 if TYPE_CHECKING:
+    from sqlframe.base.column import Column
+
     from narwhals._spark_like.expr import SparkLikeExpr
 
 
@@ -17,3 +19,9 @@ class SparkLikeExprListNamespace(
 
     def unique(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.array_distinct)
+
+    def get(self, index: int) -> SparkLikeExpr:
+        def _get(expr: Column) -> Column:
+            return expr.getItem(index)
+
+        return self.compliant._with_elementwise(_get)
