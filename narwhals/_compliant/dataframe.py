@@ -53,9 +53,9 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
+        IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
         MultiColSelector,
@@ -106,7 +106,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | None,
+        schema: IntoSchema | None,
     ) -> Self: ...
     @classmethod
     def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
@@ -117,7 +117,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: IntoSchema | Sequence[str] | None,
     ) -> Self: ...
 
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...

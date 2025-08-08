@@ -225,7 +225,9 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         return pa.time64("ns")
     if isinstance_or_issubclass(dtype, dtypes.Binary):
         return pa.binary()
-
+    if isinstance_or_issubclass(dtype, dtypes.Object):
+        msg = f"Converting to {dtype} dtype is not supported for pyarrow."
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

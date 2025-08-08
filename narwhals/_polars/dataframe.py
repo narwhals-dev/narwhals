@@ -44,8 +44,8 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
+        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -273,7 +273,7 @@ class PolarsDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | None,
+        schema: IntoSchema | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -291,7 +291,7 @@ class PolarsDataFrame(
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: IntoSchema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
