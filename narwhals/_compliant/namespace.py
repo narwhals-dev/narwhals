@@ -27,20 +27,19 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterable, Mapping, Sequence
+    from collections.abc import Container, Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         IntegerDType,
         Into1DArray,
         IntoDType,
+        IntoSchema,
         NonNestedLiteral,
         _2DArray,
     )
@@ -188,17 +187,14 @@ class EagerNamespace(
 
     @overload
     def from_numpy(
-        self,
-        data: _2DArray,
-        /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
     ) -> EagerDataFrameT: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
     ) -> EagerDataFrameT | EagerSeriesT:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

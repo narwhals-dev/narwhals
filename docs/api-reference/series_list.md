@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - contains
         - len
         - unique
       show_source: false
