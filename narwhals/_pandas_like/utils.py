@@ -129,6 +129,16 @@ UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "ns": "nanosecond",
 }
 
+PANDAS_VERSION = Implementation.PANDAS._backend_version()
+"""Static backend version for `pandas`.
+
+Always available if we reached here, due to a module-level import.
+"""
+
+
+def is_pandas_or_modin(implementation: Implementation) -> bool:
+    return implementation in {Implementation.PANDAS, Implementation.MODIN}
+
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
@@ -182,8 +192,7 @@ def set_index(
         (1, 5) <= implementation._backend_version() < (3,)
     ):  # pragma: no cover
         return obj.set_axis(index, axis=0, copy=False)
-    else:  # pragma: no cover
-        return obj.set_axis(index, axis=0)
+    return obj.set_axis(index, axis=0)  # pragma: no cover
 
 
 def rename(
@@ -288,7 +297,7 @@ def object_native_to_narwhals_dtype(
     if inferred_dtype == "empty" and version is not Version.V1:
         # Default to String for empty Series.
         return dtypes.String()
-    elif inferred_dtype == "empty":
+    if inferred_dtype == "empty":
         # But preserve returning Object in V1.
         return dtypes.Object()
     return dtypes.Object()
@@ -344,7 +353,7 @@ def native_to_narwhals_dtype(
         )
     if str_dtype != "object":
         return non_object_native_to_narwhals_dtype(native_dtype, version)
-    elif implementation is Implementation.DASK:
+    if implementation is Implementation.DASK:
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
@@ -426,73 +435,73 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     if isinstance_or_issubclass(dtype, dtypes.Float64):
         if dtype_backend == "pyarrow":
             return "Float64[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Float64"
         return "float64"
     if isinstance_or_issubclass(dtype, dtypes.Float32):
         if dtype_backend == "pyarrow":
             return "Float32[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Float32"
         return "float32"
     if isinstance_or_issubclass(dtype, dtypes.Int64):
         if dtype_backend == "pyarrow":
             return "Int64[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Int64"
         return "int64"
     if isinstance_or_issubclass(dtype, dtypes.Int32):
         if dtype_backend == "pyarrow":
             return "Int32[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Int32"
         return "int32"
     if isinstance_or_issubclass(dtype, dtypes.Int16):
         if dtype_backend == "pyarrow":
             return "Int16[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Int16"
         return "int16"
     if isinstance_or_issubclass(dtype, dtypes.Int8):
         if dtype_backend == "pyarrow":
             return "Int8[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "Int8"
         return "int8"
     if isinstance_or_issubclass(dtype, dtypes.UInt64):
         if dtype_backend == "pyarrow":
             return "UInt64[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "UInt64"
         return "uint64"
     if isinstance_or_issubclass(dtype, dtypes.UInt32):
         if dtype_backend == "pyarrow":
             return "UInt32[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "UInt32"
         return "uint32"
     if isinstance_or_issubclass(dtype, dtypes.UInt16):
         if dtype_backend == "pyarrow":
             return "UInt16[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "UInt16"
         return "uint16"
     if isinstance_or_issubclass(dtype, dtypes.UInt8):
         if dtype_backend == "pyarrow":
             return "UInt8[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "UInt8"
         return "uint8"
     if isinstance_or_issubclass(dtype, dtypes.String):
         if dtype_backend == "pyarrow":
             return "string[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "string"
         return str
     if isinstance_or_issubclass(dtype, dtypes.Boolean):
         if dtype_backend == "pyarrow":
             return "boolean[pyarrow]"
-        elif dtype_backend == "numpy_nullable":
+        if dtype_backend == "numpy_nullable":
             return "boolean"
         return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Categorical):
@@ -500,10 +509,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
         return "category"
-    backend_version = implementation._backend_version()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # Pandas does not support "ms" or "us" time units before version 2.0
-        if implementation is Implementation.PANDAS and backend_version < (
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
             dt_time_unit = "ns"
@@ -513,11 +521,10 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         if dtype_backend == "pyarrow":
             tz_part = f", tz={tz}" if (tz := dtype.time_zone) else ""
             return f"timestamp[{dt_time_unit}{tz_part}][pyarrow]"
-        else:
-            tz_part = f", {tz}" if (tz := dtype.time_zone) else ""
-            return f"datetime64[{dt_time_unit}{tz_part}]"
+        tz_part = f", {tz}" if (tz := dtype.time_zone) else ""
+        return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        if implementation is Implementation.PANDAS and backend_version < (
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
             du_time_unit = "ns"
@@ -547,7 +554,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
-        if implementation is Implementation.PANDAS and backend_version >= (2, 2):
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION >= (2, 2):
             try:
                 import pandas as pd
                 import pyarrow as pa  # ignore-banned-import  # noqa: F401
@@ -559,12 +566,13 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
             )
 
             return pd.ArrowDtype(arrow_narwhals_to_native_dtype(dtype, version=version))
-        else:  # pragma: no cover
-            msg = (
-                f"Converting to {dtype} dtype is not supported for implementation "
-                f"{implementation} and version {version}."
-            )
-            raise NotImplementedError(msg)
+        msg = (  # pragma: no cover
+            f"Converting to {dtype} dtype is not supported for implementation "
+            f"{implementation} and version {version}."
+        )
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Object):
+        return "object"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -597,15 +605,14 @@ def calculate_timestamp_datetime(
 ) -> NativeSeriesT:
     if current == time_unit:
         return s
-    elif item := _TIMESTAMP_DATETIME_OP_FACTOR.get((current, time_unit)):
+    if item := _TIMESTAMP_DATETIME_OP_FACTOR.get((current, time_unit)):
         fn, factor = item
         return fn(s, factor)
-    else:  # pragma: no cover
-        msg = (
-            f"unexpected time unit {current}, please report an issue at "
-            "https://github.com/narwhals-dev/narwhals"
-        )
-        raise AssertionError(msg)
+    msg = (  # pragma: no cover
+        f"unexpected time unit {current}, please report an issue at "
+        "https://github.com/narwhals-dev/narwhals"
+    )
+    raise AssertionError(msg)
 
 
 _TIMESTAMP_DATE_FACTOR: Mapping[TimeUnit, int] = {
@@ -664,13 +671,12 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
         import numpy as np
 
         return np
-    elif implementation is Implementation.CUDF:
+    if implementation is Implementation.CUDF:
         import cupy as cp  # ignore-banned-import  # cuDF dependency.
 
         return cp
-    else:  # pragma: no cover
-        msg = f"Expected pandas/modin/cudf, got: {implementation}"
-        raise AssertionError(msg)
+    msg = f"Expected pandas/modin/cudf, got: {implementation}"  # pragma: no cover
+    raise AssertionError(msg)
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...

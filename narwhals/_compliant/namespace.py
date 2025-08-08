@@ -24,19 +24,18 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterable, Mapping, Sequence
+    from collections.abc import Container, Iterable, Sequence
 
     from typing_extensions import TypeAlias
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
         IntoDType,
+        IntoSchema,
         NonNestedLiteral,
         _2DArray,
     )
@@ -135,9 +134,8 @@ class LazyNamespace(
     def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
         if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        else:  # pragma: no cover
-            msg = f"Unsupported type: {type(data).__name__!r}"
-            raise TypeError(msg)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)
 
 
 class EagerNamespace(
@@ -165,7 +163,7 @@ class EagerNamespace(
     ) -> EagerDataFrameT | EagerSeriesT:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
-        elif self._series._is_native(data):
+        if self._series._is_native(data):
             return self._series.from_native(data, context=self)
         msg = f"Unsupported type: {type(data).__name__!r}"
         raise TypeError(msg)
@@ -175,17 +173,14 @@ class EagerNamespace(
 
     @overload
     def from_numpy(
-        self,
-        data: _2DArray,
-        /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
     ) -> EagerDataFrameT: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
     ) -> EagerDataFrameT | EagerSeriesT:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

@@ -240,13 +240,13 @@ def _is_cudf_exception(exception: Exception) -> bool:
 def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
-    elif isinstance(exception, pl.exceptions.ShapeError):
+    if isinstance(exception, pl.exceptions.ShapeError):
         return ShapeError(str(exception))
-    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+    if isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
-    elif isinstance(exception, pl.exceptions.DuplicateError):
+    if isinstance(exception, pl.exceptions.DuplicateError):
         return DuplicateError(str(exception))
-    elif isinstance(exception, pl.exceptions.ComputeError):
+    if isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if _is_polars_exception(exception) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover
@@ -333,13 +333,13 @@ class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     get_categories: Method[CompliantT]
 
 
-# NOTE: Use `Protocol` if we **only** have defs to implement
-class PolarsListNamespace(
-    PolarsAnyNamespace[CompliantT_co, NativeT_co], Protocol[CompliantT_co, NativeT_co]
-):
+class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[NativeAccessor] = "list"
 
-    def len(self) -> CompliantT_co: ...
+    @abc.abstractmethod
+    def len(self) -> CompliantT: ...
+
+    unique: Method[CompliantT]
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
