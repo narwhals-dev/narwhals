@@ -62,7 +62,6 @@ class NativeExpr(Protocol):
     """
 
     def between(self, *args: Any, **kwds: Any) -> Any: ...
-    def isin(self, *args: Any, **kwds: Any) -> Any: ...
 
     # NOTE: None of these are annotated for `dx.Series`, but are added imperatively
     # Probably better to define a sub-protocol for `NativeSQLExpr`
