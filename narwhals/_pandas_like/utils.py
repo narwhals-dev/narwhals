@@ -138,6 +138,16 @@ UNITS_DICT: Mapping[IntervalUnit, NativeIntervalUnit] = {
     "ns": "nanosecond",
 }
 
+PANDAS_VERSION = Implementation.PANDAS._backend_version()
+"""Static backend version for `pandas`.
+
+Always available if we reached here, due to a module-level import.
+"""
+
+
+def is_pandas_or_modin(implementation: Implementation) -> bool:
+    return implementation in {Implementation.PANDAS, Implementation.MODIN}
+
 
 def align_and_extract_native(
     lhs: PandasLikeSeries, rhs: PandasLikeSeries | object
@@ -508,10 +518,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
         # convert to it?
         return "category"
-    backend_version = implementation._backend_version()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # Pandas does not support "ms" or "us" time units before version 2.0
-        if implementation is Implementation.PANDAS and backend_version < (
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
             dt_time_unit = "ns"
@@ -524,7 +533,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         tz_part = f", {tz}" if (tz := dtype.time_zone) else ""
         return f"datetime64[{dt_time_unit}{tz_part}]"
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        if implementation is Implementation.PANDAS and backend_version < (
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
             du_time_unit = "ns"
@@ -554,10 +563,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
     if isinstance_or_issubclass(
         dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
-        if implementation in {
-            Implementation.PANDAS,
-            Implementation.MODIN,
-        } and Implementation.PANDAS._backend_version() >= (2, 2):
+        if is_pandas_or_modin(implementation) and PANDAS_VERSION >= (2, 2):
             try:
                 import pandas as pd
                 import pyarrow as pa  # ignore-banned-import  # noqa: F401
