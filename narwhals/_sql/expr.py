@@ -499,7 +499,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             lambda expr: self._function("round", expr, self._lit(decimals))
         )
 
-    # WIP: trying new NativeExprT
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
             return self._when(
