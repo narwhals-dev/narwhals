@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime, time, timedelta, timezone
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
@@ -14,9 +15,11 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._utils import Implementation
+    from narwhals.schema import IntoPolarsSchema
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
 
@@ -432,8 +435,26 @@ def time_unit() -> TimeUnit:
     return "us" if PANDAS_VERSION >= (3,) else "ns"
 
 
+def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
+    # helper so we can parametrize both if available
+    if find_spec("polars"):
+        import polars as pl
+
+        if POLARS_VERSION >= (1,):
+            return (pl.Schema, dict)
+    return (dict,)
+
+
+@pytest.fixture(scope="session", params=_polars_schema())
+def polars_schema_constructor(
+    request: pytest.FixtureRequest,
+) -> type[pl.Schema | dict[str, pl.DataType]]:
+    pytest.importorskip("polars")
+    return request.param  # type: ignore[no-any-return]
+
+
 @pytest.fixture
-def target_schema(time_unit: TimeUnit) -> nw.Schema:
+def target_narwhals(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
             "a": nw.Int64(),
@@ -447,7 +468,27 @@ def target_schema(time_unit: TimeUnit) -> nw.Schema:
 
 
 @pytest.fixture
-def target_schema_pandas(time_unit: TimeUnit) -> nw.Schema:
+def origin_polars(
+    polars_schema_constructor: type[pl.Schema | dict[str, pl.DataType]],
+    time_unit: TimeUnit,
+) -> IntoPolarsSchema:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    return polars_schema_constructor(
+        {
+            "a": pl.Int64(),
+            "b": pl.String(),
+            "c": pl.Boolean(),
+            "d": pl.Date(),
+            "e": pl.Time(),
+            "f": pl.Datetime(time_unit),
+        }
+    )
+
+
+@pytest.fixture
+def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
             "a": nw.Int64(),
@@ -459,26 +500,17 @@ def target_schema_pandas(time_unit: TimeUnit) -> nw.Schema:
     )
 
 
-def test_schema_from_polars(target_schema: nw.Schema, time_unit: TimeUnit) -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    container = pl.Schema if POLARS_VERSION >= (1,) else dict
-    native = container(
-        {
-            "a": pl.Int64(),
-            "b": pl.String(),
-            "c": pl.Boolean(),
-            "d": pl.Date(),
-            "e": pl.Time(),
-            "f": pl.Datetime(time_unit),
-        }
-    )
-    schema = nw.Schema.from_polars(native)
-    assert schema == target_schema
+def test_schema_from_polars(
+    origin_polars: IntoPolarsSchema, target_narwhals: nw.Schema
+) -> None:
+    from_polars = nw.Schema.from_polars(origin_polars)
+    from_native = nw.Schema.from_native(origin_polars)
+    assert from_polars == target_narwhals
+    assert from_native == target_narwhals
+    assert from_native == from_polars
 
 
-def test_schema_from_arrow(target_schema: nw.Schema, time_unit: TimeUnit) -> None:
+def test_schema_from_arrow(target_narwhals: nw.Schema, time_unit: TimeUnit) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
@@ -492,7 +524,7 @@ def test_schema_from_arrow(target_schema: nw.Schema, time_unit: TimeUnit) -> Non
     }
     native = pa.schema(fields)
     schema = nw.Schema.from_arrow(native)
-    assert schema == target_schema
+    assert schema == target_narwhals
 
 
 def _is_pandas_like_impl(
@@ -502,7 +534,7 @@ def _is_pandas_like_impl(
 
 
 def test_schema_from_pandas(
-    target_schema_pandas: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
+    target_narwhals_pandas: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
 ) -> None:
     name_pandas_like = {
         "pandas_constructor",
@@ -527,12 +559,12 @@ def test_schema_from_pandas(
     impl = nw.from_native(df_pd).implementation
     assert _is_pandas_like_impl(impl)
     schema = nw.Schema.from_pandas(native, backend=impl)
-    assert schema == target_schema_pandas
+    assert schema == target_narwhals_pandas
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="pandas too old for `pyarrow`")
 def test_schema_from_pandas_pyarrow(
-    target_schema: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
+    target_narwhals: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
 ) -> None:
     name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
     if constructor_eager.__name__ not in name_pandas_like:
@@ -554,4 +586,4 @@ def test_schema_from_pandas_pyarrow(
     impl = df_nw.implementation
     assert _is_pandas_like_impl(impl)
     schema = nw.Schema.from_pandas(native, backend=impl)
-    assert schema == target_schema
+    assert schema == target_narwhals
