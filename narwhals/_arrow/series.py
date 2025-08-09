@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    ArrowToPandas,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
         TemporalLiteral,
+        ToPandasArrowKwds,
         _1DArray,
         _2DArray,
         _SliceIndex,
@@ -120,7 +122,9 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
-class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
+class ArrowSeries(
+    ArrowToPandas["ChunkedArrayAny", "pd.Series[Any]"], EagerSeries["ChunkedArrayAny"]
+):
     _implementation = Implementation.PYARROW
 
     def __init__(
@@ -692,10 +696,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         df = pa.Table.from_arrays([self.native], names=[self.name])
         return ArrowDataFrame(df, version=self._version, validate_column_names=False)
 
-    def to_pandas(self) -> pd.Series[Any]:
-        import pandas as pd  # ignore-banned-import()
-
-        return pd.Series(self.native, name=self.name)
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> pd.Series[Any]:
+        series = super().to_pandas(
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
+        series.name = self.name
+        return series
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import

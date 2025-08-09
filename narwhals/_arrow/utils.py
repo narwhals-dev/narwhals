@@ -7,12 +7,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
+from narwhals._utils import Implementation, isinstance_or_issubclass, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral, ToPandasArrowKwds
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -229,6 +230,27 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+class ArrowToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasToT_co:
+        import pandas as pd  # ignore-banned-import
+
+        if use_pyarrow_extension_array:
+            pd_version = Implementation.PANDAS._backend_version()
+            if pd_version < (1, 5):  # pragma: no cover
+                found = requires._unparse_version(pd_version)
+                msg = f"`to_pandas(use_pyarrow_extension_array=True)` is only available in 'pandas>=1.5.0', found version {found!r}."
+                raise NotImplementedError(msg)
+            kwds["types_mapper"] = kwds.pop(
+                "types_mapper", lambda pa_dtype: pd.ArrowDtype(pa_dtype)
+            )
+        return self.native.to_pandas(**kwds)
 
 
 def extract_native(

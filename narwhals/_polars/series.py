@@ -12,6 +12,7 @@ from narwhals._polars.utils import (
     PolarsListNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
+    PolarsToPandas,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import Literal, TypeVar
 
-    import pandas as pd
+    import pandas as pd  # noqa: F401
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
@@ -120,7 +121,6 @@ INHERITED_METHODS = frozenset(
         "to_arrow",
         "to_frame",
         "to_list",
-        "to_pandas",
         "unique",
         "var",
         "zip_with",
@@ -128,7 +128,7 @@ INHERITED_METHODS = frozenset(
 )
 
 
-class PolarsSeries:
+class PolarsSeries(PolarsToPandas[pl.Series, "pd.Series[Any]"]):
     _implementation = Implementation.POLARS
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
@@ -683,7 +683,6 @@ class PolarsSeries:
     to_arrow: Method[pa.Array[Any]]
     to_frame: Method[PolarsDataFrame]
     to_list: Method[list[Any]]
-    to_pandas: Method[pd.Series[Any]]
     unique: Method[Self]
     var: Method[float]
     zip_with: Method[Self]

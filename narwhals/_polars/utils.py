@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar, overload
 
 import polars as pl
 
 from narwhals._duration import Interval
+from narwhals._translate import CompliantToPandas, ToPandasFromT_co, ToPandasToT_co
 from narwhals._utils import (
     Implementation,
     Version,
@@ -28,14 +29,14 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeIs, Unpack
 
     from narwhals._polars.dataframe import Method
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, ToPandasArrowKwds
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -252,6 +253,32 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception
+
+
+class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasToT_co:
+        always_true: tuple[Literal["self_destruct", "split_blocks"], ...] = (
+            "self_destruct",
+            "split_blocks",
+        )
+        if use_pyarrow_extension_array and kwds:
+            if types_mapper := kwds.get("types_mapper"):  # pragma: no cover
+                msg = f"`use_pyarrow_extension_array` and `types_mapper` are mutually exclusive, got:\n{use_pyarrow_extension_array!r}\n{types_mapper!r}"
+                raise InvalidOperationError(msg)
+            for kwd in always_true:
+                user_defined = kwds.pop(kwd, True)
+                # NOTE: The `pyarrow` default is False, but `polars` will always use `True` with `use_pyarrow_extension_array`
+                if user_defined is False:  # pragma: no cover
+                    msg = f"`use_pyarrow_extension_array` cannot be used with `{kwd}={user_defined}`."
+                    raise InvalidOperationError(msg)
+        return self.native.to_pandas(  # type: ignore[no-any-return]
+            use_pyarrow_extension_array=use_pyarrow_extension_array, **kwds
+        )
 
 
 class PolarsAnyNamespace(

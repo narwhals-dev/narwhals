@@ -66,10 +66,14 @@ from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._typing_compat import TypeVar
+from narwhals._utils import _StoresNative
 
 if TYPE_CHECKING:
+    import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
+
+    from narwhals.typing import ToPandasArrowKwds
 
 
 class ArrowStreamExportable(Protocol):
@@ -184,3 +188,46 @@ class ToNarwhals(Protocol[ToNarwhalsT_co]):
     def to_narwhals(self) -> ToNarwhalsT_co:
         """Convert into public representation."""
         ...
+
+
+ToPandasToT_co = TypeVar(
+    "ToPandasToT_co", "pd.Series[Any]", "pd.DataFrame", covariant=True
+)
+
+
+class ToPandas(Protocol[ToPandasToT_co]):
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasToT_co:
+        """Convert into `pandas` representation, optionally using `pyarrow`."""
+        ...
+
+
+class ToPandasNative(Protocol[ToPandasToT_co]):
+    def to_pandas(self, **kwds: Any) -> ToPandasToT_co: ...
+
+
+class _NativeToPandas(Protocol[ToPandasToT_co]):
+    def to_pandas(self, *args: Any, **kwds: Any) -> ToPandasToT_co: ...
+
+
+ToPandasFromT_co = TypeVar("ToPandasFromT_co", bound=_NativeToPandas[Any], covariant=True)
+
+
+class CompliantToPandas(
+    _StoresNative[ToPandasFromT_co],
+    ToPandas[ToPandasToT_co],
+    Protocol[ToPandasFromT_co, ToPandasToT_co],
+):
+    """Generic over native types `[From, To]`.
+
+    Used to match:
+
+        pl.DataFrame | pa.Table -> pd.DataFrame
+        pl.Series | pa.ChunkedArray -> pd.Series
+
+    Not applicable for pandas-like, which mostly don't have a `to_pandas` method.
+    """
