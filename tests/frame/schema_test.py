@@ -586,7 +586,7 @@ def test_schema_from_pandas(
     native = df_pd.dtypes.to_dict()
     impl = nw.from_native(df_pd).implementation
     assert _is_pandas_like_impl(impl)
-    schema = nw.Schema.from_pandas(native, backend=impl)
+    schema = nw.Schema._from_pandas_like_old(native, backend=impl)
     assert schema == target_narwhals_pandas
 
 
@@ -613,7 +613,7 @@ def test_schema_from_pandas_pyarrow(
     native = df_nw.to_native().dtypes.to_dict()
     impl = df_nw.implementation
     assert _is_pandas_like_impl(impl)
-    schema = nw.Schema.from_pandas(native, backend=impl)
+    schema = nw.Schema._from_pandas_like_old(native, backend=impl)
     assert schema == target_narwhals
 
 

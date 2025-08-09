@@ -119,7 +119,54 @@ class Schema(OrderedDict[str, "DType"]):
         )
 
     @classmethod
-    def from_pandas(
+    def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
+        import narwhals.dependencies as deps
+
+        from_native = (
+            cls.from_cudf
+            if deps.get_cudf()
+            and any(deps.is_cudf_dtype(dtype) for dtype in schema.values())
+            else cls.from_pandas
+        )
+        return from_native(schema)
+
+    @classmethod
+    def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
+        return cls._from_pandas_like(schema, Implementation.PANDAS)
+
+    @classmethod
+    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:  # pragma: no cover
+        return cls._from_pandas_like(schema, Implementation.CUDF)
+
+    # NOTE: Just aliasing for consistency
+    # Only `cuDF` has unique paths
+    from_modin = from_pandas
+
+    @classmethod
+    def _from_pandas_like(
+        cls, schema: IntoPandasSchema, implementation: Implementation, /
+    ) -> Self:
+        from narwhals._pandas_like.utils import (
+            native_to_narwhals_dtype,
+            object_native_to_narwhals_dtype,
+        )
+
+        impl = implementation
+        is_object = impl.to_native_namespace().api.types.is_object_dtype
+        from_native = partial(
+            native_to_narwhals_dtype, implementation=impl, version=cls._version
+        )
+        object_dtype = partial(
+            object_native_to_narwhals_dtype, (), implementation=impl, version=cls._version
+        )
+        return cls(
+            (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
+            for name, dtype in schema.items()
+        )
+
+    # TODO @dangotbanned: Remove and redo tests
+    @classmethod
+    def _from_pandas_like_old(
         cls,
         schema: IntoPandasSchema,
         /,
@@ -193,7 +240,7 @@ class Schema(OrderedDict[str, "DType"]):
             return cls.from_polars(native_polars)
         if deps.is_pandas_like_dtype(first_dtype):
             native_pandas = cast("IntoPandasSchema", native)
-            return cls.from_pandas(native_pandas)
+            return cls.from_pandas_like(native_pandas)
         if deps.is_pyarrow_data_type(first_dtype):
             native_arrow = cast("IntoArrowSchema", native)
             return cls.from_arrow(native_arrow)
