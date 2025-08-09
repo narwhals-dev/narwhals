@@ -28,6 +28,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
+    from polars.datatypes import IntegerType as PlIntegerType
     from typing_extensions import TypeIs
 
     from narwhals._polars.dataframe import Method
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntegerDType, IntoDType
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -153,6 +154,10 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     return dtypes.Unknown()
 
 
+@overload
+def narwhals_to_native_dtype(dtype: IntegerDType, version: Version) -> PlIntegerType: ...
+@overload
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pl.DataType: ...
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: IntoDType, version: Version
 ) -> pl.DataType:
