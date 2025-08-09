@@ -2078,7 +2078,9 @@ def _is_close_impl(
     if isinstance(other, (float, int, Decimal)):
         from math import isinf, isnan
 
-        other_abs, other_is_nan, other_is_inf = abs(other), isnan(other), isinf(other)  # type: ignore[assignment]
+        other_abs = abs(other)
+        other_is_nan = isnan(other)
+        other_is_inf = isinf(other)
 
         # Define the other_is_not_inf variable to prevent triggering the following warning:
         # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be
@@ -2093,7 +2095,7 @@ def _is_close_impl(
         other_is_not_inf = other.is_finite() | other_is_nan
         other_is_inf = ~other_is_not_inf
 
-    rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol  # type: ignore[arg-type]
+    rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
     tolerance = rel_threshold.clip(lower_bound=abs_tol, upper_bound=None)
 
     self_is_nan = self.is_nan()
