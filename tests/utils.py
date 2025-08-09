@@ -45,6 +45,7 @@ CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 
 def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
