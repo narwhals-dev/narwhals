@@ -9,7 +9,7 @@ pytest.importorskip("numpy")
 import numpy as np
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,12 +21,6 @@ if TYPE_CHECKING:
 
 arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
 NAME = "a"
-
-
-def assert_equal_series(
-    result: nw.Series[Any], expected: Sequence[Any], name: str
-) -> None:
-    assert_equal_data(result.to_frame(), {name: expected})
 
 
 def test_series_from_numpy(eager_backend: EagerAllowed) -> None:
