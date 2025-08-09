@@ -86,7 +86,6 @@ if TYPE_CHECKING:
         DTypes,
         IntoSeriesT,
         MultiIndexSelector,
-        NumericLiteral,
         SingleIndexSelector,
         SizedMultiIndexSelector,
         SizeUnit,
@@ -2036,86 +2035,3 @@ def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
 def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     """Perform a nested attribute lookup on `obj`."""
     return deep_attrgetter(name_1, *nested)(obj)
-
-
-@overload
-def _is_close_impl(
-    self: CompliantExprT,
-    other: CompliantExprT | NumericLiteral,
-    *,
-    abs_tol: float,
-    rel_tol: float,
-    nans_equal: bool,
-) -> CompliantExprT: ...
-
-
-@overload
-def _is_close_impl(
-    self: CompliantSeriesT,
-    other: CompliantSeriesT | NumericLiteral,
-    *,
-    abs_tol: float,
-    rel_tol: float,
-    nans_equal: bool,
-) -> CompliantSeriesT: ...
-
-
-def _is_close_impl(
-    self: CompliantExprT | CompliantSeriesT,
-    other: CompliantExprT | CompliantSeriesT | NumericLiteral,
-    *,
-    abs_tol: float,
-    rel_tol: float,
-    nans_equal: bool,
-) -> CompliantExprT | CompliantSeriesT:
-    from decimal import Decimal
-
-    other_abs: CompliantExprT | CompliantSeriesT | NumericLiteral
-    other_is_nan: CompliantExprT | CompliantSeriesT | bool
-    other_is_inf: CompliantExprT | CompliantSeriesT | bool
-    other_is_not_inf: CompliantExprT | CompliantSeriesT | bool
-
-    if isinstance(other, (float, int, Decimal)):
-        from math import isinf, isnan
-
-        other_abs = abs(other)
-        other_is_nan = isnan(other)
-        other_is_inf = isinf(other)
-
-        # Define the other_is_not_inf variable to prevent triggering the following warning:
-        # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be
-        # >     removed in Python 3.16. This returns the bitwise inversion of the
-        # >     underlying int object and is usually not what you expect from negating
-        # >     a bool. Use the 'not' operator for boolean negation or ~int(x) if you
-        # >     really want the bitwise inversion of the underlying int.
-        other_is_not_inf = not other_is_inf
-
-    else:
-        other_abs, other_is_nan = other.abs(), other.is_nan()
-        other_is_not_inf = other.is_finite() | other_is_nan
-        other_is_inf = ~other_is_not_inf
-
-    rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
-    tolerance = rel_threshold.clip(lower_bound=abs_tol, upper_bound=None)
-
-    self_is_nan = self.is_nan()
-    self_is_not_inf = self.is_finite() | self_is_nan
-
-    # Values are close if abs_diff <= tolerance, and both finite
-    is_close = ((self - other).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
-
-    # Handle infinity cases: infinities are "close" only if they have the same sign
-    self_sign, other_sign = self > 0, other > 0
-    is_same_inf = (~self_is_not_inf) & other_is_inf & (self_sign == other_sign)
-
-    # Handle nan cases:
-    #   * nans_equals = True => if both values are NaN, then True
-    #   * nans_equals = False => if any value is NaN, then False
-    either_nan = self_is_nan | other_is_nan
-    result = (is_close | is_same_inf) & ~either_nan
-
-    if nans_equal:
-        both_nan = self_is_nan & other_is_nan
-        result = result | both_nan
-
-    return result

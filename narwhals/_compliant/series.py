@@ -16,10 +16,10 @@ from narwhals._compliant.typing import (
     NativeSeriesT,
     NativeSeriesT_co,
 )
+from narwhals._compliant.utils import IsClose
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
-    _is_close_impl,
     _StoresCompliant,
     _StoresNative,
     is_compliant_series,
@@ -79,6 +79,7 @@ __all__ = [
 
 
 class CompliantSeries(
+    IsClose,
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
     FromNative[NativeSeriesT],
@@ -284,18 +285,6 @@ class CompliantSeries(
     ) -> CompliantDataFrame[Self, Any, Any, Any]:
         """`Series.hist(bins=None, bin_count=...)`."""
         ...
-
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        return _is_close_impl(
-            self, other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-        )
 
     @property
     def str(self) -> StringNamespace[Self]: ...

@@ -27,7 +27,8 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _is_close_impl, _StoresCompliant
+from narwhals._compliant.utils import IsClose
+from narwhals._utils import _StoresCompliant
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
@@ -75,7 +76,7 @@ class NativeExpr(Protocol):
     def __ne__(self, value: Any, /) -> Self: ...  # type: ignore[override]
 
 
-class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
+class CompliantExpr(IsClose, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     _implementation: Implementation
     _version: Version
     _evaluate_output_names: EvalNames[CompliantFrameT]
@@ -240,18 +241,6 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     ) -> Sequence[str]:
         names = self._evaluate_output_names(frame)
         return alias(names) if (alias := self._alias_output_names) else names
-
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        return _is_close_impl(
-            self, other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-        )
 
     @property
     def str(self) -> StringNamespace[Self]: ...
