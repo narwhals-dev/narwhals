@@ -5,6 +5,8 @@
     options:
       members:
         - contains
+        - get
         - len
         - unique
-        - get
+      show_source: false
+      show_bases: false
