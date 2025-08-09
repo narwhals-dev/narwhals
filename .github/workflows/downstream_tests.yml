@@ -376,7 +376,7 @@ jobs:
       - name: Run tests
         run: |
           cd hierarchicalforecast
-          nbdev_test --do_print --timing --n_workers 0
+          pytest tests
 
   formulaic:
     strategy:
