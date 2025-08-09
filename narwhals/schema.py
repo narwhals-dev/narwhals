@@ -9,13 +9,12 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Mapping
 from functools import partial
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 from narwhals._utils import Implementation, Version, qualified_type_name
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from types import ModuleType
     from typing import Any, ClassVar
 
     import pandas as pd
@@ -161,39 +160,6 @@ class Schema(OrderedDict[str, "DType"]):
         )
         return cls(
             (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
-            for name, dtype in schema.items()
-        )
-
-    # TODO @dangotbanned: Remove and redo tests
-    @classmethod
-    def _from_pandas_like_old(
-        cls,
-        schema: IntoPandasSchema,
-        /,
-        *,
-        backend: Literal[
-            "pandas",
-            "modin",
-            "cudf",
-            Implementation.PANDAS,
-            Implementation.MODIN,
-            Implementation.CUDF,
-        ]
-        | ModuleType = "pandas",
-    ) -> Self:
-        from narwhals._pandas_like.utils import native_to_narwhals_dtype
-
-        impl = Implementation.from_backend(backend)
-        Object = cls._version.dtypes.Object()  # noqa: N806
-        # NOTE: Not really sure what the best move is here
-        # Only doing the check to avoid "unreachable code"
-        # https://github.com/dangotbanned/narwhals/blob/8b3773a7ff2818a681f2b6cfa3fa9fc6533eece3/narwhals/_pandas_like/utils.py#L351-L354
-        is_object_dtype = impl.to_native_namespace().api.types.is_object_dtype
-        from_native_dtype = partial(
-            native_to_narwhals_dtype, implementation=impl, version=cls._version
-        )
-        return cls(
-            (name, (Object if is_object_dtype(dtype) else from_native_dtype(dtype)))
             for name, dtype in schema.items()
         )
 

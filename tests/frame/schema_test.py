@@ -16,9 +16,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     import polars as pl
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias
 
-    from narwhals._utils import Implementation
     from narwhals.schema import IntoArrowSchema, IntoPolarsSchema
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
@@ -527,9 +526,9 @@ def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
     return nw.Schema(
         {
             "a": nw.Int64(),
-            "b": nw.Float64(),
-            "c": nw.Boolean(),
-            "d": nw.Object(),
+            "b": nw.String(),
+            "c": nw.Float64(),
+            "d": nw.Boolean(),
             "e": nw.Datetime(time_unit),
         }
     )
@@ -555,27 +554,19 @@ def test_schema_from_arrow(
     assert from_native == from_arrow
 
 
-def _is_pandas_like_impl(
-    obj: Implementation,
-) -> TypeIs[Literal[Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]]:
-    return obj.is_pandas_like()
-
-
 def test_schema_from_pandas(
     target_narwhals_pandas: nw.Schema, constructor_pandas_like: ConstructorPandasLike
 ) -> None:
     data = {
         "a": [2, 1],
-        "b": [5.3, 4.99],
-        "c": [False, True],
-        "d": [nw.Time, nw.Date],
+        "b": ["hello", "hi"],
+        "c": [5.3, 4.99],
+        "d": [False, True],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
     df_pd = constructor_pandas_like(data)
     native = df_pd.dtypes.to_dict()
-    impl = nw.from_native(df_pd).implementation
-    assert _is_pandas_like_impl(impl)
-    schema = nw.Schema._from_pandas_like_old(native, backend=impl)
+    schema = nw.Schema.from_pandas_like(native)
     assert schema == target_narwhals_pandas
 
 
@@ -600,9 +591,7 @@ def test_schema_from_pandas_pyarrow(
         nw.col("d").cast(nw.Date()), nw.col("e").cast(nw.Time())
     )
     native = df_nw.to_native().dtypes.to_dict()
-    impl = df_nw.implementation
-    assert _is_pandas_like_impl(impl)
-    schema = nw.Schema._from_pandas_like_old(native, backend=impl)
+    schema = nw.Schema.from_pandas_like(native)
     assert schema == target_narwhals
 
 
