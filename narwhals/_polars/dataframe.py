@@ -15,7 +15,6 @@ from narwhals._polars.utils import (
 from narwhals._utils import (
     Implementation,
     _into_arrow_table,
-    check_columns_exist,
     convert_str_slice_to_int_slice,
     is_compliant_series,
     is_index_selector,
@@ -44,8 +43,8 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
+        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -165,11 +164,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def from_native(cls, data: NativePolarsFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
 
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(  # pragma: no cover
-            subset, available=self.columns
-        )
-
     def simple_select(self, *column_names: str) -> Self:
         return self._with_native(self.native.select(*column_names))
 
@@ -263,9 +257,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     write_csv: Method[Any]
     write_parquet: Method[None]
 
-    # CompliantDataFrame
-    _evaluate_aliases: Any
-
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         if context._implementation._backend_version() >= (1, 3):
@@ -281,7 +272,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | None,
+        schema: IntoSchema | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -299,7 +290,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: IntoSchema | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -389,7 +380,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             selector = rows_native, columns_native
             selected = self.native.__getitem__(selector)  # type: ignore[index]
             return self._from_native_object(selected)
-        else:  # pragma: no cover
+        else:  # pragma: no cover # noqa: RET505
             # TODO(marco): we can delete this branch after Polars==0.20.30 becomes the minimum
             # Polars version we support
             # This mostly mirrors the logic in `EagerDataFrame.__getitem__`.
@@ -407,7 +398,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                         native = native.select(
                             self.columns[slice(columns.start, columns.stop, columns.step)]
                         )
-                    elif is_compliant_series(columns):
+                    # NOTE: `mypy` loses track of `PolarsSeries` when `is_compliant_series` is used here
+                    # `pyright` is fine
+                    elif isinstance(columns, PolarsSeries):
                         native = native[:, columns.native.to_list()]
                     else:
                         native = native[:, columns]
@@ -450,7 +443,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
-        elif backend is Implementation.DUCKDB:
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -460,7 +453,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        elif backend is Implementation.DASK:
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -470,7 +463,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 validate_backend_version=True,
                 version=self._version,
             )
-        elif backend.is_ibis():
+        if backend.is_ibis():
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -497,8 +490,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 name: PolarsSeries.from_native(col, context=self)
                 for name, col in self.native.to_dict().items()
             }
-        else:
-            return self.native.to_dict(as_series=False)
+        return self.native.to_dict(as_series=False)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
@@ -556,10 +548,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
 
 class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
-    # CompliantLazyFrame
     sink_parquet: Method[None]
-    _evaluate_expr: Any
-    _evaluate_aliases: Any
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:

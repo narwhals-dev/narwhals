@@ -24,6 +24,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
+    check_columns_exist,
     flatten,
     generate_repr,
     is_compliant_dataframe,
@@ -42,6 +43,7 @@ from narwhals.dependencies import (
     is_pyarrow_table,
 )
 from narwhals.exceptions import (
+    ColumnNotFoundError,
     InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
@@ -65,13 +67,13 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
         MultiColSelector as _MultiColSelector,
@@ -112,7 +114,8 @@ class BaseFrame(Generic[_FrameT]):
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
-        """Process `args` and `kwargs`, extracting underlying objects as we go, interpreting strings as column names."""
+        # Process `args` and `kwargs`, extracting underlying objects as we go.
+        # NOTE: Strings are interpreted as column names.
         out_exprs = []
         out_kinds = []
         for expr in flatten(exprs):
@@ -128,6 +131,9 @@ class BaseFrame(Generic[_FrameT]):
     @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
     @property
     def schema(self) -> Schema:
@@ -176,7 +182,7 @@ class BaseFrame(Generic[_FrameT]):
                 )
             except Exception as e:
                 # Column not found is the only thing that can realistically be raised here.
-                if error := self._compliant_frame._check_columns_exist(flat_exprs):
+                if error := self._check_columns_exist(flat_exprs):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
@@ -525,7 +531,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | None = None,
         *,
         backend: ModuleType | Implementation | str | None = None,
     ) -> DataFrame[Any]:
@@ -587,7 +593,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_numpy(
         cls,
         data: _2DArray,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
         *,
         backend: ModuleType | Implementation | str,
     ) -> DataFrame[Any]:
@@ -700,6 +706,9 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
+
+        Returns:
+            A PyCapsule containing a C ArrowArrayStream representation of the object.
         """
         native_frame = self._compliant_frame._native_frame
         if supports_arrow_c_stream(native_frame):
@@ -899,9 +908,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import pyarrow as pa
@@ -1459,7 +1465,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            DataFrame: A new DataFrame with the columns added.
+            New DataFrame with the columns added.
 
         Note:
             Creating a new DataFrame using this method does not create a new copy of
@@ -2744,7 +2750,7 @@ class LazyFrame(BaseFrame[FrameT]):
                             The columns will be renamed to the keyword used.
 
         Returns:
-            LazyFrame: A new LazyFrame with the columns added.
+            New LazyFrame with the columns added.
 
         Note:
             Creating a new LazyFrame using this method does not create a new copy of
@@ -3043,9 +3049,6 @@ class LazyFrame(BaseFrame[FrameT]):
         Arguments:
             file: String, path object or file-like object to which the dataframe will be
                 written.
-
-        Returns:
-            None.
 
         Examples:
             >>> import polars as pl

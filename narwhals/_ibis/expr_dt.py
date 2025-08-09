@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._duration import Interval
 from narwhals._ibis.utils import (
     UNITS_DICT_BUCKET,
     UNITS_DICT_TRUNCATE,
     timedelta_to_ibis_interval,
 )
+from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -19,27 +18,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.utils import BucketUnit, TruncateUnit
 
 
-class IbisExprDateTimeNamespace(
-    LazyExprNamespace["IbisExpr"], DateTimeNamespace["IbisExpr"]
-):
-    def year(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.year())
-
-    def month(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.month())
-
-    def day(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.day())
-
-    def hour(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.hour())
-
-    def minute(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.minute())
-
-    def second(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.second())
-
+class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
     def millisecond(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.millisecond())
 
@@ -52,12 +31,6 @@ class IbisExprDateTimeNamespace(
     def weekday(self) -> IbisExpr:
         # Ibis uses 0-6 for Monday-Sunday. Add 1 to match polars.
         return self.compliant._with_callable(lambda expr: expr.day_of_week.index() + 1)
-
-    def ordinal_day(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.day_of_year())
-
-    def date(self) -> IbisExpr:
-        return self.compliant._with_callable(lambda expr: expr.date())
 
     def _bucket(self, kwds: dict[BucketUnit, Any], /) -> Callable[..., ir.TimestampValue]:
         def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
@@ -97,9 +70,8 @@ class IbisExprDateTimeNamespace(
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
             return self.compliant._with_callable(lambda expr: expr.cast("timestamp"))
-        else:  # pragma: no cover
-            msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"
-            raise NotImplementedError(msg)
+        msg = "`replace_time_zone` with non-null `time_zone` not yet implemented for Ibis"  # pragma: no cover
+        raise NotImplementedError(msg)
 
     nanosecond = not_implemented()
     total_minutes = not_implemented()

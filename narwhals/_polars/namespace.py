@@ -13,15 +13,14 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
     from datetime import timezone
 
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.schema import Schema
-    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -33,9 +32,7 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
 
-    # NOTE: `pyright` accepts, `mypy` doesn't highlight the issue
-    #   error: Type argument "PolarsExpr" of "CompliantWhen" must be a subtype of "CompliantExpr[Any, Any]"
-    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]  # type: ignore[type-var]
+    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
     _implementation = Implementation.POLARS
 
@@ -84,30 +81,26 @@ class PolarsNamespace:
     ) -> PolarsDataFrame | PolarsLazyFrame | PolarsSeries:
         if self._dataframe._is_native(data):
             return self._dataframe.from_native(data, context=self)
-        elif self._series._is_native(data):
+        if self._series._is_native(data):
             return self._series.from_native(data, context=self)
-        elif self._lazyframe._is_native(data):
+        if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
-        else:  # pragma: no cover
-            msg = f"Unsupported type: {type(data).__name__!r}"
-            raise TypeError(msg)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)  # pragma: no cover
 
     @overload
     def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> PolarsSeries: ...
 
     @overload
     def from_numpy(
-        self,
-        data: _2DArray,
-        /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

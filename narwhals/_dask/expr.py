@@ -42,14 +42,14 @@ if TYPE_CHECKING:
 
 
 class DaskExpr(
-    LazyExpr["DaskLazyFrame", "dx.Series"],
-    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],
+    LazyExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
+    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
 ):
     _implementation: Implementation = Implementation.DASK
 
     def __init__(
         self,
-        call: EvalSeries[DaskLazyFrame, dx.Series],
+        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
         *,
         depth: int,
         function_name: str,
@@ -397,9 +397,8 @@ class DaskExpr(
                 ).var(),
                 "rolling_var",
             )
-        else:
-            msg = "Dask backend only supports `ddof=1` for `rolling_var`"
-            raise NotImplementedError(msg)
+        msg = "Dask backend only supports `ddof=1` for `rolling_var`"
+        raise NotImplementedError(msg)
 
     def rolling_std(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
@@ -411,9 +410,8 @@ class DaskExpr(
                 ).std(),
                 "rolling_std",
             )
-        else:
-            msg = "Dask backend only supports `ddof=1` for `rolling_std`"
-            raise NotImplementedError(msg)
+        msg = "Dask backend only supports `ddof=1` for `rolling_std`"
+        raise NotImplementedError(msg)
 
     def sum(self) -> Self:
         return self._with_callable(lambda expr: expr.sum().to_series(), "sum")
@@ -520,9 +518,8 @@ class DaskExpr(
                 ).to_series()  # pragma: no cover
 
             return self._with_callable(func, "quantile", quantile=quantile)
-        else:
-            msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
-            raise NotImplementedError(msg)
+        msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
+        raise NotImplementedError(msg)
 
     def is_first_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:

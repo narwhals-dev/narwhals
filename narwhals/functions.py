@@ -44,13 +44,12 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
         IntoDType,
         IntoExpr,
+        IntoSchema,
         NativeFrame,
         NativeLazyFrame,
         NativeSeries,
@@ -59,7 +58,7 @@ if TYPE_CHECKING:
         _2DArray,
     )
 
-    _IntoSchema: TypeAlias = "Mapping[str, DType] | Schema | Sequence[str] | None"
+    _IntoSchema: TypeAlias = "IntoSchema | Sequence[str] | None"
 
 
 def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
@@ -224,7 +223,7 @@ def _new_series_impl(
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
         return series.to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             native_series: NativeSeries = _native_namespace.new_series(
@@ -245,7 +244,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | None = None,
     *,
     backend: ModuleType | Implementation | str | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -296,7 +295,7 @@ def from_dict(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -330,7 +329,7 @@ def _from_dict_no_backend(
 
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
     backend: ModuleType | Implementation | str,
 ) -> DataFrame[Any]:
@@ -384,7 +383,7 @@ def from_numpy(
     if not _is_into_schema(schema):
         msg = (
             "`schema` is expected to be one of the following types: "
-            "Mapping[str, DType] | Schema | Sequence[str]. "
+            "IntoSchema | Sequence[str]. "
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
@@ -392,7 +391,7 @@ def from_numpy(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns.from_numpy(data, schema).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -465,7 +464,7 @@ def from_arrow(
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
         return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
-    elif implementation is Implementation.UNKNOWN:  # pragma: no cover
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
         _native_namespace = implementation.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should

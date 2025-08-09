@@ -8,6 +8,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from operator import attrgetter
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -43,8 +44,6 @@ from narwhals.dependencies import (
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
-    is_polars_series,
-    is_pyarrow_chunked_array,
 )
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 
@@ -656,7 +655,11 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
     native_namespace = _import_native_namespace(module_name)
-    if impl.is_sqlframe():
+    if impl.is_polars():
+        from importlib import metadata
+
+        into_version = metadata.version("polars")
+    elif impl.is_sqlframe():
         import sqlframe._version
 
         into_version = sqlframe._version
@@ -1062,7 +1065,7 @@ def maybe_set_index(
         return df_any._with_compliant(
             df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
-    elif is_pandas_like_series(native_obj):
+    if is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
 
         if column_names:
@@ -1075,8 +1078,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
-    else:
-        return df_any
+    return df_any
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -1210,17 +1212,16 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     """
     if unit in {"b", "bytes"}:
         return sz
-    elif unit in {"kb", "kilobytes"}:
+    if unit in {"kb", "kilobytes"}:
         return sz / 1024
-    elif unit in {"mb", "megabytes"}:
+    if unit in {"mb", "megabytes"}:
         return sz / 1024**2
-    elif unit in {"gb", "gigabytes"}:
+    if unit in {"gb", "gigabytes"}:
         return sz / 1024**3
-    elif unit in {"tb", "terabytes"}:
+    if unit in {"tb", "terabytes"}:
         return sz / 1024**4
-    else:
-        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
-        raise ValueError(msg)
+    msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+    raise ValueError(msg)
 
 
 def is_ordered_categorical(series: Series[Any]) -> bool:
@@ -1250,7 +1251,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import polars as pl
         >>> data = ["x", "y"]
         >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="physical"))
+        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
 
         Let's define a library-agnostic function:
 
@@ -1263,7 +1264,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> func(s_pd)
         True
         >>> func(s_pl)
-        True
+        False
     """
     from narwhals._interchange.series import InterchangeSeries
 
@@ -1281,11 +1282,15 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         result = False
     else:
         native = series.to_native()
-        if is_polars_series(native):
+        impl = series.implementation
+        if impl.is_polars() and impl._backend_version() < (1, 32):
+            # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
+            # Since version 1.32.0, ordering parameter is ignored and
+            # it always behaves as if 'lexical' was passed.
             result = cast("pl.Categorical", native.dtype).ordering == "physical"
-        elif is_pandas_like_series(native):
+        elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
-        elif is_pyarrow_chunked_array(native):
+        elif impl.is_pyarrow():
             from narwhals._arrow.utils import is_dictionary
 
             result = is_dictionary(native.type) and native.type.ordered
@@ -1706,9 +1711,8 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
-    else:  # pragma: no cover
-        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
-        raise ModuleNotFoundError(msg)
+    msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
+    raise ModuleNotFoundError(msg)  # pragma: no cover
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -1944,13 +1948,12 @@ def inherit_doc(
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
-        else:  # pragma: no cover
-            msg = (
-                f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
-                f"Method: {init_child.__qualname__!r}\n"
-                f"Parent: {tp_parent!r}"
-            )
-            raise TypeError(msg)
+        msg = (  # pragma: no cover
+            f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
+            f"Method: {init_child.__qualname__!r}\n"
+            f"Parent: {tp_parent!r}"
+        )
+        raise TypeError(msg)  # pragma: no cover
 
     return decorate
 
@@ -2021,3 +2024,14 @@ class _DeferredIterable(Generic[_T]):
         # Collect and return as a `tuple`.
         it = self._into_iter()
         return it if isinstance(it, tuple) else tuple(it)
+
+
+@lru_cache(maxsize=64)
+def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
+    name = ".".join((attr, *nested)) if nested else attr
+    return attrgetter(name)
+
+
+def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
+    """Perform a nested attribute lookup on `obj`."""
+    return deep_attrgetter(name_1, *nested)(obj)

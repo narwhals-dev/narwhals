@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
 
 import polars as pl
 
+from narwhals._duration import Interval
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
+    _StoresCompliant,
+    _StoresNative,
+    deep_getattr,
     isinstance_or_issubclass,
 )
 from narwhals.exceptions import (
@@ -21,11 +26,14 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
 
     from typing_extensions import TypeIs
 
-    from narwhals._utils import _StoresNative
+    from narwhals._polars.dataframe import Method
+    from narwhals._polars.expr import PolarsExpr
+    from narwhals._polars.series import PolarsSeries
+    from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
@@ -33,6 +41,10 @@ if TYPE_CHECKING:
     NativeT = TypeVar(
         "NativeT", bound="pl.DataFrame | pl.LazyFrame | pl.Series | pl.Expr"
     )
+
+NativeT_co = TypeVar("NativeT_co", "pl.Series", "pl.Expr", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", "PolarsSeries", "PolarsExpr", covariant=True)
+CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
@@ -228,15 +240,108 @@ def _is_cudf_exception(exception: Exception) -> bool:
 def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
     if isinstance(exception, pl.exceptions.ColumnNotFoundError):
         return ColumnNotFoundError(str(exception))
-    elif isinstance(exception, pl.exceptions.ShapeError):
+    if isinstance(exception, pl.exceptions.ShapeError):
         return ShapeError(str(exception))
-    elif isinstance(exception, pl.exceptions.InvalidOperationError):
+    if isinstance(exception, pl.exceptions.InvalidOperationError):
         return InvalidOperationError(str(exception))
-    elif isinstance(exception, pl.exceptions.DuplicateError):
+    if isinstance(exception, pl.exceptions.DuplicateError):
         return DuplicateError(str(exception))
-    elif isinstance(exception, pl.exceptions.ComputeError):
+    if isinstance(exception, pl.exceptions.ComputeError):
         return ComputeError(str(exception))
     if _is_polars_exception(exception) or _is_cudf_exception(exception):
         return NarwhalsError(str(exception))  # pragma: no cover
     # Just return exception as-is.
     return exception
+
+
+class PolarsAnyNamespace(
+    _StoresCompliant[CompliantT_co],
+    _StoresNative[NativeT_co],
+    Protocol[CompliantT_co, NativeT_co],
+):
+    _accessor: ClassVar[NativeAccessor]
+
+    def __getattr__(self, attr: str) -> Callable[..., CompliantT_co]:
+        def func(*args: Any, **kwargs: Any) -> CompliantT_co:
+            pos, kwds = extract_args_kwargs(args, kwargs)
+            method = deep_getattr(self.native, self._accessor, attr)
+            return self.compliant._with_native(method(*pos, **kwds))
+
+        return func
+
+
+class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "dt"
+
+    def truncate(self, every: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse(every)
+        return self.__getattr__("truncate")(every)
+
+    def offset_by(self, by: str) -> CompliantT:
+        # Ensure consistent error message is raised.
+        Interval.parse_no_constraints(by)
+        return self.__getattr__("offset_by")(by)
+
+    to_string: Method[CompliantT]
+    replace_time_zone: Method[CompliantT]
+    convert_time_zone: Method[CompliantT]
+    timestamp: Method[CompliantT]
+    date: Method[CompliantT]
+    year: Method[CompliantT]
+    month: Method[CompliantT]
+    day: Method[CompliantT]
+    hour: Method[CompliantT]
+    minute: Method[CompliantT]
+    second: Method[CompliantT]
+    millisecond: Method[CompliantT]
+    microsecond: Method[CompliantT]
+    nanosecond: Method[CompliantT]
+    ordinal_day: Method[CompliantT]
+    weekday: Method[CompliantT]
+    total_minutes: Method[CompliantT]
+    total_seconds: Method[CompliantT]
+    total_milliseconds: Method[CompliantT]
+    total_microseconds: Method[CompliantT]
+    total_nanoseconds: Method[CompliantT]
+
+
+class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "str"
+
+    # NOTE: Use `abstractmethod` if we have defs to implement, but also `Method` usage
+    @abc.abstractmethod
+    def zfill(self, width: int) -> CompliantT: ...
+
+    len_chars: Method[CompliantT]
+    replace: Method[CompliantT]
+    replace_all: Method[CompliantT]
+    strip_chars: Method[CompliantT]
+    starts_with: Method[CompliantT]
+    ends_with: Method[CompliantT]
+    contains: Method[CompliantT]
+    slice: Method[CompliantT]
+    split: Method[CompliantT]
+    to_date: Method[CompliantT]
+    to_datetime: Method[CompliantT]
+    to_lowercase: Method[CompliantT]
+    to_uppercase: Method[CompliantT]
+
+
+class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "cat"
+    get_categories: Method[CompliantT]
+
+
+class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "list"
+
+    @abc.abstractmethod
+    def len(self) -> CompliantT: ...
+
+    unique: Method[CompliantT]
+
+
+class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[NativeAccessor] = "struct"
+    field: Method[CompliantT]

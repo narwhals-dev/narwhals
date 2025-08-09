@@ -143,7 +143,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         if condition:
             pytest.skip(reason)
 
-    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"
@@ -315,6 +315,7 @@ def test_dtype_is_x() -> None:
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
     is_nested = {nw.Array, nw.List, nw.Struct}
+    is_boolean = {nw.Boolean}
 
     for dtype in dtypes:
         assert dtype.is_numeric() == (
@@ -332,6 +333,7 @@ def test_dtype_is_x() -> None:
         assert dtype.is_decimal() == (dtype in is_decimal)
         assert dtype.is_temporal() == (dtype in is_temporal)
         assert dtype.is_nested() == (dtype in is_nested)
+        assert dtype.is_boolean() == (dtype in is_boolean)
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")

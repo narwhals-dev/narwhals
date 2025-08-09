@@ -88,8 +88,7 @@ def chunked_array(
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(arr, dtype)
-    else:
-        return pa.chunked_array([arr], arr.type)
+    return pa.chunked_array([arr], arr.type)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -225,7 +224,9 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         return pa.time64("ns")
     if isinstance_or_issubclass(dtype, dtypes.Binary):
         return pa.binary()
-
+    if isinstance_or_issubclass(dtype, dtypes.Object):
+        msg = f"Converting to {dtype} dtype is not supported for pyarrow."
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
@@ -381,7 +382,7 @@ def _parse_date_format(arr: pc.StringArray) -> str:
         matches = pc.extract_regex(arr, pattern=date_rgx)
         if date_fmt == "%Y%m%d" and pc.all(matches.is_valid()).as_py():
             return date_fmt
-        elif (
+        if (
             pc.all(matches.is_valid()).as_py()
             and pc.count(pc.unique(sep1 := matches.field("sep1"))).as_py() == 1
             and pc.count(pc.unique(sep2 := matches.field("sep2"))).as_py() == 1

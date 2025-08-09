@@ -6,6 +6,12 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    PolarsAnyNamespace,
+    PolarsCatNamespace,
+    PolarsDateTimeNamespace,
+    PolarsListNamespace,
+    PolarsStringNamespace,
+    PolarsStructNamespace,
     catch_polars_exception,
     extract_args_kwargs,
     extract_native,
@@ -30,7 +36,13 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        NonNestedLiteral,
+        _1DArray,
+    )
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
@@ -275,18 +287,18 @@ class PolarsSeries:
     def __ne__(self, other: object) -> Self:  # type: ignore[override]
         return self._with_native(self.native.__ne__(extract_native(other)))
 
-    # NOTE: `pyright` is being reasonable here
-    def __ge__(self, other: Any) -> Self:
-        return self._with_native(self.native.__ge__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    # NOTE: These need to be anything that can't match `PolarsExpr`, due to overload order
+    def __ge__(self, other: Self) -> Self:
+        return self._with_native(self.native.__ge__(extract_native(other)))
 
-    def __gt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__gt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __gt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__gt__(extract_native(other)))
 
-    def __le__(self, other: Any) -> Self:
-        return self._with_native(self.native.__le__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __le__(self, other: Self) -> Self:
+        return self._with_native(self.native.__le__(extract_native(other)))
 
-    def __lt__(self, other: Any) -> Self:
-        return self._with_native(self.native.__lt__(extract_native(other)))  # pyright: ignore[reportArgumentType]
+    def __lt__(self, other: Self) -> Self:
+        return self._with_native(self.native.__lt__(extract_native(other)))
 
     def __rpow__(self, other: PolarsSeries | Any) -> Self:
         result = self.native.__rpow__(extract_native(other))
@@ -681,92 +693,62 @@ class PolarsSeries:
         return PolarsSeriesListNamespace(self)
 
 
-class PolarsSeriesDateTimeNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
-        self._compliant_series = series
-
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.dt, attr)(*pos, **kwds)
-            )
-
-        return func
-
-
-class PolarsSeriesStringNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
-        self._compliant_series = series
-
-    def zfill(self, width: int) -> PolarsSeries:
-        series = self._compliant_series
-        name = series.name
-        ns = series.__narwhals_namespace__()
-        return series.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
-
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.str, attr)(*pos, **kwds)
-            )
-
-        return func
-
-
-class PolarsSeriesCatNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
-        self._compliant_series = series
-
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.cat, attr)(*pos, **kwds)
-            )
-
-        return func
-
-
-class PolarsSeriesListNamespace:
+class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
     def __init__(self, series: PolarsSeries) -> None:
         self._series = series
 
+    @property
+    def compliant(self) -> PolarsSeries:
+        return self._series
+
+    @property
+    def native(self) -> pl.Series:
+        return self._series.native
+
+    @property
+    def name(self) -> str:
+        return self.compliant.name
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        return self.compliant.__narwhals_namespace__()
+
+    def to_frame(self) -> PolarsDataFrame:
+        return self.compliant.to_frame()
+
+
+class PolarsSeriesDateTimeNamespace(
+    PolarsSeriesNamespace, PolarsDateTimeNamespace[PolarsSeries, pl.Series]
+): ...
+
+
+class PolarsSeriesStringNamespace(
+    PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
+):
+    def zfill(self, width: int) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+
+
+class PolarsSeriesCatNamespace(
+    PolarsSeriesNamespace, PolarsCatNamespace[PolarsSeries, pl.Series]
+): ...
+
+
+class PolarsSeriesListNamespace(
+    PolarsSeriesNamespace, PolarsListNamespace[PolarsSeries, pl.Series]
+):
     def len(self) -> PolarsSeries:
-        native_series = self._series.native
-        native_result = native_series.list.len()
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.len()).get_column(name)
 
-        if self._series._backend_version < (1, 16):  # pragma: no cover
-            native_result = pl.select(
-                pl.when(~native_series.is_null()).then(native_result).otherwise(None)
-            )[native_series.name].cast(pl.UInt32())
-
-        elif self._series._backend_version < (1, 17):  # pragma: no cover
-            native_result = native_series.cast(pl.UInt32())
-
-        return self._series._with_native(native_result)
-
-    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
-    def __getattr__(self, attr: str) -> Any:  # pragma: no cover
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._series._with_native(
-                getattr(self._series.native.list, attr)(*pos, **kwds)
-            )
-
-        return func
+    def contains(self, item: NonNestedLiteral) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
 
 
-class PolarsSeriesStructNamespace:
-    def __init__(self, series: PolarsSeries) -> None:
-        self._compliant_series = series
-
-    def __getattr__(self, attr: str) -> Any:
-        def func(*args: Any, **kwargs: Any) -> Any:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self._compliant_series._with_native(
-                getattr(self._compliant_series.native.struct, attr)(*pos, **kwds)
-            )
-
-        return func
+class PolarsSeriesStructNamespace(
+    PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]
+): ...

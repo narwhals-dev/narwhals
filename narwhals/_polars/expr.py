@@ -4,8 +4,13 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import polars as pl
 
-from narwhals._duration import Interval
 from narwhals._polars.utils import (
+    PolarsAnyNamespace,
+    PolarsCatNamespace,
+    PolarsDateTimeNamespace,
+    PolarsListNamespace,
+    PolarsStringNamespace,
+    PolarsStructNamespace,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -17,10 +22,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import EvalNames
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._polars.dataframe import Method
+    from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._utils import Version
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import IntoDType
 
 
@@ -256,9 +262,26 @@ class PolarsExpr:
     _evaluate_output_names: Any
     _is_multi_output_unnamed: Any
     __call__: Any
-    from_column_names: Any
-    from_column_indices: Any
-    _eval_names_indices: Any
+
+    # CompliantExpr + builtin descriptor
+    # TODO @dangotbanned: Remove in #2713
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: EvalNames[PolarsDataFrame],
+        /,
+        *,
+        context: _LimitedContext,
+    ) -> Self:
+        raise NotImplementedError
+
+    @classmethod
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
+        raise NotImplementedError
+
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
+        raise NotImplementedError
 
     # Polars
     abs: Method[Self]
@@ -311,7 +334,7 @@ class PolarsExpr:
     var: Method[Self]
 
 
-class PolarsExprNamespace:
+class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):
     def __init__(self, expr: PolarsExpr) -> None:
         self._expr = expr
 
@@ -324,49 +347,14 @@ class PolarsExprNamespace:
         return self._expr.native
 
 
-class PolarsExprDateTimeNamespace(PolarsExprNamespace):
-    def truncate(self, every: str) -> PolarsExpr:
-        Interval.parse(every)  # Ensure consistent error message is raised.
-        return self.compliant._with_native(self.native.dt.truncate(every))
-
-    def offset_by(self, by: str) -> PolarsExpr:
-        # Ensure consistent error message is raised.
-        Interval.parse_no_constraints(by)
-        return self.compliant._with_native(self.native.dt.offset_by(by))
-
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.dt, attr)(*pos, **kwds)
-            )
-
-        return func
-
-    to_string: Method[PolarsExpr]
-    replace_time_zone: Method[PolarsExpr]
-    convert_time_zone: Method[PolarsExpr]
-    timestamp: Method[PolarsExpr]
-    date: Method[PolarsExpr]
-    year: Method[PolarsExpr]
-    month: Method[PolarsExpr]
-    day: Method[PolarsExpr]
-    hour: Method[PolarsExpr]
-    minute: Method[PolarsExpr]
-    second: Method[PolarsExpr]
-    millisecond: Method[PolarsExpr]
-    microsecond: Method[PolarsExpr]
-    nanosecond: Method[PolarsExpr]
-    ordinal_day: Method[PolarsExpr]
-    weekday: Method[PolarsExpr]
-    total_minutes: Method[PolarsExpr]
-    total_seconds: Method[PolarsExpr]
-    total_milliseconds: Method[PolarsExpr]
-    total_microseconds: Method[PolarsExpr]
-    total_nanoseconds: Method[PolarsExpr]
+class PolarsExprDateTimeNamespace(
+    PolarsExprNamespace, PolarsDateTimeNamespace[PolarsExpr, pl.Expr]
+): ...
 
 
-class PolarsExprStringNamespace(PolarsExprNamespace):
+class PolarsExprStringNamespace(
+    PolarsExprNamespace, PolarsStringNamespace[PolarsExpr, pl.Expr]
+):
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
@@ -395,53 +383,14 @@ class PolarsExprStringNamespace(PolarsExprNamespace):
 
         return self.compliant._with_native(native_result)
 
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.str, attr)(*pos, **kwds)
-            )
 
-        return func
-
-    len_chars: Method[PolarsExpr]
-    replace: Method[PolarsExpr]
-    replace_all: Method[PolarsExpr]
-    strip_chars: Method[PolarsExpr]
-    starts_with: Method[PolarsExpr]
-    ends_with: Method[PolarsExpr]
-    contains: Method[PolarsExpr]
-    slice: Method[PolarsExpr]
-    split: Method[PolarsExpr]
-    to_date: Method[PolarsExpr]
-    to_datetime: Method[PolarsExpr]
-    to_lowercase: Method[PolarsExpr]
-    to_uppercase: Method[PolarsExpr]
-
-
-class PolarsExprCatNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.cat, attr)(*pos, **kwds)
-            )
-
-        return func
-
-    get_categories: Method[PolarsExpr]
+class PolarsExprCatNamespace(
+    PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
+): ...
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.name, attr)(*pos, **kwds)
-            )
-
-        return func
-
+    _accessor = "name"
     keep: Method[PolarsExpr]
     map: Method[PolarsExpr]
     prefix: Method[PolarsExpr]
@@ -450,9 +399,11 @@ class PolarsExprNameNamespace(PolarsExprNamespace):
     to_uppercase: Method[PolarsExpr]
 
 
-class PolarsExprListNamespace(PolarsExprNamespace):
+class PolarsExprListNamespace(
+    PolarsExprNamespace, PolarsListNamespace[PolarsExpr, pl.Expr]
+):
     def len(self) -> PolarsExpr:
-        native_expr = self.compliant._native_expr
+        native_expr = self.native
         native_result = native_expr.list.len()
 
         if self.compliant._backend_version < (1, 16):  # pragma: no cover
@@ -464,25 +415,16 @@ class PolarsExprListNamespace(PolarsExprNamespace):
 
         return self.compliant._with_native(native_result)
 
-    # TODO(FBruzzesi): Remove `pragma: no cover` once other namespace methods are added
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.list, attr)(*pos, **kwds)
+    def contains(self, item: Any) -> PolarsExpr:
+        if self.compliant._backend_version < (1, 28):
+            result: pl.Expr = pl.when(self.native.is_not_null()).then(
+                self.native.list.contains(item)
             )
+        else:
+            result = self.native.list.contains(item)
+        return self.compliant._with_native(result)
 
-        return func
 
-
-class PolarsExprStructNamespace(PolarsExprNamespace):
-    def __getattr__(self, attr: str) -> Callable[[Any], PolarsExpr]:  # pragma: no cover
-        def func(*args: Any, **kwargs: Any) -> PolarsExpr:
-            pos, kwds = extract_args_kwargs(args, kwargs)
-            return self.compliant._with_native(
-                getattr(self.native.struct, attr)(*pos, **kwds)
-            )
-
-        return func
-
-    field: Method[PolarsExpr]
+class PolarsExprStructNamespace(
+    PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
+): ...

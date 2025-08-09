@@ -53,9 +53,9 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
+        IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
         MultiColSelector,
@@ -105,7 +105,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | None,
+        schema: IntoSchema | None,
     ) -> Self: ...
     @classmethod
     def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
@@ -116,7 +116,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None,
+        schema: IntoSchema | Sequence[str] | None,
     ) -> Self: ...
 
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
@@ -258,13 +258,6 @@ class CompliantDataFrame(
     def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
     def write_parquet(self, file: str | Path | BytesIO) -> None: ...
 
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=self.columns)
-
 
 class CompliantLazyFrame(
     _StoresNative[NativeFrameT],
@@ -357,17 +350,6 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
-    def _evaluate_expr(self, expr: CompliantExprT_contra, /) -> Any:
-        result = expr(self)
-        assert len(result) == 1  # debug assertion  # noqa: S101
-        return result[0]
-
-    def _evaluate_aliases(self, *exprs: CompliantExprT_contra) -> list[str]:
-        it = (expr._evaluate_aliases(self) for expr in exprs)
-        return list(chain.from_iterable(it))
-
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        return check_columns_exist(subset, available=self.columns)
 
 
 class EagerDataFrame(
@@ -390,6 +372,9 @@ class EagerDataFrame(
     def _with_native(
         self, df: NativeFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
+
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        return check_columns_exist(subset, available=self.columns)
 
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
