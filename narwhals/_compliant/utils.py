@@ -45,6 +45,7 @@ class IsClose(Protocol):
         if isinstance(other, (float, int, Decimal)):
             from math import isinf, isnan
 
+            # NOTE: See https://discuss.python.org/t/inferred-type-of-function-that-calls-dunder-abs-abs/101447
             other_abs = other.__abs__()
             other_is_nan = isnan(other)
             other_is_inf = isinf(other)
