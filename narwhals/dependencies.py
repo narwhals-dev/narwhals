@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         IntoDataFrameT,
         IntoLazyFrameT,
         IntoSeriesT,
+        PandasLikeDType,
         _1DArray,
         _1DArrayInt,
         _2DArray,
@@ -457,14 +458,20 @@ def is_pandas_like_index(index: Any) -> bool:
     )  # pragma: no cover
 
 
-def is_pandas_like_dtype(obj: Any) -> TypeIs[pd.api.extensions.ExtensionDtype]:
-    return bool(pd := get_pandas()) and isinstance(obj, pd.api.extensions.ExtensionDtype)
+def is_pandas_like_dtype(obj: Any) -> TypeIs[PandasLikeDType]:
+    return bool(pd := get_pandas()) and isinstance(
+        obj, (pd.api.extensions.ExtensionDtype, get_numpy().dtype)
+    )
 
 
 def is_cudf_dtype(
     obj: Any,
 ) -> TypeIs[pd.api.extensions.ExtensionDtype]:  # pragma: no cover
-    return is_pandas_like_dtype(obj) and hasattr(obj, "to_arrow")
+    return (
+        bool(pd := get_pandas())
+        and isinstance(obj, (pd.api.extensions.ExtensionDtype))
+        and hasattr(obj, "to_arrow")
+    )
 
 
 def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:

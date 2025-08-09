@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     import numpy as np
+    import pandas as pd
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
@@ -351,6 +352,8 @@ _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
 
 NumericLiteral: TypeAlias = "int | float | Decimal"

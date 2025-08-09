@@ -17,17 +17,16 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, ClassVar
 
-    import pandas as pd
     import polars as pl
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend
+    from narwhals.typing import DTypeBackend, PandasLikeDType
 
     IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
     IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
-    IntoPandasSchema: TypeAlias = Mapping[str, pd.api.extensions.ExtensionDtype]
+    IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
 
 __all__ = ["Schema"]

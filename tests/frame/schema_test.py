@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias
 
-    from narwhals.schema import IntoArrowSchema, IntoPolarsSchema
+    from narwhals.schema import IntoArrowSchema, IntoPandasSchema, IntoPolarsSchema
     from narwhals.typing import DTypeBackend
     from tests.utils import Constructor, ConstructorEager
 
@@ -475,9 +475,23 @@ def target_narwhals(time_unit: TimeUnit) -> nw.Schema:
             "a": nw.Int64(),
             "b": nw.String(),
             "c": nw.Boolean(),
-            "d": nw.Date(),
-            "e": nw.Time(),
-            "f": nw.Datetime(time_unit),
+            "d": nw.Float64(),
+            "e": nw.Datetime(time_unit),
+            "f": nw.Date(),
+            "g": nw.Time(),
+        }
+    )
+
+
+@pytest.fixture
+def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
+    return nw.Schema(
+        {
+            "a": nw.Int64(),
+            "b": nw.String(),
+            "c": nw.Boolean(),
+            "d": nw.Float64(),
+            "e": nw.Datetime(time_unit),
         }
     )
 
@@ -495,9 +509,10 @@ def origin_polars(
             "a": pl.Int64(),
             "b": pl.String(),
             "c": pl.Boolean(),
-            "d": pl.Date(),
-            "e": pl.Time(),
-            "f": pl.Datetime(time_unit),
+            "d": pl.Float64(),
+            "e": pl.Datetime(time_unit),
+            "f": pl.Date(),
+            "g": pl.Time(),
         }
     )
 
@@ -514,24 +529,51 @@ def origin_arrow(
             "a": pa.int64(),
             "b": pa.string(),
             "c": pa.bool_(),
-            "d": pa.date32(),
-            "e": pa.time64("ns"),
-            "f": pa.timestamp(time_unit),
+            "d": pa.float64(),
+            "e": pa.timestamp(time_unit),
+            "f": pa.date32(),
+            "g": pa.time64("ns"),
         }
     )
 
 
 @pytest.fixture
-def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
-    return nw.Schema(
-        {
-            "a": nw.Int64(),
-            "b": nw.String(),
-            "c": nw.Float64(),
-            "d": nw.Boolean(),
-            "e": nw.Datetime(time_unit),
-        }
+def origin_pandas_like(
+    constructor_pandas_like: ConstructorPandasLike,
+) -> IntoPandasSchema:
+    data: dict[str, Any] = {
+        "a": [2, 1],
+        "b": ["hello", "hi"],
+        "c": [False, True],
+        "d": [5.3, 4.99],
+        "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
+    }
+    return constructor_pandas_like(data).dtypes.to_dict()
+
+
+@pytest.fixture
+def origin_pandas_like_pyarrow(
+    constructor_pandas_like: ConstructorPandasLike,
+) -> IntoPandasSchema:
+    if PANDAS_VERSION < (1, 5):
+        pytest.skip(reason="pandas too old for `pyarrow`")
+    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
+    if constructor_pandas_like.__name__ not in name_pandas_like:
+        pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
+    data = {
+        "a": [2, 1],
+        "b": ["hello", "hi"],
+        "c": [False, True],
+        "d": [1.2, 3.4],
+        "e": [datetime(2003, 1, 1), datetime(2004, 1, 1)],
+        "f": [date(2003, 1, 1), date(2004, 1, 1)],
+        "g": [time(10, 1, 1), time(14, 1, 1)],
+    }
+    df_pd = constructor_pandas_like(data)
+    df_nw = nw.from_native(df_pd).with_columns(
+        nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
+    return df_nw.to_native().dtypes.to_dict()
 
 
 def test_schema_from_polars(
@@ -554,45 +596,24 @@ def test_schema_from_arrow(
     assert from_native == from_arrow
 
 
-def test_schema_from_pandas(
-    target_narwhals_pandas: nw.Schema, constructor_pandas_like: ConstructorPandasLike
+def test_schema_from_pandas_like(
+    origin_pandas_like: IntoPandasSchema, target_narwhals_pandas: nw.Schema
 ) -> None:
-    data = {
-        "a": [2, 1],
-        "b": ["hello", "hi"],
-        "c": [5.3, 4.99],
-        "d": [False, True],
-        "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
-    }
-    df_pd = constructor_pandas_like(data)
-    native = df_pd.dtypes.to_dict()
-    schema = nw.Schema.from_pandas_like(native)
-    assert schema == target_narwhals_pandas
+    from_pandas = nw.Schema.from_pandas_like(origin_pandas_like)
+    from_native = nw.Schema.from_native(origin_pandas_like)
+    assert from_pandas == target_narwhals_pandas
+    assert from_native == target_narwhals_pandas
+    assert from_native == from_pandas
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="pandas too old for `pyarrow`")
-def test_schema_from_pandas_pyarrow(
-    target_narwhals: nw.Schema, constructor_pandas_like: ConstructorPandasLike
+def test_schema_from_pandas_like_pyarrow(
+    origin_pandas_like_pyarrow: IntoPandasSchema, target_narwhals: nw.Schema
 ) -> None:
-    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
-    if constructor_pandas_like.__name__ not in name_pandas_like:
-        pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
-
-    data = {
-        "a": [2, 1],
-        "b": ["hello", "hi"],
-        "c": [False, True],
-        "d": [date(2003, 1, 1), date(2004, 1, 1)],
-        "e": [time(10, 1, 1), time(14, 1, 1)],
-        "f": [datetime(2003, 1, 1), datetime(2004, 1, 1)],
-    }
-    df_pd = constructor_pandas_like(data)
-    df_nw = nw.from_native(df_pd).with_columns(
-        nw.col("d").cast(nw.Date()), nw.col("e").cast(nw.Time())
-    )
-    native = df_nw.to_native().dtypes.to_dict()
-    schema = nw.Schema.from_pandas_like(native)
-    assert schema == target_narwhals
+    from_pandas = nw.Schema.from_pandas_like(origin_pandas_like_pyarrow)
+    from_native = nw.Schema.from_native(origin_pandas_like_pyarrow)
+    assert from_pandas == target_narwhals
+    assert from_native == target_narwhals
+    assert from_native == from_pandas
 
 
 def test_schema_from_invalid() -> None:
