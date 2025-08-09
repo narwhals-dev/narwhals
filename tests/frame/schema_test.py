@@ -10,7 +10,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -562,19 +562,8 @@ def _is_pandas_like_impl(
 
 
 def test_schema_from_pandas(
-    target_narwhals_pandas: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
+    target_narwhals_pandas: nw.Schema, constructor_pandas_like: ConstructorPandasLike
 ) -> None:
-    name_pandas_like = {
-        "pandas_constructor",
-        "pandas_nullable_constructor",
-        "pandas_pyarrow_constructor",
-        "modin_constructor",
-        "modin_pyarrow_constructor",
-        "cudf_constructor",
-    }
-    if constructor_eager.__name__ not in name_pandas_like:
-        pytest.skip(f"{constructor_eager.__name__!r} is not a pandas-like constructor")
-
     data = {
         "a": [2, 1],
         "b": [5.3, 4.99],
@@ -582,7 +571,7 @@ def test_schema_from_pandas(
         "d": [nw.Time, nw.Date],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    df_pd = constructor_eager(data)
+    df_pd = constructor_pandas_like(data)
     native = df_pd.dtypes.to_dict()
     impl = nw.from_native(df_pd).implementation
     assert _is_pandas_like_impl(impl)
@@ -592,11 +581,11 @@ def test_schema_from_pandas(
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="pandas too old for `pyarrow`")
 def test_schema_from_pandas_pyarrow(
-    target_narwhals: nw.Schema, constructor_eager: Callable[..., pd.DataFrame]
+    target_narwhals: nw.Schema, constructor_pandas_like: ConstructorPandasLike
 ) -> None:
     name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
-    if constructor_eager.__name__ not in name_pandas_like:
-        pytest.skip(f"{constructor_eager.__name__!r} is not pandas_like_pyarrow")
+    if constructor_pandas_like.__name__ not in name_pandas_like:
+        pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
 
     data = {
         "a": [2, 1],
@@ -606,7 +595,7 @@ def test_schema_from_pandas_pyarrow(
         "e": [time(10, 1, 1), time(14, 1, 1)],
         "f": [datetime(2003, 1, 1), datetime(2004, 1, 1)],
     }
-    df_pd = constructor_eager(data)
+    df_pd = constructor_pandas_like(data)
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("d").cast(nw.Date()), nw.col("e").cast(nw.Time())
     )
