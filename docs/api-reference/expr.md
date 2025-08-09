@@ -5,8 +5,10 @@
     options:
       members:
         - abs
+        - add
         - alias
         - all
+        - and_
         - any
         - cast
         - count
@@ -17,10 +19,14 @@
         - cum_sum
         - diff
         - drop_nulls
+        - eq
         - ewm_mean
         - exp
         - fill_null
         - filter
+        - floordiv
+        - ge
+        - gt
         - clip
         - is_between
         - is_duplicated
@@ -32,18 +38,25 @@
         - is_null
         - is_unique
         - kurtosis
+        - le
         - len
         - log
+        - lt
         - map_batches
         - max
         - mean
         - median
         - min
         - mode
+        - mul
+        - ne
+        - not_
         - null_count
         - n_unique
+        - or_
         - over
         - pipe
+        - pow
         - quantile
         - rank
         - replace_strict
@@ -56,7 +69,9 @@
         - skew
         - sqrt
         - std
+        - sub
         - sum
+        - truediv
         - unique
         - var
       show_source: false
