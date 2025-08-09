@@ -636,3 +636,33 @@ def test_schema_from_invalid() -> None:
         match=re.compile(r"expected.+dtype.+found.+`a: narwhals.+Int64`.+Schema", flags),
     ):
         nw.Schema.from_native(nw.Schema({"a": nw.Int64()}))  # type: ignore[arg-type]
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 6, 0), reason="https://github.com/pola-rs/polars/pull/18308"
+)
+def test_schema_from_to_roundtrip() -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+    import polars as pl
+
+    py_schema_1 = {
+        "a": int,
+        "b": str,
+        "c": bool,
+        "d": float,
+        "e": datetime,
+        "f": date,
+        "g": time,
+    }
+    pl_schema_1 = pl.Schema(py_schema_1)
+    nw_schema_1 = nw.Schema.from_native(pl_schema_1)
+    pa_schema_1 = nw_schema_1.to_arrow()
+    nw_schema_2 = nw.Schema.from_native(pa_schema_1)
+    pl_schema_2 = nw_schema_2.to_polars()
+    nw_schema_3 = nw.Schema.from_native(pl_schema_2)
+    py_schema_2 = nw_schema_3.to_polars().to_python()
+    assert pl_schema_1 == pl_schema_2
+    assert nw_schema_1 == nw_schema_2
+    assert nw_schema_2 == nw_schema_3
+    assert py_schema_1 == py_schema_2
