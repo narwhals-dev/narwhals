@@ -23,6 +23,7 @@
         - filter
         - clip
         - is_between
+        - is_close
         - is_duplicated
         - is_finite
         - is_first_distinct
