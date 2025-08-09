@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import cast_to_comparable_string_types, extract_py_scalar
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import generate_temporary_column_name
+from narwhals._utils import generate_temporary_column_name, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -39,12 +39,23 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "count": "count",
         "all": "all",
         "any": "any",
+        "first": "first",
+        "last": "last",
     }
     _REMAP_UNIQUE: ClassVar[Mapping[UniqueKeepStrategy, Aggregation]] = {
         "any": "min",
         "first": "min",
         "last": "max",
     }
+    _OPTION_COUNT_ALL: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("len", "n_unique")
+    )
+    _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
+    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
+        ("first", "last")
+    )
+    _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("any", "all"))
 
     def __init__(
         self,
@@ -60,12 +71,58 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         self._grouped = pa.TableGroupBy(self.compliant.native, self._keys)
         self._drop_null_keys = drop_null_keys
 
+    def _configure_agg(
+        self, grouped: pa.TableGroupBy, expr: ArrowExpr, /
+    ) -> tuple[pa.TableGroupBy, Aggregation, AggregateOptions | None]:
+        option: AggregateOptions | None = None
+        function_name = self._leaf_name(expr)
+        if function_name in self._OPTION_VARIANCE:
+            ddof = expr._scalar_kwargs.get("ddof", 1)
+            option = pc.VarianceOptions(ddof=ddof)
+        elif function_name in self._OPTION_COUNT_ALL:
+            option = pc.CountOptions(mode="all")
+        elif function_name in self._OPTION_COUNT_VALID:
+            option = pc.CountOptions(mode="only_valid")
+        elif function_name in self._OPTION_SCALAR:
+            option = pc.ScalarAggregateOptions(min_count=0)
+        elif function_name in self._OPTION_ORDERED:
+            grouped, option = self._ordered_agg(grouped, function_name)
+        return grouped, self._remap_expr_name(function_name), option
+
+    def _ordered_agg(
+        self, grouped: pa.TableGroupBy, name: NarwhalsAggregation, /
+    ) -> tuple[pa.TableGroupBy, AggregateOptions]:
+        """The default behavior of `pyarrow` raises when `first` or `last` are used.
+
+        You'd see an error like:
+
+            ArrowNotImplementedError: Using ordered aggregator in multiple threaded execution is not supported
+
+        We need to **disable** multi-threading to use them, but the ability to do so
+        wasn't possible before `14.0.0` ([pyarrow-36709])
+
+        [pyarrow-36709]: https://github.com/apache/arrow/issues/36709
+        """
+        backend_version = self.compliant._backend_version
+        if backend_version >= (14, 0) and grouped._use_threads:
+            native = self.compliant.native
+            grouped = pa.TableGroupBy(native, grouped.keys, use_threads=False)
+        elif backend_version < (14, 0):  # pragma: no cover
+            msg = (
+                f"Using `{name}()` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
+                f"found version {requires._unparse_version(backend_version)!r}.\n\n"
+                f"See https://github.com/apache/arrow/issues/36709"
+            )
+            raise NotImplementedError(msg)
+        return grouped, pc.ScalarAggregateOptions(skip_nulls=False)
+
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
         aggs: list[tuple[str, Aggregation, AggregateOptions | None]] = []
         expected_pyarrow_column_names: list[str] = self._keys.copy()
         new_column_names: list[str] = self._keys.copy()
         exclude = (*self._keys, *self._output_key_names)
+        grouped = self._grouped
 
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
@@ -83,20 +140,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 aggs.append((self._keys[0], "count", pc.CountOptions(mode="all")))
                 continue
 
-            function_name = self._leaf_name(expr)
-            if function_name in {"std", "var"}:
-                assert "ddof" in expr._scalar_kwargs  # noqa: S101
-                option: Any = pc.VarianceOptions(ddof=expr._scalar_kwargs["ddof"])
-            elif function_name in {"len", "n_unique"}:
-                option = pc.CountOptions(mode="all")
-            elif function_name == "count":
-                option = pc.CountOptions(mode="only_valid")
-            elif function_name in {"all", "any"}:
-                option = pc.ScalarAggregateOptions(min_count=0)
-            else:
-                option = None
-
-            function_name = self._remap_expr_name(function_name)
+            grouped, function_name, option = self._configure_agg(grouped, expr)
             new_column_names.extend(aliases)
             expected_pyarrow_column_names.extend(
                 [f"{output_name}_{function_name}" for output_name in output_names]
@@ -105,7 +149,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 [(output_name, function_name, option) for output_name in output_names]
             )
 
-        result_simple = self._grouped.aggregate(aggs)
+        result_simple = grouped.aggregate(aggs)
 
         # Rename columns, being very careful
         expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)
