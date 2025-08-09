@@ -6,6 +6,13 @@
       members:
         - names
         - dtypes
+        - from_arrow
+        - from_cudf
+        - from_modin
+        - from_native
+        - from_pandas
+        - from_pandas_like
+        - from_polars
         - len
         - to_arrow
         - to_pandas

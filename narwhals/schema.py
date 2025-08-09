@@ -108,13 +108,12 @@ class Schema(OrderedDict[str, "DType"]):
         )
 
     @classmethod
-    def from_polars(cls, schema: IntoPolarsSchema, /) -> Self:
-        from narwhals._polars.utils import native_to_narwhals_dtype
+    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:  # pragma: no cover
+        return cls._from_pandas_like(schema, Implementation.CUDF)
 
-        return cls(
-            (name, native_to_narwhals_dtype(dtype, cls._version))
-            for name, dtype in schema.items()
-        )
+    @classmethod
+    def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
+        return cls._from_pandas_like(schema, Implementation.PANDAS)
 
     @classmethod
     def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
@@ -128,39 +127,9 @@ class Schema(OrderedDict[str, "DType"]):
         )
         return from_native(schema)
 
-    @classmethod
-    def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
-        return cls._from_pandas_like(schema, Implementation.PANDAS)
-
-    @classmethod
-    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:  # pragma: no cover
-        return cls._from_pandas_like(schema, Implementation.CUDF)
-
     # NOTE: Just aliasing for consistency
     # Only `cuDF` has unique paths
     from_modin = from_pandas
-
-    @classmethod
-    def _from_pandas_like(
-        cls, schema: IntoPandasSchema, implementation: Implementation, /
-    ) -> Self:
-        from narwhals._pandas_like.utils import (
-            native_to_narwhals_dtype,
-            object_native_to_narwhals_dtype,
-        )
-
-        impl = implementation
-        is_object = impl.to_native_namespace().api.types.is_object_dtype
-        from_native = partial(
-            native_to_narwhals_dtype, implementation=impl, version=cls._version
-        )
-        object_dtype = partial(
-            object_native_to_narwhals_dtype, (), implementation=impl, version=cls._version
-        )
-        return cls(
-            (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
-            for name, dtype in schema.items()
-        )
 
     @classmethod
     def from_native(
@@ -191,29 +160,13 @@ class Schema(OrderedDict[str, "DType"]):
         raise TypeError(msg)
 
     @classmethod
-    def _from_native_mapping(
-        cls,
-        native: Mapping[str, pa.DataType] | Mapping[str, pl.DataType] | IntoPandasSchema,
-        /,
-    ) -> Self:
-        import narwhals.dependencies as deps
+    def from_polars(cls, schema: IntoPolarsSchema, /) -> Self:
+        from narwhals._polars.utils import native_to_narwhals_dtype
 
-        first_item = next(iter(native.items()))
-        first_key, first_dtype = first_item
-        if deps.is_polars_data_type(first_dtype):
-            native_polars = cast("IntoPolarsSchema", native)
-            return cls.from_polars(native_polars)
-        if deps.is_pandas_like_dtype(first_dtype):
-            native_pandas = cast("IntoPandasSchema", native)
-            return cls.from_pandas_like(native_pandas)
-        if deps.is_pyarrow_data_type(first_dtype):
-            native_arrow = cast("IntoArrowSchema", native)
-            return cls.from_arrow(native_arrow)
-        msg = (
-            f"Expected an arrow, polars, or pandas dtype, but found "
-            f"`{first_key}: {qualified_type_name(first_dtype)}`\n\n{native!r}"
+        return cls(
+            (name, native_to_narwhals_dtype(dtype, cls._version))
+            for name, dtype in schema.items()
         )
-        raise TypeError(msg)
 
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
@@ -318,4 +271,51 @@ class Schema(OrderedDict[str, "DType"]):
             pl.Schema(schema)
             if pl_version >= (1, 0, 0)
             else cast("pl.Schema", dict(schema))
+        )
+
+    @classmethod
+    def _from_native_mapping(
+        cls,
+        native: Mapping[str, pa.DataType] | Mapping[str, pl.DataType] | IntoPandasSchema,
+        /,
+    ) -> Self:
+        import narwhals.dependencies as deps
+
+        first_item = next(iter(native.items()))
+        first_key, first_dtype = first_item
+        if deps.is_polars_data_type(first_dtype):
+            native_polars = cast("IntoPolarsSchema", native)
+            return cls.from_polars(native_polars)
+        if deps.is_pandas_like_dtype(first_dtype):
+            native_pandas = cast("IntoPandasSchema", native)
+            return cls.from_pandas_like(native_pandas)
+        if deps.is_pyarrow_data_type(first_dtype):
+            native_arrow = cast("IntoArrowSchema", native)
+            return cls.from_arrow(native_arrow)
+        msg = (
+            f"Expected an arrow, polars, or pandas dtype, but found "
+            f"`{first_key}: {qualified_type_name(first_dtype)}`\n\n{native!r}"
+        )
+        raise TypeError(msg)
+
+    @classmethod
+    def _from_pandas_like(
+        cls, schema: IntoPandasSchema, implementation: Implementation, /
+    ) -> Self:
+        from narwhals._pandas_like.utils import (
+            native_to_narwhals_dtype,
+            object_native_to_narwhals_dtype,
+        )
+
+        impl = implementation
+        is_object = impl.to_native_namespace().api.types.is_object_dtype
+        from_native = partial(
+            native_to_narwhals_dtype, implementation=impl, version=cls._version
+        )
+        object_dtype = partial(
+            object_native_to_narwhals_dtype, (), implementation=impl, version=cls._version
+        )
+        return cls(
+            (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
+            for name, dtype in schema.items()
         )
