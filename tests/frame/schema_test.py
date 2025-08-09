@@ -442,7 +442,7 @@ def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
 
         if POLARS_VERSION >= (1,):
             return (pl.Schema, dict)
-    return (dict,)
+    return (dict,)  # pragma: no cover
 
 
 def _arrow_schema() -> Sequence[Callable[..., IntoArrowSchema]]:
@@ -450,7 +450,7 @@ def _arrow_schema() -> Sequence[Callable[..., IntoArrowSchema]]:
         import pyarrow as pa
 
         return (pa.schema, dict)
-    return (dict,)
+    return (dict,)  # pragma: no cover
 
 
 @pytest.fixture(scope="session", params=_polars_schema())
@@ -615,3 +615,25 @@ def test_schema_from_pandas_pyarrow(
     assert _is_pandas_like_impl(impl)
     schema = nw.Schema.from_pandas(native, backend=impl)
     assert schema == target_narwhals
+
+
+def test_schema_from_invalid() -> None:
+    flags = re.DOTALL | re.IGNORECASE
+
+    with pytest.raises(
+        TypeError, match=re.compile(r"expected.+schema.+got.+dict.+\{\}", flags)
+    ):
+        nw.Schema.from_native({})
+    with pytest.raises(
+        TypeError, match=re.compile(r"expected.+schema.+got.+list.+a.+string", flags)
+    ):
+        nw.Schema.from_native([("a", nw.String())])  # type: ignore[arg-type]
+    with pytest.raises(
+        TypeError, match=re.compile(r"expected.+dtype.+found.+`a: str`", flags)
+    ):
+        nw.Schema.from_native({"a": str})  # type: ignore[arg-type]
+    with pytest.raises(
+        TypeError,
+        match=re.compile(r"expected.+dtype.+found.+`a: narwhals.+Int64`.+Schema", flags),
+    ):
+        nw.Schema.from_native(nw.Schema({"a": nw.Int64()}))  # type: ignore[arg-type]
