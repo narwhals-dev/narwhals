@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol
 
 from narwhals._utils import Version, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeIs
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import DataFrameLike
+
+    class DataFrameLike(Protocol):
+        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class DtypeKind(enum.IntEnum):
@@ -153,3 +155,7 @@ class InterchangeFrame:
             "at https://github.com/narwhals-dev/narwhals/issues."
         )
         raise NotImplementedError(msg)
+
+
+def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+    return hasattr(obj, "__dataframe__")

@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals.typing import (
         FillNullStrategy,
+        IntoLazyFrame,
+        NativeDataFrame,
         NativeFrame,
         NativeSeries,
         RankMethod,
@@ -90,6 +92,8 @@ NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=T
 NativeSeriesT_contra = TypeVar(
     "NativeSeriesT_contra", bound="NativeSeries", contravariant=True
 )
+NativeDataFrameT = TypeVar("NativeDataFrameT", bound="NativeDataFrame")
+NativeLazyFrameT = TypeVar("NativeLazyFrameT", bound="IntoLazyFrame")
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame")
 NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeFrameT_contra = TypeVar(

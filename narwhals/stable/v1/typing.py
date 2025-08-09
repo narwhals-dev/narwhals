@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
 if TYPE_CHECKING:
     import sys
+    from collections.abc import Iterable, Sized
 
     from narwhals.stable.v1 import DataFrame, LazyFrame
 
@@ -23,8 +24,13 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
-    class NativeSeries(Protocol):
-        def __len__(self) -> int: ...
+    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
+
+    class NativeLazyFrame(NativeFrame, Protocol):
+        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
+
+    class NativeSeries(Sized, Iterable[Any], Protocol):
+        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -40,7 +46,8 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrame[Any]", "DataFrameLike"]
+
+IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -53,9 +60,9 @@ Examples:
     ...     return df.shape
 """
 
-IntoFrame: TypeAlias = Union[
-    "NativeFrame", "DataFrame[Any]", "LazyFrame[Any]", "DataFrameLike"
-]
+IntoLazyFrame: TypeAlias = "NativeLazyFrame"
+
+IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
@@ -83,7 +90,7 @@ Examples:
     ...     return df.columns
 """
 
-IntoSeries: TypeAlias = Union["Series[Any]", "NativeSeries"]
+IntoSeries: TypeAlias = "NativeSeries"
 """Anything which can be converted to a Narwhals Series.
 
 Use this if your function can accept an object which can be converted to `nw.Series`
@@ -125,6 +132,8 @@ Examples:
     ...     df = nw.from_native(df_native, eager_only=True)
     ...     return df.with_columns(c=df["a"] + 1).to_native()
 """
+
+IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
 
 FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
