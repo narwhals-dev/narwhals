@@ -18,8 +18,12 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias
 
-    from narwhals.schema import IntoArrowSchema, IntoPandasSchema, IntoPolarsSchema
-    from narwhals.typing import DTypeBackend
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoArrowSchema,
+        IntoPandasSchema,
+        IntoPolarsSchema,
+    )
     from tests.utils import Constructor, ConstructorEager
 
     TimeUnit: TypeAlias = Literal["ns", "us"]

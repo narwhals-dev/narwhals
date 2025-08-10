@@ -12,6 +12,15 @@ from functools import partial
 from typing import TYPE_CHECKING, cast
 
 from narwhals._utils import Implementation, Version, qualified_type_name
+from narwhals.dependencies import (
+    get_cudf,
+    is_cudf_dtype,
+    is_pandas_like_dtype,
+    is_polars_data_type,
+    is_polars_schema,
+    is_pyarrow_data_type,
+    is_pyarrow_schema,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -19,14 +28,15 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, PandasLikeDType
-
-    IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
-    IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
-    IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoArrowSchema,
+        IntoPandasSchema,
+        IntoPolarsSchema,
+    )
 
 
 __all__ = ["Schema"]
@@ -117,12 +127,9 @@ class Schema(OrderedDict[str, "DType"]):
 
     @classmethod
     def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
-        import narwhals.dependencies as deps
-
         from_native = (
             cls.from_cudf
-            if deps.get_cudf()
-            and any(deps.is_cudf_dtype(dtype) for dtype in schema.values())
+            if get_cudf() and any(is_cudf_dtype(dtype) for dtype in schema.values())
             else cls.from_pandas
         )
         return from_native(schema)
@@ -144,11 +151,9 @@ class Schema(OrderedDict[str, "DType"]):
         Returns:
             A Narwhals Schema.
         """
-        import narwhals.dependencies as deps
-
-        if deps.is_pyarrow_schema(schema):
+        if is_pyarrow_schema(schema):
             return cls.from_arrow(schema)
-        if deps.is_polars_schema(schema):
+        if is_polars_schema(schema):
             return cls.from_polars(schema)
         # avoid the empty case as well, since we have no dtypes to sample
         if isinstance(schema, Mapping) and schema:
@@ -279,17 +284,15 @@ class Schema(OrderedDict[str, "DType"]):
         native: Mapping[str, pa.DataType] | Mapping[str, pl.DataType] | IntoPandasSchema,
         /,
     ) -> Self:
-        import narwhals.dependencies as deps
-
         first_item = next(iter(native.items()))
         first_key, first_dtype = first_item
-        if deps.is_polars_data_type(first_dtype):
+        if is_polars_data_type(first_dtype):
             native_polars = cast("IntoPolarsSchema", native)
             return cls.from_polars(native_polars)
-        if deps.is_pandas_like_dtype(first_dtype):
+        if is_pandas_like_dtype(first_dtype):
             native_pandas = cast("IntoPandasSchema", native)
             return cls.from_pandas_like(native_pandas)
-        if deps.is_pyarrow_data_type(first_dtype):
+        if is_pyarrow_data_type(first_dtype):
             native_arrow = cast("IntoArrowSchema", native)
             return cls.from_arrow(native_arrow)
         msg = (
