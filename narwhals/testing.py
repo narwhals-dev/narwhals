@@ -90,7 +90,7 @@ def assert_series_equal(  # noqa: C901, PLR0912
             )
         elif l_dtype.is_numeric():
             # Workaround via is_close with 0-tolerances to handle inf and nan values.
-            is_equal_mask = ~left_.is_close(right_, rel_tol=0, abs_tol=0, nans_equal=True)
+            is_equal_mask = left_.is_close(right_, rel_tol=0, abs_tol=0, nans_equal=True)
         else:
             is_equal_mask = l_vals == r_vals
 
