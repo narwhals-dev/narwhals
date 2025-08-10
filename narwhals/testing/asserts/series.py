@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING
 
 from narwhals import Categorical, String, from_native, new_series
+from narwhals.testing.asserts.utils import raise_assertion_error
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT, SeriesT
-
-
-def _raise_assertion_error(mismatch_type: str, left: Any, right: Any) -> NoReturn:
-    msg = f"Series are different ({mismatch_type})\n[left]: {left}\n[right]: {right}"
-
-    raise AssertionError(msg)
+    from narwhals.typing import SeriesT
 
 
 def assert_series_equal(  # noqa: C901, PLR0912
@@ -46,20 +41,22 @@ def assert_series_equal(  # noqa: C901, PLR0912
         categorical_as_str: Cast categorical columns to string before comparing.
             Enabling this helps compare columns that do not share the same string cache.
     """
-    left_ = from_native(left, series_only=True)
-    right_ = from_native(right, series_only=True)
+    __tracebackhide__ = True
+
+    left_ = from_native(left, series_only=True, pass_through=False)
+    right_ = from_native(right, series_only=True, pass_through=False)
 
     if (l_impl := left_.implementation) != (r_impl := right_.implementation):
-        _raise_assertion_error("implementation mismatch", l_impl, r_impl)
+        raise_assertion_error("Series", "implementation mismatch", l_impl, r_impl)
 
     if (l_len := len(left_)) != (r_len := len(right_)):
-        _raise_assertion_error("length mismatch", l_len, r_len)
+        raise_assertion_error("Series", "length mismatch", l_len, r_len)
 
     if check_dtypes and (l_dtype := left_.dtype) != (r_dtype := right_.dtype):
-        _raise_assertion_error("dtype mismatch", l_dtype, r_dtype)
+        raise_assertion_error("Series", "dtype mismatch", l_dtype, r_dtype)
 
     if check_names and (l_name := left_.name) != (r_name := right_.name):
-        _raise_assertion_error("name mismatch", l_name, r_name)
+        raise_assertion_error("Series", "name mismatch", l_name, r_name)
 
     if isinstance(l_dtype, Categorical) and categorical_as_str:
         left_, right_ = left_.cast(String()), right_.cast(String())
@@ -73,7 +70,7 @@ def assert_series_equal(  # noqa: C901, PLR0912
     if ((l_null_mask := left_.is_null()) != (r_null_mask := right_.is_null())).any() or (
         l_null_count := left_.null_count()
     ) != (r_null_count := right_.null_count()):
-        _raise_assertion_error("null value mismatch", l_null_count, r_null_count)
+        raise_assertion_error("Series", "null value mismatch", l_null_count, r_null_count)
 
     l_vals, r_vals = left_.filter(~l_null_mask), right_.filter(~r_null_mask)
 
@@ -95,7 +92,7 @@ def assert_series_equal(  # noqa: C901, PLR0912
             is_equal_mask = l_vals == r_vals
 
         if not is_equal_mask.all():
-            _raise_assertion_error("exact value mismatch", l_vals, r_vals)
+            raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
 
     else:
         # TODO: Requires https://github.com/narwhals-dev/narwhals/pull/2962
@@ -104,22 +101,9 @@ def assert_series_equal(  # noqa: C901, PLR0912
         )
 
         if is_not_close_mask.any():
-            _raise_assertion_error(
+            raise_assertion_error(
+                "Series",
                 "values not within tolerance",
                 l_vals.filter(is_not_close_mask),
                 r_vals.filter(is_not_close_mask),
             )
-
-
-def assert_frame_equal(
-    left: FrameT,
-    right: FrameT,
-    *,
-    check_row_order: bool = True,
-    check_column_order: bool = True,
-    check_dtypes: bool = True,
-    check_exact: bool = False,
-    rel_tol: float = 1e-05,
-    abs_tol: float = 1e-08,
-    categorical_as_str: bool = False,
-) -> None: ...
