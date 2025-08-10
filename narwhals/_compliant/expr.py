@@ -5,8 +5,6 @@ from functools import partial
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
 
-from typing_extensions import Self
-
 from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
