@@ -745,7 +745,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))
         return maybe_extract_py_scalar(result, return_py_scalar=True)
 
-    def unique(self, *, maintain_order: bool) -> Self:
+    def unique(self, *, maintain_order: bool = True) -> Self:
         # TODO(marco): `pc.unique` seems to always maintain order, is that guaranteed?
         return self._with_native(self.native.unique())
 
