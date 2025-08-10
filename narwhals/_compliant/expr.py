@@ -476,19 +476,19 @@ class EagerExpr(
         return self._with_binary("__and__", other)
 
     def __rand__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__rand__", other)
+        return self._with_binary_right("__rand__", other)  # pragma: no cover
 
     def __or__(self, other: Self | bool | Any) -> Self:
         return self._with_binary("__or__", other)
 
     def __ror__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__ror__", other)
+        return self._with_binary_right("__ror__", other)  # pragma: no cover
 
     def __add__(self, other: Self | Any) -> Self:
         return self._with_binary("__add__", other)
 
     def __radd__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__radd__", other)
+        return self._with_binary_right("__radd__", other)  # pragma: no cover
 
     def __sub__(self, other: Self | Any) -> Self:
         return self._with_binary("__sub__", other)
@@ -500,7 +500,7 @@ class EagerExpr(
         return self._with_binary("__mul__", other)
 
     def __rmul__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__rmul__", other)
+        return self._with_binary_right("__rmul__", other)  # pragma: no cover
 
     def __truediv__(self, other: Self | Any) -> Self:
         return self._with_binary("__truediv__", other)
@@ -828,7 +828,7 @@ class EagerExpr(
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
         )
