@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals import from_native, new_series
+from narwhals import Categorical, String, from_native, new_series
 
 if TYPE_CHECKING:
     from narwhals.typing import FrameT, SeriesT
@@ -14,17 +14,17 @@ def _raise_assertion_error(mismatch_type: str, left: Any, right: Any) -> NoRetur
     raise AssertionError(msg)
 
 
-def assert_series_equal(
+def assert_series_equal(  # noqa: C901, PLR0912
     left: SeriesT,
     right: SeriesT,
     *,
     check_dtypes: bool = True,
     check_names: bool = True,
-    # check_order: bool = True,  # TODO(FBruzzesi): How do we sort complex types?
+    check_order: bool = True,
     check_exact: bool = False,
-    rtol: float = 1e-05,
-    atol: float = 1e-08,
-    # categorical_as_str: bool = False,  # TODO(FBruzzesi): Should we even support this?
+    rel_tol: float = 1e-05,
+    abs_tol: float = 1e-08,
+    categorical_as_str: bool = False,
 ) -> None:
     """Assert that the left and right Series are equal.
 
@@ -36,13 +36,15 @@ def assert_series_equal(
         right: The second Series to compare.
         check_dtypes: Requires data types to match.
         check_names: Requires names to match.
+        check_order: Requires elements to appear in the same order.
         check_exact: Requires float values to match exactly. If set to `False`, values are
-            considered equal when within tolerance of each other (see `rtol` and `atol`).
+            considered equal when within tolerance of each other (see `rel_tol` and `abs_tol`).
             Only affects columns with a Float data type.
-        rtol: Relative tolerance for inexact checking, given as a fraction of the values in
+        rel_tol: Relative tolerance for inexact checking, given as a fraction of the values in
             `right`.
-        atol: Absolute tolerance for inexact checking.
-
+        abs_tol: Absolute tolerance for inexact checking.
+        categorical_as_str: Cast categorical columns to string before comparing.
+            Enabling this helps compare columns that do not share the same string cache.
     """
     left_ = from_native(left, series_only=True)
     right_ = from_native(right, series_only=True)
@@ -59,6 +61,15 @@ def assert_series_equal(
     if check_names and (l_name := left_.name) != (r_name := right_.name):
         _raise_assertion_error("name mismatch", l_name, r_name)
 
+    if isinstance(l_dtype, Categorical) and categorical_as_str:
+        left_, right_ = left_.cast(String()), right_.cast(String())
+
+    if not check_order:
+        if l_dtype.is_nested():
+            msg = "`check_order=False` is not supported (yet) with nested data type."
+            raise NotImplementedError(msg)
+        left_, right_ = left_.sort(), right_.sort()
+
     if ((l_null_mask := left_.is_null()) != (r_null_mask := right_.is_null())).any() or (
         l_null_count := left_.null_count()
     ) != (r_null_count := right_.null_count()):
@@ -67,21 +78,30 @@ def assert_series_equal(
     l_vals, r_vals = left_.filter(~l_null_mask), right_.filter(~r_null_mask)
 
     # TODO(FBruzzesi): Open points:
-    #  1. Handle nan's and infinities for numerical
-    #  2. Nested values: do nested values compare "nicely"?
-    #  3. date vs datetime
+    #  [x] Handle nan's and infinities for numerical
+    #  [ ] Nested values: do nested values compare "nicely"?
+    #  [ ] date vs datetime?
     if check_exact or not l_dtype.is_numeric():
-        if not (l_vals == r_vals).all():
+        if l_dtype.is_nested():
+            is_equal_mask = new_series(
+                l_vals.name,
+                (l_val == r_val for l_val, r_val in zip(l_vals, r_vals)),
+                backend=l_impl,
+            )
+        elif l_dtype.is_numeric():
+            # Workaround via is_close with 0-tolerances to handle inf and nan values.
+            is_equal_mask = ~left_.is_close(right_, rel_tol=0, abs_tol=0, nans_equal=True)
+        else:
+            is_equal_mask = l_vals == r_vals
+
+        if not is_equal_mask.all():
             _raise_assertion_error("exact value mismatch", l_vals, r_vals)
 
     else:
-        # Based on math.isclosed https://docs.python.org/3/library/math.html#math.isclose
-        # Namely: abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol).
-        l_abs, r_abs = l_vals.abs(), r_vals.abs()
-        m1 = l_abs.zip_with(l_abs > r_abs, r_abs) * rtol
-        m2 = new_series(name="tmp", values=[atol] * l_len, backend=left_.implementation)
-
-        is_not_close_mask = (l_vals - r_vals).abs() > m1.zip_with(m1 > m2, m2)
+        # TODO: Requires https://github.com/narwhals-dev/narwhals/pull/2962
+        is_not_close_mask = ~left_.is_close(
+            right_, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
+        )
 
         if is_not_close_mask.any():
             _raise_assertion_error(
@@ -99,7 +119,7 @@ def assert_frame_equal(
     check_column_order: bool = True,
     check_dtypes: bool = True,
     check_exact: bool = False,
-    rtol: float = 1e-05,
-    atol: float = 1e-08,
+    rel_tol: float = 1e-05,
+    abs_tol: float = 1e-08,
     categorical_as_str: bool = False,
 ) -> None: ...
