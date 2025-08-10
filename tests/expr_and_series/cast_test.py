@@ -59,17 +59,15 @@ SCHEMA = {
 SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
+MODIN_XFAIL_COLUMNS = {"o", "k"}
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
-def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_cast(constructor: Constructor) -> None:
     if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
         15,
     ):  # pragma: no cover
         pytest.skip()
-    if "modin_constructor" in str(constructor):
-        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
-        request.applymarker(pytest.mark.xfail)
 
     if "pyspark" in str(constructor):
         incompatible_columns = SPARK_LIKE_INCOMPATIBLE_COLUMNS  # pragma: no cover
@@ -107,8 +105,18 @@ def test_cast(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     }
     cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
 
-    result = df.select(*[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()])
-    assert dict(result.collect_schema()) == cast_map
+    result = df.select(
+        *[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()]
+    ).collect_schema()
+
+    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+        if "modin_constructor" in str(constructor) and key in MODIN_XFAIL_COLUMNS:
+            # TODO(unassigned): in modin we end up with `'<U0'` dtype
+            # This block will act similarly to an xfail i.e. if we fix the issue, the
+            # assert will fail
+            assert ltype != rtype
+        else:
+            assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
 
 
 def test_cast_series(
@@ -118,17 +126,14 @@ def test_cast_series(
         15,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "modin_constructor" in str(constructor_eager):
-        # TODO(unassigned): in modin, we end up with `'<U0'` dtype
-        request.applymarker(pytest.mark.xfail)
+
     df = (
         nw.from_native(constructor_eager(DATA))
         .select(nw.col(key).cast(value) for key, value in SCHEMA.items())
         .lazy()
         .collect()
     )
-
-    expected = {
+    cast_map = {
         "a": nw.Int32,
         "b": nw.Int16,
         "c": nw.Int8,
@@ -146,25 +151,16 @@ def test_cast_series(
         "o": nw.String,
         "p": nw.Duration,
     }
-    result = df.select(
-        df["a"].cast(nw.Int32),
-        df["b"].cast(nw.Int16),
-        df["c"].cast(nw.Int8),
-        df["d"].cast(nw.Int64),
-        df["e"].cast(nw.UInt32),
-        df["f"].cast(nw.UInt16),
-        df["g"].cast(nw.UInt8),
-        df["h"].cast(nw.UInt64),
-        df["i"].cast(nw.Float32),
-        df["j"].cast(nw.Float64),
-        df["k"].cast(nw.String),
-        df["l"].cast(nw.Datetime),
-        df["m"].cast(nw.Int8),
-        df["n"].cast(nw.Int8),
-        df["o"].cast(nw.String),
-        df["p"].cast(nw.Duration),
-    )
-    assert result.schema == expected
+    result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items()).schema
+
+    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+        if "modin_constructor" in str(constructor_eager) and key in MODIN_XFAIL_COLUMNS:
+            # TODO(unassigned): in modin we end up with `'<U0'` dtype
+            # This block will act similarly to an xfail i.e. if we fix the issue, the
+            # assert will fail
+            assert ltype != rtype
+        else:
+            assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
 
 
 def test_cast_string() -> None:
@@ -270,9 +266,7 @@ def test_cast_datetime_utc(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor) for backend in ("dask", "modin", "cudf", "sqlframe")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
@@ -328,9 +322,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
 
-    if any(
-        backend in str(constructor) for backend in ("dask", "pyspark", "modin", "cudf")
-    ):
+    if any(backend in str(constructor) for backend in ("dask", "pyspark", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [time(12, 0, 0), time(12, 0, 5)]}
@@ -343,7 +335,7 @@ def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
         pytest.skip()
 
-    if any(backend in str(constructor) for backend in ("cudf", "dask", "modin")):
+    if any(backend in str(constructor) for backend in ("cudf", "dask")):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": ["test1", "test2"]}

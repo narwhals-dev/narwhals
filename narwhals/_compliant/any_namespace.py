@@ -9,7 +9,7 @@ from narwhals._utils import CompliantT_co, _StoresCompliant
 if TYPE_CHECKING:
     from typing import Callable
 
-    from narwhals.typing import TimeUnit
+    from narwhals.typing import NonNestedLiteral, TimeUnit
 
 __all__ = [
     "CatNamespace",
@@ -53,6 +53,8 @@ class DateTimeNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]
 
 class ListNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def len(self) -> CompliantT_co: ...
+    def unique(self) -> CompliantT_co: ...
+    def contains(self, item: NonNestedLiteral) -> CompliantT_co: ...
 
 
 class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):

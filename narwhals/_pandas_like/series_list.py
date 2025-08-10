@@ -8,6 +8,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     narwhals_to_native_dtype,
 )
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -30,3 +31,6 @@ class PandasLikeSeriesListNamespace(
             self.version,
         )
         return self.with_native(result.astype(dtype)).alias(self.native.name)
+
+    unique = not_implemented()
+    contains = not_implemented()

@@ -62,7 +62,17 @@ class NativeExpr(Protocol):
     """
 
     def between(self, *args: Any, **kwds: Any) -> Any: ...
-    def isin(self, *args: Any, **kwds: Any) -> Any: ...
+
+    # NOTE: None of these are annotated for `dx.Series`, but are added imperatively
+    # Probably better to define a sub-protocol for `NativeSQLExpr`
+    # - match `dx.Series` to `NativeExpr`
+    # - match the others to `NativeSQLExpr`
+    def __gt__(self, value: Any, /) -> Self: ...
+    def __lt__(self, value: Any, /) -> Self: ...
+    def __ge__(self, value: Any, /) -> Self: ...
+    def __le__(self, value: Any, /) -> Self: ...
+    def __eq__(self, value: Any, /) -> Self: ...  # type: ignore[override]
+    def __ne__(self, value: Any, /) -> Self: ...  # type: ignore[override]
 
 
 class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
@@ -1048,6 +1058,12 @@ class EagerExprListNamespace(
 ):
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
+
+    def unique(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "unique")
+
+    def contains(self, item: NonNestedLiteral) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "contains", item=item)
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]

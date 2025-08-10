@@ -92,3 +92,19 @@ def test_alignment() -> None:
     ).to_native()
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]})
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_from_dict_object_2851(
+    eager_backend: EagerAllowed, request: pytest.FixtureRequest
+) -> None:
+    data = {"Var1": [3, "a"], "Var2": ["a", "b"]}
+    schema = {"Var1": nw.Object(), "Var2": nw.String()}
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow" in str(eager_backend),
+            reason="Object DType not supported in pyarrow",
+            raises=NotImplementedError,
+        )
+    )
+    df = nw.DataFrame.from_dict(data, backend=eager_backend, schema=schema)
+    assert df.schema == schema
