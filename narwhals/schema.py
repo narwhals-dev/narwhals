@@ -113,6 +113,24 @@ class Schema(OrderedDict[str, "DType"]):
 
         Returns:
             A Narwhals Schema.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> mapping = {
+            ...     "a": pa.timestamp("us", "UTC"),
+            ...     "b": pa.date32(),
+            ...     "c": pa.string(),
+            ...     "d": pa.uint8(),
+            ... }
+            >>> native = pa.schema(mapping)
+            >>>
+            >>> nw.Schema.from_arrow(native)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
+
+            >>> nw.Schema.from_arrow(mapping) == nw.Schema.from_arrow(native)
+            True
         """
         if isinstance(schema, Mapping):
             if not schema:
@@ -148,6 +166,22 @@ class Schema(OrderedDict[str, "DType"]):
 
         Returns:
             A Narwhals Schema.
+
+        Examples:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> mapping = {
+            ...     "a": pd.DatetimeTZDtype("us", "UTC"),
+            ...     "b": pd.ArrowDtype(pa.date32()),
+            ...     "c": pd.StringDtype("python"),
+            ...     "d": np.dtype("uint8"),
+            ... }
+            >>>
+            >>> nw.Schema.from_pandas(mapping)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
         """
         return cls._from_pandas_like(schema, Implementation.PANDAS) if schema else cls()
 
@@ -160,6 +194,16 @@ class Schema(OrderedDict[str, "DType"]):
 
         Returns:
             A Narwhals Schema.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [1], "b": ["a"], "c": [False], "d": [9.2]}
+            >>> native = native = pd.DataFrame(data).convert_dtypes().dtypes.to_dict()
+            >>>
+            >>> nw.Schema.from_pandas_like(native)
+            Schema({'a': Int64, 'b': String, 'c': Boolean, 'd': Float64})
         """
         from_native = (
             cls.from_cudf
@@ -184,6 +228,17 @@ class Schema(OrderedDict[str, "DType"]):
 
         Returns:
             A Narwhals Schema.
+
+        Examples:
+            >>> import datetime as dt
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [1], "b": ["a"], "c": [dt.time(1, 2, 3)], "d": [[2]]}
+            >>> native = pa.table(data).schema
+            >>>
+            >>> nw.Schema.from_native(native)
+            Schema({'a': Int64, 'b': String, 'c': Time, 'd': List(Int64)})
         """
         if is_pyarrow_schema(schema):
             return cls.from_arrow(schema)
@@ -207,6 +262,24 @@ class Schema(OrderedDict[str, "DType"]):
 
         Returns:
             A Narwhals Schema.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> mapping = {
+            ...     "a": pl.Datetime(time_zone="UTC"),
+            ...     "b": pl.Date(),
+            ...     "c": pl.String(),
+            ...     "d": pl.UInt8(),
+            ... }
+            >>> native = pl.Schema(mapping)
+            >>>
+            >>> nw.Schema.from_polars(native)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
+
+            >>> nw.Schema.from_polars(mapping) == nw.Schema.from_polars(native)
+            True
         """
         if not schema:
             return cls()
