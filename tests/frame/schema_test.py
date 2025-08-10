@@ -624,10 +624,6 @@ def test_schema_from_invalid() -> None:
     flags = re.DOTALL | re.IGNORECASE
 
     with pytest.raises(
-        TypeError, match=re.compile(r"expected.+schema.+got.+dict.+\{\}", flags)
-    ):
-        nw.Schema.from_native({})
-    with pytest.raises(
         TypeError, match=re.compile(r"expected.+schema.+got.+list.+a.+string", flags)
     ):
         nw.Schema.from_native([("a", nw.String())])  # type: ignore[arg-type]
@@ -640,6 +636,18 @@ def test_schema_from_invalid() -> None:
         match=re.compile(r"expected.+dtype.+found.+`a: narwhals.+Int64`.+Schema", flags),
     ):
         nw.Schema.from_native(nw.Schema({"a": nw.Int64()}))  # type: ignore[arg-type]
+
+
+def test_schema_from_empty_mapping() -> None:
+    # NOTE: Should never require importing a native package
+    expected = nw.Schema()
+    assert nw.Schema.from_native({}) == expected
+    assert nw.Schema.from_arrow({}) == expected
+    assert nw.Schema.from_cudf({}) == expected
+    assert nw.Schema.from_modin({}) == expected
+    assert nw.Schema.from_pandas({}) == expected
+    assert nw.Schema.from_pandas_like({}) == expected
+    assert nw.Schema.from_polars({}) == expected
 
 
 @pytest.mark.skipif(

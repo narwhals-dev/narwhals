@@ -109,53 +109,54 @@ class Schema(OrderedDict[str, "DType"]):
         """Construct a Schema from a pyarrow Schema.
 
         Arguments:
-            schema: A pyarrow Schema or non-empty mapping of column names to
-                pyarrow data types.
+            schema: A pyarrow Schema or mapping of column names to pyarrow data types.
 
         Returns:
             A Narwhals Schema.
         """
-        import pyarrow as pa  # ignore-banned-import
+        if isinstance(schema, Mapping):
+            if not schema:
+                return cls()
+            import pyarrow as pa  # ignore-banned-import
 
+            schema = pa.schema(schema)
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
-        if isinstance(schema, Mapping):
-            schema = pa.schema(schema)
         return cls(
             (field.name, native_to_narwhals_dtype(field.type, cls._version))
             for field in schema
         )
 
     @classmethod
-    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:  # pragma: no cover
+    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:
         """Construct a Schema from a cudf schema representation.
 
         Arguments:
-            schema: A non-empty mapping of column names to cudf data types.
+            schema: A mapping of column names to cudf data types.
 
         Returns:
             A Narwhals Schema.
         """
-        return cls._from_pandas_like(schema, Implementation.CUDF)
+        return cls._from_pandas_like(schema, Implementation.CUDF) if schema else cls()
 
     @classmethod
     def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
         """Construct a Schema from a pandas schema representation.
 
         Arguments:
-            schema: A non-empty mapping of column names to pandas data types.
+            schema: A mapping of column names to pandas data types.
 
         Returns:
             A Narwhals Schema.
         """
-        return cls._from_pandas_like(schema, Implementation.PANDAS)
+        return cls._from_pandas_like(schema, Implementation.PANDAS) if schema else cls()
 
     @classmethod
     def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
         """Construct a Schema from a pandas-like schema representation.
 
         Arguments:
-            schema: A non-empty mapping of column names to pandas-like data types.
+            schema: A mapping of column names to pandas-like data types.
 
         Returns:
             A Narwhals Schema.
@@ -178,7 +179,7 @@ class Schema(OrderedDict[str, "DType"]):
         """Construct a Schema from a native schema representation.
 
         Arguments:
-            schema: A native schema object, or non-empty mapping of column names to
+            schema: A native schema object, or mapping of column names to
                 *instantiated* native data types.
 
         Returns:
@@ -188,9 +189,8 @@ class Schema(OrderedDict[str, "DType"]):
             return cls.from_arrow(schema)
         if is_polars_schema(schema):
             return cls.from_polars(schema)
-        # avoid the empty case as well, since we have no dtypes to sample
-        if isinstance(schema, Mapping) and schema:
-            return cls._from_native_mapping(schema)
+        if isinstance(schema, Mapping):
+            return cls._from_native_mapping(schema) if schema else cls()
         msg = (
             f"Expected an arrow, polars, or pandas schema, but got "
             f"{qualified_type_name(schema)!r}\n\n{schema!r}"
@@ -202,12 +202,14 @@ class Schema(OrderedDict[str, "DType"]):
         """Construct a Schema from a polars Schema.
 
         Arguments:
-            schema: A polars Schema or non-empty mapping of column names to
-                *instantiated* polars data types.
+            schema: A polars Schema or mapping of column names to *instantiated*
+                polars data types.
 
         Returns:
             A Narwhals Schema.
         """
+        if not schema:
+            return cls()
         from narwhals._polars.utils import native_to_narwhals_dtype
 
         return cls(
