@@ -106,6 +106,15 @@ class Schema(OrderedDict[str, "DType"]):
 
     @classmethod
     def from_arrow(cls, schema: IntoArrowSchema, /) -> Self:
+        """Construct a Schema from a pyarrow Schema.
+
+        Arguments:
+            schema: A pyarrow Schema or non-empty mapping of column names to
+                pyarrow data types.
+
+        Returns:
+            A Narwhals Schema.
+        """
         import pyarrow as pa  # ignore-banned-import
 
         from narwhals._arrow.utils import native_to_narwhals_dtype
@@ -119,14 +128,38 @@ class Schema(OrderedDict[str, "DType"]):
 
     @classmethod
     def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:  # pragma: no cover
+        """Construct a Schema from a cudf schema representation.
+
+        Arguments:
+            schema: A non-empty mapping of column names to cudf data types.
+
+        Returns:
+            A Narwhals Schema.
+        """
         return cls._from_pandas_like(schema, Implementation.CUDF)
 
     @classmethod
     def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
+        """Construct a Schema from a pandas schema representation.
+
+        Arguments:
+            schema: A non-empty mapping of column names to pandas data types.
+
+        Returns:
+            A Narwhals Schema.
+        """
         return cls._from_pandas_like(schema, Implementation.PANDAS)
 
     @classmethod
     def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
+        """Construct a Schema from a pandas-like schema representation.
+
+        Arguments:
+            schema: A non-empty mapping of column names to pandas-like data types.
+
+        Returns:
+            A Narwhals Schema.
+        """
         from_native = (
             cls.from_cudf
             if get_cudf() and any(is_cudf_dtype(dtype) for dtype in schema.values())
@@ -166,6 +199,15 @@ class Schema(OrderedDict[str, "DType"]):
 
     @classmethod
     def from_polars(cls, schema: IntoPolarsSchema, /) -> Self:
+        """Construct a Schema from a polars Schema.
+
+        Arguments:
+            schema: A polars Schema or non-empty mapping of column names to
+                *instantiated* polars data types.
+
+        Returns:
+            A Narwhals Schema.
+        """
         from narwhals._polars.utils import native_to_narwhals_dtype
 
         return cls(
