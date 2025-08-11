@@ -104,19 +104,33 @@ if TYPE_CHECKING:
     _Arrow: TypeAlias = Literal["pyarrow"]
     _Dask: TypeAlias = Literal["dask"]
     _DuckDB: TypeAlias = Literal["duckdb"]
-    _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
+    _Pandas: TypeAlias = Literal["pandas"]
+    _Modin: TypeAlias = Literal["modin"]
+    _Cudf: TypeAlias = Literal["cudf"]
+    _PySpark: TypeAlias = Literal["pyspark"]
+    _SQLFrame: TypeAlias = Literal["sqlframe"]
+    _PySparkConnect: TypeAlias = Literal["pyspark[connect]"]
     _Ibis: TypeAlias = Literal["ibis"]
-    _SparkLike: TypeAlias = Literal["pyspark", "sqlframe", "pyspark[connect]"]
+    _PandasLike: TypeAlias = "_Pandas | _Cudf | _Modin"
+    _SparkLike: TypeAlias = "_PySpark | _SQLFrame | _PySparkConnect"
+
     _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
     _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
     _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
     _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
 
+    Pandas: TypeAlias = Literal[_Pandas, Implementation.PANDAS]
+    Cudf: TypeAlias = Literal[_Cudf, Implementation.CUDF]
+    Modin: TypeAlias = Literal[_Modin, Implementation.MODIN]
+    PySpark: TypeAlias = Literal[_PySpark, Implementation.PYSPARK]
+    SQLFrame: TypeAlias = Literal[_SQLFrame, Implementation.SQLFRAME]
+    PySparkConnect: TypeAlias = Literal[_PySparkConnect, Implementation.PYSPARK_CONNECT]
     Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
     Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
     Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
     DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
     Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
+
     PandasLike: TypeAlias = Literal[
         _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
     ]
