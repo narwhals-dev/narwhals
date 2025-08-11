@@ -697,15 +697,6 @@ class PandasLikeToPandas(
         use_pyarrow_extension_array: bool = False,
         **kwds: Unpack[ToPandasArrowKwds],
     ) -> ToPandasToT_co:
-        """`polars` and `pyarrow` have granular options for converting dtypes in `.to_pandas()`.
-
-        Only [`cuDF`] has an option *vaguely* resembling the same behavior, but all
-        `PandasLike*` can at least use:
-
-            pandas_like_nd_frame.convert_dtypes(dtype_backend="pyarrow")
-
-        [`cuDF`]: https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/api/cudf.dataframe.to_pandas/#cudf.DataFrame.to_pandas
-        """
         if kwds:
             msg = "Only `to_pandas(use_pyarrow_extension_array=...)` is supported for pandas-like objects."
             raise InvalidOperationError(msg)
