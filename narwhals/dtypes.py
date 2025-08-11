@@ -73,13 +73,13 @@ class DType:
         Examples:
             >>> import narwhals as nw
             >>> nw.Datetime("us").base_type()
-            narwhals.dtypes.Datetime
+            <class 'narwhals.dtypes.Datetime'>
 
             >>> nw.String.base_type()
-            narwhals.dtypes.String
+            <class 'narwhals.dtypes.String'>
 
             >>> nw.List(nw.Int64).base_type()
-            narwhals.dtypes.List
+            <class 'narwhals.dtypes.List'>
         """
         return cls
 
