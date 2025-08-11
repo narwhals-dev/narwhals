@@ -493,16 +493,15 @@ class PolarsSeries:
         rel_tol: float,
         nans_equal: bool,
     ) -> Self:
-        other_native = extract_native(other)
-
         if self._backend_version < (1, 32, 0):
             name = self.name
             ns = self.__narwhals_namespace__()
+            other_expr = other._to_expr() if isinstance(other, PolarsSeries) else other
             result = (
                 self.to_frame()
                 .select(
                     ns.col(name).is_close(
-                        other=other_native,  # type: ignore[arg-type]
+                        other_expr,
                         abs_tol=abs_tol,
                         rel_tol=rel_tol,
                         nans_equal=nans_equal,
@@ -512,11 +511,9 @@ class PolarsSeries:
                 .native
             )
         else:
+            other_series = other.native if isinstance(other, PolarsSeries) else other
             result = self.native.is_close(
-                other=other_native,  # pyright: ignore[reportArgumentType]
-                abs_tol=abs_tol,
-                rel_tol=rel_tol,
-                nans_equal=nans_equal,
+                other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             )
         return self._with_native(result)
 
