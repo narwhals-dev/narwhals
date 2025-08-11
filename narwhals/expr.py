@@ -1393,7 +1393,7 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return ~self.is_unique()
+        return self._with_window(lambda plx: self._to_compliant_expr(plx).is_duplicated())
 
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.

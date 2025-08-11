@@ -304,6 +304,7 @@ class PolarsExpr:
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
+    is_duplicated: Method[Self]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]

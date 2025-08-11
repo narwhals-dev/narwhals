@@ -103,6 +103,9 @@ class CompliantColumn(Protocol):
             return (self > lower_bound) & (self < upper_bound)
         return (self >= lower_bound) & (self <= upper_bound)
 
+    def is_duplicated(self) -> Self:
+        return ~self.is_unique()
+
     def is_finite(self) -> Self: ...
     def is_first_distinct(self) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
