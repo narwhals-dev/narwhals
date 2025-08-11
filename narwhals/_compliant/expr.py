@@ -475,20 +475,11 @@ class EagerExpr(
     def __and__(self, other: Self | bool | Any) -> Self:
         return self._with_binary("__and__", other)
 
-    def __rand__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__rand__", other)  # pragma: no cover
-
     def __or__(self, other: Self | bool | Any) -> Self:
         return self._with_binary("__or__", other)
 
-    def __ror__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__ror__", other)  # pragma: no cover
-
     def __add__(self, other: Self | Any) -> Self:
         return self._with_binary("__add__", other)
-
-    def __radd__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__radd__", other)  # pragma: no cover
 
     def __sub__(self, other: Self | Any) -> Self:
         return self._with_binary("__sub__", other)
@@ -498,9 +489,6 @@ class EagerExpr(
 
     def __mul__(self, other: Self | Any) -> Self:
         return self._with_binary("__mul__", other)
-
-    def __rmul__(self, other: Self | Any) -> Self:
-        return self._with_binary_right("__rmul__", other)  # pragma: no cover
 
     def __truediv__(self, other: Self | Any) -> Self:
         return self._with_binary("__truediv__", other)
@@ -877,10 +865,6 @@ class LazyExpr(  # type: ignore[misc]
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
 
-    __radd__: not_implemented = not_implemented()
-    __rand__: not_implemented = not_implemented()
-    __rmul__: not_implemented = not_implemented()
-    __ror__: not_implemented = not_implemented()
     is_between: not_implemented = not_implemented()
 
 
