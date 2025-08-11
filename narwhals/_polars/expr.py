@@ -240,40 +240,35 @@ class PolarsExpr:
         rel_tol: float,
         nans_equal: bool,
     ) -> Self:
-        native_expr = self.native
-        other_expr = (
-            extract_native(other) if isinstance(other, PolarsExpr) else pl.lit(other)
-        )
+        left = self.native
+        right = other.native if isinstance(other, PolarsExpr) else pl.lit(other)
 
         if self._backend_version < (1, 32, 0):
-            abs_diff = (native_expr - other_expr).abs()
-            rel_threshold = native_expr.abs().clip(lower_bound=other_expr.abs()) * rel_tol
-            tolerance = rel_threshold.clip(lower_bound=pl.lit(abs_tol))
-
-            self_is_inf, other_is_inf = (
-                native_expr.is_infinite(),
-                other_expr.is_infinite(),
-            )
+            lower_bound = right.abs()
+            tolerance = (left.abs().clip(lower_bound) * rel_tol).clip(abs_tol)
 
             # Values are close if abs_diff <= tolerance, and both finite
-            is_close = (abs_diff <= tolerance) & self_is_inf.not_() & other_is_inf.not_()
+            abs_diff = (left - right).abs()
+            all_ = pl.all_horizontal
+            is_close = all_((abs_diff <= tolerance), left.is_finite(), right.is_finite())
 
             # Handle infinity cases: infinities are "close" only if they have the same sign
-            self_sign, other_sign = native_expr.sign(), other_expr.sign()
-            is_same_inf = self_is_inf & other_is_inf & (self_sign == other_sign)
+            is_same_inf = all_(
+                left.is_infinite(), right.is_infinite(), (left.sign() == right.sign())
+            )
 
             # Handle nan cases:
             #   * nans_equals = True => if both values are NaN, then True
             #   * nans_equals = False => if any value is NaN, then False
-            either_nan = native_expr.is_nan() | other_expr.is_nan()
+            left_is_nan, right_is_nan = left.is_nan(), right.is_nan()
+            either_nan = left_is_nan | right_is_nan
             result = (is_close | is_same_inf) & either_nan.not_()
 
             if nans_equal:
-                both_nan = native_expr.is_nan() & other_expr.is_nan()
-                result = result | both_nan
+                result = result | (left_is_nan & right_is_nan)
         else:
-            result = native_expr.is_close(
-                other=other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            result = left.is_close(
+                right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             )
         return self._with_native(result)
 

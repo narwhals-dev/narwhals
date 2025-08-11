@@ -492,29 +492,19 @@ class PolarsSeries:
         abs_tol: float,
         rel_tol: float,
         nans_equal: bool,
-    ) -> Self:
+    ) -> PolarsSeries:
         if self._backend_version < (1, 32, 0):
             name = self.name
             ns = self.__narwhals_namespace__()
             other_expr = other._to_expr() if isinstance(other, PolarsSeries) else other
-            result = (
-                self.to_frame()
-                .select(
-                    ns.col(name).is_close(
-                        other_expr,
-                        abs_tol=abs_tol,
-                        rel_tol=rel_tol,
-                        nans_equal=nans_equal,
-                    )
-                )
-                .get_column(name)
-                .native
+            expr = ns.col(name).is_close(
+                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             )
-        else:
-            other_series = other.native if isinstance(other, PolarsSeries) else other
-            result = self.native.is_close(
-                other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
+            return self.to_frame().select(expr).get_column(name)
+        other_series = other.native if isinstance(other, PolarsSeries) else other
+        result = self.native.is_close(
+            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+        )
         return self._with_native(result)
 
     def hist_from_bins(
