@@ -2775,7 +2775,9 @@ class Series(Generic[IntoSeriesT]):
 
         Two values `a` and `b` are considered close if the following condition holds:
 
-        $$|a-b| \le max \{ \text{rel_tol} \cdot max \{ |a|, |b| \}, \text{abs_tol} \}$$
+        $$
+        |a-b| \le max \{ rel\_tol \cdot max \{ |a|, |b| \}, abs\_tol \}
+        $$
 
         Arguments:
             other: Values to compare with.

@@ -1,3 +1,9 @@
+"""Tricks to generate nan's and null's for pandas with nullable backends.
+
+* Square rooting a negative number will generate a NaN
+* Replacing a value with None once the dtype is nullable will generate <NA>'s
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -44,23 +50,20 @@ def test_is_close_series_raise_non_numeric(constructor_eager: ConstructorEager) 
         x.is_close(y)
 
 
-def test_is_close_raise_negative_abs_tol(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize("rel_tol", [1e-09, 999])
+def test_is_close_raise_negative_abs_tol(
+    constructor_eager: ConstructorEager, rel_tol: float
+) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
 
     abs_tol = -2
     msg = rf"`abs_tol` must be non-negative but got {abs_tol}"
     with pytest.raises(ComputeError, match=msg):
-        x.is_close(y, abs_tol=abs_tol)
+        x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol)
 
     with pytest.raises(ComputeError, match=msg):
-        x.is_close(y, abs_tol=abs_tol, rel_tol=999)
-
-    with pytest.raises(ComputeError, match=msg):
-        df.select(nw.col("x").is_close(nw.col("y"), abs_tol=abs_tol))
-
-    with pytest.raises(ComputeError, match=msg):
-        df.select(nw.col("x").is_close(nw.col("y"), abs_tol=abs_tol, rel_tol=999))
+        df.select(nw.col("x").is_close(nw.col("y"), abs_tol=abs_tol, rel_tol=rel_tol))
 
 
 @pytest.mark.parametrize("rel_tol", [-0.0001, 1.0, 1.1])
@@ -117,9 +120,6 @@ def test_is_close_series_with_series(
         dtype=nw.Float64(),
         backend=df.implementation,
     )
-    # Tricks to generate nan's and null's for pandas with nullable backends:
-    #   * Square rooting a negative number will generate a NaN
-    #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
     x = x.zip_with(x != NAN_PLACEHOLDER, x**0.5).zip_with(x != NULL_PLACEHOLDER, nulls)
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
@@ -148,9 +148,6 @@ def test_is_close_series_with_scalar(
         dtype=nw.Float64(),
         backend=df.implementation,
     )
-    # Tricks to generate nan's and null's for pandas with nullable backends:
-    #   * Square rooting a negative number will generate a NaN
-    #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
@@ -180,9 +177,6 @@ def test_is_close_expr_with_expr(
     x, y = nw.col("x"), nw.col("y")
     result = (
         nw.from_native(constructor(data))
-        # Tricks to generate nan's and null's for pandas with nullable backends:
-        #   * Square rooting a negative number will generate a NaN
-        #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
         .with_columns(
             x=nw.when(x != NAN_PLACEHOLDER).then(x).otherwise(x**0.5),
             y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5),
@@ -223,9 +217,6 @@ def test_is_close_expr_with_scalar(
     y = nw.col("y")
     result = (
         nw.from_native(constructor(data))
-        # Tricks to generate nan's and null's for pandas with nullable backends:
-        #   * Square rooting a negative number will generate a NaN
-        #   * Replacing a value with None once the dtype is nullable will generate <NA>'s
         .with_columns(y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5))
         .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y))
         .select(
