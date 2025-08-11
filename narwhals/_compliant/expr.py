@@ -28,7 +28,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, not_implemented
+from narwhals._utils import _StoresCompliant
 from narwhals.dependencies import get_numpy, is_numpy_array
 
 if TYPE_CHECKING:
@@ -864,8 +864,6 @@ class LazyExpr(  # type: ignore[misc]
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
-
-    is_between: not_implemented = not_implemented()
 
 
 class _ExprNamespace(  # type: ignore[misc]

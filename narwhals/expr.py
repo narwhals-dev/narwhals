@@ -993,32 +993,24 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
-
-        def func(
-            compliant_expr: CompliantExpr[Any, Any],
-            lb: CompliantExpr[Any, Any],
-            ub: CompliantExpr[Any, Any],
-        ) -> CompliantExpr[Any, Any]:
-            if closed == "left":
-                return (compliant_expr >= lb) & (compliant_expr < ub)
-            if closed == "right":
-                return (compliant_expr > lb) & (compliant_expr <= ub)
-            if closed == "none":
-                return (compliant_expr > lb) & (compliant_expr < ub)
-            return (compliant_expr >= lb) & (compliant_expr <= ub)
-
+        metadata = combine_metadata(
+            self,
+            lower_bound,
+            upper_bound,
+            str_as_lit=False,
+            allow_multi_output=False,
+            to_single_output=False,
+        )
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, func, self, lower_bound, upper_bound, str_as_lit=False
-            ),
-            combine_metadata(
+                plx,
+                lambda slf, lb, ub: slf.is_between(lb, ub, closed=closed),
                 self,
                 lower_bound,
                 upper_bound,
                 str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
             ),
+            metadata,
         )
 
     def is_in(self, other: Any) -> Self:

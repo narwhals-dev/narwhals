@@ -93,8 +93,16 @@ class CompliantColumn(Protocol):
         limit: int | None,
     ) -> Self: ...
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
-    ) -> Self: ...
+        self, lower_bound: Self, upper_bound: Self, closed: ClosedInterval
+    ) -> Self:
+        if closed == "left":
+            return (self >= lower_bound) & (self < upper_bound)
+        if closed == "right":
+            return (self > lower_bound) & (self <= upper_bound)
+        if closed == "none":
+            return (self > lower_bound) & (self < upper_bound)
+        return (self >= lower_bound) & (self <= upper_bound)
+
     def is_finite(self) -> Self: ...
     def is_first_distinct(self) -> Self: ...
     def is_in(self, other: Any) -> Self: ...
