@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
 
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -174,54 +173,37 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
     return obj.is_floating()
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
+    dtypes.Float64: ibis_dtypes.Float64(),
+    dtypes.Float32: ibis_dtypes.Float32(),
+    dtypes.Binary: ibis_dtypes.Binary(),
+    dtypes.String: ibis_dtypes.String(),
+    dtypes.Boolean: ibis_dtypes.Boolean(),
+    dtypes.Date: ibis_dtypes.Date(),
+    dtypes.Time: ibis_dtypes.Time(),
+    dtypes.Int8: ibis_dtypes.Int8(),
+    dtypes.Int16: ibis_dtypes.Int16(),
+    dtypes.Int32: ibis_dtypes.Int32(),
+    dtypes.Int64: ibis_dtypes.Int64(),
+    dtypes.UInt8: ibis_dtypes.UInt8(),
+    dtypes.UInt16: ibis_dtypes.UInt16(),
+    dtypes.UInt32: ibis_dtypes.UInt32(),
+    dtypes.UInt64: ibis_dtypes.UInt64(),
+    dtypes.Decimal: ibis_dtypes.Decimal(),
+}
+
+
+def narwhals_to_native_dtype(  # noqa: C901
     dtype: IntoDType, version: Version
 ) -> IbisDataType:
     dtypes = version.dtypes
-
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
-        return ibis_dtypes.Decimal()
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return ibis_dtypes.Float64()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return ibis_dtypes.Float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int128):  # pragma: no cover
-        msg = "Int128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return ibis_dtypes.Int64()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return ibis_dtypes.Int32()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return ibis_dtypes.Int16()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return ibis_dtypes.Int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):  # pragma: no cover
-        msg = "UInt128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return ibis_dtypes.UInt64()
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return ibis_dtypes.UInt32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return ibis_dtypes.UInt16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return ibis_dtypes.UInt8()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return ibis_dtypes.String()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return ibis_dtypes.Boolean()
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by Ibis"
-        raise NotImplementedError(msg)
+    if ibis_type := NW_TO_IBIS_DTYPES.get(dtype.base_type()):
+        return ibis_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return ibis_dtypes.Date()
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return ibis_dtypes.Time()
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner)
@@ -234,8 +216,15 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return ibis_dtypes.Binary()
+    if isinstance_or_issubclass(dtype, dtypes.Int128):  # pragma: no cover
+        msg = "Int128 not supported by Ibis"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.UInt128):  # pragma: no cover
+        msg = "UInt128 not supported by Ibis"
+        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Categorical):
+        msg = "Categorical not supported by Ibis"
+        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         # Ibis does not support: https://github.com/ibis-project/ibis/issues/10991
         msg = "Enum not supported by Ibis"
