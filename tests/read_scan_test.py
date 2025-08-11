@@ -16,7 +16,7 @@ import polars as pl
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals.typing import IntoBackend
+    from narwhals.typing import IntoEagerBackend
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 TEST_EAGER_BACKENDS = [
@@ -30,7 +30,7 @@ TEST_EAGER_BACKENDS = [
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_read_csv(tmpdir: pytest.TempdirFactory, backend: IntoBackend) -> None:
+def test_read_csv(tmpdir: pytest.TempdirFactory, backend: IntoEagerBackend) -> None:
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)

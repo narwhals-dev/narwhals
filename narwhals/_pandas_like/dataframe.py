@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
+        EagerImplementation,
         IntoSchema,
         JoinStrategy,
         PivotAgg,
@@ -490,7 +491,7 @@ class PandasLikeDataFrame(
 
     # --- convert ---
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None:
             return PandasLikeDataFrame(

@@ -74,7 +74,7 @@ def test_series_from_numpy_not_init_dtype(
 def test_series_from_numpy_not_eager() -> None:
     pytest.importorskip("ibis")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.Series.from_numpy(NAME, arr, backend="ibis")
+        nw.Series.from_numpy(NAME, arr, backend="ibis")  # type: ignore[arg-type]
 
 
 def test_series_from_numpy_not_1d(eager_backend: EagerAllowed) -> None:

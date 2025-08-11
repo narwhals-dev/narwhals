@@ -12,7 +12,7 @@ from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from narwhals.typing import IntoBackend
+    from narwhals.typing import IntoEagerBackend
 
 
 data = {"a": [1, 2], "b": [3, 4]}
@@ -53,7 +53,7 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 )
 @pytest.mark.parametrize("backend", ["pandas", Implementation.PANDAS])
 def test_collect_to_valid_backend_pandas(
-    constructor: Constructor, backend: IntoBackend
+    constructor: Constructor, backend: IntoEagerBackend
 ) -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -68,7 +68,7 @@ def test_collect_to_valid_backend_pandas(
 )
 @pytest.mark.parametrize("backend", ["polars", Implementation.POLARS])
 def test_collect_to_valid_backend_polars(
-    constructor: Constructor, backend: IntoBackend
+    constructor: Constructor, backend: IntoEagerBackend
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -83,7 +83,7 @@ def test_collect_to_valid_backend_polars(
 )
 @pytest.mark.parametrize("backend", ["pyarrow", Implementation.PYARROW])
 def test_collect_to_valid_backend_pyarrow(
-    constructor: Constructor, backend: IntoBackend
+    constructor: Constructor, backend: IntoEagerBackend
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
@@ -133,7 +133,7 @@ def test_collect_to_valid_backend_pyarrow_mod(constructor: Constructor) -> None:
     "backend", ["foo", Implementation.DASK, Implementation.MODIN, pytest]
 )
 def test_collect_to_invalid_backend(
-    constructor: Constructor, backend: ModuleType | IntoBackend
+    constructor: Constructor, backend: ModuleType | IntoEagerBackend
 ) -> None:
     df = nw.from_native(constructor(data))
 

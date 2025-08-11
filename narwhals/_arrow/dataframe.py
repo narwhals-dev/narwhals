@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        EagerImplementation,
         IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
@@ -557,7 +558,7 @@ class ArrowDataFrame(
         raise AssertionError  # pragma: no cover
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame

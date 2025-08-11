@@ -131,6 +131,15 @@ if TYPE_CHECKING:
     LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
     LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
+    EagerBackendName: TypeAlias = Literal[_Polars, _Arrow, _PandasLike]
+    EagerImplementation: TypeAlias = Literal[
+        Implementation.POLARS,
+        Implementation.PYARROW,
+        Implementation.PANDAS,
+        Implementation.MODIN,
+        Implementation.CUDF,
+    ]
+
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
 
 
@@ -424,6 +433,39 @@ Examples:
     |└─────┴──────────┘|
     └──────────────────┘
 """
+
+IntoEagerBackend: TypeAlias = "EagerBackendName | EagerImplementation | ModuleType"
+"""Anything that can be converted into a Narwhals Implementation of an eager backend.
+
+It can be specified as:
+
+- a string (backend name): `"polars"`, `"pandas"`, `"pyarrow"`, `"modin"`, and `"cudf"`.
+- an Implementation: `Implementation.POLARS`, `Implementation.PANDAS`, `Implementation.PYARROW`, etc..
+- a python module: `polars`, `pandas`, `pyarrow`, `modin`, and `cudf`
+
+Examples:
+    >>> import numpy as np
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>>
+    >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
+    >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
+    >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="polars")
+    ┌───────────────────┐
+    |Narwhals DataFrame |
+    |-------------------|
+    |shape: (2, 3)      |
+    |┌─────┬─────┬─────┐|
+    |│ c   ┆ d   ┆ e   │|
+    |│ --- ┆ --- ┆ --- │|
+    |│ i16 ┆ f32 ┆ i8  │|
+    |╞═════╪═════╪═════╡|
+    |│ 5   ┆ 2.0 ┆ 1   │|
+    |│ 1   ┆ 4.0 ┆ 3   │|
+    |└─────┴─────┴─────┘|
+    └───────────────────┘
+"""
+
 
 IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 """Anything that can be converted into a Narwhals Implementation.

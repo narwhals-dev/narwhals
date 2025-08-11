@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import (
         AsofJoinStrategy,
-        IntoBackend,
+        EagerImplementation,
         JoinStrategy,
         LazyUniqueKeepStrategy,
     )
@@ -106,7 +106,7 @@ class IbisLazyFrame(
             yield self.native[name]
 
     def collect(
-        self, backend: IntoBackend | None, **kwargs: Any
+        self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame

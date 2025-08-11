@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
-        IntoBackend,
         IntoDType,
+        IntoEagerBackend,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -100,7 +100,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend,
+        backend: IntoEagerBackend,
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 

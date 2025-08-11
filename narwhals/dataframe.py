@@ -72,6 +72,7 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         IntoBackend,
         IntoDataFrame,
+        IntoEagerBackend,
         IntoExpr,
         IntoFrame,
         IntoSchema,
@@ -474,7 +475,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoBackend
+        cls, native_frame: IntoArrowTable, *, backend: IntoEagerBackend
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -534,7 +535,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | None = None,
         *,
-        backend: IntoBackend | None = None,
+        backend: IntoEagerBackend | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
@@ -596,7 +597,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoBackend,
+        backend: IntoEagerBackend,
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
@@ -2469,7 +2470,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self, backend: IntoBackend | None = None, **kwargs: Any
+        self, backend: IntoEagerBackend | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 

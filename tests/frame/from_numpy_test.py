@@ -49,7 +49,7 @@ def test_from_numpy_schema_notvalid(eager_backend: EagerAllowed) -> None:
 def test_from_numpy_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.DataFrame.from_numpy(arr, backend="duckdb")
+        nw.DataFrame.from_numpy(arr, backend="duckdb")  # type: ignore[arg-type]
 
 
 def test_from_numpy_not2d(eager_backend: EagerAllowed) -> None:

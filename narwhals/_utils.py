@@ -84,6 +84,9 @@ if TYPE_CHECKING:
         CompliantSeries,
         DataFrameLike,
         DTypes,
+        EagerImplementation,
+        IntoBackend,
+        IntoEagerBackend,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -360,10 +363,18 @@ class Implementation(NoAutoEnum):
         except ValueError:
             return Implementation.UNKNOWN
 
+    @overload
     @classmethod
     def from_backend(
-        cls: type[Self], backend: str | Implementation | ModuleType
-    ) -> Implementation:
+        cls: type[Self], backend: IntoEagerBackend
+    ) -> EagerImplementation: ...
+
+    @overload
+    @classmethod
+    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation: ...
+
+    @classmethod
+    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:

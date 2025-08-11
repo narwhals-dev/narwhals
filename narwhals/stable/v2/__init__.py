@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoBackend,
         IntoDType,
+        IntoEagerBackend,
         IntoExpr,
         IntoFrame,
         IntoSeries,
@@ -181,7 +182,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def collect(
-        self, backend: IntoBackend | None = None, **kwargs: Any
+        self, backend: IntoEagerBackend | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
@@ -935,7 +936,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
 
 def new_series(
-    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoBackend
+    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoEagerBackend
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -959,7 +960,9 @@ def new_series(
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
-def from_arrow(native_frame: IntoArrowTable, *, backend: IntoBackend) -> DataFrame[Any]:
+def from_arrow(
+    native_frame: IntoArrowTable, *, backend: IntoEagerBackend
+) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
@@ -983,7 +986,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
-    backend: IntoBackend | None = None,
+    backend: IntoEagerBackend | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -1018,7 +1021,7 @@ def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: IntoBackend,
+    backend: IntoEagerBackend,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -1046,7 +1049,7 @@ def from_numpy(
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
-def read_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> DataFrame[Any]:
+def read_csv(source: str, *, backend: IntoEagerBackend, **kwargs: Any) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
@@ -1093,7 +1096,9 @@ def scan_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[A
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
-def read_parquet(source: str, *, backend: IntoBackend, **kwargs: Any) -> DataFrame[Any]:
+def read_parquet(
+    source: str, *, backend: IntoEagerBackend, **kwargs: Any
+) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
