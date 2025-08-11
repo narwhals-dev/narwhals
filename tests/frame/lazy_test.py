@@ -9,6 +9,7 @@ from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoBackend
     from tests.utils import ConstructorEager
 
 
@@ -59,9 +60,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         "ibis",
     ],
 )
-def test_lazy_backend(
-    constructor_eager: ConstructorEager, backend: Implementation | str
-) -> None:
+def test_lazy_backend(constructor_eager: ConstructorEager, backend: IntoBackend) -> None:
     implementation = Implementation.from_backend(backend)
     pytest.importorskip(implementation.name.lower())
     df = nw.from_native(constructor_eager(data), eager_only=True)

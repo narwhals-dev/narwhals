@@ -60,7 +60,6 @@ from narwhals.typing import IntoDataFrameT, IntoFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
-    from types import ModuleType
 
     from typing_extensions import ParamSpec, Self
 
@@ -68,6 +67,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoBackend,
         IntoDType,
         IntoExpr,
         IntoFrame,
@@ -145,9 +145,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py`.
         return super().get_column(name)  # type: ignore[return-value]
 
-    def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
-    ) -> LazyFrame[Any]:
+    def lazy(self, backend: IntoBackend | None = None) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]
@@ -183,7 +181,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoBackend | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
@@ -937,11 +935,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
 
 def new_series(
-    name: str,
-    values: Any,
-    dtype: IntoDType | None = None,
-    *,
-    backend: ModuleType | Implementation | str,
+    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoBackend
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -965,9 +959,7 @@ def new_series(
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
-def from_arrow(
-    native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
-) -> DataFrame[Any]:
+def from_arrow(native_frame: IntoArrowTable, *, backend: IntoBackend) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
     Arguments:
@@ -991,7 +983,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -1026,7 +1018,7 @@ def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str,
+    backend: IntoBackend,
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -1054,9 +1046,7 @@ def from_numpy(
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
-def read_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> DataFrame[Any]:
+def read_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
@@ -1078,9 +1068,7 @@ def read_csv(
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
-def scan_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> LazyFrame[Any]:
+def scan_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
     For the libraries that do not support lazy dataframes, the function reads
@@ -1105,9 +1093,7 @@ def scan_csv(
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
-def read_parquet(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> DataFrame[Any]:
+def read_parquet(source: str, *, backend: IntoBackend, **kwargs: Any) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
@@ -1129,9 +1115,7 @@ def read_parquet(
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
-def scan_parquet(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
-) -> LazyFrame[Any]:
+def scan_parquet(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
     For the libraries that do not support lazy dataframes, the function reads

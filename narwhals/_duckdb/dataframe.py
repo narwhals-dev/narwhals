@@ -51,7 +51,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoBackend,
+        JoinStrategy,
+        LazyUniqueKeepStrategy,
+    )
 
 
 class DuckDBLazyFrame(
@@ -129,7 +134,7 @@ class DuckDBLazyFrame(
             yield col(name)
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: IntoBackend | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame

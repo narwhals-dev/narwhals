@@ -17,11 +17,10 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace
     from narwhals._compliant.typing import CompliantExprAny
-    from narwhals._namespace import BackendName, _EagerAllowed
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
-    from narwhals.typing import _2DArray
+    from narwhals.typing import BackendName, _2DArray, _EagerAllowed
     from tests.utils import Constructor
 
 ExprT = TypeVar("ExprT", bound="CompliantExprAny")

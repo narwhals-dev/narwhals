@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import IntoBackend, JoinStrategy, LazyUniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -198,7 +198,7 @@ class SparkLikeLazyFrame(
         return self._cached_columns
 
     def _collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: IntoBackend | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -236,7 +236,7 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: IntoBackend | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if self._implementation.is_pyspark_connect():
             try:
