@@ -26,7 +26,7 @@ from narwhals._utils import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -337,6 +337,18 @@ class SparkLikeLazyFrame(
 
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
         return self._with_native(self.native.sort(*sort_cols))
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        by = list(by)
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(by)
+        sort_funcs = (
+            self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
+        )
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
+        return self._with_native(self.native.sort(*sort_cols).limit(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset = list(subset) if subset else None

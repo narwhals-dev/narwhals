@@ -239,6 +239,13 @@ class BaseFrame(Generic[_FrameT]):
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
 
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        return self._with_compliant(
+            self._compliant_frame.top_k(k, by=by, reverse=reverse)
+        )
+
     def join(
         self,
         other: Self,
@@ -1855,6 +1862,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        return super().top_k(k, by=by, reverse=reverse)
+
     def join(
         self,
         other: Self,
@@ -3189,6 +3201,11 @@ class LazyFrame(BaseFrame[FrameT]):
             └──────────────────────────────────┘
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        return super().top_k(k, by=by, reverse=reverse)
 
     def join(
         self,

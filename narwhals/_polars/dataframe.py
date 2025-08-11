@@ -84,6 +84,7 @@ INHERITED_METHODS = frozenset(
         "sink_parquet",
         "sort",
         "tail",
+        "top_k",
         "to_arrow",
         "to_pandas",
         "unique",
@@ -107,6 +108,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     select: Method[Self]
     sort: Method[Self]
     tail: Method[Self]
+    top_k: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
 

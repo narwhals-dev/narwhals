@@ -31,7 +31,7 @@ from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -408,6 +408,27 @@ class DuckDBLazyFrame(
                 for name, desc in zip(by, descending)
             )
         return self._with_native(self.native.sort(*it))
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        df = self.native  # noqa: F841
+        by = list(by)
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(by)
+        directions = ["DESC" if not rev else "ASC" for rev in reverse]
+        order_by = [f"{col} {dir}" for col, dir in zip(by, directions)]
+        query = f"""
+        WITH cte AS (
+            SELECT *, ROW_NUMBER() OVER (ORDER BY {",".join(order_by)}) as row_number
+            FROM df
+        )
+        SELECT * EXCLUDE(row_number)
+        FROM cte
+        WHERE row_number <= {k}
+        ORDER BY row_number
+        """  # noqa: S608
+        return self._with_native(duckdb.sql(query))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns

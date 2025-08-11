@@ -488,6 +488,15 @@ class PandasLikeDataFrame(
             validate_column_names=False,
         )
 
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        df = self.native
+        return self._with_native(
+            df.sort_values(list(by), ascending=reverse).head(k),
+            validate_column_names=False,
+        )
+
     # --- convert ---
     def collect(
         self, backend: Implementation | None, **kwargs: Any
