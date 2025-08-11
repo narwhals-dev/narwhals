@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -24,8 +24,27 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
-lit = ibis.literal
-"""Alias for `ibis.literal`."""
+Incomplete: TypeAlias = Any
+"""Marker for upstream issues."""
+
+
+@overload
+def lit(value: Literal[False, True], dtype: None = ...) -> ir.BooleanScalar: ...
+@overload
+def lit(value: Literal[-1, 0, 1, 2, 3], dtype: None = ...) -> ir.IntegerScalar: ...
+@overload
+def lit(value: float, dtype: None = ...) -> ir.FloatingScalar | ir.IntegerScalar: ...
+@overload
+def lit(value: str, dtype: None = ...) -> ir.StringScalar: ...
+@overload
+def lit(value: PythonLiteral | ir.Value, dtype: None = ...) -> ir.Scalar: ...
+@overload
+def lit(value: Any, dtype: Any) -> Incomplete: ...
+def lit(value: Any, dtype: Any | None = None) -> Incomplete:
+    """Alias for `ibis.literal`."""
+    literal: Incomplete = ibis.literal
+    return literal(value, dtype)
+
 
 BucketUnit: TypeAlias = Literal[
     "years",
