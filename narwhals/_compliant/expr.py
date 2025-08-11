@@ -816,7 +816,7 @@ class EagerExpr(
 
     def is_between(
         self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
-    ) -> Self:  # pragma: no cover
+    ) -> Self:
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
         )
