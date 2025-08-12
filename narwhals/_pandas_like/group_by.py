@@ -106,8 +106,14 @@ class AggExpr:
         """Evaluate the wrapped expression as a group_by operation."""
         result: pd.DataFrame | pd.Series[Any]
         names = self.output_names
-        if self.is_len() and self.is_anonymous():
+        if self.is_len() and self.is_top_level_function():
             result = group_by._grouped.size()
+        elif self.is_len():
+            result_single = group_by._grouped.size()
+            ns = group_by.compliant.__narwhals_namespace__()
+            result = ns._concat_horizontal(
+                [ns.from_native(result_single).alias(name).native for name in names]
+            )
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(group_by._grouped[select])
@@ -120,7 +126,8 @@ class AggExpr:
     def is_len(self) -> bool:
         return self.leaf_name == "len"
 
-    def is_anonymous(self) -> bool:
+    def is_top_level_function(self) -> bool:
+        # e.g. `nw.len()`.
         return self.expr._depth == 0
 
     @property
