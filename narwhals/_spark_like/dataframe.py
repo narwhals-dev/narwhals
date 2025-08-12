@@ -338,9 +338,7 @@ class SparkLikeLazyFrame(
         sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
         return self._with_native(self.native.sort(*sort_cols))
 
-    def top_k(
-        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
-    ) -> Self:
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         by = list(by)
         if isinstance(reverse, bool):
             reverse = [reverse] * len(by)

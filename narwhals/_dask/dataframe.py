@@ -261,11 +261,18 @@ class DaskLazyFrame(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
-    def top_k(
-        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
-    ) -> Self:
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        df = self.native
+        schema = self.schema
+        by = list(by)
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in schema):
+            if reverse:
+                return df.nsmallest(k, by)
+            return df.nlargest(k, by)
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(by)
         return self._with_native(
-            self.native.sort_values(list(by), ascending=reverse).head(
+            self.native.sort_values(by, ascending=list(reverse)).head(
                 n=k, compute=False, npartitions=-1
             )
         )

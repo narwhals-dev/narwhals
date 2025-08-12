@@ -346,13 +346,10 @@ class IbisLazyFrame(
 
         return self._with_native(self.native.order_by(*sort_cols))
 
-    def top_k(
-        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
-    ) -> Self:
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         by = list(by)
         if isinstance(reverse, bool):
-            reverse = [reverse for _ in range(len(by))]
-
+            reverse = [reverse] * len(by)
         sort_cols = []
 
         for i in range(len(by)):

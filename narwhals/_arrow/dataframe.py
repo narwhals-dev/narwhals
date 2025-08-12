@@ -442,9 +442,7 @@ class ArrowDataFrame(
             validate_column_names=False,
         )
 
-    def top_k(
-        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
-    ) -> Self:
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         if isinstance(reverse, bool):
             order: Order = "ascending" if reverse else "descending"
             sorting: list[tuple[str, Order]] = [(key, order) for key in by]

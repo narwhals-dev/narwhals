@@ -409,9 +409,7 @@ class DuckDBLazyFrame(
             )
         return self._with_native(self.native.sort(*it))
 
-    def top_k(
-        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
-    ) -> Self:
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         df = self.native  # noqa: F841
         by = list(by)
         if isinstance(reverse, bool):
@@ -426,7 +424,6 @@ class DuckDBLazyFrame(
         SELECT * EXCLUDE(row_number)
         FROM cte
         WHERE row_number <= {k}
-        ORDER BY row_number
         """  # noqa: S608
         return self._with_native(duckdb.sql(query))
 
