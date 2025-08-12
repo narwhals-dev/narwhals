@@ -52,7 +52,7 @@ def test_read_csv_raise_with_lazy(tmpdir: pytest.TempdirFactory) -> None:
     df_pl.write_csv(filepath)
 
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_csv(filepath, backend=Implementation.IBIS)
+        nw.read_csv(filepath, backend=Implementation.DUCKDB)
 
 
 def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
