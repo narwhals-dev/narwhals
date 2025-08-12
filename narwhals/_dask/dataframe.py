@@ -265,7 +265,7 @@ class DaskLazyFrame(
         df = self.native
         schema = self.schema
         by = list(by)
-        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in schema):
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
             if reverse:
                 return df.nsmallest(k, by)
             return df.nlargest(k, by)
