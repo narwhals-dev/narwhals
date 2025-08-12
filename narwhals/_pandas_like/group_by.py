@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -107,7 +106,7 @@ class AggExpr:
         result: pd.DataFrame | pd.Series[Any]
         names = self.output_names
         if self.is_len() and self.is_top_level_function():
-            result = group_by._grouped.size()
+            result = group_by._grouped.size().to_frame()
         elif self.is_len():
             result_single = group_by._grouped.size()
             ns = group_by.compliant.__narwhals_namespace__()
@@ -115,12 +114,8 @@ class AggExpr:
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
         else:
-            select = names[0] if len(names) == 1 else list(names)
-            result = self.native_agg()(group_by._grouped[select])
-        if is_pandas_like_dataframe(result):
-            result.columns = list(self.aliases)
-        else:
-            result.name = self.aliases[0]
+            result = self.native_agg()(group_by._grouped[list(names)])
+        result.columns = list(self.aliases)
         return result
 
     def is_len(self) -> bool:
