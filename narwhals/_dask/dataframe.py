@@ -267,12 +267,12 @@ class DaskLazyFrame(
         by = list(by)
         if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
             if reverse:
-                return df.nsmallest(k, by)
-            return df.nlargest(k, by)
+                return self._with_native(df.nsmallest(k, by))
+            return self._with_native(df.nlargest(k, by))
         if isinstance(reverse, bool):
             reverse = [reverse] * len(by)
         return self._with_native(
-            self.native.sort_values(by, ascending=list(reverse)).head(
+            df.sort_values(by, ascending=list(reverse)).head(
                 n=k, compute=False, npartitions=-1
             )
         )
