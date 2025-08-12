@@ -72,6 +72,7 @@ if TYPE_CHECKING:
         IntoEagerBackend,
         IntoExpr,
         IntoFrame,
+        IntoLazyBackend,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -146,7 +147,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py`.
         return super().get_column(name)  # type: ignore[return-value]
 
-    def lazy(self, backend: IntoBackend | None = None) -> LazyFrame[Any]:
+    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]

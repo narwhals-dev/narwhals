@@ -79,47 +79,27 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
-        Arrow,
         CompliantDataFrame,
         CompliantLazyFrame,
         CompliantSeries,
-        Cudf,
-        Dask,
         DataFrameLike,
         DTypes,
-        DuckDB,
         EagerImplementation,
-        Ibis,
         IntoBackend,
         IntoEagerBackend,
+        IntoLazyBackend,
         IntoSeriesT,
-        Modin,
+        LazyImplementation,
         MultiIndexSelector,
-        Pandas,
-        Polars,
-        PySpark,
-        PySparkConnect,
         SingleIndexSelector,
         SizedMultiIndexSelector,
         SizeUnit,
-        SQLFrame,
         SupportsNativeNamespace,
         TimeUnit,
         _1DArray,
-        _Arrow,
-        _Cudf,
-        _Dask,
-        _DuckDB,
-        _Ibis,
-        _Modin,
-        _Pandas,
-        _Polars,
-        _PySpark,
-        _PySparkConnect,
         _SliceIndex,
         _SliceName,
         _SliceNone,
-        _SQLFrame,
     )
 
     UnknownBackendName: TypeAlias = str
@@ -370,80 +350,8 @@ class Implementation(NoAutoEnum):
         }
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
-    @overload
     @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Pandas
-    ) -> Literal[Implementation.PANDAS]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Cudf
-    ) -> Literal[Implementation.CUDF]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Modin
-    ) -> Literal[Implementation.MODIN]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _PySpark
-    ) -> Literal[Implementation.PYSPARK]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _SQLFrame
-    ) -> Literal[Implementation.SQLFRAME]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _PySparkConnect
-    ) -> Literal[Implementation.PYSPARK_CONNECT]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Polars
-    ) -> Literal[Implementation.POLARS]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Arrow
-    ) -> Literal[Implementation.PYARROW]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Dask
-    ) -> Literal[Implementation.DASK]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _DuckDB
-    ) -> Literal[Implementation.DUCKDB]: ...
-
-    @overload
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: _Ibis
-    ) -> Literal[Implementation.IBIS]: ...
-
-    @overload
-    @classmethod
-    def from_string(cls: type[Self], backend_name: str) -> Implementation: ...
-
-    @classmethod
-    def from_string(
-        cls: type[Self], backend_name: str
-    ) -> Implementation:  # pragma: no cover
+    def from_string(cls: type[Self], backend_name: str) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
@@ -459,83 +367,17 @@ class Implementation(NoAutoEnum):
 
     @overload
     @classmethod
-    def from_backend(
-        cls: type[Self], backend: Pandas
-    ) -> Literal[Implementation.PANDAS]: ...
-
-    @overload
-    @classmethod
-    def from_backend(cls: type[Self], backend: Cudf) -> Literal[Implementation.CUDF]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: Modin
-    ) -> Literal[Implementation.MODIN]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: PySpark
-    ) -> Literal[Implementation.PYSPARK]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: SQLFrame
-    ) -> Literal[Implementation.SQLFRAME]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: PySparkConnect
-    ) -> Literal[Implementation.PYSPARK_CONNECT]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: Polars
-    ) -> Literal[Implementation.POLARS]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: Arrow
-    ) -> Literal[Implementation.PYARROW]: ...
-
-    @overload
-    @classmethod
-    def from_backend(cls: type[Self], backend: Dask) -> Literal[Implementation.DASK]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: DuckDB
-    ) -> Literal[Implementation.DUCKDB]: ...
-
-    @overload
-    @classmethod
-    def from_backend(cls: type[Self], backend: Ibis) -> Literal[Implementation.IBIS]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
-        cls: type[Self], backend: Literal["unknown", Implementation.UNKNOWN]
-    ) -> Literal[Implementation.UNKNOWN]: ...
-
-    @overload
-    @classmethod
-    def from_backend(
+    def from_backend(  # type: ignore[overload-overlap]
         cls: type[Self], backend: IntoEagerBackend
     ) -> EagerImplementation: ...
 
     @overload
     @classmethod
-    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation: ...
+    def from_backend(cls: type[Self], backend: IntoLazyBackend) -> LazyImplementation: ...
 
     @overload
     @classmethod
-    def from_backend(cls: type[Self], backend: UnknownBackendName) -> Implementation: ...
+    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation: ...
 
     @classmethod
     def from_backend(

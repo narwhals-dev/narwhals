@@ -70,11 +70,11 @@ if TYPE_CHECKING:
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
-        IntoBackend,
         IntoDataFrame,
         IntoEagerBackend,
         IntoExpr,
         IntoFrame,
+        IntoLazyBackend,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -726,7 +726,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
-    def lazy(self, backend: IntoBackend | None = None) -> LazyFrame[Any]:
+    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
@@ -755,7 +755,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
             >>> df = nw.from_native(df_native)

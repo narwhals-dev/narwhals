@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         EagerImplementation,
         JoinStrategy,
+        LazyImplementation,
         LazyUniqueKeepStrategy,
     )
 
@@ -192,7 +193,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, backend: LazyImplementation | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.

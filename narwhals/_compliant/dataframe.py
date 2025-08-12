@@ -58,6 +58,7 @@ if TYPE_CHECKING:
         EagerImplementation,
         IntoSchema,
         JoinStrategy,
+        LazyImplementation,
         LazyUniqueKeepStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -197,7 +198,7 @@ class CompliantDataFrame(
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrameAny: ...
+    def lazy(self, backend: LazyImplementation | None) -> CompliantLazyFrameAny: ...
     def pivot(
         self,
         on: Sequence[str],

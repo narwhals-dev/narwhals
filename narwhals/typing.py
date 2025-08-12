@@ -145,13 +145,24 @@ if TYPE_CHECKING:
     LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
     LazyAllowed: TypeAlias = "LazyOnly | Polars"
 
-    EagerBackendName: TypeAlias = Literal[_Polars, _Arrow, _PandasLike]
+    EagerBackendName: TypeAlias = _EagerAllowed
     EagerImplementation: TypeAlias = Literal[
+        Implementation.CUDF,
+        Implementation.MODIN,
+        Implementation.PANDAS,
         Implementation.POLARS,
         Implementation.PYARROW,
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
+    ]
+
+    LazyBackendName: TypeAlias = _LazyAllowed
+    LazyImplementation: TypeAlias = Literal[
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+        Implementation.SQLFRAME,
     ]
 
     BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
@@ -478,6 +489,48 @@ Examples:
     |│ 1   ┆ 4.0 ┆ 3   │|
     |└─────┴─────┴─────┘|
     └───────────────────┘
+"""
+
+IntoLazyBackend: TypeAlias = "LazyBackendName | LazyImplementation | ModuleType"
+"""Anything that can be converted into a Narwhals Implementation of an lazy backend.
+
+It can be specified as:
+
+- a string (backend name): `"dask"`, `"duckdb"`, `"ibis"`, `"polars"`, `"pyspark"`, etc...
+- an Implementation: `Implementation.DUCKDB`, `Implementation.SQLFRAME`, etc..
+- a python module: `polars`, `pyspark.sql.connect`, `ibis`, `dask.dataframe`, etc...
+
+ Examples:
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
+    >>> df = nw.from_native(df_native)
+
+    If we call `df.lazy`, we get a `narwhals.LazyFrame` backed by a Polars
+    LazyFrame.
+
+    >>> df.lazy()  # doctest: +SKIP
+    ┌─────────────────────────────┐
+    |     Narwhals LazyFrame      |
+    |-----------------------------|
+    |<LazyFrame at 0x7F52B9937230>|
+    └─────────────────────────────┘
+
+    We can also pass DuckDB as the backend, and then we'll get a
+    `narwhals.LazyFrame` backed by a `duckdb.DuckDBPyRelation`.
+
+    >>> df.lazy(backend=nw.Implementation.DUCKDB)
+    ┌──────────────────┐
+    |Narwhals LazyFrame|
+    |------------------|
+    |┌───────┬───────┐ |
+    |│   a   │   b   │ |
+    |│ int64 │ int64 │ |
+    |├───────┼───────┤ |
+    |│     1 │     4 │ |
+    |│     2 │     6 │ |
+    |└───────┴───────┘ |
+    └──────────────────┘
 """
 
 

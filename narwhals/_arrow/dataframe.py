@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         EagerImplementation,
         IntoSchema,
         JoinStrategy,
+        LazyImplementation,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -512,10 +513,10 @@ class ArrowDataFrame(
             )
         return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: LazyImplementation | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
-        if backend is Implementation.DUCKDB:
+        if backend.is_duckdb():
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -524,7 +525,7 @@ class ArrowDataFrame(
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        if backend is Implementation.POLARS:
+        if backend.is_polars():
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -534,7 +535,7 @@ class ArrowDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend is Implementation.DASK:
+        if backend.is_dask():
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -560,14 +561,14 @@ class ArrowDataFrame(
     def collect(
         self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
-        if backend is Implementation.PYARROW or backend is None:
+        if backend is None or backend.is_pyarrow():
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
 
-        if backend is Implementation.PANDAS:
+        if backend.is_pandas():
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
@@ -578,7 +579,7 @@ class ArrowDataFrame(
                 validate_column_names=False,
             )
 
-        if backend is Implementation.POLARS:
+        if backend.is_polars():
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame

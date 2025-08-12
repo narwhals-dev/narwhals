@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         EagerImplementation,
         IntoSchema,
         JoinStrategy,
+        LazyImplementation,
         PivotAgg,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
@@ -759,11 +760,11 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: LazyImplementation | None = None) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
             return self
-        if backend is Implementation.DUCKDB:
+        if backend.is_duckdb():
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -773,7 +774,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend is Implementation.POLARS:
+        if backend.is_polars():
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -783,7 +784,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend is Implementation.DASK:
+        if backend.is_dask():
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
