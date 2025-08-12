@@ -6,6 +6,8 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    SERIES_ACCEPTS_PD_INDEX,
+    SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -47,6 +49,7 @@ if TYPE_CHECKING:
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
 
+Incomplete: TypeAlias = Any
 
 # Series methods where PolarsSeries just defers to Polars.Series directly.
 INHERITED_METHODS = frozenset(
@@ -170,15 +173,16 @@ class PolarsSeries:
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        if BACKEND_VERSION < (0, 20, 7) and is_pandas_index(data):  # pragma: no cover
-            # NOTE: Fixed in https://github.com/pola-rs/polars/pull/14087
-            iterable: pd.Series[Any] | Sequence[Any] = data.to_series()
-        else:
-            # NOTE: `Iterable` is *mostly* fine, annotation is overly narrow
-            # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
-            iterable = cast("Sequence[Any]", data)
         dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
-        native = pl.Series(name, iterable, dtype=dtype_pl)
+        values: Incomplete = data
+        if SERIES_RESPECTS_DTYPE:
+            native = pl.Series(name, values, dtype=dtype_pl)
+        else:  # pragma: no cover
+            if (not SERIES_ACCEPTS_PD_INDEX) and is_pandas_index(values):
+                values = values.to_series()
+            native = pl.Series(name, values)
+            if dtype_pl:
+                native = native.cast(dtype_pl)
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -544,8 +548,6 @@ class PolarsSeries:
         returns bins that range from -inf to +inf and has bin_count + 1 bins.
           for compat: convert `bin_count=` call to `bins=`
         """
-        from typing import cast
-
         lower = cast("float", self.native.min())
         upper = cast("float", self.native.max())
 
