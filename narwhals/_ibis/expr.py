@@ -210,7 +210,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def len(self) -> Self:
         def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
-            return [df.native.count()]
+            return [df.native.count() for _ in self._evaluate_output_names(df)]
 
         return self.__class__(
             func,
