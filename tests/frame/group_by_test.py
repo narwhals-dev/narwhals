@@ -658,3 +658,19 @@ def test_group_by_no_preserve_dtype(
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
     assert_equal_data(result, expected)
+
+
+def test_top_level_len(constructor: Constructor) -> None:
+    # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
+    df = nw.from_native(
+        constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
+    )
+    result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
+    expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("gender")
+        .agg(nw.col("weight").len(), nw.col("age").len())
+        .sort("gender")
+    )
+    assert_equal_data(result, expected)
