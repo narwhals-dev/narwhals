@@ -111,9 +111,8 @@ class AggExpr:
         elif self.is_len():
             result_single = group_by._grouped.size()
             ns = group_by.compliant.__narwhals_namespace__()
-            select = names[0] if len(names) == 1 else list(names)
             result = ns._concat_horizontal(
-                [ns.from_native(result_single).alias(name).native for name in select]
+                [ns.from_native(result_single).alias(name).native for name in names]
             )
         else:
             select = names[0] if len(names) == 1 else list(names)

@@ -668,3 +668,9 @@ def test_top_level_len(constructor: Constructor) -> None:
     result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
     expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
     assert_equal_data(result, expected)
+    result = (
+        df.group_by("gender")
+        .agg(nw.col("weight").len(), nw.col("age").len())
+        .sort("gender")
+    )
+    assert_equal_data(result, expected)
