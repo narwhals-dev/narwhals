@@ -415,7 +415,7 @@ class DuckDBLazyFrame(
         if isinstance(reverse, bool):
             reverse = [reverse] * len(by)
         directions = ["DESC" if not rev else "ASC" for rev in reverse]
-        order_by = [f"{col} {dir}" for col, dir in zip(by, directions)]
+        order_by = [f'"{col}" {dir}' for col, dir in zip(by, directions)]
         query = f"""
         WITH cte AS (
             SELECT *, ROW_NUMBER() OVER (ORDER BY {",".join(order_by)}) as row_number

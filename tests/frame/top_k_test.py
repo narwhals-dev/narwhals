@@ -5,15 +5,15 @@ from tests.utils import Constructor, assert_equal_data
 
 
 def test_top_k(constructor: Constructor) -> None:
-    data = {"a": ["a", "f", "a", "d", "b", "c"], "b": [2, 4, 5, 3, 6, 1]}
+    data = {"a": ["a", "f", "a", "d", "b", "c"], "b c": [2, 4, 5, 3, 6, 1]}
     df = nw.from_native(constructor(data))
-    result = df.top_k(4, by="b")
-    expected = {"a": ["b", "a", "f", "d"], "b": [6, 5, 4, 3]}
-    assert_equal_data(result, expected)
+    result = df.top_k(4, by="b c")
+    expected = {"a": ["a", "b", "d", "f"], "b c": [5, 6, 3, 4]}
+    assert_equal_data(result.sort("a"), expected)
     df = nw.from_native(constructor(data))
-    result = df.top_k(4, by="b", reverse=True)
-    expected = {"a": ["c", "a", "d", "f"], "b": [1, 2, 3, 4]}
-    assert_equal_data(result, expected)
+    result = df.top_k(4, by="b c", reverse=True)
+    expected = {"a": ["a", "c", "d", "f"], "b c": [2, 1, 3, 4]}
+    assert_equal_data(result.sort(by="a"), expected)
 
 
 def test_top_k_by_multiple(constructor: Constructor) -> None:
@@ -25,11 +25,11 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.top_k(4, by=["b", "sf_c"], reverse=True)
     expected = {
-        "a": ["b", "c", "f", "a"],
-        "b": [1, 1, 2, 2],
-        "sf_c": ["a", "r", "d", "k"],
+        "a": ["b", "f", "a", "c"],
+        "b": [1, 2, 2, 1],
+        "sf_c": ["a", "d", "k", "r"],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(result.sort("sf_c"), expected)
     data = {
         "a": ["a", "f", "a", "d", "b", "c"],
         "b": [2, 2, 2, 3, 1, 1],
@@ -42,4 +42,4 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
         "b": [3, 2, 2, 2],
         "sf_c": ["a", "d", "k", "s"],
     }
-    assert_equal_data(result, expected)
+    assert_equal_data(result.sort("sf_c"), expected)
