@@ -662,6 +662,22 @@ def test_group_by_no_preserve_dtype(
     assert_equal_data(result, expected)
 
 
+def test_top_level_len(constructor: Constructor) -> None:
+    # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
+    df = nw.from_native(
+        constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
+    )
+    result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
+    expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("gender")
+        .agg(nw.col("weight").len(), nw.col("age").len())
+        .sort("gender")
+    )
+    assert_equal_data(result, expected)
+
+
 def _warns_context(request: pytest.FixtureRequest) -> AbstractContextManager[Any]:
     if "[pyarrow]" in request.node.name and "NA-order" in request.node.name:
         pattern = r"ordered.+safely.+string\[pyarrow\]"
