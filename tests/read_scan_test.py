@@ -46,6 +46,15 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     assert_equal_data(result, data)
 
 
+def test_read_csv_raise_with_lazy(tmpdir: pytest.TempdirFactory) -> None:
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    df_pl.write_csv(filepath)
+
+    with pytest.raises(ValueError, match="Expected eager backend, found"):
+        nw.read_csv(filepath, backend=Implementation.IBIS)
+
+
 def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
@@ -117,6 +126,15 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl.write_parquet(filepath)
     result = nw.read_parquet(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
+
+
+def test_read_parquet_raise_with_lazy(tmpdir: pytest.TempdirFactory) -> None:
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.parquet")  # type: ignore[operator]
+    df_pl.write_parquet(filepath)
+
+    with pytest.raises(ValueError, match="Expected eager backend, found"):
+        nw.read_parquet(filepath, backend=Implementation.DUCKDB)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")

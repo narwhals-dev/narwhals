@@ -591,20 +591,33 @@ def read_csv(
         |     1  2   5     |
         └──────────────────┘
     """
-    eager_backend = Implementation.from_backend(backend)
-    native_namespace = eager_backend.to_native_namespace()
+    impl = Implementation.from_backend(backend)
+    native_namespace = impl.to_native_namespace()
     native_frame: NativeFrame
-    if eager_backend in {
+    if impl in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
     }:
         native_frame = native_namespace.read_csv(source, **kwargs)
-    elif eager_backend is Implementation.PYARROW:
+    elif impl is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(source, **kwargs)
+    elif impl in {
+        Implementation.PYSPARK,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.SQLFRAME,
+        Implementation.PYSPARK_CONNECT,
+    }:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_csv(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
@@ -734,22 +747,33 @@ def read_parquet(
         |c: [[0.2,0.1]]    |
         └──────────────────┘
     """
-    implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
+    impl = Implementation.from_backend(backend)
+    native_namespace = impl.to_native_namespace()
     native_frame: NativeFrame
-    if implementation in {
+    if impl in {
         Implementation.POLARS,
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif implementation is Implementation.PYARROW:
+    elif impl is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
         native_frame = pq.read_table(source, **kwargs)
+    elif impl in {
+        Implementation.PYSPARK,
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.SQLFRAME,
+        Implementation.PYSPARK_CONNECT,
+    }:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
     else:  # pragma: no cover
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
