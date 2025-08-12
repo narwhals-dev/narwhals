@@ -565,7 +565,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     ) -> Self:
         try:
             return super().top_k(k=k, by=by, reverse=reverse)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001  # pragma: no cover
             raise catch_polars_exception(e) from None
 
 
