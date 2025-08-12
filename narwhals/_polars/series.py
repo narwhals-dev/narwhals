@@ -177,9 +177,8 @@ class PolarsSeries:
             # NOTE: `Iterable` is *mostly* fine, annotation is overly narrow
             # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
             iterable = cast("Sequence[Any]", data)
-        native = pl.Series(name=name, values=iterable)
-        if dtype:
-            native = native.cast(narwhals_to_native_dtype(dtype, version))
+        dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
+        native = pl.Series(name, iterable, dtype=dtype_pl)
         return cls.from_native(native, context=context)
 
     @staticmethod
