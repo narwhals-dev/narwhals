@@ -29,6 +29,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
     from typing import Callable
 
@@ -84,7 +85,6 @@ INHERITED_METHODS = frozenset(
         "sink_parquet",
         "sort",
         "tail",
-        "top_k",
         "to_arrow",
         "to_pandas",
         "unique",
@@ -108,7 +108,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     select: Method[Self]
     sort: Method[Self]
     tail: Method[Self]
-    top_k: Method[Self]
     unique: Method[Self]
     with_columns: Method[Self]
 
@@ -197,6 +196,19 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 suffix=suffix,
             )
         )
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):
+            return self._with_native(
+                self.native.top_k(
+                    k=k,
+                    by=by,
+                    descending=reverse,  # type: ignore[call-arg]
+                )
+            )
+        return self._with_native(self.native.top_k(k=k, by=by, reverse=reverse))
 
     def unpivot(
         self,
@@ -545,6 +557,14 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return super().join(
                 other=other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
             )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        try:
+            return super().top_k(k=k, by=by, reverse=reverse)
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
