@@ -133,6 +133,11 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴─────────┘|
             └──────────────────────────┘
         """
+        if not isinstance(index, int):
+            msg = (
+                f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
+            )
+            raise TypeError(msg)
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.get(index)
         )

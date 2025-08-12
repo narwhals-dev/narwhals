@@ -776,12 +776,6 @@ class PolarsSeriesListNamespace(
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
 
-    def get(self, index: int) -> PolarsSeries:
-        native_series = self._series.native
-        native_result = native_series.list.get(index)
-
-        return self._series._with_native(native_result)
-
 
 class PolarsSeriesStructNamespace(
     PolarsSeriesNamespace, PolarsStructNamespace[PolarsSeries, pl.Series]
