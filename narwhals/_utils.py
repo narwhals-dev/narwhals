@@ -122,6 +122,8 @@ if TYPE_CHECKING:
         _SQLFrame,
     )
 
+    UnknownBackendName: TypeAlias = str
+
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
     )
@@ -434,6 +436,10 @@ class Implementation(NoAutoEnum):
         cls: type[Self], backend_name: _Ibis
     ) -> Literal[Implementation.IBIS]: ...
 
+    @overload
+    @classmethod
+    def from_string(cls: type[Self], backend_name: str) -> Implementation: ...
+
     @classmethod
     def from_string(
         cls: type[Self], backend_name: str
@@ -514,7 +520,7 @@ class Implementation(NoAutoEnum):
     @overload
     @classmethod
     def from_backend(
-        cls: type[Self], backend: Literal[Implementation.UNKNOWN]
+        cls: type[Self], backend: Literal["unknown", Implementation.UNKNOWN]
     ) -> Literal[Implementation.UNKNOWN]: ...
 
     @overload
@@ -527,8 +533,14 @@ class Implementation(NoAutoEnum):
     @classmethod
     def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation: ...
 
+    @overload
     @classmethod
-    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation:
+    def from_backend(cls: type[Self], backend: UnknownBackendName) -> Implementation: ...
+
+    @classmethod
+    def from_backend(
+        cls: type[Self], backend: UnknownBackendName | IntoBackend
+    ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:
