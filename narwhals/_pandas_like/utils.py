@@ -465,6 +465,7 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         None: "bool",
     },
 }
+UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
 def narwhals_to_native_dtype(  # noqa: C901, PLR0912
@@ -528,8 +529,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         base_type, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
         return narwhals_to_native_arrow_dtype(dtype, implementation, version)
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for {implementation}."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for {implementation}."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

@@ -187,11 +187,13 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Object)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     dtypes = version.dtypes
-    if pa_type := NW_TO_PA_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if pa_type := NW_TO_PA_DTYPES.get(base_type):
         return pa_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         unit = dtype.time_unit
@@ -211,8 +213,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
-    if isinstance_or_issubclass(dtype, (dtypes.Decimal, dtypes.Object)):
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for PyArrow."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

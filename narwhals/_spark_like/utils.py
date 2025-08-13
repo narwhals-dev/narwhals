@@ -145,6 +145,15 @@ NW_TO_SPARK_DTYPES: Mapping[type[DType], IntoSparkDType] = {
     dtypes.Int32: attrgetter("IntegerType"),
     dtypes.Int64: attrgetter("LongType"),
 }
+UNSUPPORTED_DTYPES = (
+    dtypes.UInt64,
+    dtypes.UInt32,
+    dtypes.UInt16,
+    dtypes.UInt8,
+    dtypes.Enum,
+    dtypes.Categorical,
+    dtypes.Time,
+)
 
 
 def narwhals_to_native_dtype(
@@ -155,7 +164,8 @@ def narwhals_to_native_dtype(
         native = sqlframe_types
     else:
         native = spark_types
-    if into_spark_type := NW_TO_SPARK_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if into_spark_type := NW_TO_SPARK_DTYPES.get(base_type):
         return into_spark_type(native)()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         if (tu := dtype.time_unit) != "us":  # pragma: no cover
@@ -185,19 +195,8 @@ def narwhals_to_native_dtype(
                 for field in dtype.fields
             ]
         )
-    if isinstance_or_issubclass(
-        dtype,
-        (
-            dtypes.UInt64,
-            dtypes.UInt32,
-            dtypes.UInt16,
-            dtypes.UInt8,
-            dtypes.Enum,
-            dtypes.Categorical,
-            dtypes.Time,
-        ),
-    ):  # pragma: no cover
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for Spark-Like backend."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Spark-Like backend."
         raise UnsupportedDTypeError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

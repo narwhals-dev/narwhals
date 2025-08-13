@@ -226,13 +226,15 @@ TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, DuckDBPyType] = {
     "us": duckdb_dtypes.TIMESTAMP,
     "ns": duckdb_dtypes.TIMESTAMP_NS,
 }
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
 ) -> DuckDBPyType:
     dtypes = version.dtypes
-    if duckdb_type := NW_TO_DUCKDB_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):
         return duckdb_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
@@ -275,8 +277,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
         duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
         return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
-    if isinstance_or_issubclass(dtype, (dtypes.Decimal, dtypes.Categorical)):
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for DuckDB."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

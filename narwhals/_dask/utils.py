@@ -101,11 +101,19 @@ NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
     dtypes_v1.Datetime: "datetime64[us]",
     dtypes_v1.Duration: "timedelta64[ns]",
 }
+UNSUPPORTED_DTYPES = (
+    dtypes.List,
+    dtypes.Struct,
+    dtypes.Array,
+    dtypes.Time,
+    dtypes.Binary,
+)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
     dtypes = version.dtypes
-    if dask_type := NW_TO_DASK_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if dask_type := NW_TO_DASK_DTYPES.get(base_type):
         return dask_type
     if isinstance_or_issubclass(dtype, dtypes.String):
         if Implementation.PANDAS._backend_version() >= (2, 0, 0):
@@ -124,12 +132,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
             return pd.CategoricalDtype(dtype.categories, ordered=True)  # type: ignore[arg-type]
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-    if isinstance_or_issubclass(
-        dtype, (dtypes.List, dtypes.Struct, dtypes.Array, dtypes.Time, dtypes.Binary)
-    ):  # pragma: no cover
-        msg = (
-            f"Converting to {dtype.base_type().__name__} dtype is not supported for Dask."
-        )
+    if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Dask."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

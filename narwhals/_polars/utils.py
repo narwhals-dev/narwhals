@@ -174,13 +174,15 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.Object: pl.Object(),
     dtypes.Unknown: pl.Unknown(),
 }
+UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
 def narwhals_to_native_dtype(  # noqa: C901
     dtype: IntoDType, version: Version
 ) -> pl.DataType:
     dtypes = version.dtypes
-    if pl_type := NW_TO_PL_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if pl_type := NW_TO_PL_DTYPES.get(base_type):
         return pl_type
     if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
         # Not available for Polars pre 1.8.0
@@ -209,8 +211,8 @@ def narwhals_to_native_dtype(  # noqa: C901
         size = dtype.size
         kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for Polars."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Polars."
         raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 

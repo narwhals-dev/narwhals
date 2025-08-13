@@ -192,11 +192,14 @@ NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
     dtypes.UInt64: ibis_dtypes.UInt64(),
     dtypes.Decimal: ibis_dtypes.Decimal(),
 }
+# Enum support: https://github.com/ibis-project/ibis/issues/10991
+UNSUPPORTED_DTYPES = (dtypes.Int128, dtypes.UInt128, dtypes.Categorical, dtypes.Enum)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType:
     dtypes = version.dtypes
-    if ibis_type := NW_TO_IBIS_DTYPES.get(dtype.base_type()):
+    base_type = dtype.base_type()
+    if ibis_type := NW_TO_IBIS_DTYPES.get(base_type):
         return ibis_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
@@ -214,14 +217,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
-    if isinstance_or_issubclass(
-        dtype,
-        (dtypes.Int128, dtypes.Int128, dtypes.UInt128, dtypes.Categorical, dtypes.Enum),
-    ):
-        # Enum support: https://github.com/ibis-project/ibis/issues/10991
-        msg = (
-            f"Converting to {dtype.base_type().__name__} dtype is not supported for Ibis."
-        )
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Ibis."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
