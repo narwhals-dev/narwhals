@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import duckdb
+import duckdb.typing as duckdb_dtypes
+from duckdb.typing import DuckDBPyType
 
 from narwhals._utils import Version, isinstance_or_issubclass
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from duckdb import DuckDBPyRelation, Expression
-    from duckdb.typing import DuckDBPyType
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, TimeUnit
 
 
 UNITS_DICT = {
@@ -32,12 +33,6 @@ UNITS_DICT = {
     "ms": "millisecond",
     "us": "microsecond",
     "ns": "nanosecond",
-}
-UNIT_TO_TIMESTAMPS = {
-    "s": "TIMESTAMP_S",
-    "ms": "TIMESTAMP_MS",
-    "us": "TIMESTAMP",
-    "ns": "TIMESTAMP_NS",
 }
 DESCENDING_TO_ORDER = {True: "desc", False: "asc"}
 NULLS_LAST_TO_NULLS_POS = {True: "nulls last", False: "nulls first"}
@@ -205,63 +200,55 @@ def _non_nested_native_to_narwhals_dtype(duckdb_dtype_id: str, version: Version)
     }.get(duckdb_dtype_id, dtypes.Unknown())
 
 
-def narwhals_to_native_dtype(  # noqa: PLR0912,PLR0915,C901
+dtypes = Version.MAIN.dtypes
+NW_TO_DUCKDB_DTYPES: Mapping[type[DType], DuckDBPyType] = {
+    dtypes.Float64: duckdb_dtypes.DOUBLE,
+    dtypes.Float32: duckdb_dtypes.FLOAT,
+    dtypes.Binary: duckdb_dtypes.BLOB,
+    dtypes.String: duckdb_dtypes.VARCHAR,
+    dtypes.Boolean: duckdb_dtypes.BOOLEAN,
+    dtypes.Date: duckdb_dtypes.DATE,
+    dtypes.Time: duckdb_dtypes.TIME,
+    dtypes.Int8: duckdb_dtypes.TINYINT,
+    dtypes.Int16: duckdb_dtypes.SMALLINT,
+    dtypes.Int32: duckdb_dtypes.INTEGER,
+    dtypes.Int64: duckdb_dtypes.BIGINT,
+    dtypes.Int128: DuckDBPyType("INT128"),
+    dtypes.UInt8: duckdb_dtypes.UTINYINT,
+    dtypes.UInt16: duckdb_dtypes.USMALLINT,
+    dtypes.UInt32: duckdb_dtypes.UINTEGER,
+    dtypes.UInt64: duckdb_dtypes.UBIGINT,
+    dtypes.UInt128: DuckDBPyType("UINT128"),
+}
+TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, DuckDBPyType] = {
+    "s": duckdb_dtypes.TIMESTAMP_S,
+    "ms": duckdb_dtypes.TIMESTAMP_MS,
+    "us": duckdb_dtypes.TIMESTAMP,
+    "ns": duckdb_dtypes.TIMESTAMP_NS,
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Categorical)
+
+
+def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     dtype: IntoDType, version: Version, deferred_time_zone: DeferredTimeZone
-) -> str:
+) -> DuckDBPyType:
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "DOUBLE"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "FLOAT"
-    if isinstance_or_issubclass(dtype, dtypes.Int128):
-        return "INT128"
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "BIGINT"
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "INTEGER"
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "SMALLINT"
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "TINYINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):
-        return "UINT128"
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "UBIGINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "UINTEGER"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):  # pragma: no cover
-        return "USMALLINT"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):  # pragma: no cover
-        return "UTINYINT"
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return "VARCHAR"
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):  # pragma: no cover
-        return "BOOLEAN"
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return "TIME"
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return "BLOB"
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by DuckDB"
-        raise NotImplementedError(msg)
+    base_type = dtype.base_type()
+    if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):
+        return duckdb_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
-            categories = "'" + "', '".join(dtype.categories) + "'"
-            return f"ENUM ({categories})"
+            return DuckDBPyType(f"ENUM{dtype.categories!r}")
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         tu = dtype.time_unit
         tz = dtype.time_zone
         if not tz:
-            return UNIT_TO_TIMESTAMPS[tu]
+            return TIME_UNIT_TO_TIMESTAMP[tu]
         if tu != "us":
             msg = f"Only microsecond precision is supported for timezone-aware `Datetime` in DuckDB, got {tu} precision"
             raise ValueError(msg)
@@ -269,30 +256,30 @@ def narwhals_to_native_dtype(  # noqa: PLR0912,PLR0915,C901
             msg = f"Only the connection time zone {rel_tz} is supported, got: {tz}."
             raise ValueError(msg)
         # TODO(unassigned): cover once https://github.com/narwhals-dev/narwhals/issues/2742 addressed
-        return "TIMESTAMPTZ"  # pragma: no cover
+        return duckdb_dtypes.TIMESTAMP_TZ  # pragma: no cover
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         if (tu := dtype.time_unit) != "us":  # pragma: no cover
             msg = f"Only microsecond-precision Duration is supported, got {tu} precision"
-        return "INTERVAL"
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return "DATE"
+        return duckdb_dtypes.INTERVAL
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version, deferred_time_zone)
-        return f"{inner}[]"
+        return duckdb.list_type(inner)
     if isinstance_or_issubclass(dtype, dtypes.Struct):
-        inner = ", ".join(
-            f'"{field.name}" {narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)}'
+        fields = {
+            field.name: narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)
             for field in dtype.fields
-        )
-        return f"STRUCT({inner})"
-    if isinstance_or_issubclass(dtype, dtypes.Array):
-        shape = dtype.shape
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype: Any = dtype
-        for _ in shape:
-            inner_dtype = inner_dtype.inner
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version, deferred_time_zone)
-        return f"{duckdb_inner}{duckdb_shape_fmt}"
+        }
+        return duckdb.struct_type(fields)
+    if isinstance(dtype, dtypes.Array):
+        nw_inner: IntoDType = dtype
+        while isinstance(nw_inner, dtypes.Array):
+            nw_inner = nw_inner.inner
+        duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
+        return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for DuckDB."
+        raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 
