@@ -814,6 +814,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
+        native = self.native
         _, lower = (
             align_and_extract_native(self, lower_bound)
             if lower_bound is not None
@@ -824,8 +825,17 @@ class PandasLikeSeries(EagerSeries[Any]):
             if upper_bound is not None
             else (None, None)
         )
-        kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower, upper, **kwargs))
+        if self._implementation.is_modin():
+            result = native
+            if lower is not None:
+                result = result.where(result >= lower, lower)
+            if upper is not None:
+                result = result.where(result <= upper, upper)
+
+        else:
+            result = native.clip(lower, upper)
+
+        return self._with_native(result)
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:

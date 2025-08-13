@@ -28,8 +28,6 @@ def test_clip_expr(
 def test_clip_expr_expressified(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "modin_pyarrow" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/17682
         request.applymarker(pytest.mark.xfail)
@@ -66,8 +64,6 @@ def test_clip_series(
 def test_clip_series_expressified(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "modin_pyarrow" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/17682
         request.applymarker(pytest.mark.xfail)
