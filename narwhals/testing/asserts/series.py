@@ -95,7 +95,6 @@ def assert_series_equal(  # noqa: C901, PLR0912
             raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
 
     else:
-        # TODO: Requires https://github.com/narwhals-dev/narwhals/pull/2962
         is_not_close_mask = ~left_.is_close(
             right_, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
         )
