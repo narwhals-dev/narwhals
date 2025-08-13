@@ -102,9 +102,6 @@ class Expr:
         Arguments:
             name: The new name.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -137,9 +134,6 @@ class Expr:
             args: Positional arguments to pass to function.
             kwargs: Keyword arguments to pass to function.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -163,9 +157,6 @@ class Expr:
 
         Arguments:
             dtype: Data type that the object will be cast into.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -371,9 +362,6 @@ class Expr:
 
         If there are no non-null elements, the result is `False`.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -393,9 +381,6 @@ class Expr:
         """Return whether all values in the column are `True`.
 
         If there are no non-null elements, the result is `True`.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -457,9 +442,6 @@ class Expr:
                   $1-\alpha$ and $1$ if `adjust=True`,
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
-        Returns:
-            Expr
-
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -513,9 +495,6 @@ class Expr:
     def mean(self) -> Self:
         """Get mean value.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -533,9 +512,6 @@ class Expr:
 
     def median(self) -> Self:
         """Get median value.
-
-        Returns:
-            A new expression.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -562,9 +538,6 @@ class Expr:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                 where N represents the number of elements. By default ddof is 1.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -588,9 +561,6 @@ class Expr:
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -626,9 +596,6 @@ class Expr:
                 If not set, the dtype will be inferred based on the first non-null value
                 that is returned by the function.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -658,9 +625,6 @@ class Expr:
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
 
-        Returns:
-            An expression representing the sample skewness of the column.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -682,9 +646,6 @@ class Expr:
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
 
-        Returns:
-            An expression representing the kurtosis (Fisher's definition) without bias correction of the column.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -704,9 +665,6 @@ class Expr:
         """Return the sum value.
 
         If there are no non-null elements, the result is zero.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import duckdb
@@ -730,9 +688,6 @@ class Expr:
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -750,9 +705,6 @@ class Expr:
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -772,9 +724,6 @@ class Expr:
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -792,9 +741,6 @@ class Expr:
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -814,9 +760,6 @@ class Expr:
     def unique(self) -> Self:
         """Return unique values of this expression.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -834,9 +777,6 @@ class Expr:
 
     def abs(self) -> Self:
         """Return absolute value of each element.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -863,9 +803,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -894,9 +831,6 @@ class Expr:
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -943,9 +877,6 @@ class Expr:
 
         Arguments:
             n: Number of positions to shift values by.
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1005,9 +936,6 @@ class Expr:
                 (default), the data type is determined automatically based on the other
                 inputs.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1057,9 +985,6 @@ class Expr:
             lower_bound: Lower bound value. String literals are interpreted as column names.
             upper_bound: Upper bound value. String literals are interpreted as column names.
             closed: Define which sides of the interval are closed (inclusive).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1112,9 +1037,6 @@ class Expr:
         Arguments:
             other: iterable
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1145,9 +1067,6 @@ class Expr:
 
         Arguments:
             predicates: Conditions to filter by (which get AND-ed together).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1191,9 +1110,6 @@ class Expr:
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
             See [null_handling](../concepts/null_handling.md/)
@@ -1225,9 +1141,6 @@ class Expr:
 
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
@@ -1270,9 +1183,6 @@ class Expr:
             value: Value or expression used to fill null values.
             strategy: Strategy used to fill null values.
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
-
-        Returns:
-            A new expression.
 
         Notes:
             - pandas handles null values differently from other libraries.
@@ -1361,9 +1271,6 @@ class Expr:
     def drop_nulls(self) -> Self:
         """Drop null values.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
             See [null_handling](../concepts/null_handling.md/)
@@ -1410,9 +1317,6 @@ class Expr:
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
                 to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1467,9 +1371,6 @@ class Expr:
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1491,9 +1392,6 @@ class Expr:
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1514,9 +1412,6 @@ class Expr:
 
     def null_count(self) -> Self:
         r"""Count null values.
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
@@ -1549,9 +1444,6 @@ class Expr:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1580,9 +1472,6 @@ class Expr:
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1615,9 +1504,6 @@ class Expr:
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
-        Returns:
-            A new expression.
-
         Note:
             - pandas and Polars may have implementation differences for a given interpolation method.
             - [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has
@@ -1649,9 +1535,6 @@ class Expr:
 
         Arguments:
             decimals: Number of decimals to round by.
-
-        Returns:
-            A new expression.
 
 
         Notes:
@@ -1686,9 +1569,6 @@ class Expr:
 
         Null values count towards the total.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1717,9 +1597,6 @@ class Expr:
         Arguments:
             lower_bound: Lower bound value. String literals are treated as column names.
             upper_bound: Upper bound value. String literals are treated as column names.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1763,9 +1640,6 @@ class Expr:
 
         Can return multiple values.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1791,9 +1665,6 @@ class Expr:
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
             nullable backends null values are kept as such.
-
-        Returns:
-            Expression of `Boolean` data type.
 
         Examples:
             >>> import polars as pl
@@ -1831,9 +1702,6 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1866,9 +1734,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1903,9 +1768,6 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1938,9 +1800,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1988,9 +1847,6 @@ class Expr:
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2043,9 +1899,6 @@ class Expr:
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2105,9 +1958,6 @@ class Expr:
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2166,9 +2016,6 @@ class Expr:
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2225,9 +2072,6 @@ class Expr:
 
             descending: Rank in descending order.
 
-        Returns:
-            A new expression with rank data.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2266,9 +2110,6 @@ class Expr:
         Arguments:
             base: Given base, defaults to `e`
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2298,9 +2139,6 @@ class Expr:
     def exp(self) -> Self:
         r"""Compute the exponent.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2323,9 +2161,6 @@ class Expr:
 
     def sqrt(self) -> Self:
         r"""Compute the square root.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -2371,9 +2206,6 @@ class Expr:
                 two values, relative to the larger absolute value. Must be in the range
                 [0, 1).
             nans_equal: Whether NaN values should be considered equal.
-
-        Returns:
-            Expression of Boolean data type.
 
         Notes:
             The implementation of this method is symmetric and mirrors the behavior of
