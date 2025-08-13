@@ -1588,7 +1588,7 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
-        return ~self.is_unique()
+        return self._with_compliant(self._compliant_series.is_duplicated())
 
     def is_empty(self) -> bool:
         r"""Check if the series is empty.
@@ -1605,7 +1605,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s_nw.filter(s_nw > 10).is_empty()
             True
         """
-        return self._compliant_series.len() == 0
+        return self._compliant_series.is_empty()
 
     def is_unique(self) -> Self:
         r"""Get a mask of all unique rows in the Series.
