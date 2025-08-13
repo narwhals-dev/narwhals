@@ -17,7 +17,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -2762,6 +2762,82 @@ class Series(Generic[IntoSeriesT]):
             └───────────────────────┘
         """
         return self._with_compliant(self._compliant_series.sqrt())
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float = 0.0,
+        rel_tol: float = 1e-09,
+        nans_equal: bool = False,
+    ) -> Self:
+        r"""Get a boolean mask of the values being close to the other values.
+
+        Two values `a` and `b` are considered close if the following condition holds:
+
+        $$
+        |a-b| \le max \{ \text{rel\_tol} \cdot max \{ |a|, |b| \}, \text{abs\_tol} \}
+        $$
+
+        Arguments:
+            other: Values to compare with.
+            abs_tol: Absolute tolerance. This is the maximum allowed absolute difference
+                between two values. Must be non-negative.
+            rel_tol: Relative tolerance. This is the maximum allowed difference between
+                two values, relative to the larger absolute value. Must be in the range
+                [0, 1).
+            nans_equal: Whether NaN values should be considered equal.
+
+        Returns:
+            Series of Boolean data type.
+
+        Notes:
+            The implementation of this method is symmetric and mirrors the behavior of
+            `math.isclose`. Specifically note that this behavior is different to
+            `numpy.isclose`.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = [1.0, float("inf"), 1.41, None, float("nan")]
+            >>> s_native = pa.chunked_array([data])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.is_close(1.4, abs_tol=0.1).to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                false,
+                true,
+                null,
+                false
+              ]
+            ]
+        """
+        if not self.dtype.is_numeric():
+            msg = (
+                f"is_close operation not supported for dtype `{self.dtype}`\n\n"
+                "Hint: `is_close` is only supported for numeric types"
+            )
+            raise InvalidOperationError(msg)
+
+        if abs_tol < 0:
+            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
+            raise ComputeError(msg)
+
+        if not (0 <= rel_tol < 1):
+            msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"
+            raise ComputeError(msg)
+
+        return self._with_compliant(
+            self._compliant_series.is_close(
+                self._extract_native(other),
+                abs_tol=abs_tol,
+                rel_tol=rel_tol,
+                nans_equal=nans_equal,
+            )
+        )
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:
