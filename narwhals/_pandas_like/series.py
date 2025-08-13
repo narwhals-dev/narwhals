@@ -830,6 +830,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             native_cls = type(native)
             if isinstance(lower, native_cls) or isinstance(upper, native_cls):
+                # Workaround for both cudf and modin when clipping with a series
+                #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+                #   * modin: https://github.com/modin-project/modin/issues/7415
                 result = native
                 if lower is not None:
                     result = result.where(result >= lower, lower)
