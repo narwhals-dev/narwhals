@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from narwhals.typing import FrameT
+    from narwhals.typing import IntoFrameT
 
 
 def assert_frame_equal(
-    left: FrameT,
-    right: FrameT,
+    left: IntoFrameT,
+    right: IntoFrameT,
     *,
     check_row_order: bool = True,
     check_column_order: bool = True,
@@ -17,4 +17,6 @@ def assert_frame_equal(
     rel_tol: float = 1e-05,
     abs_tol: float = 1e-08,
     categorical_as_str: bool = False,
-) -> None: ...
+) -> None:
+    msg = "TODO"  # pragma: no cover
+    raise NotImplementedError(msg)

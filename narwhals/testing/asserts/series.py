@@ -3,8 +3,16 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Callable
 
-from narwhals import from_native, new_series
-from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
+from narwhals import (
+    Array,
+    Boolean,
+    Categorical,
+    List,
+    String,
+    Struct,
+    from_native,
+    new_series,
+)
 from narwhals.testing.asserts.utils import raise_assertion_error
 
 if TYPE_CHECKING:
@@ -74,9 +82,9 @@ def assert_series_equal(  # noqa: C901, PLR0912
             raise NotImplementedError(msg)
         left_, right_ = left_.sort(), right_.sort()
 
-    if ((l_null_mask := left_.is_null()) != (r_null_mask := right_.is_null())).any() or (
-        l_null_count := left_.null_count()
-    ) != (r_null_count := right_.null_count()):
+    if (l_null_count := left_.null_count()) != (r_null_count := right_.null_count()) or (
+        (l_null_mask := left_.is_null()) != (r_null_mask := right_.is_null())
+    ).any():
         raise_assertion_error("Series", "null value mismatch", l_null_count, r_null_count)
 
     l_vals, r_vals = left_.filter(~l_null_mask), right_.filter(~r_null_mask)
@@ -88,7 +96,7 @@ def assert_series_equal(  # noqa: C901, PLR0912
             is_not_equal_mask = ~l_vals.is_close(
                 r_vals, rel_tol=0, abs_tol=0, nans_equal=True
             )
-        # Handle nested types
+
         elif isinstance(l_dtype, (Array, List)) and isinstance(r_dtype, (Array, List)):
             check_fn = partial(
                 assert_series_equal,
@@ -102,7 +110,7 @@ def assert_series_equal(  # noqa: C901, PLR0912
             )
             _check_list_like(l_vals, r_vals, l_dtype, r_dtype, check_fn=check_fn)
 
-            # If we never raise before, then every nested element is equal
+            # If `_check_list_like` didn't raise, then every nested element is equal
             is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
 
         elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
@@ -118,10 +126,8 @@ def assert_series_equal(  # noqa: C901, PLR0912
             )
             _check_struct(l_vals, r_vals, l_dtype, r_dtype, check_fn=check_fn)
 
-            # If we never raise before, then every nested element is equal
-            is_not_equal_mask = new_series(
-                l_name, [False], dtype=Boolean(), backend=l_impl
-            )
+            # If `_check_struct` didn't raise, then every nested element is equal
+            is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
 
         else:
             is_not_equal_mask = l_vals != r_vals
