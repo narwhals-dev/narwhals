@@ -343,6 +343,8 @@ class PolarsExpr:
     fill_null: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
+    is_between: Method[Self]
+    is_duplicated: Method[Self]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
@@ -372,6 +374,11 @@ class PolarsExpr:
     tail: Method[Self]
     unique: Method[Self]
     var: Method[Self]
+    __rfloordiv__: Method[Self]
+    __rsub__: Method[Self]
+    __rmod__: Method[Self]
+    __rpow__: Method[Self]
+    __rtruediv__: Method[Self]
 
 
 class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):

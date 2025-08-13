@@ -92,6 +92,8 @@ INHERITED_METHODS = frozenset(
         "head",
         "is_between",
         "is_close",
+        "is_duplicated",
+        "is_empty",
         "is_finite",
         "is_first_distinct",
         "is_in",
@@ -677,6 +679,8 @@ class PolarsSeries:
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
+    is_duplicated: Method[Self]
+    is_empty: Method[bool]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
