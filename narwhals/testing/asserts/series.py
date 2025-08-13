@@ -1,23 +1,17 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals import (
-    Array,
-    Boolean,
-    Categorical,
-    List,
-    String,
-    Struct,
-    from_native,
-    new_series,
-)
+from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
+from narwhals.functions import new_series
 from narwhals.testing.asserts.utils import raise_assertion_error
+from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals.series import Series
     from narwhals.typing import IntoSeriesT, SeriesT
 
     CheckFn: TypeAlias = Callable[[SeriesT, SeriesT], None]
@@ -85,24 +79,24 @@ def assert_series_equal(
 def _check_metadata(
     left: SeriesT, right: SeriesT, *, check_dtypes: bool, check_names: bool
 ) -> None:
-    """Check basic equality properties: implementation, length, dtype, and names."""
+    """Check metadata information: implementation, length, dtype, and names."""
     if (l_impl := left.implementation) != (r_impl := right.implementation):
         raise_assertion_error("Series", "implementation mismatch", l_impl, r_impl)
 
     if (l_len := len(left)) != (r_len := len(right)):
         raise_assertion_error("Series", "length mismatch", l_len, r_len)
 
-    if (l_dtype := left.dtype) != (r_dtype := right.dtype) and check_dtypes:
+    if check_dtypes and (l_dtype := left.dtype) != (r_dtype := right.dtype):
         raise_assertion_error("Series", "dtype mismatch", l_dtype, r_dtype)
 
-    if (l_name := left.name) != (r_name := right.name) and check_names:
+    if check_names and (l_name := left.name) != (r_name := right.name):
         raise_assertion_error("Series", "name mismatch", l_name, r_name)
 
 
 def _maybe_apply_preprocessing(
     left: SeriesT, right: SeriesT, *, categorical_as_str: bool, check_order: bool
 ) -> tuple[SeriesT, SeriesT]:
-    """Apply preprocessing transformations like categorical casting and sorting."""
+    """Apply preprocessing transformations: categorical casting and sorting."""
     l_dtype = left.dtype
 
     # TODO(FBruzzesi): Add coverage
@@ -141,6 +135,8 @@ def _check_exact_values(
     """Check exact value equality for various data types."""
     l_impl = left.implementation
     l_dtype, r_dtype = left.dtype, right.dtype
+
+    is_not_equal_mask: Series[Any]
     if l_dtype.is_numeric():
         # For _all_ numeric dtypes, we can use `is_close` with 0-tolerances to handle
         # inf and nan values out of the box.

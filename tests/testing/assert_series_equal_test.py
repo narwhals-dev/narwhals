@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any
+from contextlib import nullcontext as does_not_raise
+from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
 
@@ -9,9 +9,13 @@ import narwhals as nw
 from narwhals.testing import assert_series_equal
 
 if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
     from narwhals.typing import IntoSchema
     from tests.conftest import Data
     from tests.utils import ConstructorEager
+
+    SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
 
 
 def _pytest_assertion_error(detail: str) -> Any:
@@ -21,105 +25,110 @@ def _pytest_assertion_error(detail: str) -> Any:
 def test_self_equal(
     constructor_eager: ConstructorEager, data: Data, schema: IntoSchema
 ) -> None:
-    """This test exists for validate that nested dtypes are checked correctly, including nulls."""
+    """Test that a series is equal to itself, including nested dtypes with nulls."""
     if "pyarrow_table" in str(constructor_eager):
-        # Pyarrow does not support Enum
+        # Replace Enum with Categorical, since Pyarrow does not support Enum
         schema = {**schema, "enum": nw.Categorical()}
 
-    df = nw.from_native(constructor_eager(data), eager_only=True).select(
-        nw.col(name).cast(dtype) for name, dtype in schema.items()
-    )
-    for name in schema:
-        assert_series_equal(df[name], df[name])
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    for name, dtype in schema.items():
+        assert_series_equal(df[name].cast(dtype), df[name].cast(dtype))
 
 
-def test_raise_impl_mismatch() -> None:
+def test_implementation_mismatch() -> None:
+    """Test that different implementations raise an error."""
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
 
     import pandas as pd
     import pyarrow as pa
 
-    data = [1, 2, 3]
-    left, right = pd.Series(data), pa.chunked_array([data])
-
     with _pytest_assertion_error("implementation mismatch"):
-        assert_series_equal(left, right)  # type: ignore[arg-type]
+        assert_series_equal(pd.Series([1]), pa.chunked_array([[2]]))
 
 
-def test_raise_length_mismatch(constructor_eager: ConstructorEager) -> None:
-    left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    right = left.head(2)
-    msg = r"Series are different \(length mismatch\)"
-    with pytest.raises(AssertionError, match=msg):
+@pytest.mark.parametrize(
+    ("setup_fn", "error_msg"),
+    [
+        (lambda s: (s, s.head(2)), "length mismatch"),
+        (lambda s: (s.cast(nw.UInt32()), s.cast(nw.Int64())), "dtype mismatch"),
+        (lambda s: (s.rename("foo"), s.rename("bar")), "name mismatch"),
+    ],
+)
+def test_metadata_checks(
+    constructor_eager: ConstructorEager, setup_fn: SetupFn, error_msg: str
+) -> None:
+    """Test metadata validation (length, dtype, name)."""
+    series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    left, right = setup_fn(series)
+
+    with _pytest_assertion_error(error_msg):
         assert_series_equal(left, right)
 
 
 @pytest.mark.parametrize(
-    ("check_dtypes", "context"),
-    [(False, nullcontext()), (True, _pytest_assertion_error("dtype mismatch"))],
+    ("setup_fn", "error_msg", "check_dtypes", "check_names"),
+    [
+        (lambda s: (s, s.cast(nw.UInt32())), "dtype mismatch", True, False),
+        (lambda s: (s, s.cast(nw.UInt32()).rename("baz")), "dtype mismatch", True, True),
+        (lambda s: (s, s.rename("baz")), "name mismatch", False, True),
+    ],
 )
-def test_check_dtypes(
-    constructor_eager: ConstructorEager, *, check_dtypes: bool, context: Any
+def test_metadata_checks_with_flags(
+    constructor_eager: ConstructorEager,
+    setup_fn: SetupFn,
+    error_msg: str,
+    *,
+    check_dtypes: bool,
+    check_names: bool,
 ) -> None:
-    left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    with context:
+    """Test the effect of check_dtypes and check_names flags."""
+    series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    left, right = setup_fn(series)
+
+    with _pytest_assertion_error(error_msg):
         assert_series_equal(
-            left.cast(nw.UInt32()), left.cast(nw.Int64()), check_dtypes=check_dtypes
+            left, right, check_dtypes=check_dtypes, check_names=check_names
         )
 
-
-@pytest.mark.parametrize(
-    ("check_names", "context"),
-    [(False, nullcontext()), (True, _pytest_assertion_error("name mismatch"))],
-)
-def test_check_names(
-    constructor_eager: ConstructorEager, *, check_names: bool, context: Any
-) -> None:
-    left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    with context:
-        assert_series_equal(
-            left.rename("foo"), left.rename("bar"), check_names=check_names
-        )
+    assert_series_equal(left, right, check_dtypes=False, check_names=False)
 
 
 @pytest.mark.parametrize(
-    ("check_order", "context"),
-    [(True, nullcontext()), (False, pytest.raises(NotImplementedError))],
+    ("dtype", "check_order", "context"),
+    [
+        (nw.List(nw.Int32()), False, pytest.raises(NotImplementedError)),
+        (nw.List(nw.Int32()), True, does_not_raise()),
+        (nw.Int32(), False, does_not_raise()),
+        (nw.Int32(), True, does_not_raise()),
+    ],
 )
-def test_nested_check_order(
-    constructor_eager: ConstructorEager, *, check_order: bool, context: Any
+def test_check_order(
+    constructor_eager: ConstructorEager,
+    dtype: nw.dtypes.DType,
+    *,
+    check_order: bool,
+    context: Any,
 ) -> None:
-    left = nw.from_native(constructor_eager({"a": [[1, 2, 3]]}), eager_only=True)[
-        "a"
-    ].cast(nw.List(nw.Int32()))
-    with context:
-        assert_series_equal(left, left, check_order=check_order)
+    """Test check_order behavior with nested and simple data."""
+    data: list[Any] = [[1, 2, 3]] if dtype.is_nested() else [1, 2, 3]
+    frame = nw.from_native(constructor_eager({"a": data}), eager_only=True)
+    left = right = frame["a"].cast(dtype)
 
-
-@pytest.mark.parametrize(
-    ("check_order", "context"),
-    [(False, nullcontext()), (True, _pytest_assertion_error("exact value mismatch"))],
-)
-def test_non_nested_check_order(
-    constructor_eager: ConstructorEager, *, check_order: bool, context: Any
-) -> None:
-    data = {"left": ["a", "b", "c"], "right": ["b", "c", "a"]}
-    frame = nw.from_native(constructor_eager(data), eager_only=True)
-    left, right = frame["left"], frame["right"]
     with context:
         assert_series_equal(left, right, check_order=check_order, check_names=False)
 
 
 @pytest.mark.parametrize(
-    "_data",
+    "null_data",
     [
-        {"left": ["x", None, None], "right": ["x", None, "x"]},
-        {"left": ["x", None, None], "right": [None, None, "x"]},
+        {"left": ["x", "y", None], "right": ["x", None, "y"]},  # Different null position
+        {"left": ["x", None, None], "right": [None, "x", "y"]},  # Different null counts
     ],
 )
-def test_null_mismatch(constructor_eager: ConstructorEager, _data: Data) -> None:
-    frame = nw.from_native(constructor_eager(_data), eager_only=True)
+def test_null_mismatch(constructor_eager: ConstructorEager, null_data: Data) -> None:
+    """Test null value mismatch detection."""
+    frame = nw.from_native(constructor_eager(null_data), eager_only=True)
     left, right = frame["left"], frame["right"]
     with _pytest_assertion_error("null value mismatch"):
         assert_series_equal(left, right, check_names=False)
@@ -130,7 +139,7 @@ def test_null_mismatch(constructor_eager: ConstructorEager, _data: Data) -> None
     [
         (True, 1e-3, 1e-3, _pytest_assertion_error("exact value mismatch")),
         (False, 1e-3, 1e-3, _pytest_assertion_error("values not within tolerance")),
-        (False, 2e-1, 2e-1, nullcontext()),
+        (False, 2e-1, 2e-1, does_not_raise()),
     ],
 )
 def test_numeric(
@@ -190,8 +199,14 @@ def test_numeric(
             _pytest_assertion_error("nested value mismatch"),
             nw.Array(nw.Float32(), 2),
         ),
-        ([[0.0, 1e-10]], [[1e-10, 0.0]], False, nullcontext(), nw.List(nw.Float64())),
-        ([[0.0, 1e-10]], [[1e-10, 0.0]], False, nullcontext(), nw.Array(nw.Float64(), 2)),
+        ([[0.0, 1e-10]], [[1e-10, 0.0]], False, does_not_raise(), nw.List(nw.Float64())),
+        (
+            [[0.0, 1e-10]],
+            [[1e-10, 0.0]],
+            False,
+            does_not_raise(),
+            nw.Array(nw.Float64(), 2),
+        ),
     ],
 )
 def test_list_like(
@@ -204,10 +219,8 @@ def test_list_like(
     dtype: nw.dtypes.DType,
 ) -> None:
     data = {"left": l_vals, "right": r_vals}
-    frame = nw.from_native(constructor_eager(data), eager_only=True).select(
-        nw.all().cast(dtype)
-    )
-    left, right = frame["left"], frame["right"]
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
     with context:
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
 
@@ -231,7 +244,7 @@ def test_list_like(
             [{"a": 0.0, "b": ["orca"]}, None],
             [{"a": 1e-10, "b": ["orca"]}, None],
             False,
-            nullcontext(),
+            does_not_raise(),
         ),
     ],
 )
@@ -245,9 +258,7 @@ def test_struct(
 ) -> None:
     dtype = nw.Struct({"a": nw.Float32(), "b": nw.List(nw.String())})
     data = {"left": l_vals, "right": r_vals}
-    frame = nw.from_native(constructor_eager(data), eager_only=True).select(
-        nw.all().cast(dtype)
-    )
-    left, right = frame["left"], frame["right"]
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
     with context:
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
