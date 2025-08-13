@@ -17,7 +17,6 @@ from narwhals._compliant.typing import (
     NativeSeriesT,
     NativeSeriesT_co,
 )
-from narwhals._compliant.utils import IsClose
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
@@ -74,7 +73,6 @@ __all__ = [
 
 
 class CompliantSeries(
-    IsClose,
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,
     FromNative[NativeSeriesT],
