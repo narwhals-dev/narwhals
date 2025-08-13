@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import functools
 import math
+import operator
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -187,6 +189,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def eq(self, other: Self | Any) -> Self:
+        """Method equivalent of equality operator `expr == other`.
+
+        Arguments:
+            other: A literal or expression value to compare against.
+
+        Returns:
+            A new expression.
+        """
+        return self.__eq__(other)
+
     def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -195,6 +208,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def ne(self, other: Self | Any) -> Self:
+        """Method equivalent of equality operator `expr != other`.
+
+        Arguments:
+            other: A literal or expression value to compare against.
+
+        Returns:
+            A new expression.
+        """
+        return self.__ne__(other)
+
     def __and__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -202,6 +226,17 @@ class Expr:
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def and_(self, *others: Any) -> Self:
+        """Method equivalent of bitwise "and" operator `expr & other & ...`.
+
+        Arguments:
+            *others: One or more integer or boolean expressions to evaluate/combine.
+
+        Returns:
+            A new expression.
+        """
+        return functools.reduce(operator.and_, (self, *others))  # type: ignore[no-any-return]
 
     def __rand__(self, other: Any) -> Self:
         return (self & other).alias("literal")  # type: ignore[no-any-return]
@@ -214,6 +249,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def or_(self, *others: Any) -> Self:
+        """Method equivalent of bitwise "or" operator `expr | other | ...`.
+
+        Arguments:
+            *others: One or more integer or boolean expressions to evaluate/combine.
+
+        Returns:
+            A new expression.
+        """
+        return functools.reduce(operator.or_, (self, *others))  # type: ignore[no-any-return]
+
     def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
@@ -225,6 +271,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def add(self, other: Any) -> Self:
+        """Method equivalent of addition operator `expr + other`.
+
+        Arguments:
+            other: numeric or string value; accepts expression input.
+
+        Returns:
+            A new expression.
+        """
+        return self.__add__(other)
+
     def __radd__(self, other: Any) -> Self:
         return (self + other).alias("literal")  # type: ignore[no-any-return]
 
@@ -235,6 +292,17 @@ class Expr:
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def sub(self, other: Any) -> Self:
+        """Method equivalent of subtraction operator `expr - other`.
+
+        Arguments:
+            other: Numeric literal or expression value.
+
+        Returns:
+            A new expression.
+        """
+        return self.__sub__(other)
 
     def __rsub__(self, other: Any) -> Self:
         return self.__class__(
@@ -252,6 +320,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def truediv(self, other: Any) -> Self:
+        """Method equivalent of division operator `expr / other`.
+
+        Arguments:
+            other: Numeric literal or expression value.
+
+        Returns:
+            A new expression.
+        """
+        return self.__truediv__(other)
+
     def __rtruediv__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -268,6 +347,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def mul(self, other: Any) -> Self:
+        """Method equivalent of multiplication operator `expr * other`.
+
+        Arguments:
+            other: Numeric literal or expression value.
+
+        Returns:
+            A new expression.
+        """
+        return self.__mul__(other)
+
     def __rmul__(self, other: Any) -> Self:
         return (self * other).alias("literal")  # type: ignore[no-any-return]
 
@@ -279,6 +369,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def le(self, other: Any) -> Self:
+        """Method equivalent of "less than or equal" operator `expr <= other`.
+
+        Arguments:
+            other: A literal or expression value to compare with.
+
+        Returns:
+            A new expression.
+        """
+        return self.__le__(other)
+
     def __lt__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -286,6 +387,17 @@ class Expr:
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def lt(self, other: Any) -> Self:
+        """Method equivalent of "less than" operator `expr < other`.
+
+        Arguments:
+            other: A literal or expression value to compare with.
+
+        Returns:
+            A new expression.
+        """
+        return self.__lt__(other)
 
     def __gt__(self, other: Any) -> Self:
         return self.__class__(
@@ -295,6 +407,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def gt(self, other: Any) -> Self:
+        """Method equivalent of "greater than" operator `expr > other`.
+
+        Arguments:
+            other: A literal or expression value to compare with.
+
+        Returns:
+            A new expression.
+        """
+        return self.__gt__(other)
+
     def __ge__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -303,6 +426,17 @@ class Expr:
             ExprMetadata.from_binary_op(self, other),
         )
 
+    def ge(self, other: Any) -> Self:
+        """Method equivalent of "greater than or equal" operator `expr >= other`.
+
+        Arguments:
+            other: A literal or expression value to compare with.
+
+        Returns:
+            A new expression.
+        """
+        return self.__ge__(other)
+
     def __pow__(self, other: Any) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
@@ -310,6 +444,17 @@ class Expr:
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def pow(self, other: Any) -> Self:
+        """Method equivalent of exponentiation operator `expr ** exponent`.
+
+        Arguments:
+            other: Numeric literal or expression exponent value.
+
+        Returns:
+            A new expression.
+        """
+        return self.__pow__(other)
 
     def __rpow__(self, other: Any) -> Self:
         return self.__class__(
@@ -326,6 +471,17 @@ class Expr:
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def floordiv(self, other: Any) -> Self:
+        """Method equivalent of integer division operator `expr // other`.
+
+        Arguments:
+            other: Numeric literal or expression value.
+
+        Returns:
+            A new expression.
+        """
+        return self.__floordiv__(other)
 
     def __rfloordiv__(self, other: Any) -> Self:
         return self.__class__(
@@ -356,6 +512,14 @@ class Expr:
         return self._with_elementwise(
             lambda plx: self._to_compliant_expr(plx).__invert__()
         )
+
+    def not_(self) -> Self:
+        """Method equivalent of inversion operator `~expr`.
+
+        Returns:
+            A new expression.
+        """
+        return self.__invert__()
 
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
@@ -1262,9 +1426,11 @@ class Expr:
                 strategy=strategy,
                 limit=limit,
             ),
-            self._metadata.with_orderable_window()
-            if strategy is not None
-            else self._metadata,
+            (
+                self._metadata.with_orderable_window()
+                if strategy is not None
+                else self._metadata
+            ),
         )
 
     # --- partial reduction ---
