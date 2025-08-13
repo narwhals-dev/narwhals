@@ -2,16 +2,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals import Categorical, String, from_native, new_series
+from narwhals import (
+    Array,
+    Boolean,
+    Categorical,
+    List,
+    String,
+    Struct,
+    from_native,
+    new_series,
+)
 from narwhals.testing.asserts.utils import raise_assertion_error
 
 if TYPE_CHECKING:
-    from narwhals.typing import SeriesT
+    from narwhals.typing import IntoSeriesT
 
 
 def assert_series_equal(  # noqa: C901, PLR0912
-    left: SeriesT,
-    right: SeriesT,
+    left: IntoSeriesT,
+    right: IntoSeriesT,
     *,
     check_dtypes: bool = True,
     check_names: bool = True,
@@ -78,22 +87,63 @@ def assert_series_equal(  # noqa: C901, PLR0912
     if check_exact or not l_dtype.is_numeric():
         if l_dtype.is_numeric():
             # For numeric dtypes, we can use `is_close` with 0-tolerances to handle inf
-            # and nan values.
-            is_not_equal_mask = ~left_.is_close(
-                right_, rel_tol=0, abs_tol=0, nans_equal=True
+            # and nan values out of the box.
+            is_not_equal_mask = ~l_vals.is_close(
+                r_vals, rel_tol=0, abs_tol=0, nans_equal=True
             )
-        elif l_dtype.is_nested():
-            # TODO(FBruzzesi): Handle nested with inner numerical
-            # 1. Polars raises: AssertionError: Series are different (nested value mismatch)
-            # 2. check_exact and tolerances are considered within the inner type as well
+        # Handle nested types
+        elif isinstance(l_dtype, (Array, List)) and isinstance(r_dtype, (Array, List)):
+            # Check row by row after transforming each array/list into a new series.
+            # Notice that order within the array/list must be the same, regardless of
+            # `check_order` value at the top level.
+            try:
+                for l_val, r_val in zip(l_vals, r_vals):
+                    assert_series_equal(
+                        left=new_series("", l_val, l_dtype.inner, backend=l_impl),
+                        right=new_series("", r_val, r_dtype.inner, backend=r_impl),
+                        check_dtypes=check_dtypes,
+                        check_names=False,
+                        check_order=True,
+                        check_exact=check_exact,
+                        rel_tol=rel_tol,
+                        abs_tol=abs_tol,
+                        categorical_as_str=categorical_as_str,
+                    )
+            except AssertionError:
+                raise_assertion_error("Series", "nested value mismatch", l_vals, r_vals)
+
+            # If we never raise before, then every nested element is equal
             is_not_equal_mask = new_series(
-                l_vals.name,
-                (
-                    any(x != y for x, y in zip(l_val, r_val))
-                    for l_val, r_val in zip(l_vals, r_vals)
-                ),
-                backend=l_impl,
+                l_name, [False], dtype=Boolean(), backend=l_impl
             )
+
+        elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
+            # Check field by field as a separate column.
+            # Notice that for struct's polars raises if:
+            #   * field names are different but values are equal
+            #   * dtype differs, regardless of `check_dtypes=False`
+            #   * order applies only at top level
+            try:
+                for l_field, r_field in zip(l_dtype.fields, r_dtype.fields):
+                    assert_series_equal(
+                        left=l_vals.struct.field(l_field.name),
+                        right=r_vals.struct.field(r_field.name),
+                        check_dtypes=True,
+                        check_names=True,
+                        check_order=True,
+                        check_exact=check_exact,
+                        rel_tol=rel_tol,
+                        abs_tol=abs_tol,
+                        categorical_as_str=categorical_as_str,
+                    )
+            except AssertionError:
+                raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
+
+            # If we never raise before, then every nested element is equal
+            is_not_equal_mask = new_series(
+                l_name, [False], dtype=Boolean(), backend=l_impl
+            )
+
         else:
             is_not_equal_mask = l_vals != r_vals
 
@@ -101,8 +151,8 @@ def assert_series_equal(  # noqa: C901, PLR0912
             raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
 
     else:
-        is_not_close_mask = ~left_.is_close(
-            right_, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
+        is_not_close_mask = ~l_vals.is_close(
+            r_vals, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
         )
 
         if is_not_close_mask.any():
