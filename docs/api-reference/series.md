@@ -36,6 +36,7 @@
         - hist
         - implementation
         - is_between
+        - is_close
         - is_duplicated
         - is_empty
         - is_finite
