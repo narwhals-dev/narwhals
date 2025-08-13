@@ -138,6 +138,11 @@ class ExprListNamespace(Generic[ExprT]):
                 f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
             )
             raise TypeError(msg)
+
+        if index < 0:
+            msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
+            raise ValueError(msg)
+
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).list.get(index)
         )

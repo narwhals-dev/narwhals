@@ -105,6 +105,16 @@ class SeriesListNamespace(Generic[SeriesT]):
                     5
             ]
         """
+        if not isinstance(index, int):
+            msg = (
+                f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
+            )
+            raise TypeError(msg)
+
+        if index < 0:
+            msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
+            raise ValueError(msg)
+
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.get(index)
         )
