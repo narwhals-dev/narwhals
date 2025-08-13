@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import duckdb
 import duckdb.typing as duckdb_dtypes
@@ -268,13 +268,12 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
             for field in dtype.fields
         }
         return duckdb.struct_type(fields)
-    if isinstance_or_issubclass(dtype, dtypes.Array):
-        shape = dtype.shape
-        duckdb_shape_fmt = "".join(f"[{item}]" for item in shape)
-        inner_dtype: Any = dtype
-        for _ in shape:
-            inner_dtype = inner_dtype.inner
-        duckdb_inner = narwhals_to_native_dtype(inner_dtype, version, deferred_time_zone)
+    if isinstance(dtype, dtypes.Array):
+        nw_inner: IntoDType = dtype
+        while isinstance(nw_inner, dtypes.Array):
+            nw_inner = nw_inner.inner
+        duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
+        duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
         return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         msg = "Casting to Decimal is not supported yet."
