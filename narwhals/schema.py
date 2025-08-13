@@ -65,34 +65,19 @@ class Schema(OrderedDict[str, "DType"]):
         super().__init__(schema)
 
     def names(self) -> list[str]:
-        """Get the column names of the schema.
-
-        Returns:
-            Column names.
-        """
+        """Get the column names of the schema."""
         return list(self.keys())
 
     def dtypes(self) -> list[DType]:
-        """Get the data types of the schema.
-
-        Returns:
-            Data types of schema.
-        """
+        """Get the data types of the schema."""
         return list(self.values())
 
     def len(self) -> int:
-        """Get the number of columns in the schema.
-
-        Returns:
-            Number of columns.
-        """
+        """Get the number of columns in the schema."""
         return len(self)
 
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
-
-        Returns:
-            A pyarrow Schema.
 
         Examples:
             >>> import narwhals as nw
@@ -118,9 +103,6 @@ class Schema(OrderedDict[str, "DType"]):
         Arguments:
             dtype_backend: Backend(s) used for the native types. When providing more than
                 one, the length of the iterable must be equal to the length of the schema.
-
-        Returns:
-            An ordered mapping of column names to their pandas data type.
 
         Examples:
             >>> import narwhals as nw
@@ -168,9 +150,6 @@ class Schema(OrderedDict[str, "DType"]):
 
     def to_polars(self) -> pl.Schema:
         """Convert Schema to a polars Schema.
-
-        Returns:
-            A polars Schema or plain dict (prior to polars 1.0).
 
         Examples:
             >>> import narwhals as nw
