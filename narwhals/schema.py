@@ -99,9 +99,6 @@ class Schema(OrderedDict[str, "DType"]):
         Arguments:
             schema: A pyarrow Schema or mapping of column names to pyarrow data types.
 
-        Returns:
-            A Narwhals Schema.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -139,9 +136,6 @@ class Schema(OrderedDict[str, "DType"]):
 
         Arguments:
             schema: A mapping of column names to pandas-like data types.
-
-        Returns:
-            A Narwhals Schema.
 
         Examples:
             >>> import numpy as np
@@ -184,9 +178,6 @@ class Schema(OrderedDict[str, "DType"]):
             schema: A native schema object, or mapping of column names to
                 *instantiated* native data types.
 
-        Returns:
-            A Narwhals Schema.
-
         Examples:
             >>> import datetime as dt
             >>> import pyarrow as pa
@@ -217,9 +208,6 @@ class Schema(OrderedDict[str, "DType"]):
         Arguments:
             schema: A polars Schema or mapping of column names to *instantiated*
                 polars data types.
-
-        Returns:
-            A Narwhals Schema.
 
         Examples:
             >>> import polars as pl
