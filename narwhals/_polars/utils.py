@@ -209,8 +209,8 @@ def narwhals_to_native_dtype(  # noqa: C901
         size = dtype.size
         kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
-    if dtype == dtypes.Decimal:
-        msg = "Casting to Decimal is not supported yet."
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for Polars."
         raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 

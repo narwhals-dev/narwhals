@@ -124,7 +124,9 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
     if isinstance_or_issubclass(
         dtype, (dtypes.List, dtypes.Struct, dtypes.Array, dtypes.Time, dtypes.Binary)
     ):  # pragma: no cover
-        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported yet"
+        msg = (
+            f"Converting to {dtype.base_type().__name__} dtype is not supported for Dask."
+        )
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

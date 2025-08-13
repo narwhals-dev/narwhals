@@ -194,9 +194,7 @@ NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
 }
 
 
-def narwhals_to_native_dtype(  # noqa: C901
-    dtype: IntoDType, version: Version
-) -> IbisDataType:
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType:
     dtypes = version.dtypes
     if ibis_type := NW_TO_IBIS_DTYPES.get(dtype.base_type()):
         return ibis_type
@@ -216,18 +214,14 @@ def narwhals_to_native_dtype(  # noqa: C901
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
-    if isinstance_or_issubclass(dtype, dtypes.Int128):  # pragma: no cover
-        msg = "Int128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):  # pragma: no cover
-        msg = "UInt128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Enum):
-        # Ibis does not support: https://github.com/ibis-project/ibis/issues/10991
-        msg = "Enum not supported by Ibis"
+    if isinstance_or_issubclass(
+        dtype,
+        (dtypes.Int128, dtypes.Int128, dtypes.UInt128, dtypes.Categorical, dtypes.Enum),
+    ):
+        # Enum support: https://github.com/ibis-project/ibis/issues/10991
+        msg = (
+            f"Converting to {dtype.base_type().__name__} dtype is not supported for Ibis."
+        )
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

@@ -275,11 +275,8 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
         duckdb_inner = narwhals_to_native_dtype(nw_inner, version, deferred_time_zone)
         duckdb_shape_fmt = "".join(f"[{item}]" for item in dtype.shape)
         return DuckDBPyType(f"{duckdb_inner}{duckdb_shape_fmt}")
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by DuckDB"
+    if isinstance_or_issubclass(dtype, (dtypes.Decimal, dtypes.Categorical)):
+        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for DuckDB."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)

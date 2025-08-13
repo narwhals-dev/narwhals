@@ -389,9 +389,7 @@ def test_cast_decimal_to_native() -> None:
         ),
     ]
     for obj in library_obj_to_test:
-        with pytest.raises(
-            NotImplementedError, match="Casting to Decimal is not supported yet."
-        ):
+        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
             (
                 nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))

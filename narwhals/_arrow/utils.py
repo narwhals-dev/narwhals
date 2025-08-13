@@ -211,11 +211,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Object):
-        msg = f"Converting to {dtype} dtype is not supported for pyarrow."
+    if isinstance_or_issubclass(dtype, (dtypes.Decimal, dtypes.Object)):
+        msg = f"Converting to {dtype.base_type().__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
