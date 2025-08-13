@@ -825,15 +825,19 @@ class PandasLikeSeries(EagerSeries[Any]):
             if upper_bound is not None
             else (None, None)
         )
-        if self._implementation.is_modin():
-            result = native
-            if lower is not None:
-                result = result.where(result >= lower, lower)
-            if upper is not None:
-                result = result.where(result <= upper, upper)
-
-        else:
+        if self._implementation.is_pandas():
             result = native.clip(lower, upper)
+        else:
+            native_cls = type(native)
+            if isinstance(lower, native_cls) or isinstance(upper, native_cls):
+                result = native
+                if lower is not None:
+                    result = result.where(result >= lower, lower)
+                if upper is not None:
+                    result = result.where(result <= upper, upper)
+            else:
+                kwargs = {"axis": 0} if self._implementation.is_modin() else {}
+                result = self.native.clip(lower, upper, **kwargs)
 
         return self._with_native(result)
 
