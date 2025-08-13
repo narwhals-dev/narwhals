@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import datetime as dt
+import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
@@ -532,16 +532,16 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
-    
+
     # TODO @mp: this should be connection point to plugin
 
     if sys.version_info < (3, 10):
         from importlib_metadata import entry_points
     else:
         from importlib.metadata import entry_points
-    
-    discovered_plugins = entry_points(group='narwhals.plugins')
-    
+
+    discovered_plugins = entry_points(group="narwhals.plugins")
+
     print(discovered_plugins)
 
     if not pass_through:

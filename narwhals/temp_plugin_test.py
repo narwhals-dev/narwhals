@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 10):
@@ -5,6 +7,6 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import entry_points
 
-discovered_plugins = entry_points(group='narwhals.plugins')
+discovered_plugins = entry_points(group="narwhals.plugins")
 
 print(discovered_plugins)
