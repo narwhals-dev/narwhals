@@ -18,9 +18,6 @@ class ExprListNamespace(Generic[ExprT]):
 
         Null values count towards the total.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -51,9 +48,6 @@ class ExprListNamespace(Generic[ExprT]):
         """Get the unique/distinct values in the list.
 
         Null values are included in the result. The order of unique values is not guaranteed.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -86,9 +80,6 @@ class ExprListNamespace(Generic[ExprT]):
 
         Arguments:
             item: Item that will be checked for membership.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl

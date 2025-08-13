@@ -623,11 +623,7 @@ class Struct(NestedType):
         return f"{class_name}({dict(self)})"
 
     def to_schema(self) -> OrderedDict[str, IntoDType]:
-        """Return Struct dtype as a schema dict.
-
-        Returns:
-            Mapping from column name to dtype.
-        """
+        """Return Struct dtype as a schema dict."""
         return OrderedDict(self)
 
 
