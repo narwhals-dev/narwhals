@@ -81,6 +81,7 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
 
 
 dtypes = Version.MAIN.dtypes
+dtypes_v1 = Version.V1.dtypes
 NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
     dtypes.Float64: "float64",
     dtypes.Float32: "float32",
@@ -97,6 +98,8 @@ NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
     dtypes.UInt64: "uint64",
     dtypes.Datetime: "datetime64[us]",
     dtypes.Duration: "timedelta64[ns]",
+    dtypes_v1.Datetime: "datetime64[us]",
+    dtypes_v1.Duration: "timedelta64[ns]",
 }
 
 
