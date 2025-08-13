@@ -4,7 +4,6 @@ import operator
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from duckdb import CoalesceOperator, StarExpression
-from duckdb.typing import DuckDBPyType
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
@@ -274,15 +273,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(DuckDBPyType(native_dtype)) for expr in self(df)]
+            return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [
-                expr.cast(DuckDBPyType(native_dtype))
-                for expr in self.window_function(df, inputs)
-            ]
+            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,
