@@ -261,7 +261,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def weekday(self) -> SeriesT:
         """Extract the week day in a datetime series.
 
-            Returns the ISO weekday number where monday = 1 and sunday = 7
+        Note that Monday = 1 and Sunday = 7.
 
         Examples:
             >>> from datetime import datetime

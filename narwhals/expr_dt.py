@@ -313,6 +313,8 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def weekday(self) -> ExprT:
         """Extract the week day from the underlying Date representation.
 
+        Note that Monday = 1 and Sunday = 7.
+
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd

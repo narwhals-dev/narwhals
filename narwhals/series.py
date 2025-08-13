@@ -204,6 +204,9 @@ class Series(Generic[IntoSeriesT]):
                 - If `idx` is a slice, a sequence of integers, or another Series
                     (with integer values) a subset of the Series is returned.
 
+        Returns:
+            A single element if `idx` is an integer, else a subset of the Series.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
