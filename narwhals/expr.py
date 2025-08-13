@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import operator as op
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -192,177 +193,91 @@ class Expr:
         )
 
     # --- binary ---
-    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
+    def _with_binary(
+        self,
+        function: Callable[[Any, Any], Any],
+        other: Self | Any,
+        *,
+        str_as_lit: bool = True,
+    ) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x == y, self, other, str_as_lit=True
+                plx, function, self, other, str_as_lit=str_as_lit
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
+        return self._with_binary(op.eq, other)
 
     def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x != y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.ne, other)
 
     def __and__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x & y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.and_, other)
 
     def __rand__(self, other: Any) -> Self:
         return (self & other).alias("literal")  # type: ignore[no-any-return]
 
     def __or__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x | y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.or_, other)
 
     def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
     def __add__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x + y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.add, other)
 
     def __radd__(self, other: Any) -> Self:
         return (self + other).alias("literal")  # type: ignore[no-any-return]
 
     def __sub__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x - y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.sub, other)
 
     def __rsub__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rsub__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rsub__(y), other)
 
     def __truediv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x / y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.truediv, other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rtruediv__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rtruediv__(y), other)
 
     def __mul__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x * y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.mul, other)
 
     def __rmul__(self, other: Any) -> Self:
         return (self * other).alias("literal")  # type: ignore[no-any-return]
 
     def __le__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x <= y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.le, other)
 
     def __lt__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x < y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.lt, other)
 
     def __gt__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x > y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.gt, other)
 
     def __ge__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x >= y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.ge, other)
 
     def __pow__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x**y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.pow, other)
 
     def __rpow__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rpow__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rpow__(y), other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x // y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.floordiv, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rfloordiv__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rfloordiv__(y), other)
 
     def __mod__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x % y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.mod, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rmod__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rmod__(y), other)
 
     # --- unary ---
     def __invert__(self) -> Self:
@@ -1016,32 +931,24 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
-
-        def func(
-            compliant_expr: CompliantExpr[Any, Any],
-            lb: CompliantExpr[Any, Any],
-            ub: CompliantExpr[Any, Any],
-        ) -> CompliantExpr[Any, Any]:
-            if closed == "left":
-                return (compliant_expr >= lb) & (compliant_expr < ub)
-            if closed == "right":
-                return (compliant_expr > lb) & (compliant_expr <= ub)
-            if closed == "none":
-                return (compliant_expr > lb) & (compliant_expr < ub)
-            return (compliant_expr >= lb) & (compliant_expr <= ub)
-
+        metadata = combine_metadata(
+            self,
+            lower_bound,
+            upper_bound,
+            str_as_lit=False,
+            allow_multi_output=False,
+            to_single_output=False,
+        )
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, func, self, lower_bound, upper_bound, str_as_lit=False
-            ),
-            combine_metadata(
+                plx,
+                lambda slf, lb, ub: slf.is_between(lb, ub, closed=closed),
                 self,
                 lower_bound,
                 upper_bound,
                 str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
             ),
+            metadata,
         )
 
     def is_in(self, other: Any) -> Self:
@@ -1400,7 +1307,7 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return ~self.is_unique()
+        return self._with_window(lambda plx: self._to_compliant_expr(plx).is_duplicated())
 
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
