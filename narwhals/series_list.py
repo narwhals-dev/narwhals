@@ -88,6 +88,8 @@ class SeriesListNamespace(Generic[SeriesT]):
     def get(self, index: int) -> SeriesT:
         """Return the value by index in each list.
 
+        Negative indices are not accepted.
+
         Returns:
             A new series.
 

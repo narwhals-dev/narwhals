@@ -109,6 +109,8 @@ class ExprListNamespace(Generic[ExprT]):
     def get(self, index: int) -> ExprT:
         """Return the value by index in each list.
 
+        Negative indices are not accepted.
+
         Returns:
             A new expression.
 
