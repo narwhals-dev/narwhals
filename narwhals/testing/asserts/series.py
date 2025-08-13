@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     CheckFn: TypeAlias = Callable[[SeriesT, SeriesT], None]
 
 
-def assert_series_equal(  # noqa: C901, PLR0912
+def assert_series_equal(
     left: IntoSeriesT,
     right: IntoSeriesT,
     *,
@@ -60,93 +60,141 @@ def assert_series_equal(  # noqa: C901, PLR0912
     left_ = from_native(left, series_only=True, pass_through=False)
     right_ = from_native(right, series_only=True, pass_through=False)
 
-    if (l_impl := left_.implementation) != (r_impl := right_.implementation):
+    _check_metadata(left_, right_, check_dtypes=check_dtypes, check_names=check_names)
+
+    left_, right_ = _maybe_apply_preprocessing(
+        left_, right_, categorical_as_str=categorical_as_str, check_order=check_order
+    )
+
+    l_vals, r_vals = _check_null_values(left_, right_)
+
+    if check_exact or not left_.dtype.is_float():
+        _check_exact_values(
+            l_vals,
+            r_vals,
+            check_dtypes=check_dtypes,
+            check_exact=check_exact,
+            rel_tol=rel_tol,
+            abs_tol=abs_tol,
+            categorical_as_str=categorical_as_str,
+        )
+    else:
+        _check_approximate_values(l_vals, r_vals, rel_tol=rel_tol, abs_tol=abs_tol)
+
+
+def _check_metadata(
+    left: SeriesT, right: SeriesT, *, check_dtypes: bool, check_names: bool
+) -> None:
+    """Check basic equality properties: implementation, length, dtype, and names."""
+    if (l_impl := left.implementation) != (r_impl := right.implementation):
         raise_assertion_error("Series", "implementation mismatch", l_impl, r_impl)
 
-    if (l_len := len(left_)) != (r_len := len(right_)):
+    if (l_len := len(left)) != (r_len := len(right)):
         raise_assertion_error("Series", "length mismatch", l_len, r_len)
 
-    if (l_dtype := left_.dtype) != (r_dtype := right_.dtype) and check_dtypes:
+    if (l_dtype := left.dtype) != (r_dtype := right.dtype) and check_dtypes:
         raise_assertion_error("Series", "dtype mismatch", l_dtype, r_dtype)
 
-    if (l_name := left_.name) != (r_name := right_.name) and check_names:
+    if (l_name := left.name) != (r_name := right.name) and check_names:
         raise_assertion_error("Series", "name mismatch", l_name, r_name)
+
+
+def _maybe_apply_preprocessing(
+    left: SeriesT, right: SeriesT, *, categorical_as_str: bool, check_order: bool
+) -> tuple[SeriesT, SeriesT]:
+    """Apply preprocessing transformations like categorical casting and sorting."""
+    l_dtype = left.dtype
 
     # TODO(FBruzzesi): Add coverage
     if isinstance(l_dtype, Categorical) and categorical_as_str:  # pragma: no cover
-        left_, right_ = left_.cast(String()), right_.cast(String())
+        left, right = left.cast(String()), right.cast(String())
 
     if not check_order:
         if l_dtype.is_nested():
             msg = "`check_order=False` is not supported (yet) with nested data type."
             raise NotImplementedError(msg)
-        left_, right_ = left_.sort(), right_.sort()
+        left, right = left.sort(), right.sort()
 
-    if (l_null_count := left_.null_count()) != (r_null_count := right_.null_count()) or (
-        (l_null_mask := left_.is_null()) != (r_null_mask := right_.is_null())
+    return left, right
+
+
+def _check_null_values(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
+    """Check null value consistency and return non-null values."""
+    if (l_null_count := left.null_count()) != (r_null_count := right.null_count()) or (
+        (l_null_mask := left.is_null()) != (r_null_mask := right.is_null())
     ).any():
         raise_assertion_error("Series", "null value mismatch", l_null_count, r_null_count)
 
-    l_vals, r_vals = left_.filter(~l_null_mask), right_.filter(~r_null_mask)
+    return left.filter(~l_null_mask), right.filter(~r_null_mask)
 
-    if check_exact or not l_dtype.is_float():
-        if l_dtype.is_numeric():
-            # For _all_ numeric dtypes, we can use `is_close` with 0-tolerances to handle
-            # inf and nan values out of the box.
-            is_not_equal_mask = ~l_vals.is_close(
-                r_vals, rel_tol=0, abs_tol=0, nans_equal=True
-            )
 
-        elif isinstance(l_dtype, (Array, List)) and isinstance(r_dtype, (Array, List)):
-            check_fn = partial(
-                assert_series_equal,
-                check_dtypes=check_dtypes,
-                check_names=False,
-                check_order=True,
-                check_exact=check_exact,
-                rel_tol=rel_tol,
-                abs_tol=abs_tol,
-                categorical_as_str=categorical_as_str,
-            )
-            _check_list_like(l_vals, r_vals, l_dtype, r_dtype, check_fn=check_fn)
-
-            # If `_check_list_like` didn't raise, then every nested element is equal
-            is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
-
-        elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
-            check_fn = partial(
-                assert_series_equal,
-                check_dtypes=True,
-                check_names=True,
-                check_order=True,
-                check_exact=check_exact,
-                rel_tol=rel_tol,
-                abs_tol=abs_tol,
-                categorical_as_str=categorical_as_str,
-            )
-            _check_struct(l_vals, r_vals, l_dtype, r_dtype, check_fn=check_fn)
-
-            # If `_check_struct` didn't raise, then every nested element is equal
-            is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
-
-        else:
-            is_not_equal_mask = l_vals != r_vals
-
-        if is_not_equal_mask.any():
-            raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
-
-    else:
-        is_not_close_mask = ~l_vals.is_close(
-            r_vals, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
+def _check_exact_values(
+    left: SeriesT,
+    right: SeriesT,
+    *,
+    check_dtypes: bool,
+    check_exact: bool,
+    rel_tol: float,
+    abs_tol: float,
+    categorical_as_str: bool,
+) -> None:
+    """Check exact value equality for various data types."""
+    l_impl = left.implementation
+    l_dtype, r_dtype = left.dtype, right.dtype
+    if l_dtype.is_numeric():
+        # For _all_ numeric dtypes, we can use `is_close` with 0-tolerances to handle
+        # inf and nan values out of the box.
+        is_not_equal_mask = ~left.is_close(right, rel_tol=0, abs_tol=0, nans_equal=True)
+    elif isinstance(l_dtype, (Array, List)) and isinstance(r_dtype, (Array, List)):
+        check_fn = partial(
+            assert_series_equal,
+            check_dtypes=check_dtypes,
+            check_names=False,
+            check_order=True,
+            check_exact=check_exact,
+            rel_tol=rel_tol,
+            abs_tol=abs_tol,
+            categorical_as_str=categorical_as_str,
         )
+        _check_list_like(left, right, l_dtype, r_dtype, check_fn=check_fn)
+        # If `_check_list_like` didn't raise, then every nested element is equal
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
+    elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
+        check_fn = partial(
+            assert_series_equal,
+            check_dtypes=True,
+            check_names=True,
+            check_order=True,
+            check_exact=check_exact,
+            rel_tol=rel_tol,
+            abs_tol=abs_tol,
+            categorical_as_str=categorical_as_str,
+        )
+        _check_struct(left, right, l_dtype, r_dtype, check_fn=check_fn)
+        # If `_check_struct` didn't raise, then every nested element is equal
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
+    else:
+        is_not_equal_mask = left != right
 
-        if is_not_close_mask.any():
-            raise_assertion_error(
-                "Series",
-                "values not within tolerance",
-                l_vals.filter(is_not_close_mask),
-                r_vals.filter(is_not_close_mask),
-            )
+    if is_not_equal_mask.any():
+        raise_assertion_error("Series", "exact value mismatch", left, right)
+
+
+def _check_approximate_values(
+    left: SeriesT, right: SeriesT, *, rel_tol: float, abs_tol: float
+) -> None:
+    """Check approximate value equality with tolerance."""
+    is_not_close_mask = ~left.is_close(
+        right, rel_tol=rel_tol, abs_tol=abs_tol, nans_equal=True
+    )
+
+    if is_not_close_mask.any():
+        raise_assertion_error(
+            "Series",
+            "values not within tolerance",
+            left.filter(is_not_close_mask),
+            right.filter(is_not_close_mask),
+        )
 
 
 def _check_list_like(
