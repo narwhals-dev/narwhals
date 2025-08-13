@@ -17,9 +17,6 @@ class SeriesListNamespace(Generic[SeriesT]):
 
         Null values count towards the total.
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -45,9 +42,6 @@ class SeriesListNamespace(Generic[SeriesT]):
 
         Null values are included in the result. The order of unique values is not guaranteed.
 
-        Returns:
-            A new series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -72,9 +66,6 @@ class SeriesListNamespace(Generic[SeriesT]):
 
         Arguments:
             item: Item that will be checked for membership.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl
