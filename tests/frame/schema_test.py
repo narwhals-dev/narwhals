@@ -643,12 +643,6 @@ def test_schema_from_empty_mapping() -> None:
     expected = nw.Schema()
     assert nw.Schema.from_native({}) == expected
     assert nw.Schema.from_arrow({}) == expected
-    assert nw.Schema.from_cudf({}) == expected
-    # NOTE: Long time `mypy` bug (https://github.com/python/mypy/issues/6700)
-    # Fixed in (https://github.com/python/mypy/pull/19297)
-    # Should become an `[unused-ignore]` for `mypy>=1.18`
-    assert nw.Schema.from_modin({}) == expected  # type: ignore[arg-type,call-arg,misc]
-    assert nw.Schema.from_pandas({}) == expected
     assert nw.Schema.from_pandas_like({}) == expected
     assert nw.Schema.from_polars({}) == expected
 

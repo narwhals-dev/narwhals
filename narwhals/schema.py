@@ -134,46 +134,6 @@ class Schema(OrderedDict[str, "DType"]):
         )
 
     @classmethod
-    def from_cudf(cls, schema: IntoPandasSchema, /) -> Self:
-        """Construct a Schema from a cudf schema representation.
-
-        Arguments:
-            schema: A mapping of column names to cudf data types.
-
-        Returns:
-            A Narwhals Schema.
-        """
-        return cls._from_pandas_like(schema, Implementation.CUDF) if schema else cls()
-
-    @classmethod
-    def from_pandas(cls, schema: IntoPandasSchema, /) -> Self:
-        """Construct a Schema from a pandas schema representation.
-
-        Arguments:
-            schema: A mapping of column names to pandas data types.
-
-        Returns:
-            A Narwhals Schema.
-
-        Examples:
-            >>> import numpy as np
-            >>> import pandas as pd
-            >>> import pyarrow as pa
-            >>> import narwhals as nw
-            >>>
-            >>> mapping = {
-            ...     "a": pd.DatetimeTZDtype("us", "UTC"),
-            ...     "b": pd.ArrowDtype(pa.date32()),
-            ...     "c": pd.StringDtype("python"),
-            ...     "d": np.dtype("uint8"),
-            ... }
-            >>>
-            >>> nw.Schema.from_pandas(mapping)
-            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
-        """
-        return cls._from_pandas_like(schema, Implementation.PANDAS) if schema else cls()
-
-    @classmethod
     def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
         """Construct a Schema from a pandas-like schema representation.
 
@@ -184,25 +144,35 @@ class Schema(OrderedDict[str, "DType"]):
             A Narwhals Schema.
 
         Examples:
+            >>> import numpy as np
             >>> import pandas as pd
+            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>>
             >>> data = {"a": [1], "b": ["a"], "c": [False], "d": [9.2]}
-            >>> native = native = pd.DataFrame(data).convert_dtypes().dtypes.to_dict()
+            >>> native = pd.DataFrame(data).convert_dtypes().dtypes.to_dict()
             >>>
             >>> nw.Schema.from_pandas_like(native)
             Schema({'a': Int64, 'b': String, 'c': Boolean, 'd': Float64})
+            >>>
+            >>> mapping = {
+            ...     "a": pd.DatetimeTZDtype("us", "UTC"),
+            ...     "b": pd.ArrowDtype(pa.date32()),
+            ...     "c": pd.StringDtype("python"),
+            ...     "d": np.dtype("uint8"),
+            ... }
+            >>>
+            >>> nw.Schema.from_pandas_like(mapping)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
         """
-        from_native = (
-            cls.from_cudf
+        if not schema:
+            return cls()
+        impl = (
+            Implementation.CUDF
             if get_cudf() and any(is_cudf_dtype(dtype) for dtype in schema.values())
-            else cls.from_pandas
+            else Implementation.PANDAS
         )
-        return from_native(schema)
-
-    # NOTE: Just aliasing for consistency
-    # Only `cuDF` has unique paths
-    from_modin = from_pandas
+        return cls._from_pandas_like(schema, impl)
 
     @classmethod
     def from_native(
