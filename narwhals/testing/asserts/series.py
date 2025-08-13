@@ -47,10 +47,10 @@ def assert_series_equal(  # noqa: C901, PLR0912
         check_names: Requires names to match.
         check_order: Requires elements to appear in the same order.
         check_exact: Requires float values to match exactly. If set to `False`, values are
-            considered equal when within tolerance of each other (see `rel_tol` and `abs_tol`).
-            Only affects columns with a Float data type.
-        rel_tol: Relative tolerance for inexact checking, given as a fraction of the values in
-            `right`.
+            considered equal when within tolerance of each other (see `rel_tol` and
+            `abs_tol`). Only affects columns with a Float data type.
+        rel_tol: Relative tolerance for inexact checking, given as a fraction of the
+            values in `right`.
         abs_tol: Absolute tolerance for inexact checking.
         categorical_as_str: Cast categorical columns to string before comparing.
             Enabling this helps compare columns that do not share the same string cache.
@@ -89,10 +89,10 @@ def assert_series_equal(  # noqa: C901, PLR0912
 
     l_vals, r_vals = left_.filter(~l_null_mask), right_.filter(~r_null_mask)
 
-    if check_exact or not l_dtype.is_numeric():
+    if check_exact or not l_dtype.is_float():
         if l_dtype.is_numeric():
-            # For numeric dtypes, we can use `is_close` with 0-tolerances to handle inf
-            # and nan values out of the box.
+            # For _all_ numeric dtypes, we can use `is_close` with 0-tolerances to handle
+            # inf and nan values out of the box.
             is_not_equal_mask = ~l_vals.is_close(
                 r_vals, rel_tol=0, abs_tol=0, nans_equal=True
             )
