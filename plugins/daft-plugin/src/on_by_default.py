@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
-
 
 class ExampleOne:
     """First Example Plugin."""
 
-    def __init__(self, tree: Any) -> None:
-        self.tree = tree
+    def __init__(self):
+        pass
 
-    def run(self) -> Generator[Any, Any, None]:
+    def run(self) -> None:
         """Do nothing."""
-        yield from []
+        print('ExampleOne just ran!')  

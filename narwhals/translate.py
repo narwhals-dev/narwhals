@@ -535,6 +535,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     # TODO @mp: this should be connection point to plugin
 
+    # not sure first if statement is needed
     if sys.version_info < (3, 10):
         from importlib_metadata import entry_points
     else:
@@ -543,6 +544,14 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     discovered_plugins = entry_points(group="narwhals.plugins")
 
     print(discovered_plugins)
+
+    """
+    TODO @mp: need logic to go over all the entry points found, and if daft found,
+    (others later), we return the daft dataframe from_native. I think the transformation has
+    to happen inside the daft_plugin, first would just like to see that I can actually read
+    it in
+    
+    """
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
