@@ -67,9 +67,6 @@ class DType:
     def base_type(cls) -> type[Self]:
         """Return this DType's fundamental/root type class.
 
-        Returns:
-            A DType class.
-
         Examples:
             >>> import narwhals as nw
             >>> nw.Datetime("us").base_type()
