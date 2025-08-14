@@ -72,13 +72,6 @@ if TYPE_CHECKING:
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
-    EagerAllowedImplementation: TypeAlias = Literal[
-        Implementation.PANDAS,
-        Implementation.CUDF,
-        Implementation.MODIN,
-        Implementation.PYARROW,
-        Implementation.POLARS,
-    ]
 
     class _BasePandasLike(Sized, Protocol):
         index: Any

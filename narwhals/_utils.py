@@ -73,8 +73,9 @@ if TYPE_CHECKING:
         NativeSeriesT_co,
     )
     from narwhals._compliant.typing import EvalNames
-    from narwhals._namespace import EagerAllowedImplementation, Namespace
+    from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._typing import EAGER_ALLOWED
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -1603,7 +1604,7 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
+def is_eager_allowed(obj: Implementation) -> TypeIs[EAGER_ALLOWED]:
     return obj in {
         Implementation.PANDAS,
         Implementation.MODIN,
