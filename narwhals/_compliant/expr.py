@@ -1000,6 +1000,9 @@ class EagerExprListNamespace(
     def contains(self, item: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "contains", item=item)
 
+    def get(self, index: int) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "get", index=index)
+
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
     _ExprNamespace[CompliantExprT_co],

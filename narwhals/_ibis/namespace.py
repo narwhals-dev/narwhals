@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import ibis
 import ibis.expr.types as ir
@@ -88,8 +88,7 @@ class IbisNamespace(SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"
                 for col in cols_casted[1:]:
                     result = result + separator + col
             else:
-                sep = cast("ir.StringValue", lit(separator))
-                result = sep.join(cols_casted)
+                result = lit(separator).join(cols_casted)
 
             return [result]
 

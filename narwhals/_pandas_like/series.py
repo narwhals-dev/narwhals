@@ -829,18 +829,18 @@ class PandasLikeSeries(EagerSeries[Any]):
             result = native.clip(lower, upper)
         else:
             native_cls = type(native)
-            if isinstance(lower, native_cls) or isinstance(upper, native_cls):
-                # Workaround for both cudf and modin when clipping with a series
-                #   * cudf: https://github.com/rapidsai/cudf/issues/17682
-                #   * modin: https://github.com/modin-project/modin/issues/7415
-                result = native
-                if lower is not None:
-                    result = result.where(result >= lower, lower)
-                if upper is not None:
-                    result = result.where(result <= upper, upper)
-            else:
-                kwargs = {"axis": 0} if self._implementation.is_modin() else {}
-                result = self.native.clip(lower, upper, **kwargs)
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            result = native
+            if isinstance(lower, native_cls):
+                result = result.where(result >= lower, lower)
+                lower = None
+            if isinstance(upper, native_cls):
+                result = result.where(result <= upper, upper)
+                upper = None
+            kwargs = {"axis": 0} if self._implementation.is_modin() else {}
+            result = result.clip(lower, upper, **kwargs)
 
         return self._with_native(result)
 
