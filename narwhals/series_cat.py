@@ -12,9 +12,6 @@ class SeriesCatNamespace(Generic[SeriesT]):
     def get_categories(self) -> SeriesT:
         """Get unique categories from column.
 
-        Returns:
-            A new Series containing the unique categories.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw

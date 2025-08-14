@@ -432,9 +432,6 @@ class Expr(NwExpr):
             with_replacement: Allow values to be sampled more than once.
             seed: Seed for the random number generator. If set to None (default), a random
                 seed is generated for each sample operation.
-
-        Returns:
-            A new expression.
         """
         return self._with_filtration(
             lambda plx: self._to_compliant_expr(plx).sample(  # type: ignore[attr-defined]
