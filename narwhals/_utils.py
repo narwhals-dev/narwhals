@@ -84,12 +84,8 @@ if TYPE_CHECKING:
         CompliantSeries,
         DataFrameLike,
         DTypes,
-        EagerImplementation,
         IntoBackend,
-        IntoEagerBackend,
-        IntoLazyBackend,
         IntoSeriesT,
-        LazyImplementation,
         MultiIndexSelector,
         SingleIndexSelector,
         SizedMultiIndexSelector,
@@ -358,20 +354,6 @@ class Implementation(NoAutoEnum):
             return cls(backend_name)
         except ValueError:
             return Implementation.UNKNOWN
-
-    @overload
-    @classmethod
-    def from_backend(  # type: ignore[overload-overlap]
-        cls: type[Self], backend: IntoEagerBackend
-    ) -> EagerImplementation: ...
-
-    @overload
-    @classmethod
-    def from_backend(cls: type[Self], backend: IntoLazyBackend) -> LazyImplementation: ...
-
-    @overload
-    @classmethod
-    def from_backend(cls: type[Self], backend: IntoBackend) -> Implementation: ...
 
     @classmethod
     def from_backend(
@@ -1628,6 +1610,27 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
         Implementation.CUDF,
         Implementation.POLARS,
         Implementation.PYARROW,
+    }
+
+
+_CanCollectInto: TypeAlias = Literal[
+    Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW
+]
+_CanLazyInto: TypeAlias = Literal[
+    Implementation.DASK, Implementation.DUCKDB, Implementation.POLARS, Implementation.IBIS
+]
+
+
+def can_collect_into(obj: Implementation) -> TypeIs[_CanCollectInto]:
+    return obj in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
+
+
+def can_lazy_into(obj: Implementation) -> TypeIs[_CanLazyInto]:
+    return obj in {
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.POLARS,
+        Implementation.IBIS,
     }
 
 

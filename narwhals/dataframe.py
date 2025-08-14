@@ -11,6 +11,7 @@ from typing import (
     Literal,
     NoReturn,
     TypeVar,
+    get_args,
     overload,
 )
 
@@ -24,6 +25,10 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
+    _CanCollectInto,
+    _CanLazyInto,
+    can_collect_into,
+    can_lazy_into,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -767,22 +772,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        lazy_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_lazy_backends = (
-            Implementation.DASK,
-            Implementation.DUCKDB,
-            Implementation.POLARS,
-            Implementation.IBIS,
-        )
-        if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
-            msg = (
-                "Not-supported backend."
-                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {lazy_backend}"
-            )
-            raise ValueError(msg)
-        return self._lazyframe(
-            self._compliant_frame.lazy(backend=lazy_backend), level="lazy"
-        )
+        lazy = self._compliant_frame.lazy
+        if backend is None:
+            return self._lazyframe(lazy(None), level="lazy")
+        lazy_backend = Implementation.from_backend(backend)
+        if can_lazy_into(lazy_backend):
+            return self._lazyframe(lazy(lazy_backend), level="lazy")
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_CanLazyInto)} or `None`, got {lazy_backend}"
+        raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
@@ -2377,18 +2374,14 @@ class LazyFrame(BaseFrame[FrameT]):
             |  b: [[2,4]]      |
             └──────────────────┘
         """
-        eager_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_eager_backends = (
-            Implementation.POLARS,
-            Implementation.PANDAS,
-            Implementation.PYARROW,
-        )
-        if eager_backend is not None and eager_backend not in supported_eager_backends:
-            msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
-            raise ValueError(msg)
-        return self._dataframe(
-            self._compliant_frame.collect(backend=eager_backend, **kwargs), level="full"
-        )
+        collect = self._compliant_frame.collect
+        if backend is None:
+            return self._dataframe(collect(None, **kwargs), level="full")
+        eager_backend = Implementation.from_backend(backend)
+        if can_collect_into(eager_backend):
+            return self._dataframe(collect(eager_backend, **kwargs), level="full")
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_CanCollectInto)} or None, got: {eager_backend}."
+        raise ValueError(msg)
 
     def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.
