@@ -342,6 +342,3 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
-
-[project.entry-points.'narwhals.plugins']
-a = 'daft-plugin'
