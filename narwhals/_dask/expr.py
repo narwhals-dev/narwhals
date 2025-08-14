@@ -234,11 +234,11 @@ class DaskExpr(
     def __mod__(self, other: Any) -> Self:
         return self._binary_op("__mod__", other)
 
-    def __eq__(self, other: object) -> Self:
-        return self._binary_op("__eq__", other)  # type: ignore[override]
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__eq__", other)
 
-    def __ne__(self, other: object) -> Self:
-        return self._binary_op("__ne__", other)  # type: ignore[override]
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__ne__", other)
 
     def __ge__(self, other: Any) -> Self:
         return self._binary_op("__ge__", other)
