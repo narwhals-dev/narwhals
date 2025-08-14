@@ -7,7 +7,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -169,44 +168,38 @@ def native_to_narwhals_dtype(dtype: pa.DataType, version: Version) -> DType:  # 
     return dtypes.Unknown()  # pragma: no cover
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
+    dtypes.Float64: pa.float64(),
+    dtypes.Float32: pa.float32(),
+    dtypes.Binary: pa.binary(),
+    dtypes.String: pa.string(),
+    dtypes.Boolean: pa.bool_(),
+    dtypes.Categorical: pa.dictionary(pa.uint32(), pa.string()),
+    dtypes.Date: pa.date32(),
+    dtypes.Time: pa.time64("ns"),
+    dtypes.Int8: pa.int8(),
+    dtypes.Int16: pa.int16(),
+    dtypes.Int32: pa.int32(),
+    dtypes.Int64: pa.int64(),
+    dtypes.UInt8: pa.uint8(),
+    dtypes.UInt16: pa.uint16(),
+    dtypes.UInt32: pa.uint32(),
+    dtypes.UInt64: pa.uint64(),
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal, dtypes.Object)
+
+
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return pa.float64()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return pa.float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return pa.int64()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return pa.int32()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return pa.int16()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return pa.int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return pa.uint64()
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return pa.uint32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return pa.uint16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return pa.uint8()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return pa.string()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return pa.bool_()
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        return pa.dictionary(pa.uint32(), pa.string())
+    base_type = dtype.base_type()
+    if pa_type := NW_TO_PA_DTYPES.get(base_type):
+        return pa_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         unit = dtype.time_unit
         return pa.timestamp(unit, tz) if (tz := dtype.time_zone) else pa.timestamp(unit)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return pa.duration(dtype.time_unit)
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return pa.date32()
     if isinstance_or_issubclass(dtype, dtypes.List):
         return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
@@ -220,12 +213,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return pa.time64("ns")
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return pa.binary()
-    if isinstance_or_issubclass(dtype, dtypes.Object):
-        msg = f"Converting to {dtype} dtype is not supported for pyarrow."
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for PyArrow."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
