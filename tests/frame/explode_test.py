@@ -59,18 +59,18 @@ def test_explode_single_col(
             "l1",
             ["l2"],
             {
-                "a": ["x", "x", "y", "z", "w"],
-                "l1": [1, 2, None, None, None],
-                "l2": [3, None, None, 42, None],
+                "a": ["w", "x", "x", "y", "z"],
+                "l1": [None, 1, 2, None, None],
+                "l2": [None, 3, None, None, 42],
             },
         ),
         (
             "l3",
             ["l4"],
             {
-                "a": ["x", "x", "y", "z", "w"],
-                "l3": [1, 2, 3, None, 1],
-                "l4": [1, 2, 3, 123, 456],
+                "a": ["w", "x", "x", "y", "z"],
+                "l3": [1, 1, 2, 3, None],
+                "l4": [456, 1, 2, 3, 123],
             },
         ),
     ],
@@ -96,7 +96,7 @@ def test_explode_multiple_cols(
         .with_columns(nw.col(column, *more_columns).cast(nw.List(nw.Int32())))
         .explode(column, *more_columns)
         .select("a", column, *more_columns)
-        .sort("a", column, *more_columns, nulls_last=True)
+        .sort("a", column, nulls_last=True)
     )
     assert_equal_data(result, expected)
 
