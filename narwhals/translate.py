@@ -535,15 +535,25 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     # TODO @mp: this should be connection point to plugin
 
-    # not sure first if statement is needed
-    if sys.version_info < (3, 10):
-        from importlib_metadata import entry_points
-    else:
-        from importlib.metadata import entry_points
+    from importlib.metadata import entry_points
 
     discovered_plugins = entry_points(group="narwhals.plugins")
 
-    print(discovered_plugins)
+    for plugin in discovered_plugins:
+
+        obj = plugin.load()
+        frame = obj.dataframe.DaftLazyFrame
+        print(type(frame))
+
+        #from obj.dataframe import DaftLazyFrame
+        # try:
+        #     df_compliant = LazyFrame(df_native, version=Version.MAIN)
+        #     return df_compliant.to_narwhals()
+        # except:
+        #     # try the next plugin
+        #     continue
+        
+
 
     """
     TODO @mp: need logic to go over all the entry points found, and if daft found,
