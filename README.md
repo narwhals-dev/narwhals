@@ -181,6 +181,7 @@ Join the party!
 - [plotly](https://plotly.com)
 - [pointblank](https://github.com/posit-dev/pointblank)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [pyreadstat](https://github.com/Roche/pyreadstat)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [rio](https://github.com/rio-labs/rio)
 - [scikit-lego](https://github.com/koaning/scikit-lego)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
@@ -23,8 +23,27 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
-lit = ibis.literal
-"""Alias for `ibis.literal`."""
+Incomplete: TypeAlias = Any
+"""Marker for upstream issues."""
+
+
+@overload
+def lit(value: bool, dtype: None = ...) -> ir.BooleanScalar: ...  # noqa: FBT001
+@overload
+def lit(value: int, dtype: None = ...) -> ir.IntegerScalar: ...
+@overload
+def lit(value: float, dtype: None = ...) -> ir.FloatingScalar: ...
+@overload
+def lit(value: str, dtype: None = ...) -> ir.StringScalar: ...
+@overload
+def lit(value: PythonLiteral | ir.Value, dtype: None = ...) -> ir.Scalar: ...
+@overload
+def lit(value: Any, dtype: Any) -> Incomplete: ...
+def lit(value: Any, dtype: Any | None = None) -> Incomplete:
+    """Alias for `ibis.literal`."""
+    literal: Incomplete = ibis.literal
+    return literal(value, dtype)
+
 
 BucketUnit: TypeAlias = Literal[
     "years",
@@ -231,11 +250,11 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     # Workaround SQL vs Ibis differences.
     if name == "row_number":
-        return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+        return ibis.row_number() + lit(1)
     if name == "least":
-        return ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
+        return ibis.least(*args)
     if name == "greatest":
-        return ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
+        return ibis.greatest(*args)
     expr = args[0]
     if name == "var_pop":
         return cast("ir.NumericColumn", expr).var(how="pop")
