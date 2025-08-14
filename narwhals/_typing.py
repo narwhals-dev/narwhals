@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from types import ModuleType
+from typing import TYPE_CHECKING, Literal, Union
 
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -53,8 +55,15 @@ PySpark: TypeAlias = Literal[_PySpark, PYSPARK]
 SQLFrame: TypeAlias = Literal[_SQLFrame, SQLFRAME]
 PySparkConnect: TypeAlias = Literal[_PySparkConnect, PYSPARK_CONNECT]
 Polars: TypeAlias = Literal[_Polars, POLARS]
+"""Maybe we could say something here?"""
+
 Arrow: TypeAlias = Literal[_Arrow, ARROW]
 Dask: TypeAlias = Literal[_Dask, DASK]
+"""Might want to highlight the limited support?
+
+After (#2858), link to https://narwhals-dev.github.io/narwhals/api-completeness/expr/
+"""
+
 DuckDB: TypeAlias = Literal[_DuckDB, DUCKDB]
 Ibis: TypeAlias = Literal[_Ibis, IBIS]
 PandasLike: TypeAlias = Literal[_PandasLike, PANDAS_LIKE]
@@ -66,3 +75,38 @@ LazyAllowed: TypeAlias = Literal[LazyOnly, Polars]
 
 BackendName: TypeAlias = Literal[_EagerAllowed, _LazyAllowed]
 Backend: TypeAlias = Literal[EagerAllowed, LazyAllowed]
+"""Ooh look, a description!"""
+
+
+BackendT = TypeVar("BackendT", bound=Backend)
+IntoBackend: TypeAlias = Union[BackendT, ModuleType]
+"""Here's lots of long text.
+
+Even more stuff here.
+
+And here too!
+
+Examples:
+
+    # not a doctest!
+    import narwhals as nw
+
+    nw.hello()
+"""
+
+
+IntoBackendAny: TypeAlias = IntoBackend[Backend]
+IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
+IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
+
+
+def dataframe_lazy_current(backend: IntoBackendLazy | None = None) -> None: ...
+def dataframe_lazy_alt_1(
+    backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None,
+) -> None: ...
+
+
+def lazyframe_collect_current(backend: IntoBackendEager | None = None) -> None: ...
+def lazyframe_collect_alt_1(
+    backend: IntoBackend[Polars | Pandas | Arrow] | None = None,
+) -> None: ...
