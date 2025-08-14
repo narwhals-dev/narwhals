@@ -33,4 +33,10 @@ class PandasLikeSeriesListNamespace(
         return self.with_native(result.astype(dtype)).alias(self.native.name)
 
     unique = not_implemented()
+
     contains = not_implemented()
+
+    def get(self, index: int) -> PandasLikeSeries:
+        result = self.native.list[index]
+        result.name = self.native.name
+        return self.with_native(result)
