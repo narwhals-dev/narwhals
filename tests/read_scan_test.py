@@ -16,7 +16,7 @@ import polars as pl
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals.typing import IntoEagerBackend
+    from narwhals.typing import IntoEagerBackend, _LazyOnly
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 TEST_EAGER_BACKENDS = [
@@ -49,14 +49,16 @@ def test_read_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 
 @pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
-def test_read_csv_raise_with_lazy(tmpdir: pytest.TempdirFactory, backend: str) -> None:
+def test_read_csv_raise_with_lazy(
+    tmpdir: pytest.TempdirFactory, backend: _LazyOnly
+) -> None:
     pytest.importorskip(backend)
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
 
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_csv(filepath, backend=backend)
+        nw.read_csv(filepath, backend=backend)  # type: ignore[arg-type]
 
 
 def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
@@ -134,7 +136,7 @@ def test_read_parquet_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 @pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
 def test_read_parquet_raise_with_lazy(
-    tmpdir: pytest.TempdirFactory, backend: str
+    tmpdir: pytest.TempdirFactory, backend: _LazyOnly
 ) -> None:
     pytest.importorskip(backend)
     df_pl = pl.DataFrame(data)
@@ -142,7 +144,7 @@ def test_read_parquet_raise_with_lazy(
     df_pl.write_parquet(filepath)
 
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_parquet(filepath, backend=backend)
+        nw.read_parquet(filepath, backend=backend)  # type: ignore[arg-type]
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
