@@ -167,9 +167,6 @@ class DepthTrackingGroupBy(
 
         Arguments:
             name: Name of a `nw.Expr` aggregation method.
-
-        Returns:
-            A native compatible representation.
         """
         return cls._REMAP_AGGS.get(name, name)
 

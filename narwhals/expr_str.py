@@ -15,9 +15,6 @@ class ExprStringNamespace(Generic[ExprT]):
     def len_chars(self) -> ExprT:
         r"""Return the length of each string as the number of characters.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -54,9 +51,6 @@ class ExprStringNamespace(Generic[ExprT]):
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -84,9 +78,6 @@ class ExprStringNamespace(Generic[ExprT]):
             pattern: A valid regular expression pattern.
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -117,9 +108,6 @@ class ExprStringNamespace(Generic[ExprT]):
                 If set to None (default), all leading and trailing whitespace is removed
                 instead.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -139,9 +127,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             prefix: prefix substring
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -167,9 +152,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             suffix: suffix substring
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -197,9 +179,6 @@ class ExprStringNamespace(Generic[ExprT]):
             pattern: A Character sequence or valid regular expression pattern.
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pyarrow as pa
@@ -233,9 +212,6 @@ class ExprStringNamespace(Generic[ExprT]):
             length: Length of the slice. If set to `None` (default), the slice is taken to the
                 end of the string.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -262,9 +238,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             by: Substring to split by.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import polars as pl
@@ -296,9 +269,6 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
 
-        Returns:
-            A new expression.
-
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
 
@@ -324,9 +294,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             n: Number of elements to take. Negative indexing is **not** supported.
-
-        Returns:
-            A new expression.
 
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
@@ -368,9 +335,6 @@ class ExprStringNamespace(Generic[ExprT]):
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -405,9 +369,6 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             format: Format to use for conversion. If set to None (default), the format is inferred from the data.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -429,9 +390,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
     def to_uppercase(self) -> ExprT:
         r"""Transform string to uppercase variant.
-
-        Returns:
-            A new expression.
 
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
@@ -459,9 +417,6 @@ class ExprStringNamespace(Generic[ExprT]):
     def to_lowercase(self) -> ExprT:
         r"""Transform string to lowercase variant.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -487,9 +442,6 @@ class ExprStringNamespace(Generic[ExprT]):
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.
                 If `width` is less than 0, no padding is applied.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
