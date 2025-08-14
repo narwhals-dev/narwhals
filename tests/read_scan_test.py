@@ -121,6 +121,32 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     assert_equal_data(result, data)
 
 
+def test_read_csv_raise_sep_multiple(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    from pyarrow import csv
+
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    df_pl.write_csv(filepath)
+
+    msg = "Can't pass both `separator` and `parse_options`."
+    with pytest.raises(TypeError, match=msg):
+        nw.read_csv(
+            filepath,
+            backend=pa,
+            separator="|",
+            parse_options=csv.ParseOptions(delimiter=";"),
+        )
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(
+            filepath,
+            backend=pa,
+            separator="|",
+            parse_options=csv.ParseOptions(delimiter=";"),
+        )
+
+
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_read_parquet(
     tmpdir: pytest.TempdirFactory, constructor_eager: ConstructorEager
