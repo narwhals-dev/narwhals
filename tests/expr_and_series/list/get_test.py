@@ -94,3 +94,42 @@ def test_get_series_negative_index(
     )
     with pytest.raises(ValueError, match=msg):
         df["a"].list.get(index)
+
+
+def test_get_expr_non_int_index(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    data = {"a": [[1, 2], [None, 3], [None], None], "index": [0, 1, 0, 0]}
+    index = "index"
+
+    if any(backend in str(constructor) for backend in ("cudf",)):
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):
+        pytest.skip()
+
+    df = nw.from_native(constructor(data))
+    msg = re.escape(
+        f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
+    )
+    with pytest.raises(TypeError, match=msg):
+        df.select(nw.col("a").cast(nw.List(nw.Int32())).list.get(index))  # type: ignore[arg-type]
+
+
+def test_get_series_non_int_index(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    data = {"a": [[1, 2], [None, 3], [None], None], "index": [0, 1, 0, 0]}
+    index = "index"
+
+    if "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+        pytest.skip()
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    msg = re.escape(
+        f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
+    )
+    with pytest.raises(TypeError, match=msg):
+        df["a"].list.get(index)  # type: ignore[arg-type]
