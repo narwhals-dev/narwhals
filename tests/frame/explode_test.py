@@ -46,14 +46,14 @@ def test_explode_single_col(
         .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
         .explode(column)
         .select("a", column)
-        .sort("a")
+        .sort("a", column, nulls_last=True)
     )
     expected = {"a": ["w", "x", "x", "y", "z"], column: expected_values}
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
-    ("columns", "more_columns", "expected"),
+    ("column", "more_columns", "expected"),
     [
         (
             "l1",
@@ -78,7 +78,7 @@ def test_explode_single_col(
 def test_explode_multiple_cols(
     request: pytest.FixtureRequest,
     constructor: Constructor,
-    columns: str | Sequence[str],
+    column: str,
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
 ) -> None:
@@ -93,9 +93,10 @@ def test_explode_multiple_cols(
 
     result = (
         nw.from_native(constructor(data))
-        .with_columns(nw.col(columns, *more_columns).cast(nw.List(nw.Int32())))
-        .explode(columns, *more_columns)
-        .select("a", columns, *more_columns)
+        .with_columns(nw.col(column, *more_columns).cast(nw.List(nw.Int32())))
+        .explode(column, *more_columns)
+        .select("a", column, *more_columns)
+        .sort("a", column, *more_columns, nulls_last=True)
     )
     assert_equal_data(result, expected)
 
