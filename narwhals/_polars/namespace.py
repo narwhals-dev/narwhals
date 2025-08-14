@@ -41,7 +41,7 @@ class PolarsNamespace:
 
     when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
 
     @property
     def _backend_version(self) -> tuple[int, ...]:

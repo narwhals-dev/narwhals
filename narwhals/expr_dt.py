@@ -16,9 +16,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def date(self) -> ExprT:
         """Extract the date from underlying DateTime representation.
 
-        Returns:
-            A new expression.
-
         Raises:
             NotImplementedError: If pandas default backend is being used.
 
@@ -50,9 +47,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Returns the year number in the calendar date.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -79,9 +73,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Returns the month number starting from 1. The return value ranges from 1 to 12.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pyarrow as pa
@@ -105,9 +96,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Returns the day of month starting from 1. The return value ranges from 1 to 31. (The last day of month differs by months.)
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pyarrow as pa
@@ -130,9 +118,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         """Extract hour from underlying DateTime representation.
 
         Returns the hour number from 0 to 23.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -166,9 +151,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Returns the minute number from 0 to 59.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -188,9 +170,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def second(self) -> ExprT:
         """Extract seconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -219,9 +198,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def millisecond(self) -> ExprT:
         """Extract milliseconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -253,9 +229,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def microsecond(self) -> ExprT:
         """Extract microseconds from underlying DateTime representation.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pyarrow as pa
@@ -285,9 +258,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def nanosecond(self) -> ExprT:
         """Extract Nanoseconds from underlying DateTime representation.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime
@@ -319,9 +289,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def ordinal_day(self) -> ExprT:
         """Get ordinal day.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -346,8 +313,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def weekday(self) -> ExprT:
         """Extract the week day from the underlying Date representation.
 
-        Returns:
-            Returns the ISO weekday number where monday = 1 and sunday = 7
+        Note that Monday = 1 and Sunday = 7.
 
         Examples:
             >>> from datetime import datetime
@@ -372,9 +338,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def total_minutes(self) -> ExprT:
         """Get total minutes.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total minutes in the int dtype by default,
@@ -409,9 +372,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def total_seconds(self) -> ExprT:
         """Get total seconds.
 
-        Returns:
-            A new expression.
-
         Notes:
             The function outputs the total seconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
@@ -444,9 +404,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def total_milliseconds(self) -> ExprT:
         """Get total milliseconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total milliseconds in the int dtype by default,
@@ -486,9 +443,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
     def total_microseconds(self) -> ExprT:
         """Get total microseconds.
 
-        Returns:
-            A new expression.
-
         Notes:
             The function outputs the total microseconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
@@ -523,9 +477,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
     def total_nanoseconds(self) -> ExprT:
         """Get total nanoseconds.
-
-        Returns:
-            A new expression.
 
         Notes:
             The function outputs the total nanoseconds in the int dtype by default,
@@ -563,9 +514,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             format: Format to format temporal column with.
-
-        Returns:
-            A new expression.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -631,9 +579,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
         Arguments:
             time_zone: Target time zone.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> from datetime import datetime, timezone
             >>> import pandas as pd
@@ -664,9 +609,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
 
         Arguments:
             time_zone: Target time zone.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -701,9 +643,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'ns': nanosecond.
                 - 'us': microsecond.
                 - 'ms': millisecond.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> from datetime import date
@@ -754,9 +693,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'q': quarter.
                 - 'y': year.
 
-        Returns:
-            Expression of data type `Date` or `Datetime`.
-
         Examples:
             >>> from datetime import datetime
             >>> import polars as pl
@@ -800,9 +736,6 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'mo': month.
                 - 'q': quarter.
                 - 'y': year.
-
-        Returns:
-            Expression of data type `Date` or `Datetime`.
 
         Examples:
             >>> from datetime import datetime
