@@ -15,9 +15,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def date(self) -> SeriesT:
         """Get the date in a datetime series.
 
-        Returns:
-            A new Series with the date portion of the datetime values.
-
         Raises:
             NotImplementedError: If pandas default backend is being used.
 
@@ -41,9 +38,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def year(self) -> SeriesT:
         """Get the year in a datetime series.
 
-        Returns:
-            A new Series containing the year component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import polars as pl
@@ -65,9 +59,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def month(self) -> SeriesT:
         """Gets the month in a datetime series.
 
-        Returns:
-            A new Series containing the month component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import polars as pl
@@ -88,9 +79,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def day(self) -> SeriesT:
         """Extracts the day in a datetime series.
-
-        Returns:
-            A new Series containing the day component of each datetime value.
 
         Examples:
             >>> from datetime import datetime
@@ -116,9 +104,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def hour(self) -> SeriesT:
         """Extracts the hour in a datetime series.
 
-        Returns:
-            A new Series containing the hour component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import pyarrow as pa
@@ -143,9 +128,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def minute(self) -> SeriesT:
         """Extracts the minute in a datetime series.
 
-        Returns:
-            A new Series containing the minute component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -166,9 +148,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def second(self) -> SeriesT:
         """Extracts the seconds in a datetime series.
 
-        Returns:
-            A new Series containing the second component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -188,9 +167,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def millisecond(self) -> SeriesT:
         """Extracts the milliseconds in a datetime series.
-
-        Returns:
-            A new Series containing the millisecond component of each datetime value.
 
         Examples:
             >>> from datetime import datetime
@@ -215,9 +191,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def microsecond(self) -> SeriesT:
         """Extracts the microseconds in a datetime series.
 
-        Returns:
-            A new Series containing the microsecond component of each datetime value.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -233,7 +206,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             0    400000
             1         0
             Name: datetime, dtype: int32
-
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.microsecond()
@@ -241,9 +213,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def nanosecond(self) -> SeriesT:
         """Extract the nanoseconds in a date series.
-
-        Returns:
-            A new Series containing the nanosecond component of each datetime value.
 
         Examples:
             >>> from datetime import datetime
@@ -267,9 +236,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def ordinal_day(self) -> SeriesT:
         """Get ordinal day.
-
-        Returns:
-            A new Series containing the ordinal day (day of year) for each datetime value.
 
         Examples:
             >>> from datetime import datetime
@@ -295,9 +261,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
     def weekday(self) -> SeriesT:
         """Extract the week day in a datetime series.
 
-        Returns:
-            A new Series containing the week day for each datetime value.
-            Returns the ISO weekday number where monday = 1 and sunday = 7
+        Note that Monday = 1 and Sunday = 7.
 
         Examples:
             >>> from datetime import datetime
@@ -328,9 +292,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
-        Returns:
-            A new Series containing the total number of minutes for each timedelta value.
-
         Examples:
             >>> from datetime import timedelta
             >>> import polars as pl
@@ -358,9 +319,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             The function outputs the total seconds in the int dtype by default,
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
-
-        Returns:
-            A new Series containing the total number of seconds for each timedelta value.
 
         Examples:
             >>> from datetime import timedelta
@@ -390,9 +348,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
-        Returns:
-            A new Series containing the total number of milliseconds for each timedelta value.
-
         Examples:
             >>> from datetime import timedelta
             >>> import polars as pl
@@ -418,9 +373,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
     def total_microseconds(self) -> SeriesT:
         """Get total microseconds.
-
-        Returns:
-            A new Series containing the total number of microseconds for each timedelta value.
 
         Notes:
             The function outputs the total microseconds in the int dtype by default,
@@ -458,9 +410,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             however, pandas may change the dtype to float when there are missing values,
             consider using `fill_null()` in this case.
 
-        Returns:
-            A new Series containing the total number of nanoseconds for each timedelta value.
-
         Examples:
             >>> from datetime import datetime
             >>> import polars as pl
@@ -486,9 +435,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
         Arguments:
             format: Format string for converting the datetime to string.
-
-        Returns:
-            A new Series with the datetime values formatted as strings according to the specified format.
 
         Notes:
             Unfortunately, different libraries interpret format directives a bit
@@ -548,9 +494,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         Arguments:
             time_zone: Target time zone.
 
-        Returns:
-            A new Series with the specified time zone.
-
         Examples:
             >>> from datetime import datetime, timezone
             >>> import polars as pl
@@ -585,9 +528,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
         Arguments:
             time_zone: Target time zone.
 
-        Returns:
-            A new Series with the specified time zone.
-
         Examples:
             >>> from datetime import datetime, timezone
             >>> import pandas as pd
@@ -619,9 +559,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 - 'ns': nanosecond.
                 - 'us': microsecond.
                 - 'ms': millisecond.
-
-        Returns:
-            A new Series with timestamps in the specified time unit.
 
         Examples:
             >>> from datetime import date
@@ -665,9 +602,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 - 'q': quarter.
                 - 'y': year.
 
-        Returns:
-            Series of data type `Date` or `Datetime`.
-
         Examples:
             >>> from datetime import datetime
             >>> import pandas as pd
@@ -699,9 +633,6 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
                 - 'mo': month.
                 - 'q': quarter.
                 - 'y': year.
-
-        Returns:
-            Series of data type `Date` or `Datetime`.
 
         Examples:
             >>> from datetime import datetime

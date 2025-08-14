@@ -15,9 +15,6 @@ class ExprCatNamespace(Generic[ExprT]):
     def get_categories(self) -> ExprT:
         """Get unique categories from column.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
