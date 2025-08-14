@@ -14,8 +14,9 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals._typing import EagerAllowed
     from narwhals.dtypes import NestedType
-    from narwhals.typing import EagerAllowed, IntoDType, _1DArray
+    from narwhals.typing import IntoDType, _1DArray
 
 
 arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))

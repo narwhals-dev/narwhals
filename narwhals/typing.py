@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals._typing import BackendName, EagerAllowed, LazyAllowed
     from narwhals._utils import Implementation
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
@@ -99,73 +100,6 @@ if TYPE_CHECKING:
         def Time(self) -> type[dtypes.Time]: ...
         @property
         def Binary(self) -> type[dtypes.Binary]: ...
-
-    _Polars: TypeAlias = Literal["polars"]
-    _Arrow: TypeAlias = Literal["pyarrow"]
-    _Dask: TypeAlias = Literal["dask"]
-    _DuckDB: TypeAlias = Literal["duckdb"]
-    _Pandas: TypeAlias = Literal["pandas"]
-    _Modin: TypeAlias = Literal["modin"]
-    _Cudf: TypeAlias = Literal["cudf"]
-    _PySpark: TypeAlias = Literal["pyspark"]
-    _SQLFrame: TypeAlias = Literal["sqlframe"]
-    _PySparkConnect: TypeAlias = Literal["pyspark[connect]"]
-    _Ibis: TypeAlias = Literal["ibis"]
-    _PandasLike: TypeAlias = "_Pandas | _Cudf | _Modin"
-    _SparkLike: TypeAlias = "_PySpark | _SQLFrame | _PySparkConnect"
-
-    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
-    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
-    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
-
-    Pandas: TypeAlias = Literal[_Pandas, Implementation.PANDAS]
-    Cudf: TypeAlias = Literal[_Cudf, Implementation.CUDF]
-    Modin: TypeAlias = Literal[_Modin, Implementation.MODIN]
-    PySpark: TypeAlias = Literal[_PySpark, Implementation.PYSPARK]
-    SQLFrame: TypeAlias = Literal[_SQLFrame, Implementation.SQLFRAME]
-    PySparkConnect: TypeAlias = Literal[_PySparkConnect, Implementation.PYSPARK_CONNECT]
-    Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
-    Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
-    Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
-    DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
-    Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
-
-    PandasLike: TypeAlias = Literal[
-        _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
-    ]
-    SparkLike: TypeAlias = Literal[
-        _SparkLike,
-        Implementation.PYSPARK,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    ]
-    EagerOnly: TypeAlias = "PandasLike | Arrow"
-    EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
-    LazyAllowed: TypeAlias = "LazyOnly | Polars"
-
-    EagerBackendName: TypeAlias = _EagerAllowed
-    EagerImplementation: TypeAlias = Literal[
-        Implementation.CUDF,
-        Implementation.MODIN,
-        Implementation.PANDAS,
-        Implementation.POLARS,
-        Implementation.PYARROW,
-    ]
-
-    LazyBackendName: TypeAlias = _LazyAllowed
-    LazyImplementation: TypeAlias = Literal[
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.POLARS,
-        Implementation.PYSPARK,
-        Implementation.PYSPARK_CONNECT,
-        Implementation.SQLFRAME,
-    ]
-
-    BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -459,7 +393,7 @@ Examples:
     └──────────────────┘
 """
 
-IntoEagerBackend: TypeAlias = "EagerBackendName | EagerImplementation | ModuleType"
+IntoEagerBackend: TypeAlias = Union["EagerAllowed", "ModuleType"]
 """Anything that can be converted into a Narwhals Implementation of an eager backend.
 
 It can be specified as:
@@ -491,7 +425,7 @@ Examples:
     └───────────────────┘
 """
 
-IntoLazyBackend: TypeAlias = "LazyBackendName | LazyImplementation | ModuleType"
+IntoLazyBackend: TypeAlias = Union["LazyAllowed", "ModuleType"]
 """Anything that can be converted into a Narwhals Implementation of an lazy backend.
 
 It can be specified as:
@@ -534,7 +468,7 @@ It can be specified as:
 """
 
 
-IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
+IntoBackend: TypeAlias = Union["BackendName", "Implementation", "ModuleType"]
 """Anything that can be converted into a Narwhals Implementation.
 
 It can be specified as:

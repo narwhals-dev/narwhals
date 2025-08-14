@@ -49,20 +49,22 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import (
+    from narwhals._typing import (
         Arrow,
         Dask,
-        DataFrameLike,
         DuckDB,
         EagerAllowed,
         Ibis,
+        PandasLike,
+        Polars,
+        SparkLike,
+    )
+    from narwhals.typing import (
+        DataFrameLike,
         IntoBackend,
         NativeFrame,
         NativeLazyFrame,
         NativeSeries,
-        PandasLike,
-        Polars,
-        SparkLike,
     )
 
     T = TypeVar("T")
