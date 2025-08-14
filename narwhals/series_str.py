@@ -12,9 +12,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
     def len_chars(self) -> SeriesT:
         r"""Return the length of each string as the number of characters.
 
-        Returns:
-            A new Series containing the length of each string in characters.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -44,9 +41,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             literal: Treat `pattern` as a literal string.
             n: Number of matches to replace.
 
-        Returns:
-            A new Series with the regex/literal pattern replaced with the specified value.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -71,9 +65,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             value: String that will replace the matched substring.
             literal: Treat `pattern` as a literal string.
 
-        Returns:
-            A new Series with all occurrences of pattern replaced with the specified value.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -95,9 +86,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             characters: The set of characters to be removed. All combinations of this set of characters will be stripped from the start and end of the string. If set to None (default), all leading and trailing whitespace is removed instead.
-
-        Returns:
-            A new Series with leading and trailing characters removed.
 
         Examples:
             >>> import polars as pl
@@ -122,9 +110,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             prefix: prefix substring
 
-        Returns:
-            A new Series with boolean values indicating if each string starts with the prefix.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -145,9 +130,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             suffix: suffix substring
-
-        Returns:
-            A new Series with boolean values indicating if each string ends with the suffix.
 
         Examples:
             >>> import pandas as pd
@@ -171,9 +153,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             pattern: A Character sequence or valid regular expression pattern.
             literal: If True, treats the pattern as a literal string.
                      If False, assumes the pattern is a regular expression.
-
-        Returns:
-            A new Series with boolean values indicating if each string contains the pattern.
 
         Examples:
             >>> import pyarrow as pa
@@ -202,9 +181,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             length: Length of the slice. If set to `None` (default), the slice is taken to the
                 end of the string.
 
-        Returns:
-            A new Series containing subslices of each string.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -228,9 +204,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             by: Substring to split by.
 
-        Returns:
-            A new Series containing lists of strings.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -253,9 +226,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
-
-        Returns:
-            A new Series containing the first n characters of each string.
 
         Notes:
             1. When the `n` input is negative, `head` returns characters up to the n-th from the end of the string.
@@ -287,9 +257,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             n: Number of elements to take. Negative indexing is supported (see note (1.))
 
-        Returns:
-            A new Series containing the last n characters of each string.
-
         Notes:
             1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
             the string. For example, if `n = -3`, then all characters except the first three are returned.
@@ -317,9 +284,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
     def to_uppercase(self) -> SeriesT:
         r"""Transform string to uppercase variant.
 
-        Returns:
-            A new Series with values converted to uppercase.
-
         Notes:
             The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
             For more info see: https://github.com/apache/arrow/issues/34599
@@ -341,9 +305,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
-
-        Returns:
-            A new Series with values converted to lowercase.
 
         Examples:
             >>> import pandas as pd
@@ -377,9 +338,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
 
-        Returns:
-            A new Series with datetime dtype.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -410,9 +368,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             format: Format to use for conversion. If set to None (default), the format is
                 inferred from the data.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -436,9 +391,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
-
-        Returns:
-            A new Series with strings padded with zeros on the left.
 
         Examples:
             >>> import pandas as pd
