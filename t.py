@@ -4,4 +4,7 @@ import daft
 
 import narwhals as nw
 
-nw.from_native(daft.from_pydict({"a": [1, 2, 3]}))
+df = nw.from_native(daft.from_pydict({"a": [1, 2, 3]}))
+
+print(df)
+print(type(df))

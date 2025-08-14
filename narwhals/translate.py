@@ -543,15 +543,14 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
         obj = plugin.load()
         frame = obj.dataframe.DaftLazyFrame
-        print(type(frame))
 
         #from obj.dataframe import DaftLazyFrame
-        # try:
-        #     df_compliant = LazyFrame(df_native, version=Version.MAIN)
-        #     return df_compliant.to_narwhals()
-        # except:
-        #     # try the next plugin
-        #     continue
+        try:
+            df_compliant = frame(native_object, version=Version.MAIN)
+            return df_compliant.to_narwhals()
+        except:
+            # try the next plugin
+            continue
         
 
 
