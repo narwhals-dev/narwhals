@@ -443,9 +443,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             yield PolarsSeries.from_native(series, context=self)
 
     def lazy(self, backend: LazyImplementation | None = None) -> CompliantLazyFrameAny:
-        if backend is None or backend.is_polars():
+        if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
-        if backend.is_duckdb():
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -455,7 +455,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        if backend.is_dask():
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame

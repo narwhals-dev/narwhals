@@ -764,7 +764,7 @@ class PandasLikeDataFrame(
         pandas_df = self.to_pandas()
         if backend is None:
             return self
-        if backend.is_duckdb():
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -774,7 +774,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_polars():
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -784,7 +784,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_dask():
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame

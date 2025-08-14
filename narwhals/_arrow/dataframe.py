@@ -516,7 +516,7 @@ class ArrowDataFrame(
     def lazy(self, backend: LazyImplementation | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
-        if backend.is_duckdb():
+        if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -525,7 +525,7 @@ class ArrowDataFrame(
             return DuckDBLazyFrame(
                 duckdb.table("df"), validate_backend_version=True, version=self._version
             )
-        if backend.is_polars():
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsLazyFrame
@@ -535,7 +535,7 @@ class ArrowDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_dask():
+        if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
             from narwhals._dask.dataframe import DaskLazyFrame
@@ -561,14 +561,14 @@ class ArrowDataFrame(
     def collect(
         self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
-        if backend is None or backend.is_pyarrow():
+        if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
 
-        if backend.is_pandas():
+        if backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 
             return PandasLikeDataFrame(
@@ -579,7 +579,7 @@ class ArrowDataFrame(
                 validate_column_names=False,
             )
 
-        if backend.is_polars():
+        if backend is Implementation.POLARS:
             import polars as pl  # ignore-banned-import
 
             from narwhals._polars.dataframe import PolarsDataFrame
