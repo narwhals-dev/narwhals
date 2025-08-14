@@ -15,9 +15,6 @@ class SeriesStructNamespace(Generic[SeriesT]):
         Arguments:
             name: Name of the struct field to retrieve.
 
-        Returns:
-            A new Series.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw

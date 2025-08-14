@@ -419,96 +419,70 @@ def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
+dtypes = Version.MAIN.dtypes
+NW_TO_PD_DTYPES_INVARIANT: Mapping[type[DType], str] = {
+    # TODO(Unassigned): is there no pyarrow-backed categorical?
+    # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
+    # convert to it?
+    dtypes.Categorical: "category",
+    dtypes.Object: "object",
+}
+NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[Any]]] = {
+    dtypes.Float64: {
+        "pyarrow": "Float64[pyarrow]",
+        "numpy_nullable": "Float64",
+        None: "float64",
+    },
+    dtypes.Float32: {
+        "pyarrow": "Float32[pyarrow]",
+        "numpy_nullable": "Float32",
+        None: "float32",
+    },
+    dtypes.Int64: {"pyarrow": "Int64[pyarrow]", "numpy_nullable": "Int64", None: "int64"},
+    dtypes.Int32: {"pyarrow": "Int32[pyarrow]", "numpy_nullable": "Int32", None: "int32"},
+    dtypes.Int16: {"pyarrow": "Int16[pyarrow]", "numpy_nullable": "Int16", None: "int16"},
+    dtypes.Int8: {"pyarrow": "Int8[pyarrow]", "numpy_nullable": "Int8", None: "int8"},
+    dtypes.UInt64: {
+        "pyarrow": "UInt64[pyarrow]",
+        "numpy_nullable": "UInt64",
+        None: "uint64",
+    },
+    dtypes.UInt32: {
+        "pyarrow": "UInt32[pyarrow]",
+        "numpy_nullable": "UInt32",
+        None: "uint32",
+    },
+    dtypes.UInt16: {
+        "pyarrow": "UInt16[pyarrow]",
+        "numpy_nullable": "UInt16",
+        None: "uint16",
+    },
+    dtypes.UInt8: {"pyarrow": "UInt8[pyarrow]", "numpy_nullable": "UInt8", None: "uint8"},
+    dtypes.String: {"pyarrow": "string[pyarrow]", "numpy_nullable": "string", None: str},
+    dtypes.Boolean: {
+        "pyarrow": "boolean[pyarrow]",
+        "numpy_nullable": "boolean",
+        None: "bool",
+    },
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal,)
+
+
+def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     dtype: IntoDType,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
     version: Version,
 ) -> str | PandasDtype:
-    if dtype_backend is not None and dtype_backend not in {"pyarrow", "numpy_nullable"}:
+    if dtype_backend not in {None, "pyarrow", "numpy_nullable"}:
         msg = f"Expected one of {{None, 'pyarrow', 'numpy_nullable'}}, got: '{dtype_backend}'"
         raise ValueError(msg)
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        if dtype_backend == "pyarrow":
-            return "Float64[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Float64"
-        return "float64"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        if dtype_backend == "pyarrow":
-            return "Float32[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Float32"
-        return "float32"
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        if dtype_backend == "pyarrow":
-            return "Int64[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Int64"
-        return "int64"
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        if dtype_backend == "pyarrow":
-            return "Int32[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Int32"
-        return "int32"
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        if dtype_backend == "pyarrow":
-            return "Int16[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Int16"
-        return "int16"
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        if dtype_backend == "pyarrow":
-            return "Int8[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "Int8"
-        return "int8"
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        if dtype_backend == "pyarrow":
-            return "UInt64[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "UInt64"
-        return "uint64"
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        if dtype_backend == "pyarrow":
-            return "UInt32[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "UInt32"
-        return "uint32"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        if dtype_backend == "pyarrow":
-            return "UInt16[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "UInt16"
-        return "uint16"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        if dtype_backend == "pyarrow":
-            return "UInt8[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "UInt8"
-        return "uint8"
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        if dtype_backend == "pyarrow":
-            return "string[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "string"
-        return str
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        if dtype_backend == "pyarrow":
-            return "boolean[pyarrow]"
-        if dtype_backend == "numpy_nullable":
-            return "boolean"
-        return "bool"
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        # TODO(Unassigned): is there no pyarrow-backed categorical?
-        # or at least, convert_dtypes(dtype_backend='pyarrow') doesn't
-        # convert to it?
-        return "category"
+    base_type = dtype.base_type()
+    if pd_type := NW_TO_PD_DTYPES_INVARIANT.get(base_type):
+        return pd_type
+    if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
+        return into_pd_type[dtype_backend]
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         # Pandas does not support "ms" or "us" time units before version 2.0
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
@@ -537,9 +511,11 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
         )
     if isinstance_or_issubclass(dtype, dtypes.Date):
         try:
-            import pyarrow as pa  # ignore-banned-import
-        except ModuleNotFoundError:  # pragma: no cover
+            import pyarrow as pa  # ignore-banned-import  # noqa: F401
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            # BUG: Never re-raised?
             msg = "'pyarrow>=13.0.0' is required for `Date` dtype."
+            raise ModuleNotFoundError(msg) from exc
         return "date32[pyarrow]"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
@@ -550,31 +526,34 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912, PLR0915
             return ns.CategoricalDtype(dtype.categories, ordered=True)
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-
-    if isinstance_or_issubclass(
-        dtype, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
+    if issubclass(
+        base_type, (dtypes.Struct, dtypes.Array, dtypes.List, dtypes.Time, dtypes.Binary)
     ):
-        if is_pandas_or_modin(implementation) and PANDAS_VERSION >= (2, 2):
-            try:
-                import pandas as pd
-                import pyarrow as pa  # ignore-banned-import  # noqa: F401
-            except ImportError as exc:  # pragma: no cover
-                msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
-                raise ImportError(msg) from exc
-            from narwhals._arrow.utils import (
-                narwhals_to_native_dtype as arrow_narwhals_to_native_dtype,
-            )
-
-            return pd.ArrowDtype(arrow_narwhals_to_native_dtype(dtype, version=version))
-        msg = (  # pragma: no cover
-            f"Converting to {dtype} dtype is not supported for implementation "
-            f"{implementation} and version {version}."
-        )
+        return narwhals_to_native_arrow_dtype(dtype, implementation, version)
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for {implementation}."
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Object):
-        return "object"
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def narwhals_to_native_arrow_dtype(
+    dtype: IntoDType, implementation: Implementation, version: Version
+) -> pd.ArrowDtype:
+    if is_pandas_or_modin(implementation) and PANDAS_VERSION >= (2, 2):
+        try:
+            import pyarrow as pa  # ignore-banned-import  # noqa: F401
+        except ImportError as exc:  # pragma: no cover
+            msg = f"Unable to convert to {dtype} to to the following exception: {exc.msg}"
+            raise ImportError(msg) from exc
+        from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
+
+        return pd.ArrowDtype(_to_arrow_dtype(dtype, version))
+    msg = (  # pragma: no cover
+        f"Converting to {dtype} dtype is not supported for implementation "
+        f"{implementation} and version {version}."
+    )
+    raise NotImplementedError(msg)
 
 
 def int_dtype_mapper(dtype: Any) -> str:

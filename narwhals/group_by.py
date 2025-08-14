@@ -40,9 +40,6 @@ class GroupBy(Generic[DataFrameT]):
                 specified as positional arguments.
             named_aggs: Additional aggregations, specified as keyword arguments.
 
-        Returns:
-            A new Dataframe.
-
         Examples:
             Group by one column or by multiple columns and call `agg` to compute
             the grouped sum of another column.
@@ -123,9 +120,6 @@ class LazyGroupBy(Generic[LazyFrameT]):
             aggs: Aggregations to compute for each group of the group by operation,
                 specified as positional arguments.
             named_aggs: Additional aggregations, specified as keyword arguments.
-
-        Returns:
-            A new LazyFrame.
 
         Examples:
             Group by one column or by multiple columns and call `agg` to compute
