@@ -133,7 +133,7 @@ class DuckDBNamespace(
             tz = DeferredTimeZone(df.native)
             if dtype is not None:
                 target = narwhals_to_native_dtype(dtype, self._version, tz)
-                return [lit(value).cast(target)]  # type: ignore[arg-type]
+                return [lit(value).cast(target)]
             return [lit(value)]
 
         return self._expr(

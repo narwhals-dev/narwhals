@@ -18,9 +18,6 @@ class ExprStructNamespace(Generic[ExprT]):
         Arguments:
             name: Name of the struct field to retrieve.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw

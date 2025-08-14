@@ -64,6 +64,23 @@ class DType:
         return self.__class__.__qualname__
 
     @classmethod
+    def base_type(cls) -> type[Self]:
+        """Return this DType's fundamental/root type class.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Datetime("us").base_type()
+            <class 'narwhals.dtypes.Datetime'>
+
+            >>> nw.String.base_type()
+            <class 'narwhals.dtypes.String'>
+
+            >>> nw.List(nw.Int64).base_type()
+            <class 'narwhals.dtypes.List'>
+        """
+        return cls
+
+    @classmethod
     def is_numeric(cls: type[Self]) -> bool:
         return issubclass(cls, NumericType)
 
@@ -623,11 +640,7 @@ class Struct(NestedType):
         return f"{class_name}({dict(self)})"
 
     def to_schema(self) -> OrderedDict[str, IntoDType]:
-        """Return Struct dtype as a schema dict.
-
-        Returns:
-            Mapping from column name to dtype.
-        """
+        """Return Struct dtype as a schema dict."""
         return OrderedDict(self)
 
 
