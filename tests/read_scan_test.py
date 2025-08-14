@@ -68,6 +68,10 @@ def test_scan_csv(
 ) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
+        from sqlframe.duckdb import DuckDBSession
+
+        kwargs = {"session": DuckDBSession(), "inferSchema": True}
+
         request.applymarker(
             pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/469")
         )
