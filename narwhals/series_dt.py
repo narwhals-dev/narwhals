@@ -469,20 +469,18 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
         Examples:
             >>> from datetime import datetime
-            >>> import pyarrow as pa
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [[datetime(2020, 3, 1), datetime(2020, 4, 1)]]
-            ... )
+            >>> s_native = pd.Series([datetime(2020, 3, 1), datetime(2020, 4, 1)])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.dt.to_string("%Y/%m/%d").to_native()  # doctest: +ELLIPSIS
-            <pyarrow.lib.ChunkedArray object at ...>
-            [
-              [
-                "2020/03/01",
-                "2020/04/01"
-              ]
-            ]
+            >>> s.dt.to_string("%Y/%m/%d")
+            ┌───────────────┐
+            |Narwhals Series|
+            |---------------|
+            |0    2020/03/01|
+            |1    2020/04/01|
+            |dtype: object  |
+            └───────────────┘
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.dt.to_string(format)
