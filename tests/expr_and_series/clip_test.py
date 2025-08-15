@@ -25,15 +25,7 @@ def test_clip_expr(
     assert_equal_data(result, {"result": expected})
 
 
-def test_clip_expr_expressified(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    if "modin_pyarrow" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/17682
-        request.applymarker(pytest.mark.xfail)
-
+def test_clip_expr_expressified(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3, -4, 5], "lb": [3, 2, 1, 1, 1], "ub": [4, 4, 2, 2, 2]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").clip("lb", nw.col("ub") + 1))
@@ -63,15 +55,7 @@ def test_clip_series(
     assert_equal_data(result, {"result": expected})
 
 
-def test_clip_series_expressified(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
-    if "modin_pyarrow" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        # https://github.com/rapidsai/cudf/issues/17682
-        request.applymarker(pytest.mark.xfail)
-
+def test_clip_series_expressified(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3, -4, 5], "lb": [3, 2, 1, 1, 1], "ub": [4, 4, 2, 2, 2]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].clip(df["lb"], df["ub"] + 1).to_frame()
