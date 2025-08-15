@@ -248,7 +248,7 @@ def test_list_like(
     if (
         "pyarrow_table" in str(constructor_eager)
         and PYARROW_VERSION < (14, 0)
-        and dtype == nw.List
+        and dtype == nw.Array
     ):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from "
