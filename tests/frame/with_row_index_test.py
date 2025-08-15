@@ -58,7 +58,7 @@ def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
     )
 
     with context:
-        result = frame.with_row_index()
+        result = frame.with_row_index()  # type: ignore[call-arg]
 
         expected = {"index": [0, 1], **data}
         assert_equal_data(result, expected)

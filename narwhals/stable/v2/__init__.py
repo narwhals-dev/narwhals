@@ -56,7 +56,7 @@ from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -172,7 +172,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return _stableify(super().is_unique())
 
 
-class LazyFrame(NwLazyFrame[IntoFrameT]):
+class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V2  # noqa: S101
@@ -238,9 +238,9 @@ class Schema(NwSchema):
 
 
 @overload
-def _stableify(obj: NwDataFrame[IntoFrameT]) -> DataFrame[IntoFrameT]: ...
+def _stableify(obj: NwDataFrame[IntoDataFrameT]) -> DataFrame[IntoDataFrameT]: ...
 @overload
-def _stableify(obj: NwLazyFrame[IntoFrameT]) -> LazyFrame[IntoFrameT]: ...
+def _stableify(obj: NwLazyFrame[IntoLazyFrameT]) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
 def _stableify(obj: NwSeries[IntoSeriesT]) -> Series[IntoSeriesT]: ...
 @overload
@@ -248,11 +248,11 @@ def _stableify(obj: NwExpr) -> Expr: ...
 
 
 def _stableify(
-    obj: NwDataFrame[IntoFrameT]
-    | NwLazyFrame[IntoFrameT]
+    obj: NwDataFrame[IntoDataFrameT]
+    | NwLazyFrame[IntoLazyFrameT]
     | NwSeries[IntoSeriesT]
     | NwExpr,
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT] | Series[IntoSeriesT] | Expr:
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
         return DataFrame(obj._compliant_frame._with_version(Version.V2), level=obj._level)
     if isinstance(obj, NwLazyFrame):
@@ -372,6 +372,17 @@ def from_native(
 
 @overload
 def from_native(
+    native_object: IntoLazyFrameT,
+    *,
+    pass_through: Literal[False] = ...,
+    eager_only: Literal[False] = ...,
+    series_only: Literal[False] = ...,
+    allow_series: None = ...,
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+@overload
+def from_native(
     native_object: IntoDataFrameT,
     *,
     pass_through: Literal[False] = ...,
@@ -416,14 +427,19 @@ def from_native(
 
 
 def from_native(  # noqa: D417
-    native_object: IntoFrameT | IntoFrame | IntoSeriesT | IntoSeries | T,
+    native_object: IntoDataFrameT
+    | IntoLazyFrameT
+    | IntoFrame
+    | IntoSeriesT
+    | IntoSeries
+    | T,
     *,
     pass_through: bool = False,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
     **kwds: Any,
-) -> LazyFrame[IntoFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
+) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
@@ -480,8 +496,8 @@ def to_native(
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
-) -> IntoFrameT: ...
+    narwhals_object: LazyFrame[IntoLazyFrameT], *, pass_through: Literal[False] = ...
+) -> IntoLazyFrameT: ...
 @overload
 def to_native(
     narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
@@ -492,11 +508,11 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 def to_native(
     narwhals_object: DataFrame[IntoDataFrameT]
-    | LazyFrame[IntoFrameT]
+    | LazyFrame[IntoLazyFrameT]
     | Series[IntoSeriesT],
     *,
     pass_through: bool = False,
-) -> IntoFrameT | IntoSeriesT | Any:
+) -> IntoDataFrameT | IntoLazyFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:

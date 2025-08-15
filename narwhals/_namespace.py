@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame, NativeSeries
+    from narwhals.typing import NativeDataFrame, NativeLazyFrame, NativeSeries
 
     T = TypeVar("T")
 
@@ -116,7 +116,7 @@ if TYPE_CHECKING:
             """`inplace=False` is required to avoid (incorrect?) default overloads."""
             ...
 
-    class _BasePandasLikeFrame(NativeFrame, _BasePandasLike, Protocol): ...
+    class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 
     class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
         def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
@@ -161,9 +161,7 @@ if TYPE_CHECKING:
     )
 
     NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask | _NativeIbis"
-    NativeUnknown: TypeAlias = (
-        "NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike"
-    )
+    NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeLazyFrame"
     NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
 
 __all__ = ["Namespace"]

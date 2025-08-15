@@ -105,7 +105,7 @@ def test_q1_w_generic_funcs(library: str) -> None:
     if library == "pandas" and PANDAS_VERSION < (1, 5):
         pytest.skip()
     elif library == "pandas":
-        df_raw: IntoFrame = pd.read_csv("tests/data/lineitem.csv")
+        df_raw: pd.DataFrame | pl.DataFrame = pd.read_csv("tests/data/lineitem.csv")
     else:
         pytest.importorskip("polars")
         import polars as pl
