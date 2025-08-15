@@ -186,105 +186,92 @@ class DaskExpr(
             scalar_kwargs=self._scalar_kwargs,
         )
 
-    def __add__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__add__(other), "__add__", other=other
+    def _with_binary(
+        self,
+        call: Callable[[dx.Series, Any], dx.Series],
+        name: str,
+        other: Any,
+        *,
+        reverse: bool = False,
+    ) -> Self:
+        result = self._with_callable(
+            lambda expr, other: call(expr, other), name, other=other
         )
+        if reverse:
+            result = result.alias("literal")
+        return result
+
+    def _binary_op(self, op_name: str, other: Any) -> Self:
+        return self._with_binary(
+            lambda expr, other: getattr(expr, op_name)(other), op_name, other
+        )
+
+    def _reverse_binary_op(
+        self, op_name: str, operator_func: Callable[..., dx.Series], other: Any
+    ) -> Self:
+        return self._with_binary(
+            lambda expr, other: operator_func(other, expr), op_name, other, reverse=True
+        )
+
+    def __add__(self, other: Any) -> Self:
+        return self._binary_op("__add__", other)
 
     def __sub__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__sub__(other), "__sub__", other=other
-        )
-
-    def __rsub__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other - expr, "__rsub__", other=other
-        ).alias("literal")
+        return self._binary_op("__sub__", other)
 
     def __mul__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__mul__(other), "__mul__", other=other
-        )
+        return self._binary_op("__mul__", other)
 
     def __truediv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__truediv__(other), "__truediv__", other=other
-        )
-
-    def __rtruediv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other / expr, "__rtruediv__", other=other
-        ).alias("literal")
+        return self._binary_op("__truediv__", other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__floordiv__(other), "__floordiv__", other=other
-        )
-
-    def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other // expr, "__rfloordiv__", other=other
-        ).alias("literal")
+        return self._binary_op("__floordiv__", other)
 
     def __pow__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__pow__(other), "__pow__", other=other
-        )
-
-    def __rpow__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other**expr, "__rpow__", other=other
-        ).alias("literal")
+        return self._binary_op("__pow__", other)
 
     def __mod__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__mod__(other), "__mod__", other=other
-        )
+        return self._binary_op("__mod__", other)
+
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__eq__", other)
+
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__ne__", other)
+
+    def __ge__(self, other: Any) -> Self:
+        return self._binary_op("__ge__", other)
+
+    def __gt__(self, other: Any) -> Self:
+        return self._binary_op("__gt__", other)
+
+    def __le__(self, other: Any) -> Self:
+        return self._binary_op("__le__", other)
+
+    def __lt__(self, other: Any) -> Self:
+        return self._binary_op("__lt__", other)
+
+    def __and__(self, other: Any) -> Self:
+        return self._binary_op("__and__", other)
+
+    def __or__(self, other: Any) -> Self:
+        return self._binary_op("__or__", other)
+
+    def __rsub__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rsub__", lambda a, b: a - b, other)
+
+    def __rtruediv__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rtruediv__", lambda a, b: a / b, other)
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rfloordiv__", lambda a, b: a // b, other)
+
+    def __rpow__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rpow__", lambda a, b: a**b, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other % expr, "__rmod__", other=other
-        ).alias("literal")
-
-    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda expr, other: expr.__eq__(other), "__eq__", other=other
-        )
-
-    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda expr, other: expr.__ne__(other), "__ne__", other=other
-        )
-
-    def __ge__(self, other: DaskExpr | Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__ge__(other), "__ge__", other=other
-        )
-
-    def __gt__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__gt__(other), "__gt__", other=other
-        )
-
-    def __le__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__le__(other), "__le__", other=other
-        )
-
-    def __lt__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__lt__(other), "__lt__", other=other
-        )
-
-    def __and__(self, other: DaskExpr | Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__and__(other), "__and__", other=other
-        )
-
-    def __or__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__or__(other), "__or__", other=other
-        )
+        return self._reverse_binary_op("__rmod__", lambda a, b: a % b, other)
 
     def __invert__(self) -> Self:
         return self._with_callable(lambda expr: expr.__invert__(), "__invert__")
