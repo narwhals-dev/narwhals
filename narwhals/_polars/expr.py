@@ -159,7 +159,7 @@ class PolarsExpr:
             narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
-            if self._backend_version < (1, 32, 3)
+            if self._backend_version < (1, 32)
             else pl.self_dtype()
         )
         native = self.native.map_batches(
