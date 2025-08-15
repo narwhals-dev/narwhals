@@ -37,18 +37,27 @@ class SQLExprStringNamespace(
             lambda expr: self._function("length", expr)
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> SQLExprT:
-        options = [self._lit("g")] if self.compliant._implementation.is_duckdb() else []
-        if not literal:
+    def replace_all(
+        self, pattern: str, value: str | SQLExprT, *, literal: bool
+    ) -> SQLExprT:
+        fname: str = "replace" if literal else "regexp_replace"
+
+        options: list[Any] = []
+        if not literal and self.compliant._implementation.is_duckdb():
+            options = [self._lit("g")]
+
+        if isinstance(value, str):
             return self.compliant._with_elementwise(
                 lambda expr: self._function(
-                    "regexp_replace", expr, self._lit(pattern), self._lit(value), *options
+                    fname, expr, self._lit(pattern), self._lit(value), *options
                 )
             )
+
         return self.compliant._with_elementwise(
-            lambda expr: self._function(
-                "replace", expr, self._lit(pattern), self._lit(value)
-            )
+            lambda expr, value: self._function(
+                fname, expr, self._lit(pattern), value, *options
+            ),
+            value=value,
         )
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
