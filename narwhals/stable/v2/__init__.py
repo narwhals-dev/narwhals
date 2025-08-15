@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
 
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Dask, DuckDB, Ibis, IntoBackend as _IntoBackend, Polars
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -72,7 +73,6 @@ if TYPE_CHECKING:
         IntoEagerBackend,
         IntoExpr,
         IntoFrame,
-        IntoLazyBackend,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -147,7 +147,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py`.
         return super().get_column(name)  # type: ignore[return-value]
 
-    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self, backend: _IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+    ) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend))
 
     @overload  # type: ignore[override]

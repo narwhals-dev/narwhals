@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Dask, DuckDB, Ibis, IntoBackend, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -79,7 +80,6 @@ if TYPE_CHECKING:
         IntoEagerBackend,
         IntoExpr,
         IntoFrame,
-        IntoLazyBackend,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -716,7 +716,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
-    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
