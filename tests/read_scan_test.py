@@ -35,6 +35,10 @@ def test_read_csv(tmpdir: pytest.TempdirFactory, backend: Implementation | str) 
     result = nw.read_csv(filepath, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
+    df_pl.write_csv(filepath, separator=";")
+    result = nw.read_csv(filepath, backend=backend, separator=";")
+    assert_equal_data(result, data)
+    assert isinstance(result, nw.DataFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
@@ -57,12 +61,20 @@ def test_read_csv_raise_with_lazy(tmpdir: pytest.TempdirFactory, backend: str) -
         nw.read_csv(filepath, backend=backend)
 
 
-def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
+def test_scan_csv(
+    tmpdir: pytest.TempdirFactory,
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
-        kwargs = {"session": DuckDBSession(), "inferSchema": True, "header": True}
+        kwargs = {"session": DuckDBSession(), "inferSchema": True}
+
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/469")
+        )
     elif "pyspark" in str(constructor):
         if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
             from pyspark.sql.connect.session import SparkSession
@@ -96,6 +108,12 @@ def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> No
     result = nw.scan_csv(filepath, backend=backend, **kwargs)
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
+    df_pl.write_csv(filepath, separator="|")
+    df = nw.from_native(constructor(data))
+    backend = nw.get_native_namespace(df)
+    result = nw.scan_csv(filepath, backend=backend, separator="|", **kwargs)
+    assert_equal_data(result, data)
+    assert isinstance(result, nw.LazyFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
@@ -105,6 +123,32 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
     df_pl.write_csv(filepath)
     result = nw.scan_csv(filepath, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
+
+
+def test_read_csv_raise_sep_multiple(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    from pyarrow import csv
+
+    df_pl = pl.DataFrame(data)
+    filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
+    df_pl.write_csv(filepath)
+
+    msg = "Can't pass both `separator` and `parse_options`."
+    with pytest.raises(TypeError, match=msg):
+        nw.read_csv(
+            filepath,
+            backend=pa,
+            separator="|",
+            parse_options=csv.ParseOptions(delimiter=";"),
+        )
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(
+            filepath,
+            backend=pa,
+            separator="|",
+            parse_options=csv.ParseOptions(delimiter=";"),
+        )
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")

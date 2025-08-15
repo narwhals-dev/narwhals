@@ -560,7 +560,11 @@ def show_versions() -> None:
 
 
 def read_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str,
+    *,
+    backend: ModuleType | Implementation | str,
+    separator: str = ",",
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -573,6 +577,7 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -594,17 +599,19 @@ def read_csv(
     impl = Implementation.from_backend(backend)
     native_namespace = impl.to_native_namespace()
     native_frame: NativeFrame
-    if impl in {
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
+    if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
+        native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
+    elif impl is Implementation.POLARS:
+        native_frame = native_namespace.read_csv(source, separator=separator, **kwargs)
     elif impl is Implementation.PYARROW:
+        if separator is not None and "parse_options" in kwargs:
+            msg = "Can't pass both `separator` and `parse_options`."
+            raise TypeError(msg)
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(source, **kwargs)
+        native_frame = csv.read_csv(
+            source, parse_options=csv.ParseOptions(delimiter=separator), **kwargs
+        )
     elif impl in {
         Implementation.PYSPARK,
         Implementation.DASK,
@@ -630,7 +637,11 @@ def read_csv(
 
 
 def scan_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str,
+    *,
+    backend: ModuleType | Implementation | str,
+    separator: str = ",",
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -646,6 +657,7 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -671,20 +683,26 @@ def scan_csv(
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_csv(source, **kwargs)
+        native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
     elif implementation in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
-        Implementation.DUCKDB,
         Implementation.IBIS,
     }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
+        native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
+    elif implementation in {Implementation.DUCKDB}:
+        native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
+        if separator is not None and "parse_options" in kwargs:
+            msg = "Can't pass both `separator` and `parse_options`."
+            raise TypeError(msg)
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(source, **kwargs)
+        native_frame = csv.read_csv(
+            source, parse_options=csv.ParseOptions(delimiter=separator), **kwargs
+        )
     elif implementation.is_spark_like():
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
@@ -692,12 +710,12 @@ def scan_csv(
 
         csv_reader = session.read.format("csv")
         native_frame = (
-            csv_reader.load(source)
+            csv_reader.load(source, sep=separator)
             if (
                 implementation is Implementation.SQLFRAME
                 and implementation._backend_version() < (3, 27, 0)
             )
-            else csv_reader.options(**kwargs).load(source)
+            else csv_reader.options(sep=separator, **kwargs).load(source)
         )
     else:  # pragma: no cover
         try:
