@@ -6,6 +6,10 @@
       members:
         - names
         - dtypes
+        - from_arrow
+        - from_native
+        - from_pandas_like
+        - from_polars
         - len
         - to_arrow
         - to_pandas
