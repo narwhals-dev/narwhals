@@ -28,7 +28,7 @@ class TemporalFunction(Function):
         tp = type(self)
         if tp is TemporalFunction:
             return tp.__name__
-        elif tp is Timestamp:
+        if tp is Timestamp:
             tu = cast("Timestamp", self).time_unit
             return f"dt.timestamp[{tu!r}]"
         m: dict[type[TemporalFunction], str] = {

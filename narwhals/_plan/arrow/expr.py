@@ -426,13 +426,12 @@ class ArrowScalar(
     def from_series(cls, series: ArrowSeries) -> Self:
         if len(series) == 1:
             return cls.from_native(series.native[0], series.name, series.version)
-        elif len(series) == 0:
+        if len(series) == 0:
             return cls.from_python(
                 None, series.name, dtype=series.dtype, version=series.version
             )
-        else:
-            msg = f"Too long {len(series)!r}"
-            raise InvalidOperationError(msg)
+        msg = f"Too long {len(series)!r}"
+        raise InvalidOperationError(msg)
 
     def _dispatch_expr(
         self, node: ExprIR, frame: ArrowDataFrame, name: str

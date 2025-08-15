@@ -432,8 +432,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
             if len(self.input) >= 2:
                 return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
             return f"{first!r}.{self.function!r}()"
-        else:
-            return f"{self.function!r}()"
+        return f"{self.function!r}()"
 
     def iter_left(self) -> t.Iterator[ExprIR]:
         for e in self.input:

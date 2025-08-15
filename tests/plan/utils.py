@@ -17,8 +17,7 @@ def _unwrap_ir(obj: DummyExpr | ExprIR | NamedIR) -> ExprIR:
         return obj
     if isinstance(obj, NamedIR):
         return obj.expr
-    else:
-        raise NotImplementedError(type(obj))
+    raise NotImplementedError(type(obj))
 
 
 def assert_expr_ir_equal(

@@ -203,12 +203,10 @@ class ArrowNamespace(
             native = fn.int_range(start_, end_, step, dtype=pa_dtype)
             return self._expr.from_native(native, name, self.version)
 
-        else:
-            msg = (
-                f"All inputs for `int_range()` resolve to int, but got \n"
-                f"{start_!r}\n{end_!r}"
-            )
-            raise InvalidOperationError(msg)
+        msg = (
+            f"All inputs for `int_range()` resolve to int, but got \n{start_!r}\n{end_!r}"
+        )
+        raise InvalidOperationError(msg)
 
     @overload
     def concat(
@@ -279,5 +277,4 @@ class ArrowNamespace(
                     )
                     raise TypeError(msg)
             return df._with_native(fn.concat_vertical_table(df.native for df in dfs))
-        else:
-            raise TypeError(items)
+        raise TypeError(items)

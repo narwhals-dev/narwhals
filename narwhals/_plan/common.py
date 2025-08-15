@@ -121,7 +121,7 @@ class Immutable:
     def __eq__(self, other: object) -> bool:
         if self is other:
             return True
-        elif type(self) is not type(other):
+        if type(self) is not type(other):
             return False
         return all(
             getattr(self, key) == getattr(other, key) for key in self.__immutable_keys__
@@ -162,7 +162,7 @@ def _field_str(name: str, value: Any) -> str:
     if isinstance(value, tuple):
         inner = ", ".join(f"{v}" for v in value)
         return f"{name}=[{inner}]"
-    elif isinstance(value, str):
+    if isinstance(value, str):
         return f"{name}={value!r}"
     return f"{name}={value}"
 
