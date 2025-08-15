@@ -69,6 +69,7 @@ nav:
     - api-reference/dtypes.md
     - api-reference/exceptions.md
     - api-reference/selectors.md
+    - api-reference/testing.md
     - api-reference/typing.md
     - api-reference/utils.md
   - This: this.md
