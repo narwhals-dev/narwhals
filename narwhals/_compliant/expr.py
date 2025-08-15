@@ -782,7 +782,7 @@ class EagerExpr(
                 result = [series.cast(return_dtype) for series in result]
 
             is_scalar_result = tuple(len(r) == 1 for r in result)
-            if not returns_scalar and any(is_scalar_result) and self.len() > 1:
+            if (not returns_scalar) and any(is_scalar_result) and (len(df) > 1):
                 _idx = is_scalar_result.index(True)  # Index of first result with length 1
                 _type = type(native_result[_idx])
                 msg = (
