@@ -765,16 +765,17 @@ class EagerExpr(
             input_series_list = self(df)
             output_names = (input_series.name for input_series in input_series_list)
             native_result = tuple(function(series) for series in input_series_list)
+            result: Sequence[EagerSeriesT]
             if is_numpy_array(native_result[0]) or (
                 (np := get_numpy()) is not None and np.isscalar(native_result[0])
             ):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
-                result = [
+                result = tuple(
                     from_numpy(array).alias(output_name)
                     for array, output_name in zip(native_result, output_names)
-                ]
+                )
             else:
                 result = native_result
             if return_dtype is not None:
