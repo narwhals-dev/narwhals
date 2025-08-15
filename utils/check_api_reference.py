@@ -94,15 +94,7 @@ SERIES_ONLY_METHODS = {
     "__iter__",
     "__contains__",
 }
-BASE_DTYPES = {
-    "NumericType",
-    "DType",
-    "TemporalType",
-    "Literal",
-    "OrderedDict",
-    "Mapping",
-    "Iterable",
-}
+BASE_DTYPES = {"DType", "Literal", "OrderedDict", "Mapping", "Iterable"}
 DIR_API_REF = Path("docs/api-reference")
 
 files = {fp.stem for fp in Path("narwhals").iterdir()}
