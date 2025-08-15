@@ -36,7 +36,14 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
-    from narwhals.typing import Into1DArray, IntoDType, MultiIndexSelector, _1DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        MultiIndexSelector,
+        NonNestedLiteral,
+        NumericLiteral,
+        _1DArray,
+    )
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
@@ -84,6 +91,9 @@ INHERITED_METHODS = frozenset(
         "gather_every",
         "head",
         "is_between",
+        "is_close",
+        "is_duplicated",
+        "is_empty",
         "is_finite",
         "is_first_distinct",
         "is_in",
@@ -124,6 +134,11 @@ INHERITED_METHODS = frozenset(
 
 class PolarsSeries:
     _implementation = Implementation.POLARS
+
+    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
+        True: ["breakpoint", "count"],
+        False: ["count"],
+    }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
         self._native_series: pl.Series = series
@@ -472,10 +487,27 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
-        True: ["breakpoint", "count"],
-        False: ["count"],
-    }
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> PolarsSeries:
+        if self._backend_version < (1, 32, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            other_expr = other._to_expr() if isinstance(other, PolarsSeries) else other
+            expr = ns.col(name).is_close(
+                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            )
+            return self.to_frame().select(expr).get_column(name)
+        other_series = other.native if isinstance(other, PolarsSeries) else other
+        result = self.native.is_close(
+            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+        )
+        return self._with_native(result)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
@@ -647,6 +679,8 @@ class PolarsSeries:
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
+    is_duplicated: Method[Self]
+    is_empty: Method[bool]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
@@ -736,6 +770,11 @@ class PolarsSeriesListNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.len()).get_column(name)
+
+    def contains(self, item: NonNestedLiteral) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
 
 
 class PolarsSeriesStructNamespace(

@@ -324,9 +324,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             native_namespace: Native namespace.
-
-        Returns:
-            Implementation.
         """
         mapping = {
             get_pandas(): Implementation.PANDAS,
@@ -351,9 +348,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             backend_name: Name of backend, expressed as string.
-
-        Returns:
-            Implementation.
         """
         try:
             return cls(backend_name)
@@ -368,9 +362,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             backend: Backend to instantiate Implementation from.
-
-        Returns:
-            Implementation.
         """
         return (
             cls.from_string(backend)
@@ -381,11 +372,7 @@ class Implementation(NoAutoEnum):
         )
 
     def to_native_namespace(self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation.
-
-        Returns:
-            Native module.
-        """
+        """Return the native namespace module corresponding to Implementation."""
         if self is Implementation.UNKNOWN:
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
@@ -396,9 +383,6 @@ class Implementation(NoAutoEnum):
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -413,9 +397,6 @@ class Implementation(NoAutoEnum):
     def is_pandas_like(self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -428,9 +409,6 @@ class Implementation(NoAutoEnum):
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -449,9 +427,6 @@ class Implementation(NoAutoEnum):
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -464,9 +439,6 @@ class Implementation(NoAutoEnum):
 
     def is_cudf(self) -> bool:
         """Return whether implementation is cuDF.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -481,9 +453,6 @@ class Implementation(NoAutoEnum):
     def is_modin(self) -> bool:
         """Return whether implementation is Modin.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -496,9 +465,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -513,9 +479,6 @@ class Implementation(NoAutoEnum):
     def is_pyspark_connect(self) -> bool:
         """Return whether implementation is PySpark.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -528,9 +491,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -545,9 +505,6 @@ class Implementation(NoAutoEnum):
     def is_dask(self) -> bool:
         """Return whether implementation is Dask.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -560,9 +517,6 @@ class Implementation(NoAutoEnum):
 
     def is_duckdb(self) -> bool:
         """Return whether implementation is DuckDB.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -577,9 +531,6 @@ class Implementation(NoAutoEnum):
     def is_ibis(self) -> bool:
         """Return whether implementation is Ibis.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -592,9 +543,6 @@ class Implementation(NoAutoEnum):
 
     def is_sqlframe(self) -> bool:
         """Return whether implementation is SQLFrame.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -1061,7 +1009,7 @@ def maybe_set_index(
         return df_any._with_compliant(
             df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )
-    elif is_pandas_like_series(native_obj):
+    if is_pandas_like_series(native_obj):
         from narwhals._pandas_like.utils import set_index
 
         if column_names:
@@ -1074,8 +1022,7 @@ def maybe_set_index(
             implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
         )
         return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
-    else:
-        return df_any
+    return df_any
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -1209,17 +1156,16 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     """
     if unit in {"b", "bytes"}:
         return sz
-    elif unit in {"kb", "kilobytes"}:
+    if unit in {"kb", "kilobytes"}:
         return sz / 1024
-    elif unit in {"mb", "megabytes"}:
+    if unit in {"mb", "megabytes"}:
         return sz / 1024**2
-    elif unit in {"gb", "gigabytes"}:
+    if unit in {"gb", "gigabytes"}:
         return sz / 1024**3
-    elif unit in {"tb", "terabytes"}:
+    if unit in {"tb", "terabytes"}:
         return sz / 1024**4
-    else:
-        msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
-        raise ValueError(msg)
+    msg = f"`unit` must be one of {{'b', 'kb', 'mb', 'gb', 'tb'}}, got {unit!r}"
+    raise ValueError(msg)
 
 
 def is_ordered_categorical(series: Series[Any]) -> bool:
@@ -1709,9 +1655,8 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
-    else:  # pragma: no cover
-        msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
-        raise ModuleNotFoundError(msg)
+    msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
+    raise ModuleNotFoundError(msg)  # pragma: no cover
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -1833,9 +1778,6 @@ class not_implemented:  # noqa: N801
         Arguments:
             message: **Static-only** deprecation message, emitted in an IDE.
 
-        Returns:
-            An exception-raising [descriptor].
-
         [descriptor]: https://docs.python.org/3/howto/descriptor.html
         """
         obj = cls()
@@ -1884,9 +1826,6 @@ class requires:  # noqa: N801
         Arguments:
             minimum: Minimum backend version.
             hint: Optional suggested alternative.
-
-        Returns:
-            An exception-raising decorator.
         """
         obj = cls.__new__(cls)
         obj._min_version = minimum
@@ -1947,13 +1886,12 @@ def inherit_doc(
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
-        else:  # pragma: no cover
-            msg = (
-                f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
-                f"Method: {init_child.__qualname__!r}\n"
-                f"Parent: {tp_parent!r}"
-            )
-            raise TypeError(msg)
+        msg = (  # pragma: no cover
+            f"`@{inherit_doc.__name__}` is only allowed to decorate an `__init__` with a class-level doc.\n"
+            f"Method: {init_child.__qualname__!r}\n"
+            f"Parent: {tp_parent!r}"
+        )
+        raise TypeError(msg)  # pragma: no cover
 
     return decorate
 

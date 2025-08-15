@@ -16,7 +16,7 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoSeries
+    from narwhals.typing import IntoSeries, NonNestedDType
     from tests.utils import Constructor
 
 
@@ -143,7 +143,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         if condition:
             pytest.skip(reason)
 
-    if any(x in str(constructor) for x in ("dask", "modin", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"
@@ -315,6 +315,7 @@ def test_dtype_is_x() -> None:
     is_decimal = {nw.Decimal}
     is_temporal = {nw.Datetime, nw.Date, nw.Duration, nw.Time}
     is_nested = {nw.Array, nw.List, nw.Struct}
+    is_boolean = {nw.Boolean}
 
     for dtype in dtypes:
         assert dtype.is_numeric() == (
@@ -332,6 +333,7 @@ def test_dtype_is_x() -> None:
         assert dtype.is_decimal() == (dtype in is_decimal)
         assert dtype.is_temporal() == (dtype in is_temporal)
         assert dtype.is_nested() == (dtype in is_nested)
+        assert dtype.is_boolean() == (dtype in is_boolean)
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
@@ -387,9 +389,7 @@ def test_cast_decimal_to_native() -> None:
         ),
     ]
     for obj in library_obj_to_test:
-        with pytest.raises(
-            NotImplementedError, match="Casting to Decimal is not supported yet."
-        ):
+        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
             (
                 nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
@@ -509,3 +509,42 @@ def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no 
     )
     result = df.collect_schema()
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.Object,
+        nw.String,
+        nw.Time,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+        nw.Binary,
+    ],
+)
+def test_dtype_base_type_non_nested(dtype: type[NonNestedDType]) -> None:
+    assert dtype.base_type() is dtype().base_type()
+
+
+def test_dtype_base_type_nested() -> None:
+    assert nw.List.base_type() is nw.List(nw.Float32).base_type()
+    assert nw.Array.base_type() is nw.Array(nw.String, 2).base_type()
+    assert nw.Struct.base_type() is nw.Struct({"a": nw.Boolean}).base_type()
+    assert nw.Enum.base_type() is nw.Enum(["beluga", "narwhal"]).base_type()

@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Callable
 from functools import lru_cache
 from importlib import import_module
+from operator import attrgetter
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, overload
 
-from narwhals._utils import Implementation, isinstance_or_issubclass
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
-    from types import ModuleType
+    from collections.abc import Mapping
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
@@ -19,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.expr import SparkLikeExpr
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
@@ -129,7 +131,32 @@ def fetch_session_time_zone(session: SparkSession) -> str:
         return "<unknown>"
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912
+IntoSparkDType: TypeAlias = Callable[[ModuleType], Callable[[], "_NativeDType"]]
+dtypes = Version.MAIN.dtypes
+NW_TO_SPARK_DTYPES: Mapping[type[DType], IntoSparkDType] = {
+    dtypes.Float64: attrgetter("DoubleType"),
+    dtypes.Float32: attrgetter("FloatType"),
+    dtypes.Binary: attrgetter("BinaryType"),
+    dtypes.String: attrgetter("StringType"),
+    dtypes.Boolean: attrgetter("BooleanType"),
+    dtypes.Date: attrgetter("DateType"),
+    dtypes.Int8: attrgetter("ByteType"),
+    dtypes.Int16: attrgetter("ShortType"),
+    dtypes.Int32: attrgetter("IntegerType"),
+    dtypes.Int64: attrgetter("LongType"),
+}
+UNSUPPORTED_DTYPES = (
+    dtypes.UInt64,
+    dtypes.UInt32,
+    dtypes.UInt16,
+    dtypes.UInt8,
+    dtypes.Enum,
+    dtypes.Categorical,
+    dtypes.Time,
+)
+
+
+def narwhals_to_native_dtype(
     dtype: IntoDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> _NativeDType:
     dtypes = version.dtypes
@@ -137,25 +164,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         native = sqlframe_types
     else:
         native = spark_types
-
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return native.DoubleType()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return native.FloatType()
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return native.LongType()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return native.IntegerType()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return native.ShortType()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return native.ByteType()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return native.StringType()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return native.BooleanType()
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return native.DateType()
+    base_type = dtype.base_type()
+    if into_spark_type := NW_TO_SPARK_DTYPES.get(base_type):
+        return into_spark_type(native)()
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         if (tu := dtype.time_unit) != "us":  # pragma: no cover
             msg = f"Only microsecond precision is supported for PySpark, got: {tu}."
@@ -184,24 +195,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
                 for field in dtype.fields
             ]
         )
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return native.BinaryType()
-
-    if isinstance_or_issubclass(
-        dtype,
-        (
-            dtypes.UInt64,
-            dtypes.UInt32,
-            dtypes.UInt16,
-            dtypes.UInt8,
-            dtypes.Enum,
-            dtypes.Categorical,
-            dtypes.Time,
-        ),
-    ):  # pragma: no cover
-        msg = "Unsigned integer, Enum, Categorical and Time types are not supported by spark-like backend"
+    if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Spark-Like backend."
         raise UnsupportedDTypeError(msg)
-
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
 

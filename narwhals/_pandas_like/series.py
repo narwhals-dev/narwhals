@@ -239,8 +239,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             import numpy as np
 
             return np
-        else:
-            return import_array_module(self._implementation)
+        return import_array_module(self._implementation)
 
     def ewm_mean(
         self,
@@ -522,27 +521,25 @@ class PandasLikeSeries(EagerSeries[Any]):
         ser_not_null = self.native.dropna()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        elif len(ser_not_null) == 2:
+        if len(ser_not_null) == 2:
             return 0.0
-        else:
-            m = ser_not_null - ser_not_null.mean()
-            m2 = (m**2).mean()
-            m3 = (m**3).mean()
-            return m3 / (m2**1.5) if m2 != 0 else float("nan")
+        m = ser_not_null - ser_not_null.mean()
+        m2 = (m**2).mean()
+        m3 = (m**3).mean()
+        return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def kurtosis(self) -> float | None:
         ser_not_null = self.native.dropna()
         if len(ser_not_null) == 0:
             return None
-        elif len(ser_not_null) == 1:
+        if len(ser_not_null) == 1:
             return float("nan")
-        else:
-            m = ser_not_null - ser_not_null.mean()
-            m2 = (m**2).mean()
-            m4 = (m**4).mean()
-            return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
+        m = ser_not_null - ser_not_null.mean()
+        m2 = (m**2).mean()
+        m4 = (m**4).mean()
+        return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
 
     def len(self) -> int:
         return len(self.native)
@@ -706,9 +703,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def to_pandas(self) -> pd.Series[Any]:
         if self._implementation is Implementation.PANDAS:
             return self.native
-        elif self._implementation is Implementation.CUDF:  # pragma: no cover
+        if self._implementation is Implementation.CUDF:  # pragma: no cover
             return self.native.to_pandas()
-        elif self._implementation is Implementation.MODIN:
+        if self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
@@ -738,8 +735,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         if descending:
             return self.native.is_monotonic_decreasing
-        else:
-            return self.native.is_monotonic_increasing
+        return self.native.is_monotonic_increasing
 
     def value_counts(
         self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
@@ -828,8 +824,22 @@ class PandasLikeSeries(EagerSeries[Any]):
             if upper_bound is not None
             else (None, None)
         )
-        kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower, upper, **kwargs))
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas():
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            if self._is_native(lower):
+                result = result.where(result >= lower, lower)
+                lower = None
+            if self._is_native(upper):
+                result = result.where(result <= upper, upper)
+                upper = None
+
+        return self._with_native(result.clip(lower, upper, **kwargs))
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:

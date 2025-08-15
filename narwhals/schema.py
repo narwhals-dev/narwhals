@@ -65,34 +65,19 @@ class Schema(OrderedDict[str, "DType"]):
         super().__init__(schema)
 
     def names(self) -> list[str]:
-        """Get the column names of the schema.
-
-        Returns:
-            Column names.
-        """
+        """Get the column names of the schema."""
         return list(self.keys())
 
     def dtypes(self) -> list[DType]:
-        """Get the data types of the schema.
-
-        Returns:
-            Data types of schema.
-        """
+        """Get the data types of the schema."""
         return list(self.values())
 
     def len(self) -> int:
-        """Get the number of columns in the schema.
-
-        Returns:
-            Number of columns.
-        """
+        """Get the number of columns in the schema."""
         return len(self)
 
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
-
-        Returns:
-            A pyarrow Schema.
 
         Examples:
             >>> import narwhals as nw
@@ -119,9 +104,6 @@ class Schema(OrderedDict[str, "DType"]):
             dtype_backend: Backend(s) used for the native types. When providing more than
                 one, the length of the iterable must be equal to the length of the schema.
 
-        Returns:
-            An ordered mapping of column names to their pandas data type.
-
         Examples:
             >>> import narwhals as nw
             >>> schema = nw.Schema({"a": nw.Int64(), "b": nw.Datetime("ns")})
@@ -143,37 +125,31 @@ class Schema(OrderedDict[str, "DType"]):
                 name: to_native_dtype(dtype=dtype, dtype_backend=dtype_backend)
                 for name, dtype in self.items()
             }
-        else:
-            backends = tuple(dtype_backend)
-            if len(backends) != len(self):
-                from itertools import chain, islice, repeat
+        backends = tuple(dtype_backend)
+        if len(backends) != len(self):
+            from itertools import chain, islice, repeat
 
-                n_user, n_actual = len(backends), len(self)
-                suggestion = tuple(
-                    islice(
-                        chain.from_iterable(islice(repeat(backends), n_actual)), n_actual
-                    )
-                )
-                msg = (
-                    f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
-                    "Hint: instead of\n"
-                    f"    schema.to_pandas({backends})\n"
-                    "you may want to use\n"
-                    f"    schema.to_pandas({backends[0]})\n"
-                    f"or\n"
-                    f"    schema.to_pandas({suggestion})"
-                )
-                raise ValueError(msg)
-            return {
-                name: to_native_dtype(dtype=dtype, dtype_backend=backend)
-                for name, dtype, backend in zip(self.keys(), self.values(), backends)
-            }
+            n_user, n_actual = len(backends), len(self)
+            suggestion = tuple(
+                islice(chain.from_iterable(islice(repeat(backends), n_actual)), n_actual)
+            )
+            msg = (
+                f"Provided {n_user!r} `dtype_backend`(s), but schema contains {n_actual!r} field(s).\n"
+                "Hint: instead of\n"
+                f"    schema.to_pandas({backends})\n"
+                "you may want to use\n"
+                f"    schema.to_pandas({backends[0]})\n"
+                f"or\n"
+                f"    schema.to_pandas({suggestion})"
+            )
+            raise ValueError(msg)
+        return {
+            name: to_native_dtype(dtype=dtype, dtype_backend=backend)
+            for name, dtype, backend in zip(self.keys(), self.values(), backends)
+        }
 
     def to_polars(self) -> pl.Schema:
         """Convert Schema to a polars Schema.
-
-        Returns:
-            A polars Schema or plain dict (prior to polars 1.0).
 
         Examples:
             >>> import narwhals as nw
