@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -27,8 +27,18 @@ def test_self_equal(
     constructor_eager: ConstructorEager, data: Data, schema: IntoSchema
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
+        15,
+        0,
+    ):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
+            "dictionary using function cast_dictionary"
+        )
         pytest.skip(reason=reason)
 
     if "pyarrow_table" in str(constructor_eager):
@@ -120,7 +130,7 @@ def test_check_order(
         "pandas" in str(constructor_eager)
         and PANDAS_VERSION < (2, 2)
         and dtype.is_nested()
-    ):
+    ):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 
@@ -231,8 +241,19 @@ def test_list_like(
     context: Any,
     dtype: nw.dtypes.DType,
 ) -> None:
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
+    if (
+        "pyarrow_table" in str(constructor_eager)
+        and PYARROW_VERSION < (14, 0)
+        and dtype == nw.List
+    ):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from "
+            "list<item: string> to fixed_size_list using function cast_fixed_size_list"
+        )
         pytest.skip(reason=reason)
 
     data = {"left": l_vals, "right": r_vals}
@@ -273,7 +294,7 @@ def test_struct(
     check_exact: bool,
     context: Any,
 ) -> None:
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 
