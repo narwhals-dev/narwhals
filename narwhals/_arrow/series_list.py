@@ -17,4 +17,8 @@ class ArrowSeriesListNamespace(ArrowSeriesNamespace):
         return self.with_native(pc.list_value_length(self.native).cast(pa.uint32()))
 
     unique = not_implemented()
+
     contains = not_implemented()
+
+    def get(self, index: int) -> ArrowSeries:
+        return self.with_native(pc.list_element(self.native, index))
