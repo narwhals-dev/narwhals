@@ -143,6 +143,9 @@ IntoBackendAny: TypeAlias = IntoBackend[Backend]
 IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
 
+# We can't misuse it!
+IntoBackendBad: TypeAlias = IntoBackend[Literal["bad"]]  # type: ignore[type-var]
+
 
 def dataframe_lazy_current(backend: IntoBackendLazy | None = None) -> None: ...
 def dataframe_lazy_alt_1(
