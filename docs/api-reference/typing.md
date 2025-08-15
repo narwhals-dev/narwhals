@@ -31,6 +31,7 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - RollingInterpolationMethod
         - UniqueKeepStrategy
         - LazyUniqueKeepStrategy
+        - ToPandasArrowKwds
       show_source: false
       show_bases: false
 

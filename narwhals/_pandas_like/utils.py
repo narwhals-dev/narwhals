@@ -16,14 +16,17 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._translate import ToPandas, ToPandasToT_co
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
+    _StoresImplementation,
+    _StoresNative,
     check_columns_exist,
     isinstance_or_issubclass,
 )
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
@@ -31,7 +34,7 @@ if TYPE_CHECKING:
 
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -42,7 +45,13 @@ if TYPE_CHECKING:
         NativeSeriesT,
     )
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoDType,
+        TimeUnit,
+        ToPandasArrowKwds,
+        _1DArray,
+    )
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
@@ -656,6 +665,34 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
         return cp
     msg = f"Expected pandas/modin/cudf, got: {implementation}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+class PandasLikeToPandas(
+    _StoresNative[Any], _StoresImplementation, ToPandas[ToPandasToT_co]
+):
+    def to_pandas(
+        self,
+        *,
+        use_pyarrow_extension_array: bool = False,
+        **kwds: Unpack[ToPandasArrowKwds],
+    ) -> ToPandasToT_co:
+        if kwds:
+            msg = "Only `to_pandas(use_pyarrow_extension_array=...)` is supported for pandas-like objects."
+            raise InvalidOperationError(msg)
+        use_pyarrow = use_pyarrow_extension_array
+        if self._implementation is Implementation.PANDAS:
+            nd_frame = self.native
+        elif self._implementation is Implementation.CUDF:
+            native = self.native
+            return (
+                native.to_pandas(arrow_type=True) if use_pyarrow else native.to_pandas()
+            )
+        else:
+            assert self._implementation is Implementation.MODIN  # noqa: S101
+            nd_frame = self.native._to_pandas()
+        return (
+            nd_frame.convert_dtypes(dtype_backend="pyarrow") if use_pyarrow else nd_frame
+        )
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
