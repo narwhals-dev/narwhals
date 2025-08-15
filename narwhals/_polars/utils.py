@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
 
 import polars as pl
 
@@ -48,6 +48,15 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
+
+SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
+"""`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
+
+Includes `SERIES_ACCEPTS_PD_INDEX`.
+"""
+
+SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
+"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
 
 @overload

@@ -146,6 +146,12 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             )
 
 
+def assert_equal_series(
+    result: nw.Series[Any], expected: Sequence[Any], name: str
+) -> None:
+    assert_equal_data(result.to_frame(), {name: expected})
+
+
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
