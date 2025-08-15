@@ -80,18 +80,62 @@ Backend: TypeAlias = Literal[EagerAllowed, LazyAllowed]
 
 BackendT = TypeVar("BackendT", bound=Backend)
 IntoBackend: TypeAlias = Union[BackendT, ModuleType]
-"""Here's lots of long text.
+"""Anything that can be converted into a Narwhals Implementation.
 
-Even more stuff here.
-
-And here too!
+`backend` can be specified in three ways.
 
 Examples:
+    A string backend name, such as: `"pandas"`, `"pyarrow"`, `"modin"`, `"cudf"`
 
-    # not a doctest!
-    import narwhals as nw
+    >>> import pandas as pd
+    >>> import narwhals as nw
+    >>>
+    >>> data = {"c": [5, 2], "d": [1, 4]}
+    >>> nw.DataFrame.from_dict(data, backend="pandas")
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |        c  d      |
+    |     0  5  1      |
+    |     1  2  4      |
+    └──────────────────┘
 
-    nw.hello()
+    An Implementation, such as: `Implementation.POLARS`, `Implementation.DUCKDB`, `Implementation.PYSPARK`
+
+    >>> import narwhals as nw
+    >>> nw.read_parquet("file.parquet", backend=nw.Implementation.PYARROW)
+    ┌──────────────────┐
+    |Narwhals DataFrame|
+    |------------------|
+    |  pyarrow.Table   |
+    |  a: int64        |
+    |  b: int64        |
+    |  ----            |
+    |  a: [[1,2]]      |
+    |  b: [[4,5]]      |
+    └──────────────────┘
+
+    A python module, such as `dask`, `ibis`, `sqlframe`
+
+    >>> import numpy as np
+    >>> import polars as pl
+    >>> import narwhals as nw
+    >>>
+    >>> arr = np.arange(5, 10)
+    >>> nw.Series.from_numpy("arr", arr, dtype=nw.Int8, backend=pl)
+    ┌──────────────────┐
+    | Narwhals Series  |
+    |------------------|
+    |shape: (5,)       |
+    |Series: 'arr' [i8]|
+    |[                 |
+    |        5         |
+    |        6         |
+    |        7         |
+    |        8         |
+    |        9         |
+    |]                 |
+    └──────────────────┘
 """
 
 
