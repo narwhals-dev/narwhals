@@ -14,12 +14,7 @@ def test_map_batches_expr(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(expected, {"a": [2, 3, 4], "b": [5, 6, 7]})
 
 
-def test_map_batches_expr_numpy(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor_eager):
-        # https://github.com/narwhals-dev/narwhals/issues/2995
-        request.applymarker(pytest.mark.xfail(strict=False))
+def test_map_batches_expr_numpy(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = df.select(
         nw.col("a")
