@@ -227,7 +227,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
                 return expr.std(how="sample")
             n_samples = expr.count()
             std_pop = expr.std(how="pop")
-            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            ddof_lit = lit(ddof)
             return std_pop * n_samples.sqrt() / (n_samples - ddof_lit).sqrt()
 
         return self._with_callable(lambda expr: _std(expr, ddof))
@@ -240,7 +240,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
                 return expr.var(how="sample")
             n_samples = expr.count()
             var_pop = expr.var(how="pop")
-            ddof_lit = cast("ir.IntegerScalar", ibis.literal(ddof))
+            ddof_lit = lit(ddof)
             return var_pop * n_samples / (n_samples - ddof_lit)
 
         return self._with_callable(lambda expr: _var(expr, ddof))
@@ -290,35 +290,33 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        def _rank(expr: ir.Column) -> ir.Column:
+        def _rank(expr: ir.Column) -> ir.Value:
             order_by = next(self._sort(expr, descending=[descending], nulls_last=[True]))
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
                 rank_ = order_by.dense_rank()
             elif method == "ordinal":
-                rank_ = cast("ir.IntegerColumn", ibis.row_number().over(window))
+                rank_ = ibis.row_number().over(window)
             else:
                 rank_ = order_by.rank()
 
             # Ibis uses 0-based ranking. Add 1 to match polars 1-based rank.
-            rank_ = rank_ + cast("ir.IntegerValue", lit(1))
+            rank_ = rank_ + lit(1)
 
             # For "max" and "average", adjust using the count of rows in the partition.
             if method == "max":
                 # Define a window partitioned by expr (i.e. each distinct value)
                 partition = ibis.window(group_by=[expr])
-                cnt = cast("ir.IntegerValue", expr.count().over(partition))
-                rank_ = rank_ + cnt - cast("ir.IntegerValue", lit(1))
+                cnt = expr.count().over(partition)
+                rank_ = rank_ + cnt - lit(1)
             elif method == "average":
                 partition = ibis.window(group_by=[expr])
-                cnt = cast("ir.IntegerValue", expr.count().over(partition))
-                avg = cast(
-                    "ir.NumericValue", (cnt - cast("ir.IntegerScalar", lit(1))) / lit(2.0)
-                )
+                cnt = expr.count().over(partition)
+                avg = cast("ir.NumericValue", (cnt - lit(1)) / lit(2.0))
                 rank_ = rank_ + avg
 
-            return cast("ir.Column", ibis.cases((expr.notnull(), rank_)))
+            return ibis.cases((expr.notnull(), rank_))
 
         return self._with_callable(_rank)
 
