@@ -7,6 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -26,6 +27,10 @@ def test_self_equal(
     constructor_eager: ConstructorEager, data: Data, schema: IntoSchema
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+        reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
     if "pyarrow_table" in str(constructor_eager):
         # Replace Enum with Categorical, since Pyarrow does not support Enum
         schema = {**schema, "enum": nw.Categorical()}
@@ -111,6 +116,14 @@ def test_check_order(
     context: Any,
 ) -> None:
     """Test check_order behavior with nested and simple data."""
+    if (
+        "pandas" in str(constructor_eager)
+        and PANDAS_VERSION < (2, 2)
+        and dtype.is_nested()
+    ):
+        reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
     data: list[Any] = [[1, 2, 3]] if dtype.is_nested() else [1, 2, 3]
     frame = nw.from_native(constructor_eager({"a": data}), eager_only=True)
     left = right = frame["a"].cast(dtype)
@@ -218,6 +231,10 @@ def test_list_like(
     context: Any,
     dtype: nw.dtypes.DType,
 ) -> None:
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+        reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
     data = {"left": l_vals, "right": r_vals}
     frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
@@ -256,6 +273,10 @@ def test_struct(
     check_exact: bool,
     context: Any,
 ) -> None:
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):
+        reason = "Pandas too old for nested dtypes"
+        pytest.skip(reason=reason)
+
     dtype = nw.Struct({"a": nw.Float32(), "b": nw.List(nw.String())})
     data = {"left": l_vals, "right": r_vals}
     frame = nw.from_native(constructor_eager(data), eager_only=True)
