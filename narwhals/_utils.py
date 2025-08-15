@@ -605,11 +605,7 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
     native_namespace = _import_native_namespace(module_name)
-    if impl.is_polars():
-        from importlib import metadata
-
-        into_version = metadata.version("polars")
-    elif impl.is_sqlframe():
+    if impl.is_sqlframe():
         import sqlframe._version
 
         into_version = sqlframe._version

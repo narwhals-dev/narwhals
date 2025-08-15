@@ -824,8 +824,22 @@ class PandasLikeSeries(EagerSeries[Any]):
             if upper_bound is not None
             else (None, None)
         )
-        kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower, upper, **kwargs))
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas():
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            if self._is_native(lower):
+                result = result.where(result >= lower, lower)
+                lower = None
+            if self._is_native(upper):
+                result = result.where(result <= upper, upper)
+                upper = None
+
+        return self._with_native(result.clip(lower, upper, **kwargs))
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
