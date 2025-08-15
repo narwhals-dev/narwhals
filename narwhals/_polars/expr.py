@@ -155,16 +155,16 @@ class PolarsExpr:
         *,
         returns_scalar: bool,
     ) -> Self:
+        pl_version = self._backend_version
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
-            if self._backend_version < (1, 32)
+            if pl_version < (1, 32)
             else pl.self_dtype()
         )
-        native = self.native.map_batches(
-            function, return_dtype_pl, returns_scalar=returns_scalar
-        )
+        kwargs = {} if pl_version < (0, 20, 31) else {"returns_scalar": returns_scalar}
+        native = self.native.map_batches(function, return_dtype_pl, **kwargs)
         return self._with_native(native)
 
     @requires.backend_version((1,))
