@@ -133,6 +133,8 @@ class CompliantExpr(
         self,
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self: ...
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
@@ -753,24 +755,41 @@ class EagerExpr(
         )
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
+        self,
+        function: Callable[[Any], Any],
+        return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
             input_series_list = self(df)
-            output_names = [input_series.name for input_series in input_series_list]
-            result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]) or (
-                (np := get_numpy()) is not None and np.isscalar(result[0])
+            output_names = (input_series.name for input_series in input_series_list)
+            native_result = tuple(function(series) for series in input_series_list)
+            if is_numpy_array(native_result[0]) or (
+                (np := get_numpy()) is not None and np.isscalar(native_result[0])
             ):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
                 result = [
                     from_numpy(array).alias(output_name)
-                    for array, output_name in zip(result, output_names)
+                    for array, output_name in zip(native_result, output_names)
                 ]
+            else:
+                result = native_result
             if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
+
+            is_scalar_result = tuple(len(r) == 1 for r in result)
+            if not returns_scalar and any(is_scalar_result) and self.len() > 1:
+                _idx = is_scalar_result.index(True)  # Index of first result with length 1
+                _type = type(native_result[_idx])
+                msg = (
+                    "`map_batches` with `returns_scalar=False` must return a Series; "
+                    f"found '{_type.__module__}.{_type.__name__}'.\n\nIf `returns_scalar` "
+                    "is set to `True`, a returned value can be a scalar value."
+                )
+                raise TypeError(msg)
             return result
 
         return self._from_callable(
