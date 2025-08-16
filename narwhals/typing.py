@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals._typing import IntoBackend as IntoBackend  # noqa: PLC0414
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -14,8 +15,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._typing import BackendName, EagerAllowed, LazyAllowed
-    from narwhals._utils import Implementation
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
@@ -393,117 +392,6 @@ Examples:
     └──────────────────┘
 """
 
-IntoEagerBackend: TypeAlias = Union["EagerAllowed", "ModuleType"]
-"""Anything that can be converted into a Narwhals Implementation of an eager backend.
-
-It can be specified as:
-
-- a string (backend name): `"polars"`, `"pandas"`, `"pyarrow"`, `"modin"`, and `"cudf"`.
-- an Implementation: `Implementation.POLARS`, `Implementation.PANDAS`, `Implementation.PYARROW`, etc..
-- a python module: `polars`, `pandas`, `pyarrow`, `modin`, and `cudf`
-
-Examples:
-    >>> import numpy as np
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>>
-    >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
-    >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
-    >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="polars")
-    ┌───────────────────┐
-    |Narwhals DataFrame |
-    |-------------------|
-    |shape: (2, 3)      |
-    |┌─────┬─────┬─────┐|
-    |│ c   ┆ d   ┆ e   │|
-    |│ --- ┆ --- ┆ --- │|
-    |│ i16 ┆ f32 ┆ i8  │|
-    |╞═════╪═════╪═════╡|
-    |│ 5   ┆ 2.0 ┆ 1   │|
-    |│ 1   ┆ 4.0 ┆ 3   │|
-    |└─────┴─────┴─────┘|
-    └───────────────────┘
-"""
-
-IntoLazyBackend: TypeAlias = Union["LazyAllowed", "ModuleType"]
-"""Anything that can be converted into a Narwhals Implementation of an lazy backend.
-
-It can be specified as:
-
-- a string (backend name): `"dask"`, `"duckdb"`, `"ibis"`, `"polars"`, `"pyspark"`, etc...
-- an Implementation: `Implementation.DUCKDB`, `Implementation.SQLFRAME`, etc..
-- a python module: `polars`, `pyspark.sql.connect`, `ibis`, `dask.dataframe`, etc...
-
- Examples:
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
-    >>> df = nw.from_native(df_native)
-
-    If we call `df.lazy`, we get a `narwhals.LazyFrame` backed by a Polars
-    LazyFrame.
-
-    >>> df.lazy()  # doctest: +SKIP
-    ┌─────────────────────────────┐
-    |     Narwhals LazyFrame      |
-    |-----------------------------|
-    |<LazyFrame at 0x7F52B9937230>|
-    └─────────────────────────────┘
-
-    We can also pass DuckDB as the backend, and then we'll get a
-    `narwhals.LazyFrame` backed by a `duckdb.DuckDBPyRelation`.
-
-    >>> df.lazy(backend=nw.Implementation.DUCKDB)
-    ┌──────────────────┐
-    |Narwhals LazyFrame|
-    |------------------|
-    |┌───────┬───────┐ |
-    |│   a   │   b   │ |
-    |│ int64 │ int64 │ |
-    |├───────┼───────┤ |
-    |│     1 │     4 │ |
-    |│     2 │     6 │ |
-    |└───────┴───────┘ |
-    └──────────────────┘
-"""
-
-
-IntoBackend: TypeAlias = Union["BackendName", "Implementation", "ModuleType"]
-"""Anything that can be converted into a Narwhals Implementation.
-
-It can be specified as:
-
-- a string (backend name), such as: `"pandas"`, `"pyarrow"`, `"modin"`, `"cudf"`, etc..
-- an Implementation, such as: `Implementation.POLARS`, `Implementation.DUCKDB`, `Implementation.PYSPARK`, etc..
-- a python module, such as `dask`, `ibis`, `sqlframe`, etc..
-
-Examples:
-    >>> import dask.dataframe as dd
-    >>> from sqlframe.duckdb import DuckDBSession
-    >>> import narwhals as nw
-    >>>
-    >>> nw.scan_parquet("file.parquet", backend="dask").collect()  # doctest:+SKIP
-    ┌──────────────────┐
-    |Narwhals DataFrame|
-    |------------------|
-    |        a   b     |
-    |     0  1   4     |
-    |     1  2   5     |
-    └──────────────────┘
-    >>> nw.scan_parquet(
-    ...     "file.parquet", backend=Implementation.SQLFRAME, session=DuckDBSession()
-    ... ).collect()  # doctest:+SKIP
-    ┌──────────────────┐
-    |Narwhals DataFrame|
-    |------------------|
-    |  pyarrow.Table   |
-    |  a: int64        |
-    |  b: int64        |
-    |  ----            |
-    |  a: [[1,2]]      |
-    |  b: [[4,5]]      |
-    └──────────────────┘
-"""
 
 # TODO @dangotbanned: fix this?
 # Constructor allows tuples, but we don't support that *everywhere* yet

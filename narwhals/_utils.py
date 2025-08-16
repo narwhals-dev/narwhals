@@ -75,7 +75,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames
     from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
-    from narwhals._typing import EAGER_ALLOWED
+    from narwhals._typing import EAGER_ALLOWED, Backend, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -85,7 +85,6 @@ if TYPE_CHECKING:
         CompliantSeries,
         DataFrameLike,
         DTypes,
-        IntoBackend,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -358,7 +357,7 @@ class Implementation(NoAutoEnum):
 
     @classmethod
     def from_backend(
-        cls: type[Self], backend: UnknownBackendName | IntoBackend
+        cls: type[Self], backend: IntoBackend[Backend] | UnknownBackendName
     ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 

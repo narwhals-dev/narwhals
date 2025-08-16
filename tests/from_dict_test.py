@@ -11,9 +11,9 @@ from narwhals.utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoEagerBackend
+    from narwhals._typing import Arrow, Pandas, Polars
 
-TEST_EAGER_BACKENDS: list[IntoEagerBackend] = []
+TEST_EAGER_BACKENDS: list[Polars | Pandas | Arrow] = []
 TEST_EAGER_BACKENDS.extend(
     (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
 )
@@ -26,7 +26,7 @@ TEST_EAGER_BACKENDS.extend(
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict(backend: IntoEagerBackend) -> None:
+def test_from_dict(backend: Polars | Pandas | Arrow) -> None:
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
     expected = {"c": [1, 2], "d": [5, 6]}
     assert_equal_data(result, expected)
@@ -34,7 +34,7 @@ def test_from_dict(backend: IntoEagerBackend) -> None:
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_schema(backend: IntoEagerBackend) -> None:
+def test_from_dict_schema(backend: Polars | Pandas | Arrow) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
     result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
     assert result.collect_schema() == schema
@@ -48,9 +48,7 @@ def test_from_dict_schema(backend: IntoEagerBackend) -> None:
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
-def test_from_dict_without_backend(
-    constructor: Constructor, backend: IntoEagerBackend
-) -> None:
+def test_from_dict_without_backend(constructor: Constructor, backend: Polars) -> None:
     pytest.importorskip("polars")
 
     df = (
@@ -76,7 +74,7 @@ def test_from_dict_with_backend_invalid() -> None:
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor, backend: IntoEagerBackend
+    constructor: Constructor, backend: Polars
 ) -> None:
     pytest.importorskip("polars")
 
@@ -91,13 +89,13 @@ def test_from_dict_one_native_one_narwhals(
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_empty(backend: IntoEagerBackend) -> None:
+def test_from_dict_empty(backend: Polars | Pandas | Arrow) -> None:
     result = nw.from_dict({}, backend=backend)
     assert result.shape == (0, 0)
 
 
 @pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_empty_with_schema(backend: IntoEagerBackend) -> None:
+def test_from_dict_empty_with_schema(backend: Polars | Pandas | Arrow) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
     result = nw.from_dict({}, schema, backend=backend)
     assert result.schema == schema
