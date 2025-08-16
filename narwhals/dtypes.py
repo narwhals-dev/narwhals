@@ -639,11 +639,24 @@ class Struct(NestedType):
             self.fields = list(fields)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        """Check if this DType is equivalent to another DType."""
-        # The comparison allows comparing objects to classes, and specific
-        # inner types to those without (eg: inner=None). if one of the
-        # arguments is not specific about its inner type we infer it
-        # as being equal. (See the List type for more info).
+        """Check if this Struct is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"a": nw.Int64})
+            True
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"a": nw.Boolean})
+            False
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct({"b": nw.Int64})
+            False
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct([nw.Field("a", nw.Int64)])
+            True
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.Struct({"a": nw.Int64}) == nw.Struct
+            True
+        """
         if type(other) is type and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
@@ -692,12 +705,20 @@ class List(NestedType):
         self.inner = inner
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        """Check if this DType is equivalent to another DType."""
-        # This equality check allows comparison of type classes and type instances.
-        # If a parent type is not specific about its inner type, we infer it as equal:
-        # > list[i64] == list[i64] -> True
-        # > list[i64] == list[f32] -> False
-        # > list[i64] == list      -> True
+        """Check if this List is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.List(nw.Int64) == nw.List(nw.Int64)
+            True
+            >>> nw.List(nw.Int64) == nw.List(nw.Float32)
+            False
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.List(nw.Int64) == nw.List
+            True
+        """
         if type(other) is type and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
@@ -754,14 +775,22 @@ class Array(NestedType):
             raise TypeError(msg)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        """Check if this DType is equivalent to another DType."""
-        # This equality check allows comparison of type classes and type instances.
-        # If a parent type is not specific about its inner type, we infer it as equal:
-        # > array[i64] == array[i64] -> True
-        # > array[i64] == array[f32] -> False
-        # > array[i64] == array      -> True
+        """Check if this Array is equivalent to another DType.
 
-        # allow comparing object instances to class
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.Int64, 2)
+            True
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.String, 2)
+            False
+            >>> nw.Array(nw.Int64, 2) == nw.Array(nw.Int64, 4)
+            False
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.Array(nw.Int64, 2) == nw.Array
+            True
+        """
         if type(other) is type and issubclass(other, self.__class__):
             return True
         if isinstance(other, self.__class__):
