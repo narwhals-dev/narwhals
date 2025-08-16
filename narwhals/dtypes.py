@@ -460,8 +460,26 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
             To see valid strings run `import zoneinfo; zoneinfo.available_timezones()` for a full list.
         """
 
-    def __eq__(self, other: object) -> bool:
-        """Check if this DType is equivalent to another DType."""
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Datetime is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Datetime("s") == nw.Datetime("s")
+            True
+            >>> nw.Datetime("us") == nw.Datetime()
+            True
+            >>> nw.Datetime("us") == nw.Datetime("ns")
+            False
+            >>> nw.Datetime("us", "UTC") == nw.Datetime(time_unit="us", time_zone="UTC")
+            True
+            >>> nw.Datetime(time_zone="UTC") == nw.Datetime(time_zone="EST")
+            False
+            >>> nw.Datetime() == nw.Duration()
+            False
+            >>> nw.Datetime("ms") == nw.Datetime
+            True
+        """
         if type(other) is _DatetimeMeta:
             return True
         if isinstance(other, self.__class__):
