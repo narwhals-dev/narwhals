@@ -506,6 +506,13 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
+    
+    '''
+    @mp: need function here which can read frames as long as they're of the type provided 
+    in the plugins. that could then be called below
+    how to make it generic enough but not so generic as to break downsteam..
+    '''
+
 
     # Interchange protocol
     if _supports_dataframe_interchange(native_object):
@@ -549,7 +556,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             return df_compliant.to_narwhals()
         # @mp: not sure if correct exception, check. Improve error message
         except TypeError as e:
-            print(f"Cannot read it the dataframe, reason {e}. Currently only supporting daft plugins")
+            print(f"Cannot read in the dataframe, reason {e}. Currently only supporting daft plugins")
             # try the next plugin
             continue
 

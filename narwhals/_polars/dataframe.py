@@ -95,6 +95,10 @@ INHERITED_METHODS = frozenset(
 
 NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
+# @mp: can we make a class here which is more generic than all the other framework specif frames?
+# then have the other frames inherit from this, but it should be generic enough that we can use 
+# it also to read plugins? 
+
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
     drop_nulls: Method[Self]
