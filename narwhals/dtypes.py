@@ -576,8 +576,24 @@ class Enum(DType):
         msg = f"Internal structure of {type(self).__name__!r} is invalid."  # pragma: no cover
         raise TypeError(msg)  # pragma: no cover
 
-    def __eq__(self, other: object) -> bool:
-        """Check if this DType is equivalent to another DType."""
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Enum is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["a", "b", "c"])
+            True
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(("a", "b", "c"))
+            True
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["b", "a", "c"])
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["a"])
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Categorical
+            False
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum
+            True
+        """
         if type(other) is type:
             return other is Enum
         return isinstance(other, type(self)) and self.categories == other.categories
