@@ -467,7 +467,7 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
             >>> import narwhals as nw
             >>> nw.Datetime("s") == nw.Datetime("s")
             True
-            >>> nw.Datetime("us") == nw.Datetime()
+            >>> nw.Datetime() == nw.Datetime("us")
             True
             >>> nw.Datetime("us") == nw.Datetime("ns")
             False
