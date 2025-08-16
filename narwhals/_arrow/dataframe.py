@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import EAGER_ALLOWED, LAZY_ALLOWED
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -512,7 +512,7 @@ class ArrowDataFrame(
             )
         return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(self, backend: LAZY_ALLOWED | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
         if backend is Implementation.DUCKDB:
@@ -558,7 +558,7 @@ class ArrowDataFrame(
         raise AssertionError  # pragma: no cover
 
     def collect(
-        self, backend: EAGER_ALLOWED | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame

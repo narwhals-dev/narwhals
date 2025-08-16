@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._typing import EAGER_ALLOWED
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -199,7 +199,7 @@ class SparkLikeLazyFrame(
         return self._cached_columns
 
     def _collect(
-        self, backend: EAGER_ALLOWED | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -237,7 +237,7 @@ class SparkLikeLazyFrame(
         raise ValueError(msg)  # pragma: no cover
 
     def collect(
-        self, backend: EAGER_ALLOWED | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if self._implementation.is_pyspark_connect():
             try:
