@@ -8,7 +8,7 @@ import sys
 from collections import deque
 from inspect import isfunction
 from pathlib import Path
-from types import MethodType
+from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
@@ -37,6 +37,17 @@ else:
 
 def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
     for name, _ in inspect.getmembers(tp, _is_public_method_or_property):
+        yield name
+
+
+def iter_api_reference_names_dtypes(module: ModuleType) -> Iterator[str]:
+    base = module.DType
+    # NOTE: Special case, only non-dtype
+    field_dtype = module.Field
+    for name, _ in inspect.getmembers(
+        module,
+        lambda x: isinstance(x, type) and (issubclass(x, base) or x is field_dtype),
+    ):
         yield name
 
 
@@ -94,7 +105,6 @@ SERIES_ONLY_METHODS = {
     "__iter__",
     "__contains__",
 }
-BASE_DTYPES = {"DType", "Literal", "OrderedDict", "Mapping", "Iterable"}
 DIR_API_REF = Path("docs/api-reference")
 
 files = {fp.stem for fp in Path("narwhals").iterdir()}
@@ -197,9 +207,9 @@ for namespace in NAMESPACES:
         ret = 1
 
 # DTypes
-dtypes = [i for i in dir(nw.dtypes) if i[0].isupper() and not i.isupper() and i[0] != "_"]
+dtypes = list(iter_api_reference_names_dtypes(nw.dtypes))
 documented = read_documented_members(DIR_API_REF / "dtypes.md")
-if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
+if missing := set(dtypes).difference(documented):
     print("Dtype: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1

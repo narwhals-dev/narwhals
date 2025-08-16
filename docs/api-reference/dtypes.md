@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - DType
         - NumericType
         - Decimal
         - FloatType
@@ -41,6 +42,6 @@
         - Unknown
       show_root_heading: false
       show_source: false
-      show_bases: false
+      show_bases: true
       filters: ["!^_", "^__eq__$"]
-      inherited_members: true
+      inherited_members: false
