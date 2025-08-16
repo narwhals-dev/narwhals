@@ -55,15 +55,8 @@ PySpark: TypeAlias = Literal[_PySpark, PYSPARK]
 SQLFrame: TypeAlias = Literal[_SQLFrame, SQLFRAME]
 PySparkConnect: TypeAlias = Literal[_PySparkConnect, PYSPARK_CONNECT]
 Polars: TypeAlias = Literal[_Polars, POLARS]
-"""Maybe we could say something here?"""
-
 Arrow: TypeAlias = Literal[_Arrow, ARROW]
 Dask: TypeAlias = Literal[_Dask, DASK]
-"""Might want to highlight the limited support?
-
-After (#2858), link to https://narwhals-dev.github.io/narwhals/api-completeness/expr/
-"""
-
 DuckDB: TypeAlias = Literal[_DuckDB, DUCKDB]
 Ibis: TypeAlias = Literal[_Ibis, IBIS]
 PandasLike: TypeAlias = Literal[_PandasLike, PANDAS_LIKE]
@@ -75,8 +68,6 @@ LazyAllowed: TypeAlias = Literal[LazyOnly, Polars]
 
 BackendName: TypeAlias = Literal[_EagerAllowed, _LazyAllowed]
 Backend: TypeAlias = Literal[EagerAllowed, LazyAllowed]
-"""Ooh look, a description!"""
-
 
 BackendT = TypeVar("BackendT", bound=Backend)
 IntoBackend: TypeAlias = Union[BackendT, ModuleType]
@@ -142,18 +133,3 @@ Examples:
 IntoBackendAny: TypeAlias = IntoBackend[Backend]
 IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
-
-# We can't misuse it!
-IntoBackendBad: TypeAlias = IntoBackend[Literal["bad"]]  # type: ignore[type-var]
-
-
-def dataframe_lazy_current(backend: IntoBackendLazy | None = None) -> None: ...
-def dataframe_lazy_alt_1(
-    backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None,
-) -> None: ...
-
-
-def lazyframe_collect_current(backend: IntoBackendEager | None = None) -> None: ...
-def lazyframe_collect_alt_1(
-    backend: IntoBackend[Polars | Pandas | Arrow] | None = None,
-) -> None: ...
