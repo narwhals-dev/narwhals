@@ -49,34 +49,25 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import (
+    from narwhals._typing import (
         Arrow,
+        Backend,
         Dask,
-        DataFrameLike,
         DuckDB,
         EagerAllowed,
         Ibis,
         IntoBackend,
-        NativeFrame,
-        NativeLazyFrame,
-        NativeSeries,
         PandasLike,
         Polars,
         SparkLike,
     )
+    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame, NativeSeries
 
     T = TypeVar("T")
 
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
-    EagerAllowedImplementation: TypeAlias = Literal[
-        Implementation.PANDAS,
-        Implementation.CUDF,
-        Implementation.MODIN,
-        Implementation.PYARROW,
-        Implementation.POLARS,
-    ]
 
     class _BasePandasLike(Sized, Protocol):
         index: Any
@@ -214,12 +205,12 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(
-        cls, backend: IntoBackend, /
+        cls, backend: IntoBackend[Backend], /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(
-        cls: type[Namespace[Any]], backend: IntoBackend, /
+        cls: type[Namespace[Any]], backend: IntoBackend[Backend], /
     ) -> Namespace[Any]:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -333,6 +324,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     def from_native_object(
         cls: type[Namespace[Any]], native: NativeAny, /
     ) -> Namespace[Any]:
+        impl: Backend
         if is_native_polars(native):
             impl = Implementation.POLARS
         elif is_native_pandas(native):

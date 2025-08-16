@@ -72,14 +72,13 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
-        IntoEagerBackend,
         IntoExpr,
         IntoFrame,
-        IntoLazyBackend,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -480,7 +479,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoEagerBackend
+        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -537,7 +536,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | None = None,
         *,
-        backend: IntoEagerBackend | None = None,
+        backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
@@ -596,7 +595,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoEagerBackend,
+        backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
@@ -716,7 +715,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
-    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
+    def lazy(
+        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+    ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
@@ -2315,7 +2316,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self, backend: IntoEagerBackend | None = None, **kwargs: Any
+        self, backend: IntoBackend[EagerAllowed] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals._typing import IntoBackend as IntoBackend  # noqa: PLC0414
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._utils import Implementation
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
@@ -99,73 +99,6 @@ if TYPE_CHECKING:
         def Time(self) -> type[dtypes.Time]: ...
         @property
         def Binary(self) -> type[dtypes.Binary]: ...
-
-    _Polars: TypeAlias = Literal["polars"]
-    _Arrow: TypeAlias = Literal["pyarrow"]
-    _Dask: TypeAlias = Literal["dask"]
-    _DuckDB: TypeAlias = Literal["duckdb"]
-    _Pandas: TypeAlias = Literal["pandas"]
-    _Modin: TypeAlias = Literal["modin"]
-    _Cudf: TypeAlias = Literal["cudf"]
-    _PySpark: TypeAlias = Literal["pyspark"]
-    _SQLFrame: TypeAlias = Literal["sqlframe"]
-    _PySparkConnect: TypeAlias = Literal["pyspark[connect]"]
-    _Ibis: TypeAlias = Literal["ibis"]
-    _PandasLike: TypeAlias = "_Pandas | _Cudf | _Modin"
-    _SparkLike: TypeAlias = "_PySpark | _SQLFrame | _PySparkConnect"
-
-    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
-    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
-    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
-
-    Pandas: TypeAlias = Literal[_Pandas, Implementation.PANDAS]
-    Cudf: TypeAlias = Literal[_Cudf, Implementation.CUDF]
-    Modin: TypeAlias = Literal[_Modin, Implementation.MODIN]
-    PySpark: TypeAlias = Literal[_PySpark, Implementation.PYSPARK]
-    SQLFrame: TypeAlias = Literal[_SQLFrame, Implementation.SQLFRAME]
-    PySparkConnect: TypeAlias = Literal[_PySparkConnect, Implementation.PYSPARK_CONNECT]
-    Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
-    Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
-    Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
-    DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
-    Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
-
-    PandasLike: TypeAlias = Literal[
-        _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
-    ]
-    SparkLike: TypeAlias = Literal[
-        _SparkLike,
-        Implementation.PYSPARK,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    ]
-    EagerOnly: TypeAlias = "PandasLike | Arrow"
-    EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
-    LazyAllowed: TypeAlias = "LazyOnly | Polars"
-
-    EagerBackendName: TypeAlias = _EagerAllowed
-    EagerImplementation: TypeAlias = Literal[
-        Implementation.CUDF,
-        Implementation.MODIN,
-        Implementation.PANDAS,
-        Implementation.POLARS,
-        Implementation.PYARROW,
-    ]
-
-    LazyBackendName: TypeAlias = _LazyAllowed
-    LazyImplementation: TypeAlias = Literal[
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.POLARS,
-        Implementation.PYSPARK,
-        Implementation.PYSPARK_CONNECT,
-        Implementation.SQLFRAME,
-    ]
-
-    BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
@@ -459,117 +392,6 @@ Examples:
     └──────────────────┘
 """
 
-IntoEagerBackend: TypeAlias = "EagerBackendName | EagerImplementation | ModuleType"
-"""Anything that can be converted into a Narwhals Implementation of an eager backend.
-
-It can be specified as:
-
-- a string (backend name): `"polars"`, `"pandas"`, `"pyarrow"`, `"modin"`, and `"cudf"`.
-- an Implementation: `Implementation.POLARS`, `Implementation.PANDAS`, `Implementation.PYARROW`, etc..
-- a python module: `polars`, `pandas`, `pyarrow`, `modin`, and `cudf`
-
-Examples:
-    >>> import numpy as np
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>>
-    >>> arr = np.array([[5, 2, 1], [1, 4, 3]])
-    >>> schema = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int8()}
-    >>> nw.DataFrame.from_numpy(arr, schema=schema, backend="polars")
-    ┌───────────────────┐
-    |Narwhals DataFrame |
-    |-------------------|
-    |shape: (2, 3)      |
-    |┌─────┬─────┬─────┐|
-    |│ c   ┆ d   ┆ e   │|
-    |│ --- ┆ --- ┆ --- │|
-    |│ i16 ┆ f32 ┆ i8  │|
-    |╞═════╪═════╪═════╡|
-    |│ 5   ┆ 2.0 ┆ 1   │|
-    |│ 1   ┆ 4.0 ┆ 3   │|
-    |└─────┴─────┴─────┘|
-    └───────────────────┘
-"""
-
-IntoLazyBackend: TypeAlias = "LazyBackendName | LazyImplementation | ModuleType"
-"""Anything that can be converted into a Narwhals Implementation of an lazy backend.
-
-It can be specified as:
-
-- a string (backend name): `"dask"`, `"duckdb"`, `"ibis"`, `"polars"`, `"pyspark"`, etc...
-- an Implementation: `Implementation.DUCKDB`, `Implementation.SQLFRAME`, etc..
-- a python module: `polars`, `pyspark.sql.connect`, `ibis`, `dask.dataframe`, etc...
-
- Examples:
-    >>> import polars as pl
-    >>> import narwhals as nw
-    >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
-    >>> df = nw.from_native(df_native)
-
-    If we call `df.lazy`, we get a `narwhals.LazyFrame` backed by a Polars
-    LazyFrame.
-
-    >>> df.lazy()  # doctest: +SKIP
-    ┌─────────────────────────────┐
-    |     Narwhals LazyFrame      |
-    |-----------------------------|
-    |<LazyFrame at 0x7F52B9937230>|
-    └─────────────────────────────┘
-
-    We can also pass DuckDB as the backend, and then we'll get a
-    `narwhals.LazyFrame` backed by a `duckdb.DuckDBPyRelation`.
-
-    >>> df.lazy(backend=nw.Implementation.DUCKDB)
-    ┌──────────────────┐
-    |Narwhals LazyFrame|
-    |------------------|
-    |┌───────┬───────┐ |
-    |│   a   │   b   │ |
-    |│ int64 │ int64 │ |
-    |├───────┼───────┤ |
-    |│     1 │     4 │ |
-    |│     2 │     6 │ |
-    |└───────┴───────┘ |
-    └──────────────────┘
-"""
-
-
-IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
-"""Anything that can be converted into a Narwhals Implementation.
-
-It can be specified as:
-
-- a string (backend name), such as: `"pandas"`, `"pyarrow"`, `"modin"`, `"cudf"`, etc..
-- an Implementation, such as: `Implementation.POLARS`, `Implementation.DUCKDB`, `Implementation.PYSPARK`, etc..
-- a python module, such as `dask`, `ibis`, `sqlframe`, etc..
-
-Examples:
-    >>> import dask.dataframe as dd
-    >>> from sqlframe.duckdb import DuckDBSession
-    >>> import narwhals as nw
-    >>>
-    >>> nw.scan_parquet("file.parquet", backend="dask").collect()  # doctest:+SKIP
-    ┌──────────────────┐
-    |Narwhals DataFrame|
-    |------------------|
-    |        a   b     |
-    |     0  1   4     |
-    |     1  2   5     |
-    └──────────────────┘
-    >>> nw.scan_parquet(
-    ...     "file.parquet", backend=Implementation.SQLFRAME, session=DuckDBSession()
-    ... ).collect()  # doctest:+SKIP
-    ┌──────────────────┐
-    |Narwhals DataFrame|
-    |------------------|
-    |  pyarrow.Table   |
-    |  a: int64        |
-    |  b: int64        |
-    |  ----            |
-    |  a: [[1,2]]      |
-    |  b: [[4,5]]      |
-    └──────────────────┘
-"""
 
 # TODO @dangotbanned: fix this?
 # Constructor allows tuples, but we don't support that *everywhere* yet

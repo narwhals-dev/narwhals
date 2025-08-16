@@ -35,13 +35,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
-        IntoEagerBackend,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -100,7 +100,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoEagerBackend,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 

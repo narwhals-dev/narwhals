@@ -11,7 +11,8 @@ import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.typing import EagerAllowed, _2DArray
+    from narwhals._typing import EagerAllowed
+    from narwhals.typing import _2DArray
 
 
 arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))

@@ -20,7 +20,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
-    from narwhals.typing import BackendName, _2DArray, _EagerAllowed
+    from narwhals._typing import BackendName, _EagerAllowed
+    from narwhals.typing import _2DArray
     from tests.utils import Constructor
 
 ExprT = TypeVar("ExprT", bound="CompliantExprAny")
