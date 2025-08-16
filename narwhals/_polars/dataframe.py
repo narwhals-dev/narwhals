@@ -580,7 +580,7 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         return func
 
     def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
-        yield from self.collect(self._implementation).iter_columns()  # type: ignore[arg-type]
+        yield from self.collect(Implementation.POLARS).iter_columns()
 
     def collect_schema(self) -> dict[str, DType]:
         try:
