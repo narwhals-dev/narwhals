@@ -666,6 +666,7 @@ class Field:
         """Check if this Field is equivalent to another Field.
 
         Two fields are equivalent if they have the same name and the same dtype.
+
         Examples:
             >>> import narwhals as nw
             >>> nw.Field("a", nw.String) == nw.Field("a", nw.String())
