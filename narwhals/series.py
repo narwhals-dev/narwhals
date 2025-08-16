@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        IntoEagerBackend,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -99,7 +100,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoEagerBackend,
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 

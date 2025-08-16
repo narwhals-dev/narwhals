@@ -11,6 +11,7 @@ from typing import (
     Literal,
     NoReturn,
     TypeVar,
+    get_args,
     overload,
 )
 
@@ -24,6 +25,10 @@ from narwhals._expression_parsing import (
 from narwhals._utils import (
     Implementation,
     Version,
+    _CanCollectInto,
+    _CanLazyInto,
+    can_collect_into,
+    can_lazy_into,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -71,8 +76,10 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
+        IntoEagerBackend,
         IntoExpr,
         IntoFrame,
+        IntoLazyBackend,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -473,7 +480,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+        cls, native_frame: IntoArrowTable, *, backend: IntoEagerBackend
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -530,7 +537,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | None = None,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoEagerBackend | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
@@ -589,7 +596,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoEagerBackend,
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
@@ -709,9 +716,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
-    def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
-    ) -> LazyFrame[Any]:
+    def lazy(self, backend: IntoLazyBackend | None = None) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
         If `backend` is specified, then a conversion between different backends
@@ -737,7 +742,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
             >>> df = nw.from_native(df_native)
@@ -768,22 +772,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        lazy_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_lazy_backends = (
-            Implementation.DASK,
-            Implementation.DUCKDB,
-            Implementation.POLARS,
-            Implementation.IBIS,
-        )
-        if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
-            msg = (
-                "Not-supported backend."
-                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {lazy_backend}"
-            )
-            raise ValueError(msg)
-        return self._lazyframe(
-            self._compliant_frame.lazy(backend=lazy_backend), level="lazy"
-        )
+        lazy = self._compliant_frame.lazy
+        if backend is None:
+            return self._lazyframe(lazy(None), level="lazy")
+        lazy_backend = Implementation.from_backend(backend)
+        if can_lazy_into(lazy_backend):
+            return self._lazyframe(lazy(lazy_backend), level="lazy")
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_CanLazyInto)} or `None`, got {lazy_backend}"
+        raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
@@ -2319,7 +2315,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoEagerBackend | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
@@ -2378,18 +2374,14 @@ class LazyFrame(BaseFrame[FrameT]):
             |  b: [[2,4]]      |
             └──────────────────┘
         """
-        eager_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_eager_backends = (
-            Implementation.POLARS,
-            Implementation.PANDAS,
-            Implementation.PYARROW,
-        )
-        if eager_backend is not None and eager_backend not in supported_eager_backends:
-            msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
-            raise ValueError(msg)
-        return self._dataframe(
-            self._compliant_frame.collect(backend=eager_backend, **kwargs), level="full"
-        )
+        collect = self._compliant_frame.collect
+        if backend is None:
+            return self._dataframe(collect(None, **kwargs), level="full")
+        eager_backend = Implementation.from_backend(backend)
+        if can_collect_into(eager_backend):
+            return self._dataframe(collect(eager_backend, **kwargs), level="full")
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_CanCollectInto)} or None, got: {eager_backend}."
+        raise ValueError(msg)
 
     def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.

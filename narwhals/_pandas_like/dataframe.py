@@ -52,8 +52,10 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
+        EagerImplementation,
         IntoSchema,
         JoinStrategy,
+        LazyImplementation,
         PivotAgg,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
@@ -490,7 +492,7 @@ class PandasLikeDataFrame(
 
     # --- convert ---
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None:
             return PandasLikeDataFrame(
@@ -758,7 +760,7 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: LazyImplementation | None = None) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
             return self

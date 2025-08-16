@@ -14,9 +14,8 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._namespace import EagerAllowed
     from narwhals.dtypes import NestedType
-    from narwhals.typing import IntoDType, _1DArray
+    from narwhals.typing import EagerAllowed, IntoDType, _1DArray
 
 
 arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
@@ -75,7 +74,7 @@ def test_series_from_numpy_not_init_dtype(
 def test_series_from_numpy_not_eager() -> None:
     pytest.importorskip("ibis")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.Series.from_numpy(NAME, arr, backend="ibis")
+        nw.Series.from_numpy(NAME, arr, backend="ibis")  # type: ignore[arg-type]
 
 
 def test_series_from_numpy_not_1d(eager_backend: EagerAllowed) -> None:

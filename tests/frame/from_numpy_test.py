@@ -11,8 +11,7 @@ import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals._namespace import EagerAllowed
-    from narwhals.typing import _2DArray
+    from narwhals.typing import EagerAllowed, _2DArray
 
 
 arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
@@ -50,7 +49,7 @@ def test_from_numpy_schema_notvalid(eager_backend: EagerAllowed) -> None:
 def test_from_numpy_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.DataFrame.from_numpy(arr, backend="duckdb")
+        nw.DataFrame.from_numpy(arr, backend="duckdb")  # type: ignore[arg-type]
 
 
 def test_from_numpy_not2d(eager_backend: EagerAllowed) -> None:

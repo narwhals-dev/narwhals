@@ -24,9 +24,8 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
-    from narwhals._namespace import EagerAllowed
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
-    from narwhals.typing import NativeFrame, NativeLazyFrame
+    from narwhals.typing import EagerAllowed, NativeFrame, NativeLazyFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"

@@ -37,7 +37,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        EagerImplementation,
+        JoinStrategy,
+        LazyUniqueKeepStrategy,
+    )
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -111,7 +116,7 @@ class DaskLazyFrame(
         return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: EagerImplementation | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         result = self.native.compute(**kwargs)
 

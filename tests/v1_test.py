@@ -44,9 +44,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
-    from narwhals._namespace import EagerAllowed
     from narwhals.stable.v1.typing import IntoDataFrameT
-    from narwhals.typing import IntoDType, _1DArray, _2DArray
+    from narwhals.typing import EagerAllowed, IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
 

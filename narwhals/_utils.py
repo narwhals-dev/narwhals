@@ -84,6 +84,7 @@ if TYPE_CHECKING:
         CompliantSeries,
         DataFrameLike,
         DTypes,
+        IntoBackend,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -96,6 +97,8 @@ if TYPE_CHECKING:
         _SliceName,
         _SliceNone,
     )
+
+    UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -341,9 +344,7 @@ class Implementation(NoAutoEnum):
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
     @classmethod
-    def from_string(
-        cls: type[Self], backend_name: str
-    ) -> Implementation:  # pragma: no cover
+    def from_string(cls: type[Self], backend_name: str) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
@@ -356,7 +357,7 @@ class Implementation(NoAutoEnum):
 
     @classmethod
     def from_backend(
-        cls: type[Self], backend: str | Implementation | ModuleType
+        cls: type[Self], backend: UnknownBackendName | IntoBackend
     ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -1605,6 +1606,27 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
         Implementation.CUDF,
         Implementation.POLARS,
         Implementation.PYARROW,
+    }
+
+
+_CanCollectInto: TypeAlias = Literal[
+    Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW
+]
+_CanLazyInto: TypeAlias = Literal[
+    Implementation.DASK, Implementation.DUCKDB, Implementation.POLARS, Implementation.IBIS
+]
+
+
+def can_collect_into(obj: Implementation) -> TypeIs[_CanCollectInto]:
+    return obj in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
+
+
+def can_lazy_into(obj: Implementation) -> TypeIs[_CanLazyInto]:
+    return obj in {
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.POLARS,
+        Implementation.IBIS,
     }
 
 

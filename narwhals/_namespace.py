@@ -31,7 +31,6 @@ from narwhals.dependencies import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sized
-    from types import ModuleType
     from typing import ClassVar
 
     import duckdb
@@ -50,45 +49,25 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame, NativeSeries
+    from narwhals.typing import (
+        Arrow,
+        Dask,
+        DataFrameLike,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        NativeFrame,
+        NativeLazyFrame,
+        NativeSeries,
+        PandasLike,
+        Polars,
+        SparkLike,
+    )
 
     T = TypeVar("T")
 
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
-
-    _Polars: TypeAlias = Literal["polars"]
-    _Arrow: TypeAlias = Literal["pyarrow"]
-    _Dask: TypeAlias = Literal["dask"]
-    _DuckDB: TypeAlias = Literal["duckdb"]
-    _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
-    _Ibis: TypeAlias = Literal["ibis"]
-    _SparkLike: TypeAlias = Literal["pyspark", "sqlframe", "pyspark[connect]"]
-    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
-    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
-    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
-
-    Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
-    Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
-    Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
-    DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
-    Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
-    PandasLike: TypeAlias = Literal[
-        _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
-    ]
-    SparkLike: TypeAlias = Literal[
-        _SparkLike,
-        Implementation.PYSPARK,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    ]
-    EagerOnly: TypeAlias = "PandasLike | Arrow"
-    EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
-    LazyAllowed: TypeAlias = "LazyOnly | Polars"
-
-    BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
-    IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
     EagerAllowedImplementation: TypeAlias = Literal[
