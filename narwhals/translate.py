@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
@@ -544,16 +543,16 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         obj = plugin.load()
         frame = obj.dataframe.DaftLazyFrame
 
-        #from obj.dataframe import DaftLazyFrame
+        #from obj.dataframe import DaftLazyFrame doesn't work directly!
         try:
             df_compliant = frame(native_object, version=Version.MAIN)
             return df_compliant.to_narwhals()
         # @mp: not sure if correct exception, check. Improve error message
-        except TypeError as e: 
-            print(f'Cannot read it the dataframe, reason {e}. Currently only supporting daft plugins')
+        except TypeError as e:
+            print(f"Cannot read it the dataframe, reason {e}. Currently only supporting daft plugins")
             # try the next plugin
             continue
-            
+
     """
     TODO @mp: need logic to go over all the entry points found, and if daft found,
     (others later), we return the daft dataframe from_native. I think the transformation has
