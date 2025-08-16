@@ -548,12 +548,12 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         try:
             df_compliant = frame(native_object, version=Version.MAIN)
             return df_compliant.to_narwhals()
-        except:
+        # @mp: not sure if correct exception, check. Improve error message
+        except TypeError as e: 
+            print(f'Cannot read it the dataframe, reason {e}. Currently only supporting daft plugins')
             # try the next plugin
             continue
-        
-
-
+            
     """
     TODO @mp: need logic to go over all the entry points found, and if daft found,
     (others later), we return the daft dataframe from_native. I think the transformation has
