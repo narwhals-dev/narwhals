@@ -126,7 +126,21 @@ class DType:
         return issubclass(cls, Boolean)
 
     def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
-        """Check if this DType is equivalent to another DType."""
+        """Check if this DType is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.String() == nw.String()
+            True
+            >>> nw.String() == nw.String
+            True
+            >>> nw.Int16() == nw.Int32
+            False
+            >>> nw.Boolean() == nw.Int8
+            False
+            >>> nw.Date() == nw.Datetime
+            False
+        """
         from narwhals._utils import isinstance_or_issubclass
 
         return isinstance_or_issubclass(other, type(self))
