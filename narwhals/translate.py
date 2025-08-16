@@ -548,6 +548,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     for plugin in discovered_plugins:
 
         obj = plugin.load()
+
+        # instead of the below, have something more generic like the 
+        # _load_backend in pandas
+        # https://github.com/pandas-dev/pandas/blob/d95bf9a04f10590fff41e75de94c321a8743af72/pandas/plotting/_core.py#L1872
         frame = obj.dataframe.DaftLazyFrame
 
         #from obj.dataframe import DaftLazyFrame doesn't work directly!
