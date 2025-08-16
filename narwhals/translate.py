@@ -507,6 +507,12 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
+    """
+    @mp: need function here which can read frames as long as they're of the type provided 
+    in the plugins. that could then be called below
+    how to make it generic enough but not so generic as to break downsteam..
+    """
+
     # Interchange protocol
     if _supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
@@ -531,6 +537,40 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
+
+    # TODO @mp: this should be connection point to plugin
+
+    from importlib.metadata import entry_points
+
+    discovered_plugins = entry_points(group="narwhals.plugins")
+
+    for plugin in discovered_plugins:
+        obj = plugin.load()
+
+        # instead of the below, have something more generic like the
+        # _load_backend in pandas
+        # https://github.com/pandas-dev/pandas/blob/d95bf9a04f10590fff41e75de94c321a8743af72/pandas/plotting/_core.py#L1872
+        frame = obj.dataframe.DaftLazyFrame
+
+        # from obj.dataframe import DaftLazyFrame doesn't work directly!
+        try:
+            df_compliant = frame(native_object, version=Version.MAIN)
+            return df_compliant.to_narwhals()
+        # @mp: not sure if correct exception, check. Improve error message
+        except TypeError as e:
+            print(
+                f"Cannot read in the dataframe, reason {e}. Currently only supporting daft plugins"
+            )
+            # try the next plugin
+            continue
+
+    """
+    TODO @mp: need logic to go over all the entry points found, and if daft found,
+    (others later), we return the daft dataframe from_native. I think the transformation has
+    to happen inside the daft_plugin, first would just like to see that I can actually read
+    it in
+    
+    """
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
