@@ -615,8 +615,26 @@ class Field:
         self.dtype = dtype
 
     def __eq__(self, other: Field) -> bool:  # type: ignore[override]
-        """Check if this DType is equivalent to another DType."""
-        return (self.name == other.name) & (self.dtype == other.dtype)
+        """Check if this Field is equivalent to another Field.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.String())
+            True
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.String)
+            True
+            >>> nw.Field("a", nw.String) == nw.Field("a", nw.Datetime)
+            False
+            >>> nw.Field("a", nw.String) == nw.Field("b", nw.String)
+            False
+            >>> nw.Field("a", nw.String) == nw.String
+            False
+        """
+        return (
+            isinstance(other, Field)
+            and (self.name == other.name)
+            and (self.dtype == other.dtype)
+        )
 
     def __hash__(self) -> int:
         return hash((self.name, self.dtype))
