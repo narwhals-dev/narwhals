@@ -514,8 +514,22 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         self.time_unit: TimeUnit = time_unit
         """Unit of time."""
 
-    def __eq__(self, other: object) -> bool:
-        """Check if this DType is equivalent to another DType."""
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Duration is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Duration("us") == nw.Duration("us")
+            True
+            >>> nw.Duration() == nw.Duration("us")
+            True
+            >>> nw.Duration("us") == nw.Duration("ns")
+            False
+            >>> nw.Duration() == nw.Datetime()
+            False
+            >>> nw.Duration("ms") == nw.Duration
+            True
+        """
         if type(other) is _DurationMeta:
             return True
         if isinstance(other, self.__class__):
