@@ -536,14 +536,18 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        # safest assumptions
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).map_batches(
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).map_batches(
                 function=function,
                 return_dtype=return_dtype,
                 returns_scalar=returns_scalar,
             )
-        )
+
+        if returns_scalar:
+            return self._with_aggregation(compliant_expr)
+        # safest assumptions
+        return self._with_orderable_filtration(compliant_expr)
 
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
