@@ -65,12 +65,14 @@ if TYPE_CHECKING:
 
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
+        Arrow,
         Backend,
         Dask,
         DuckDB,
         EagerAllowed,
         Ibis,
         IntoBackend,
+        Pandas,
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
@@ -191,7 +193,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def collect(
-        self, backend: IntoBackend[EagerAllowed] | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 

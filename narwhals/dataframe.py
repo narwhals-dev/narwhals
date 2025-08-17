@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals._typing import _DataFrameLazyImpl, _LazyFrameCollectImpl
+from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
@@ -2315,7 +2315,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self, backend: IntoBackend[EagerAllowed] | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
