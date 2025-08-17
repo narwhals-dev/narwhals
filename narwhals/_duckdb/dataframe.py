@@ -416,7 +416,12 @@ class DuckDBLazyFrame(
             descending = [not reverse] * len(by)
         else:
             descending = [not rev for rev in reverse]
-        expr = window_expression(F("row_number"), order_by=by, descending=descending)
+        expr = window_expression(
+            F("row_number"),
+            order_by=by,
+            descending=descending,
+            nulls_last=[True] * len(by),
+        )
         condition = expr <= lit(k)
         query = f"""
         SELECT *

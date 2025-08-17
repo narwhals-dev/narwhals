@@ -5,14 +5,14 @@ from tests.utils import Constructor, assert_equal_data
 
 
 def test_top_k(constructor: Constructor) -> None:
-    data = {"a": ["a", "f", "a", "d", "b", "c"], "b c": [2, 4, 5, 3, 6, 1]}
+    data = {"a": ["a", "f", "a", "d", "b", "c"], "b c": [None, None, 2, 3, 6, 1]}
     df = nw.from_native(constructor(data))
     result = df.top_k(4, by="b c")
-    expected = {"a": ["a", "b", "d", "f"], "b c": [5, 6, 3, 4]}
+    expected = {"a": ["a", "b", "c", "d"], "b c": [2, 6, 1, 3]}
     assert_equal_data(result.sort("a"), expected)
     df = nw.from_native(constructor(data))
     result = df.top_k(4, by="b c", reverse=True)
-    expected = {"a": ["a", "c", "d", "f"], "b c": [2, 1, 3, 4]}
+    expected = {"a": ["a", "b", "c", "d"], "b c": [2, 6, 1, 3]}
     assert_equal_data(result.sort(by="a"), expected)
 
 
