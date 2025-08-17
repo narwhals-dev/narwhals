@@ -15,6 +15,7 @@ from narwhals._utils import (
     Version,
     not_implemented,
     parse_columns_to_drop,
+    zip_equal,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
@@ -307,7 +308,7 @@ class IbisLazyFrame(
             return left_on
         return [
             cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
-            for left, right in zip(left_on, right_on)
+            for left, right in zip_equal(left_on, right_on)
         ]
 
     def collect_schema(self) -> dict[str, DType]:

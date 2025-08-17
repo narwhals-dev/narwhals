@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
+from narwhals._utils import zip_equal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -188,7 +189,7 @@ class SparkLikeNamespace(
             else:
                 init_value, *values = [
                     df._F.when(~nm, col).otherwise(df._F.lit(""))
-                    for col, nm in zip(cols_casted, null_mask)
+                    for col, nm in zip_equal(cols_casted, null_mask)
                 ]
 
                 separators = (
@@ -199,7 +200,7 @@ class SparkLikeNamespace(
                     lambda x, y: df._F.format_string("%s%s", x, y),
                     (
                         df._F.format_string("%s%s", s, v)
-                        for s, v in zip(separators, values)
+                        for s, v in zip_equal(separators, values)
                     ),
                     init_value,
                 )

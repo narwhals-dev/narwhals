@@ -8,6 +8,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from itertools import chain
 from operator import attrgetter
 from secrets import token_hex
 from typing import (
@@ -1077,6 +1078,46 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
             obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
+
+
+@overload
+def zip_equal(it1: Iterable[_T1], it2: Iterable[_T2], /) -> Iterable[tuple[_T1, _T2]]: ...
+
+
+@overload
+def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]: ...
+
+
+# https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
+def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
+    # For trivial cases, use pure zip.
+    if len(iterables) < 2:
+        return zip(*iterables)
+
+    # Tail for the first iterable
+    first_stopped = False
+
+    def first_tail() -> Any:
+        nonlocal first_stopped
+        first_stopped = True
+        return
+        yield
+
+    # Tail for the zip
+    def zip_tail() -> Any:
+        if not first_stopped:
+            msg = "zip_equal: first iterable is longer"
+            raise ValueError(msg)
+        for _ in chain.from_iterable(rest):
+            msg = "zip_equal: first iterable is shorter"
+            raise ValueError(msg)
+            yield
+
+    # Put the pieces together
+    iterables_it = iter(iterables)
+    first = chain(next(iterables_it), first_tail())
+    rest = list(map(iter, iterables_it))
+    return chain(zip(first, *rest), zip_tail())
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
