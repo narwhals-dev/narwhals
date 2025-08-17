@@ -22,11 +22,10 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
+from narwhals._typing import _CanCollectInto, _CanLazyInto
 from narwhals._utils import (
     Implementation,
     Version,
-    _CanCollectInto,
-    _CanLazyInto,
     can_collect_into,
     can_lazy_into,
     check_columns_exist,
