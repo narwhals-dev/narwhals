@@ -615,7 +615,9 @@ class Enum(DType):
             >>> import narwhals as nw
             >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["a", "b", "c"])
             True
-            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(("a", "b", "c"))
+            >>> import polars as pl
+            >>> categories = pl.Series(["a", "b", "c"])
+            >>> nw.Enum(["a", "b", "c"]) == nw.Enum(categories)
             True
             >>> nw.Enum(["a", "b", "c"]) == nw.Enum(["b", "a", "c"])
             False
