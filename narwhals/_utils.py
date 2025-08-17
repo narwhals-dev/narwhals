@@ -78,9 +78,9 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Backend,
         IntoBackend,
-        _CanCollectInto,
-        _CanLazyInto,
+        _DataFrameLazyImpl,
         _EagerAllowedImpl,
+        _LazyFrameCollectImpl,
     )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
@@ -1605,8 +1605,9 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowedImpl]:
-    return obj in {
+def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
+    """Return True if `impl` allows eager operations."""
+    return impl in {
         Implementation.PANDAS,
         Implementation.MODIN,
         Implementation.CUDF,
@@ -1615,12 +1616,14 @@ def is_eager_allowed(obj: Implementation) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
-def can_collect_into(obj: Implementation) -> TypeIs[_CanCollectInto]:
-    return obj in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
+def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
+    """Return True if `LazyFrame.collect(impl)` is allowed."""
+    return impl in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
 
 
-def can_lazy_into(obj: Implementation) -> TypeIs[_CanLazyInto]:
-    return obj in {
+def can_dataframe_lazy(impl: Implementation, /) -> TypeIs[_DataFrameLazyImpl]:
+    """Return True if `DataFrame.lazy(impl)` is allowed."""
+    return impl in {
         Implementation.DASK,
         Implementation.DUCKDB,
         Implementation.POLARS,

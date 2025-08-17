@@ -22,12 +22,12 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals._typing import _CanCollectInto, _CanLazyInto
+from narwhals._typing import _DataFrameLazyImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
-    can_collect_into,
-    can_lazy_into,
+    can_dataframe_lazy,
+    can_lazyframe_collect,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -776,9 +776,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         if backend is None:
             return self._lazyframe(lazy(None), level="lazy")
         lazy_backend = Implementation.from_backend(backend)
-        if can_lazy_into(lazy_backend):
+        if can_dataframe_lazy(lazy_backend):
             return self._lazyframe(lazy(lazy_backend), level="lazy")
-        msg = f"Not-supported backend.\n\nExpected one of {get_args(_CanLazyInto)} or `None`, got {lazy_backend}"
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_DataFrameLazyImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
@@ -2378,9 +2378,9 @@ class LazyFrame(BaseFrame[FrameT]):
         if backend is None:
             return self._dataframe(collect(None, **kwargs), level="full")
         eager_backend = Implementation.from_backend(backend)
-        if can_collect_into(eager_backend):
+        if can_lazyframe_collect(eager_backend):
             return self._dataframe(collect(eager_backend, **kwargs), level="full")
-        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_CanCollectInto)} or None, got: {eager_backend}."
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
         raise ValueError(msg)
 
     def to_native(self) -> FrameT:

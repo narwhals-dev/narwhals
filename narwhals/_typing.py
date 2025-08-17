@@ -50,8 +50,8 @@ _LazyAllowedImpl: TypeAlias = Literal[_LazyOnlyImpl, _PolarsImpl]  # noqa: PYI04
 # NOTE: Temporary aliases for gaps in `LazyFrame.collect`, `DataFrame.lazy`, see:
 # - https://github.com/narwhals-dev/narwhals/pull/2971#discussion_r2277137003
 # - https://github.com/narwhals-dev/narwhals/pull/3002#issuecomment-3194267667
-_CanCollectInto: TypeAlias = Literal[_PandasImpl, _PolarsImpl, _ArrowImpl]  # noqa: PYI047
-_CanLazyInto: TypeAlias = Literal[_PolarsImpl, _DaskImpl, _DuckDBImpl, _IbisImpl]  # noqa: PYI047
+_LazyFrameCollectImpl: TypeAlias = Literal[_PandasImpl, _PolarsImpl, _ArrowImpl]  # noqa: PYI047
+_DataFrameLazyImpl: TypeAlias = Literal[_PolarsImpl, _DaskImpl, _DuckDBImpl, _IbisImpl]  # noqa: PYI047
 
 # `str | Implementation` aliases
 Pandas: TypeAlias = Literal[_Pandas, _PandasImpl]
