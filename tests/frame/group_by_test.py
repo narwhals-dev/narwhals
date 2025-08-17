@@ -558,14 +558,19 @@ def test_group_by_raise_drop_null_keys_with_exprs(
 
 
 def test_group_by_selector(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 1], "b": [4, 4, 6], "c": [7.5, 8.5, 9.0]}
+    data = {
+        "a": [1, 1, 1],
+        "b": [4, 4, 6],
+        "c": ["foo", "foo", "bar"],
+        "x": [7.5, 8.5, 9.0],
+    }
     result = (
         nw.from_native(constructor(data))
-        .group_by(nw.selectors.by_dtype(nw.Int64))
-        .agg(nw.col("c").mean())
+        .group_by(nw.selectors.by_dtype(nw.Int64), "c")
+        .agg(nw.col("x").mean())
         .sort("a", "b")
     )
-    expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
+    expected = {"a": [1, 1], "b": [4, 6], "c": ["foo", "bar"], "x": [8.0, 9.0]}
     assert_equal_data(result, expected)
 
 
