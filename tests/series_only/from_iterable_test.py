@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._namespace import EagerAllowed
-    from narwhals.typing import IntoDType
+    from narwhals.typing import EagerAllowed, IntoDType
 
     IntoIterable: TypeAlias = Callable[..., Iterable[Any]]
 
@@ -179,7 +178,7 @@ def test_series_from_iterable_not_eager() -> None:
     backend = "sqlframe"
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.Series.from_iterable("", [1, 2, 3], backend=backend)
+        nw.Series.from_iterable("", [1, 2, 3], backend=backend)  # type: ignore[arg-type]
 
 
 def test_series_from_iterable_numpy_not_1d(eager_backend: EagerAllowed) -> None:

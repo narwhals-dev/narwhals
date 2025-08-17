@@ -214,7 +214,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoEagerBackend,
     ) -> Series[Any]:
         result = super().from_iterable(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
