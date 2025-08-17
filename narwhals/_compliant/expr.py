@@ -29,7 +29,7 @@ from narwhals._compliant.typing import (
     NativeExprT,
 )
 from narwhals._utils import _StoresCompliant
-from narwhals.dependencies import get_numpy, is_numpy_array
+from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -766,9 +766,7 @@ class EagerExpr(
             output_names = (input_series.name for input_series in input_series_list)
             native_result = tuple(function(series) for series in input_series_list)
             result: Sequence[EagerSeriesT]
-            if is_numpy_array(native_result[0]) or (
-                (np := get_numpy()) is not None and np.isscalar(native_result[0])
-            ):
+            if is_numpy_array(native_result[0]) or is_numpy_scalar(native_result[0]):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
