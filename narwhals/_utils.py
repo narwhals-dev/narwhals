@@ -5,7 +5,7 @@ import re
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import cache, lru_cache, wraps
+from functools import cache, lru_cache, partial, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from itertools import chain
@@ -1075,8 +1075,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
         )
     return obj_any
 
-
-from functools import partial
 
 if TYPE_CHECKING:
     zip_strict = partial(zip, strict=True)
