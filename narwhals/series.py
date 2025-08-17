@@ -166,7 +166,7 @@ class Series(Generic[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoEagerBackend,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         """Construct a Series from an iterable.
 

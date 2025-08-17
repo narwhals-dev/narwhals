@@ -24,8 +24,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
+    from narwhals._typing import EagerAllowed
     from narwhals.stable.v2.typing import IntoDataFrameT
-    from narwhals.typing import EagerAllowed, IntoDType
+    from narwhals.typing import IntoDType
 
 
 def test_toplevel() -> None:
