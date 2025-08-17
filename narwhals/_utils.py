@@ -1076,46 +1076,43 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
     return obj_any
 
 
-@overload
-def zip_strict(
-    it1: Iterable[_T1], it2: Iterable[_T2], /
-) -> Iterable[tuple[_T1, _T2]]: ...
+if TYPE_CHECKING:
+    zip_strict = partial(zip, strict=True)
+else:
+    import sys
 
+    if sys.version_info >= (3, 10):
+        zip_strict = partial(zip, strict=True)
+    else:  # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
 
-@overload
-def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]: ...
+        def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
+            # For trivial cases, use pure zip.
+            if len(iterables) < 2:
+                return zip(*iterables)
+            # Tail for the first iterable
+            first_stopped = False
 
+            def first_tail() -> Any:
+                nonlocal first_stopped
+                first_stopped = True
+                return
+                yield
 
-# https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
-def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
-    # For trivial cases, use pure zip.
-    if len(iterables) < 2:
-        return zip(*iterables)
+            # Tail for the zip
+            def zip_tail() -> Any:
+                if not first_stopped:  # pragma: no cover
+                    msg = "zip_strict: first iterable is longer"
+                    raise ValueError(msg)
+                for _ in chain.from_iterable(rest):  # pragma: no cover
+                    msg = "zip_strict: first iterable is shorter"
+                    raise ValueError(msg)
+                    yield
 
-    # Tail for the first iterable
-    first_stopped = False
-
-    def first_tail() -> Any:
-        nonlocal first_stopped
-        first_stopped = True
-        return
-        yield
-
-    # Tail for the zip
-    def zip_tail() -> Any:
-        if not first_stopped:  # pragma: no cover
-            msg = "zip_strict: first iterable is longer"
-            raise ValueError(msg)
-        for _ in chain.from_iterable(rest):  # pragma: no cover
-            msg = "zip_strict: first iterable is shorter"
-            raise ValueError(msg)
-            yield
-
-    # Put the pieces together
-    iterables_it = iter(iterables)
-    first = chain(next(iterables_it), first_tail())
-    rest = list(map(iter, iterables_it))
-    return chain(zip(first, *rest), zip_tail())
+            # Put the pieces together
+            iterables_it = iter(iterables)
+            first = chain(next(iterables_it), first_tail())
+            rest = list(map(iter, iterables_it))
+            return chain(zip(first, *rest), zip_tail())
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
