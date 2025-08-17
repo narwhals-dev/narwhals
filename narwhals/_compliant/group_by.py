@@ -108,19 +108,19 @@ class ParseKeysGroupBy(
             key_str = str(key)  # pandas allows non-string column names :sob:
             return f"_{key_str}_tmp{'_' * (tmp_name_length - len(key_str) - 5)}"
 
-        output_names_grouped = [expr._evaluate_aliases(compliant_frame) for expr in keys]
+        keys_aliases = [expr._evaluate_aliases(compliant_frame) for expr in keys]
         safe_keys = [
             # multi-output expression cannot have duplicate names, hence it's safe to suffix
             key.name.map(_temporary_name)
             if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
             # otherwise it's single named and we can use Expr.alias
-            else key.alias(_temporary_name(new_name[0]))
-            for key, new_name in zip(keys, output_names_grouped)
+            else key.alias(_temporary_name(new_names[0]))
+            for key, new_names in zip(keys, keys_aliases)
         ]
         return (
             compliant_frame.with_columns(*safe_keys),
             _evaluate_aliases(compliant_frame, safe_keys),
-            list(chain.from_iterable(output_names_grouped)),
+            list(chain.from_iterable(keys_aliases)),
         )
 
 
