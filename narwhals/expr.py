@@ -545,7 +545,7 @@ class Expr:
             )
 
         if returns_scalar:
-            return self._with_aggregation(compliant_expr)
+            return self._with_orderable_aggregation(compliant_expr)
         # safest assumptions
         return self._with_orderable_filtration(compliant_expr)
 
