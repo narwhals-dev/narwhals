@@ -417,13 +417,9 @@ class DuckDBLazyFrame(
         directions = ["DESC" if not rev else "ASC" for rev in reverse]
         order_by = [f'"{col}" {dir}' for col, dir in zip(by, directions)]
         query = f"""
-        WITH cte AS (
-            SELECT *, ROW_NUMBER() OVER (ORDER BY {",".join(order_by)}) as row_number
-            FROM df
-        )
-        SELECT * EXCLUDE(row_number)
-        FROM cte
-        WHERE row_number <= {k}
+        SELECT *
+        FROM df
+        QUALIFY ROW_NUMBER() OVER (ORDER BY {",".join(order_by)}) <= {k}
         """  # noqa: S608
         return self._with_native(duckdb.sql(query))
 
