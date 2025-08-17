@@ -324,9 +324,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             native_namespace: Native namespace.
-
-        Returns:
-            Implementation.
         """
         mapping = {
             get_pandas(): Implementation.PANDAS,
@@ -351,9 +348,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             backend_name: Name of backend, expressed as string.
-
-        Returns:
-            Implementation.
         """
         try:
             return cls(backend_name)
@@ -368,9 +362,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             backend: Backend to instantiate Implementation from.
-
-        Returns:
-            Implementation.
         """
         return (
             cls.from_string(backend)
@@ -381,11 +372,7 @@ class Implementation(NoAutoEnum):
         )
 
     def to_native_namespace(self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation.
-
-        Returns:
-            Native module.
-        """
+        """Return the native namespace module corresponding to Implementation."""
         if self is Implementation.UNKNOWN:
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
@@ -396,9 +383,6 @@ class Implementation(NoAutoEnum):
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -413,9 +397,6 @@ class Implementation(NoAutoEnum):
     def is_pandas_like(self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -428,9 +409,6 @@ class Implementation(NoAutoEnum):
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -449,9 +427,6 @@ class Implementation(NoAutoEnum):
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -464,9 +439,6 @@ class Implementation(NoAutoEnum):
 
     def is_cudf(self) -> bool:
         """Return whether implementation is cuDF.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -481,9 +453,6 @@ class Implementation(NoAutoEnum):
     def is_modin(self) -> bool:
         """Return whether implementation is Modin.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -496,9 +465,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -513,9 +479,6 @@ class Implementation(NoAutoEnum):
     def is_pyspark_connect(self) -> bool:
         """Return whether implementation is PySpark.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -528,9 +491,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -545,9 +505,6 @@ class Implementation(NoAutoEnum):
     def is_dask(self) -> bool:
         """Return whether implementation is Dask.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -560,9 +517,6 @@ class Implementation(NoAutoEnum):
 
     def is_duckdb(self) -> bool:
         """Return whether implementation is DuckDB.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -577,9 +531,6 @@ class Implementation(NoAutoEnum):
     def is_ibis(self) -> bool:
         """Return whether implementation is Ibis.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -592,9 +543,6 @@ class Implementation(NoAutoEnum):
 
     def is_sqlframe(self) -> bool:
         """Return whether implementation is SQLFrame.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -655,11 +603,7 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
     native_namespace = _import_native_namespace(module_name)
-    if impl.is_polars():
-        from importlib import metadata
-
-        into_version = metadata.version("polars")
-    elif impl.is_sqlframe():
+    if impl.is_sqlframe():
         import sqlframe._version
 
         into_version = sqlframe._version
@@ -1834,9 +1778,6 @@ class not_implemented:  # noqa: N801
         Arguments:
             message: **Static-only** deprecation message, emitted in an IDE.
 
-        Returns:
-            An exception-raising [descriptor].
-
         [descriptor]: https://docs.python.org/3/howto/descriptor.html
         """
         obj = cls()
@@ -1885,9 +1826,6 @@ class requires:  # noqa: N801
         Arguments:
             minimum: Minimum backend version.
             hint: Optional suggested alternative.
-
-        Returns:
-            An exception-raising decorator.
         """
         obj = cls.__new__(cls)
         obj._min_version = minimum

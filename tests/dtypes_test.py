@@ -16,7 +16,7 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoSeries
+    from narwhals.typing import IntoSeries, NonNestedDType
     from tests.utils import Constructor
 
 
@@ -120,6 +120,22 @@ def test_struct_reverse() -> None:
 def test_field_repr() -> None:
     dtype = nw.Field("a", nw.Int32)
     assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
+
+
+def test_field_eq() -> None:
+    field_1 = nw.Field("a", nw.String)
+    field_2 = nw.Field("a", nw.String())
+    field_3 = nw.Field("b", nw.Datetime())
+    field_4 = nw.Field("b", nw.Datetime("ms"))
+    field_5 = nw.Field("b", nw.Datetime)
+
+    assert field_1 == field_2
+    assert field_2 != field_3
+    # bit of a head-scratcher
+    assert field_3 != field_4
+    assert field_3 == field_5
+    assert field_4 == field_5
+    assert field_1 != field_1.dtype
 
 
 def test_struct_hashes() -> None:
@@ -389,9 +405,7 @@ def test_cast_decimal_to_native() -> None:
         ),
     ]
     for obj in library_obj_to_test:
-        with pytest.raises(
-            NotImplementedError, match="Casting to Decimal is not supported yet."
-        ):
+        with pytest.raises(NotImplementedError, match=r"to.+Decimal.+not supported."):
             (
                 nw.from_native(obj)  # type: ignore[call-overload]
                 .with_columns(a=nw.col("a").cast(nw.Decimal()))
@@ -511,3 +525,42 @@ def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no 
     )
     result = df.collect_schema()
     assert result["a"] == nw.List(nw.Datetime("us", "UTC"))
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        nw.Boolean,
+        nw.Categorical,
+        nw.Date,
+        nw.Datetime,
+        nw.Decimal,
+        nw.Duration,
+        nw.Float32,
+        nw.Float64,
+        nw.Int8,
+        nw.Int16,
+        nw.Int32,
+        nw.Int64,
+        nw.Int128,
+        nw.Object,
+        nw.String,
+        nw.Time,
+        nw.UInt8,
+        nw.UInt16,
+        nw.UInt32,
+        nw.UInt64,
+        nw.UInt128,
+        nw.Unknown,
+        nw.Binary,
+    ],
+)
+def test_dtype_base_type_non_nested(dtype: type[NonNestedDType]) -> None:
+    assert dtype.base_type() is dtype().base_type()
+
+
+def test_dtype_base_type_nested() -> None:
+    assert nw.List.base_type() is nw.List(nw.Float32).base_type()
+    assert nw.Array.base_type() is nw.Array(nw.String, 2).base_type()
+    assert nw.Struct.base_type() is nw.Struct({"a": nw.Boolean}).base_type()
+    assert nw.Enum.base_type() is nw.Enum(["beluga", "narwhal"]).base_type()

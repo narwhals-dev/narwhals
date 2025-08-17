@@ -15,9 +15,6 @@ class ExprNameNamespace(Generic[ExprT]):
     def keep(self) -> ExprT:
         r"""Keep the original root name of the expression.
 
-        Returns:
-            A new expression.
-
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
@@ -38,9 +35,6 @@ class ExprNameNamespace(Generic[ExprT]):
 
         Arguments:
             function: Function that maps a root name to a new name.
-
-        Returns:
-            A new expression.
 
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
@@ -64,9 +58,6 @@ class ExprNameNamespace(Generic[ExprT]):
         Arguments:
             prefix: Prefix to add to the root column name.
 
-        Returns:
-            A new expression.
-
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
@@ -88,9 +79,6 @@ class ExprNameNamespace(Generic[ExprT]):
         Arguments:
             suffix: Suffix to add to the root column name.
 
-        Returns:
-            A new expression.
-
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
@@ -109,9 +97,6 @@ class ExprNameNamespace(Generic[ExprT]):
     def to_lowercase(self) -> ExprT:
         r"""Make the root column name lowercase.
 
-        Returns:
-            A new expression.
-
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.
 
@@ -129,9 +114,6 @@ class ExprNameNamespace(Generic[ExprT]):
 
     def to_uppercase(self) -> ExprT:
         r"""Make the root column name uppercase.
-
-        Returns:
-            A new expression.
 
         Notes:
             For Polars versions prior to 1.32, this will undo any previous renaming operations on the expression.

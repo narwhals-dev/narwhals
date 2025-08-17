@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.1.1"
+version = "2.1.2"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -245,6 +245,7 @@ filterwarnings = [
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
+  'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

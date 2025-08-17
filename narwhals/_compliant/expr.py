@@ -13,6 +13,7 @@ from narwhals._compliant.any_namespace import (
     StringNamespace,
     StructNamespace,
 )
+from narwhals._compliant.column import CompliantColumn
 from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import (
     AliasName,
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         IntoDType,
         NonNestedLiteral,
@@ -75,9 +77,10 @@ class NativeExpr(Protocol):
     def __ne__(self, value: Any, /) -> Self: ...  # type: ignore[override]
 
 
-class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
+class CompliantExpr(
+    CompliantColumn, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
+):
     _implementation: Implementation
-    _version: Version
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
     _metadata: ExprMetadata | None
@@ -107,12 +110,8 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
 
         return fn
 
-    def is_null(self) -> Self: ...
-    def abs(self) -> Self: ...
     def all(self) -> Self: ...
     def any(self) -> Self: ...
-    def alias(self, name: str) -> Self: ...
-    def cast(self, dtype: IntoDType) -> Self: ...
     def count(self) -> Self: ...
     def min(self) -> Self: ...
     def max(self) -> Self: ...
@@ -125,41 +124,7 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
     def var(self, *, ddof: int) -> Self: ...
     def n_unique(self) -> Self: ...
     def null_count(self) -> Self: ...
-    def drop_nulls(self) -> Self: ...
-    def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
-    ) -> Self: ...
-    def diff(self) -> Self: ...
-    def exp(self) -> Self: ...
-    def sqrt(self) -> Self: ...
-    def unique(self) -> Self: ...
     def len(self) -> Self: ...
-    def log(self, base: float) -> Self: ...
-    def round(self, decimals: int) -> Self: ...
-    def mode(self) -> Self: ...
-    def shift(self, n: int) -> Self: ...
-    def is_finite(self) -> Self: ...
-    def is_nan(self) -> Self: ...
-    def is_unique(self) -> Self: ...
-    def is_first_distinct(self) -> Self: ...
-    def is_last_distinct(self) -> Self: ...
-    def cum_sum(self, *, reverse: bool) -> Self: ...
-    def cum_count(self, *, reverse: bool) -> Self: ...
-    def cum_min(self, *, reverse: bool) -> Self: ...
-    def cum_max(self, *, reverse: bool) -> Self: ...
-    def cum_prod(self, *, reverse: bool) -> Self: ...
-    def is_in(self, other: Any) -> Self: ...
-    def rank(self, method: RankMethod, *, descending: bool) -> Self: ...
-    def replace_strict(
-        self,
-        old: Sequence[Any] | Mapping[Any, Any],
-        new: Sequence[Any],
-        *,
-        return_dtype: IntoDType | None,
-    ) -> Self: ...
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
@@ -169,55 +134,6 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: IntoDType | None,
     ) -> Self: ...
-
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self: ...
-
-    def ewm_mean(
-        self,
-        *,
-        com: float | None,
-        span: float | None,
-        half_life: float | None,
-        alpha: float | None,
-        adjust: bool,
-        min_samples: int,
-        ignore_nulls: bool,
-    ) -> Self: ...
-
-    def rolling_sum(
-        self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self: ...
-
-    def rolling_mean(
-        self, window_size: int, *, min_samples: int, center: bool
-    ) -> Self: ...
-
-    def rolling_var(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self: ...
-
-    def rolling_std(
-        self, window_size: int, *, min_samples: int, center: bool, ddof: int
-    ) -> Self: ...
-
-    def __and__(self, other: Any) -> Self: ...
-    def __or__(self, other: Any) -> Self: ...
-    def __add__(self, other: Any) -> Self: ...
-    def __sub__(self, other: Any) -> Self: ...
-    def __mul__(self, other: Any) -> Self: ...
-    def __floordiv__(self, other: Any) -> Self: ...
-    def __truediv__(self, other: Any) -> Self: ...
-    def __mod__(self, other: Any) -> Self: ...
-    def __pow__(self, other: Any) -> Self: ...
-    def __gt__(self, other: Any) -> Self: ...
-    def __ge__(self, other: Any) -> Self: ...
-    def __lt__(self, other: Any) -> Self: ...
-    def __le__(self, other: Any) -> Self: ...
-    def __invert__(self) -> Self: ...
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
@@ -242,17 +158,7 @@ class CompliantExpr(Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]):
         return alias(names) if (alias := self._alias_output_names) else names
 
     @property
-    def str(self) -> StringNamespace[Self]: ...
-    @property
     def name(self) -> NameNamespace[Self]: ...
-    @property
-    def dt(self) -> DateTimeNamespace[Self]: ...
-    @property
-    def cat(self) -> CatNamespace[Self]: ...
-    @property
-    def list(self) -> ListNamespace[Self]: ...
-    @property
-    def struct(self) -> StructNamespace[Self]: ...
 
 
 class DepthTrackingExpr(
@@ -542,65 +448,71 @@ class EagerExpr(
     def cast(self, dtype: IntoDType) -> Self:
         return self._reuse_series("cast", dtype=dtype)
 
+    def _with_binary(self, operator: str, other: Self | Any, /) -> Self:
+        return self._reuse_series(operator, other=other)
+
+    def _with_binary_right(self, operator: str, other: Self | Any, /) -> Self:
+        return self.alias("literal")._reuse_series(operator, other=other)
+
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self._reuse_series("__eq__", other=other)
+        return self._with_binary("__eq__", other)
 
     def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self._reuse_series("__ne__", other=other)
+        return self._with_binary("__ne__", other)
 
     def __ge__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__ge__", other=other)
+        return self._with_binary("__ge__", other)
 
     def __gt__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__gt__", other=other)
+        return self._with_binary("__gt__", other)
 
     def __le__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__le__", other=other)
+        return self._with_binary("__le__", other)
 
     def __lt__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__lt__", other=other)
+        return self._with_binary("__lt__", other)
 
     def __and__(self, other: Self | bool | Any) -> Self:
-        return self._reuse_series("__and__", other=other)
+        return self._with_binary("__and__", other)
 
     def __or__(self, other: Self | bool | Any) -> Self:
-        return self._reuse_series("__or__", other=other)
+        return self._with_binary("__or__", other)
 
     def __add__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__add__", other=other)
+        return self._with_binary("__add__", other)
 
     def __sub__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__sub__", other=other)
+        return self._with_binary("__sub__", other)
 
     def __rsub__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series("__rsub__", other=other)
+        return self._with_binary_right("__rsub__", other)
 
     def __mul__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__mul__", other=other)
+        return self._with_binary("__mul__", other)
 
     def __truediv__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__truediv__", other=other)
+        return self._with_binary("__truediv__", other)
 
     def __rtruediv__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series("__rtruediv__", other=other)
+        return self._with_binary_right("__rtruediv__", other)
 
     def __floordiv__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__floordiv__", other=other)
+        return self._with_binary("__floordiv__", other)
 
     def __rfloordiv__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series("__rfloordiv__", other=other)
+        return self._with_binary_right("__rfloordiv__", other)
 
     def __pow__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__pow__", other=other)
+        return self._with_binary("__pow__", other)
 
     def __rpow__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series("__rpow__", other=other)
+        return self._with_binary_right("__rpow__", other)
 
     def __mod__(self, other: Self | Any) -> Self:
-        return self._reuse_series("__mod__", other=other)
+        return self._with_binary("__mod__", other)
 
     def __rmod__(self, other: Self | Any) -> Self:
-        return self.alias("literal")._reuse_series("__rmod__", other=other)
+        return self._with_binary_right("__rmod__", other)
 
     # Unary
     def __invert__(self) -> Self:
@@ -902,6 +814,29 @@ class EagerExpr(
     def sqrt(self) -> Self:
         return self._reuse_series("sqrt")
 
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
+    ) -> Self:
+        return self._reuse_series(
+            "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
+        )
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        return self._reuse_series(
+            "is_close",
+            other=other,
+            abs_tol=abs_tol,
+            rel_tol=rel_tol,
+            nans_equal=nans_equal,
+        )
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -1064,6 +999,9 @@ class EagerExprListNamespace(
 
     def contains(self, item: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "contains", item=item)
+
+    def get(self, index: int) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("list", "get", index=index)
 
 
 class CompliantExprNameNamespace(  # type: ignore[misc]
