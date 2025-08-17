@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
 from narwhals._utils import (
@@ -13,9 +13,10 @@ from narwhals._utils import (
     is_compliant_series,
     is_eager_allowed,
     is_index_selector,
+    qualified_type_name,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
+from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.series_cat import SeriesCatNamespace
@@ -155,6 +156,71 @@ class Series(Generic[IntoSeriesT]):
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
             f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        """Construct a Series from an iterable.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as an iterable.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> values = [4, 1, 3, 2]
+            >>> nw.Series.from_iterable("a", values, dtype=nw.UInt32, backend="pandas")
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |0    4                |
+            |1    1                |
+            |2    3                |
+            |3    2                |
+            |Name: a, dtype: uint32|
+            └──────────────────────┘
+        """
+        if is_numpy_array(values):
+            return cls.from_numpy(name, values, dtype, backend=backend)
+        if dtype:
+            _validate_into_dtype(dtype)
+        if not isinstance(values, Iterable):
+            msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._series.from_iterable(
+                values, context=ns, name=name, dtype=dtype
+            )
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
         )
         raise ValueError(msg)
 

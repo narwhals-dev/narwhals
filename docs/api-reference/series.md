@@ -30,8 +30,8 @@
         - fill_null
         - filter
         - first
+        - from_iterable
         - from_numpy
-        - last
         - gather_every
         - head
         - hist
@@ -50,6 +50,7 @@
         - is_unique
         - item
         - kurtosis
+        - last
         - len
         - log
         - max
