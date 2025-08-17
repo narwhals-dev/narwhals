@@ -4,39 +4,44 @@
     handler: python
     options:
       members:
-        - Array
+        - DType
+        - NumericType
         - Decimal
-        - List
-        - Int128
-        - Int64
-        - Int32
-        - Int16
-        - Int8
-        - IntegerType
-        - UInt128
-        - UInt64
-        - UInt32
-        - UInt16
-        - UInt8
-        - Field
-        - Float64
-        - Float32
         - FloatType
-        - Boolean
-        - Categorical
-        - Enum
-        - NestedType
+        - Float32
+        - Float64
+        - IntegerType
         - SignedIntegerType
-        - String
-        - Struct
+        - Int8
+        - Int16
+        - Int32
+        - Int64
+        - Int128
+        - UnsignedIntegerType
+        - UInt8
+        - UInt16
+        - UInt32
+        - UInt64
+        - UInt128
+        - TemporalType
         - Date
         - Datetime
         - Duration
+        - Time
+        - NestedType
+        - Array
+        - List
+        - Field
+        - Struct
+        - String
+        - Categorical
+        - Enum
+        - Binary
+        - Boolean
         - Object
         - Unknown
-        - UnsignedIntegerType
-        - Time
-        - Binary
       show_root_heading: false
       show_source: false
-      show_bases: false
+      show_bases: true
+      filters: ["!^_", "^__eq__$"]
+      inherited_members: false

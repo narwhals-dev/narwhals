@@ -330,6 +330,12 @@ def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
     return request.param  # type: ignore[no-any-return]
 
 
+@pytest.fixture(params=[el for el in TEST_EAGER_BACKENDS if not isinstance(el, str)])
+def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
+    """Use if a test is heavily parametric, skips `str` backend."""
+    return request.param  # type: ignore[no-any-return]
+
+
 @pytest.fixture(scope="session")
 def arrow_namespace() -> ArrowNamespace:
     """Using for `ArrowDataFrame.to_struct`.

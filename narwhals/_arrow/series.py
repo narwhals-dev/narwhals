@@ -16,6 +16,7 @@ from narwhals._arrow.utils import (
     chunked_array,
     extract_native,
     floordiv_compat,
+    is_array_or_scalar,
     lit,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -160,10 +161,15 @@ class ArrowSeries(
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls.from_native(
-            chunked_array([data], dtype_pa), name=name, context=context
-        )
+        if dtype is not None:
+            dtype_pa: pa.DataType | None = narwhals_to_native_dtype(dtype, version)
+            if is_array_or_scalar(data):
+                data = data.cast(dtype_pa)
+                dtype_pa = None
+            native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
+        else:
+            native = chunked_array([data])
+        return cls.from_native(native, context=context, name=name)
 
     def _from_scalar(self, value: Any) -> Self:
         if hasattr(value, "as_py"):
