@@ -13,7 +13,7 @@ from narwhals._utils import Implementation
 from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.typing import EagerAllowed
+    from narwhals._typing import EagerAllowed
 
 
 @pytest.fixture

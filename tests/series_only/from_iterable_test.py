@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import EagerAllowed, IntoDType
+    from narwhals._typing import EagerAllowed
+    from narwhals.typing import IntoDType
 
     IntoIterable: TypeAlias = Callable[..., Iterable[Any]]
 

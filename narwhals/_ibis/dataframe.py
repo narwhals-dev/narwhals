@@ -33,17 +33,12 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import (
-        AsofJoinStrategy,
-        EagerImplementation,
-        JoinStrategy,
-        LazyImplementation,
-        LazyUniqueKeepStrategy,
-    )
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -107,7 +102,7 @@ class IbisLazyFrame(
             yield self.native[name]
 
     def collect(
-        self, backend: EagerImplementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -169,7 +164,7 @@ class IbisLazyFrame(
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: LazyImplementation | None = None) -> Self:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for Ibis.

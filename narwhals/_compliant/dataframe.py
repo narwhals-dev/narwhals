@@ -49,16 +49,15 @@ if TYPE_CHECKING:
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, _LimitedContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
     from narwhals.typing import (
         AsofJoinStrategy,
-        EagerImplementation,
         IntoSchema,
         JoinStrategy,
-        LazyImplementation,
         LazyUniqueKeepStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -155,7 +154,7 @@ class CompliantDataFrame(
     def shape(self) -> tuple[int, int]: ...
     def clone(self) -> Self: ...
     def collect(
-        self, backend: EagerImplementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
@@ -198,7 +197,7 @@ class CompliantDataFrame(
         strategy: AsofJoinStrategy,
         suffix: str,
     ) -> Self: ...
-    def lazy(self, backend: LazyImplementation | None) -> CompliantLazyFrameAny: ...
+    def lazy(self, backend: _LazyAllowedImpl | None) -> CompliantLazyFrameAny: ...
     def pivot(
         self,
         on: Sequence[str],
@@ -300,7 +299,7 @@ class CompliantLazyFrame(
     def schema(self) -> Mapping[str, DType]: ...
     def _iter_columns(self) -> Iterator[Any]: ...
     def collect(
-        self, backend: EagerImplementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...

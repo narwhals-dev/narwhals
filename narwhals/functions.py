@@ -43,13 +43,12 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.typing import (
         ConcatMethod,
         FrameT,
-        IntoBackend,
         IntoDType,
-        IntoEagerBackend,
         IntoExpr,
         IntoSchema,
         NativeFrame,
@@ -169,7 +168,11 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
 
 
 def new_series(
-    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoEagerBackend
+    name: str,
+    values: Any,
+    dtype: IntoDType | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -210,7 +213,11 @@ def new_series(
 
 
 def _new_series_impl(
-    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoEagerBackend
+    name: str,
+    values: Any,
+    dtype: IntoDType | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
 ) -> Series[Any]:
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
@@ -240,7 +247,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: IntoSchema | None = None,
     *,
-    backend: IntoEagerBackend | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -325,7 +332,7 @@ def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,
     *,
-    backend: IntoEagerBackend,
+    backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -412,7 +419,7 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
 
 
 def from_arrow(
-    native_frame: IntoArrowTable, *, backend: IntoEagerBackend
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
 ) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -553,7 +560,9 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-def read_csv(source: str, *, backend: IntoEagerBackend, **kwargs: Any) -> DataFrame[Any]:
+def read_csv(
+    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
@@ -621,7 +630,9 @@ def read_csv(source: str, *, backend: IntoEagerBackend, **kwargs: Any) -> DataFr
     return from_native(native_frame, eager_only=True)
 
 
-def scan_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[Any]:
+def scan_csv(
+    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
     For the libraries that do not support lazy dataframes, the function reads
@@ -701,7 +712,7 @@ def scan_csv(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[A
 
 
 def read_parquet(
-    source: str, *, backend: IntoEagerBackend, **kwargs: Any
+    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -775,7 +786,9 @@ def read_parquet(
     return from_native(native_frame, eager_only=True)
 
 
-def scan_parquet(source: str, *, backend: IntoBackend, **kwargs: Any) -> LazyFrame[Any]:
+def scan_parquet(
+    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
     For the libraries that do not support lazy dataframes, the function reads

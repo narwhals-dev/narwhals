@@ -47,17 +47,12 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import (
-        AsofJoinStrategy,
-        EagerImplementation,
-        JoinStrategy,
-        LazyImplementation,
-        LazyUniqueKeepStrategy,
-    )
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
 
 
 class DuckDBLazyFrame(
@@ -135,7 +130,7 @@ class DuckDBLazyFrame(
             yield col(name)
 
     def collect(
-        self, backend: EagerImplementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -193,7 +188,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: LazyImplementation | None = None) -> Self:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
