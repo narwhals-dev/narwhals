@@ -347,13 +347,12 @@ class IbisLazyFrame(
         return self._with_native(self.native.order_by(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        by = list(by)
         if isinstance(reverse, bool):
-            reverse = [reverse] * len(by)
+            reverse = [reverse] * len(list(by))
         sort_cols = []
 
         for is_reverse, by_col in zip(reverse, by):
-            direction_fn = ibis.asc is is_reverse else ibis.desc
+            direction_fn = ibis.asc if is_reverse else ibis.desc
             col = direction_fn(by_col, nulls_first=False)
             sort_cols.append(cast("ir.Column", col))
 

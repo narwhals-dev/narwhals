@@ -410,16 +410,18 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.sort(*it))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        df = self.native  # noqa: F841
+        _df = self.native
         by = list(by)
         if isinstance(reverse, bool):
-            reverse = [reverse] * len(by)
-        directions = ["DESC" if not rev else "ASC" for rev in reverse]
-        order_by = [f'"{col}" {dir}' for col, dir in zip(by, directions)]
+            descending = [not reverse] * len(by)
+        else:
+            descending = [not rev for rev in reverse]
+        expr = window_expression(F("row_number"), order_by=by, descending=descending)
+        condition = expr <= lit(k)
         query = f"""
         SELECT *
-        FROM df
-        QUALIFY ROW_NUMBER() OVER (ORDER BY {",".join(order_by)}) <= {k}
+        FROM _df
+        QUALIFY {condition}
         """  # noqa: S608
         return self._with_native(duckdb.sql(query))
 
