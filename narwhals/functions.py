@@ -692,7 +692,7 @@ def scan_csv(
         Implementation.IBIS,
     }:
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
-    elif implementation in {Implementation.DUCKDB}:
+    elif implementation is Implementation.DUCKDB:
         native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
         if separator is not None and "parse_options" in kwargs:
