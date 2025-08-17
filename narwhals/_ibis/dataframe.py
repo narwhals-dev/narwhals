@@ -352,9 +352,9 @@ class IbisLazyFrame(
             reverse = [reverse] * len(by)
         sort_cols = []
 
-        for i in range(len(by)):
-            direction_fn = ibis.desc if not reverse[i] else ibis.asc
-            col = direction_fn(by[i], nulls_first=False)
+        for is_reverse, by_col in zip(reverse, by):
+            direction_fn = ibis.asc is is_reverse else ibis.desc
+            col = direction_fn(by_col, nulls_first=False)
             sort_cols.append(cast("ir.Column", col))
 
         return self._with_native(self.native.order_by(*sort_cols).head(k))
