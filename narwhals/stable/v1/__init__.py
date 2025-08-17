@@ -322,6 +322,18 @@ class Series(NwSeries[IntoSeriesT]):
         result = super().from_numpy(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
 
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoEagerBackend,
+    ) -> Series[Any]:
+        result = super().from_iterable(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
+
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame

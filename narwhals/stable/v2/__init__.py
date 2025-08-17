@@ -199,6 +199,8 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
 
 
 class Series(NwSeries[IntoSeriesT]):
+    _version = Version.V2
+
     @inherit_doc(NwSeries)
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -212,6 +214,20 @@ class Series(NwSeries[IntoSeriesT]):
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
+
+    # TODO @dangotbanned: Fix `from_numpy` override missing in `v2` in another PR
+
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoEagerBackend,
+    ) -> Series[Any]:
+        result = super().from_iterable(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
 
     def to_frame(self) -> DataFrame[Any]:
         return _stableify(super().to_frame())
