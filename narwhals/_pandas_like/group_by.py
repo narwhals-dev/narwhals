@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import zip_equal
+from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -284,7 +284,7 @@ class PandasLikeGroupBy(
                 for expr in exprs
                 for keys in expr(compliant)
             )
-            out_group, out_names = zip_equal(*results) if results else ([], [])
+            out_group, out_names = zip_strict(*results) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
         return fn

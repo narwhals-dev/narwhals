@@ -1077,15 +1077,17 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
 
 
 @overload
-def zip_equal(it1: Iterable[_T1], it2: Iterable[_T2], /) -> Iterable[tuple[_T1, _T2]]: ...
+def zip_strict(
+    it1: Iterable[_T1], it2: Iterable[_T2], /
+) -> Iterable[tuple[_T1, _T2]]: ...
 
 
 @overload
-def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]: ...
+def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]: ...
 
 
 # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
-def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
+def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
     # For trivial cases, use pure zip.
     if len(iterables) < 2:
         return zip(*iterables)
@@ -1102,10 +1104,10 @@ def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
     # Tail for the zip
     def zip_tail() -> Any:
         if not first_stopped:  # pragma: no cover
-            msg = "zip_equal: first iterable is longer"
+            msg = "zip_strict: first iterable is longer"
             raise ValueError(msg)
         for _ in chain.from_iterable(rest):  # pragma: no cover
-            msg = "zip_equal: first iterable is shorter"
+            msg = "zip_strict: first iterable is shorter"
             raise ValueError(msg)
             yield
 

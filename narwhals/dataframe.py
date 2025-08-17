@@ -35,7 +35,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     supports_arrow_c_stream,
-    zip_equal,
+    zip_strict,
 )
 from narwhals.dependencies import (
     get_polars,
@@ -167,7 +167,7 @@ class BaseFrame(Generic[_FrameT]):
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_equal(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
@@ -191,7 +191,7 @@ class BaseFrame(Generic[_FrameT]):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_equal(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
@@ -1699,7 +1699,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         _keys = [
             k if is_expr else col(k)
-            for k, is_expr in zip_equal(flat_keys, key_is_expr_or_series)
+            for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
@@ -2932,7 +2932,7 @@ class LazyFrame(BaseFrame[FrameT]):
             raise NotImplementedError(msg)
 
         _keys = [
-            k if is_expr else col(k) for k, is_expr in zip_equal(flat_keys, key_is_expr)
+            k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 

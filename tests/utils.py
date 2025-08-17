@@ -12,11 +12,11 @@ import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version
+from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Mapping
 
     from typing_extensions import TypeAlias
 
@@ -43,13 +43,6 @@ CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
-
-
-def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
-    if len(left) != len(right):
-        msg = f"{len(left)=} != {len(right)=}\nLeft: {left}\nRight: {right}"  # pragma: no cover
-        raise ValueError(msg)  # pragma: no cover
-    return zip(left, right)
 
 
 def _to_comparable_list(column_values: Any) -> Any:

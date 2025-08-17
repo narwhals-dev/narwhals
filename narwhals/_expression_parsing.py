@@ -8,7 +8,7 @@ from enum import Enum, auto
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
-from narwhals._utils import is_compliant_expr, zip_equal
+from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
@@ -104,10 +104,10 @@ def evaluate_output_names_and_aliases(
     if exclude:
         assert expr._metadata is not None  # noqa: S101
         if expr._metadata.expansion_kind.is_multi_unnamed():
-            output_names, aliases = zip_equal(
+            output_names, aliases = zip_strict(
                 *[
                     (x, alias)
-                    for x, alias in zip_equal(output_names, aliases)
+                    for x, alias in zip_strict(output_names, aliases)
                     if x not in exclude
                 ]
             )
@@ -626,6 +626,6 @@ def apply_n_ary_operation(
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
         else compliant_expr
-        for compliant_expr, kind in zip_equal(compliant_exprs, kinds)
+        for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
     )
     return function(*compliant_exprs)
