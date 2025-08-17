@@ -1101,10 +1101,10 @@ def zip_equal(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
 
     # Tail for the zip
     def zip_tail() -> Any:
-        if not first_stopped:
+        if not first_stopped:  # pragma: no cover
             msg = "zip_equal: first iterable is longer"
             raise ValueError(msg)
-        for _ in chain.from_iterable(rest):
+        for _ in chain.from_iterable(rest):  # pragma: no cover
             msg = "zip_equal: first iterable is shorter"
             raise ValueError(msg)
             yield
