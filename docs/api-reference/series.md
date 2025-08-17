@@ -29,6 +29,7 @@
         - exp
         - fill_null
         - filter
+        - from_iterable
         - from_numpy
         - gather_every
         - head
