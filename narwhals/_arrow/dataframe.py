@@ -288,10 +288,9 @@ class ArrowDataFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        schema = self.native.schema
         return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in zip_strict(schema.names, schema.types)
+            field.name: native_to_narwhals_dtype(field.type, self._version)
+            for field in self.native.schema
         }
 
     def collect_schema(self) -> dict[str, DType]:
