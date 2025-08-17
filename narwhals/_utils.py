@@ -1076,6 +1076,8 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
     return obj_any
 
 
+from functools import partial
+
 if TYPE_CHECKING:
     zip_strict = partial(zip, strict=True)
 else:
