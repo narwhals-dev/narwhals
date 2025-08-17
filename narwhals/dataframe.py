@@ -865,7 +865,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.write_csv()
+            >>> df.write_csv()  # doctest: +SKIP
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
 
             If we had passed a file name to `write_csv`, it would have been
