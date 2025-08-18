@@ -7,6 +7,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -138,7 +139,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             agg_fn = agg_fn(**expr._scalar_kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
                 (alias, (output_name, agg_fn))
-                for alias, output_name in zip(aliases, output_names)
+                for alias, output_name in zip_strict(aliases, output_names)
             )
         return DaskLazyFrame(
             self._grouped.agg(**simple_aggregations).reset_index(),

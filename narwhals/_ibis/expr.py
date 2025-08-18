@@ -12,7 +12,7 @@ from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, not_implemented
+from narwhals._utils import Implementation, Version, not_implemented, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -128,7 +128,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         }
         yield from (
             cast("ir.Column", mapping[(_desc, _nulls_last)](col))
-            for col, _desc, _nulls_last in zip(cols, descending, nulls_last)
+            for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last)
         )
 
     @classmethod
