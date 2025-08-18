@@ -326,7 +326,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     allow_series: bool | None = None,
     version: Version,
 ) -> Any:
-    from narwhals._interchange.dataframe import _supports_dataframe_interchange
+    from narwhals._interchange.dataframe import supports_dataframe_interchange
     from narwhals._utils import (
         is_compliant_dataframe,
         is_compliant_lazyframe,
@@ -511,7 +511,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
-    if _supports_dataframe_interchange(native_object):
+    if supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:

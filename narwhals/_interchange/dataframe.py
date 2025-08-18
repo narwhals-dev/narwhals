@@ -157,5 +157,5 @@ class InterchangeFrame:
         raise NotImplementedError(msg)
 
 
-def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
+def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return hasattr(obj, "__dataframe__")
