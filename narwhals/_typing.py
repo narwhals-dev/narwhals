@@ -70,14 +70,14 @@ SparkLike: TypeAlias = Literal[_SparkLike, _SparkLikeImpl]
 EagerOnly: TypeAlias = Literal[PandasLike, Arrow]
 LazyOnly: TypeAlias = Literal[SparkLike, Dask, DuckDB, Ibis]
 EagerAllowed: TypeAlias = Literal[EagerOnly, Polars]
-"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of an eager backend.
+"""A string name or [`narwhals.Implementation`][] of an eager backend.
 
 - A string name, one of: `"cudf"`, `"modin"`, `"pandas"`, `"pyarrow"`, `"polars"`.
 - An Implementation, such as: `Implementation.CUDF`, `Implementation.MODIN`, ...
 """
 
 LazyAllowed: TypeAlias = Literal[LazyOnly, Polars]
-"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of a lazy backend.
+"""A string name or [`narwhals.Implementation`][] of a lazy backend.
 
 - A string name, such as: `"duckdb"`, `"ibis"`, `"dask"`, `"sqlframe"`, ...
 - An Implementation, such as: `Implementation.POLARS`, `Implementation.PYSPARK`, ...
@@ -85,7 +85,7 @@ LazyAllowed: TypeAlias = Literal[LazyOnly, Polars]
 
 BackendName: TypeAlias = Literal[_EagerAllowed, _LazyAllowed]
 Backend: TypeAlias = Literal[EagerAllowed, LazyAllowed]
-"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of a supported
+"""A string name or [`narwhals.Implementation`][] of a supported
 backend (either eager or lazy).
 
 - A string name, such as: `"duckdb"`, `"ibis"`, `"pandas"`, `"pyarrow"`, `"polars"`, ...
@@ -94,7 +94,7 @@ backend (either eager or lazy).
 
 BackendT = TypeVar("BackendT", bound=Backend)
 IntoBackend: TypeAlias = Union[BackendT, ModuleType]
-"""Anything that can be converted into a Narwhals Implementation.
+"""Anything that can be converted into a [`narwhals.Implementation`][].
 
 `backend` can be specified in three ways.
 
