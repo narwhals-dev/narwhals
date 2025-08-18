@@ -29,6 +29,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     parse_columns_to_drop,
     scale_bytes,
+    zip_strict,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -561,7 +562,7 @@ class PandasLikeDataFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip(left_on, right_on)
+            for left_key, right_key in zip_strict(left_on, right_on)
             if right_key != left_key
         ]
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.

@@ -10,7 +10,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -145,7 +145,7 @@ class Schema(OrderedDict[str, "DType"]):
             raise ValueError(msg)
         return {
             name: to_native_dtype(dtype=dtype, dtype_backend=backend)
-            for name, dtype, backend in zip(self.keys(), self.values(), backends)
+            for name, dtype, backend in zip_strict(self.keys(), self.values(), backends)
         }
 
     def to_polars(self) -> pl.Schema:
