@@ -358,10 +358,11 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             df_compliant = obj.from_native(
                 native_object, eager_only=eager_only, series_only=series_only
             )
-        # @mp: not sure if correct exception, check. Improve error message
         except TypeError:
-            # @mp:TODO add good error message
-            # try the next plugin
+            if "daft" in str(type(native_object)):
+                msg = "Hint: you might be missing the `narwhals-daft` plugin"
+                raise RuntimeError(msg)
+            # continue looping over the plugins
             continue
         else:
             return df_compliant.to_narwhals()
