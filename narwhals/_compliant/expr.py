@@ -765,12 +765,9 @@ class EagerExpr(
             udf_series_in = self(df)
             output_names = (input_series.name for input_series in udf_series_in)
             udf_series_out = tuple(function(series) for series in udf_series_in)
-
-            _first_in = udf_series_in[0]
-            _first_out = udf_series_out[0]
+            _first_in, _first_out = udf_series_in[0], udf_series_out[0]
 
             result: Sequence[EagerSeriesT]
-
             if is_numpy_array(_first_out):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
