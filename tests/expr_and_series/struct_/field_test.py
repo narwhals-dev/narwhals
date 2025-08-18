@@ -20,7 +20,7 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
     df_native = constructor(data)
 
     if "pandas" in str(constructor):
-        df_native = df_native.assign(  # type: ignore[union-attr]
+        df_native = cast("pd.DataFrame", df_native).assign(
             user=pd.Series(
                 data["user"],
                 dtype=pd.ArrowDtype(
