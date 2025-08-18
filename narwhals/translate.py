@@ -34,10 +34,9 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import (
         DataFrameT,
-        IntoDataFrame,
+        Frame,
         IntoDataFrameT,
         IntoFrame,
-        IntoLazyFrame,
         IntoLazyFrameT,
         IntoSeries,
         IntoSeriesT,
@@ -541,9 +540,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     return native_object
 
 
-def get_native_namespace(
-    *obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
-) -> Any:
+def get_native_namespace(*obj: Frame | Series[Any] | IntoFrame | IntoSeries) -> Any:
     """Get native namespace from object.
 
     Arguments:
@@ -576,12 +573,7 @@ def get_native_namespace(
 
 
 def _get_native_namespace_single_obj(
-    obj: DataFrame[Any]
-    | LazyFrame[Any]
-    | Series[Any]
-    | IntoDataFrame
-    | IntoLazyFrame
-    | IntoSeries,
+    obj: Frame | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
     if has_native_namespace(obj):
         return obj.__native_namespace__()
