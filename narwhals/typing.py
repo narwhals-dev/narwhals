@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
-from narwhals._typing import IntoBackend as IntoBackend  # noqa: PLC0414
+from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -445,12 +445,15 @@ MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 __all__ = [
+    "Backend",
     "CompliantDataFrame",
     "CompliantLazyFrame",
     "CompliantSeries",
     "DataFrameT",
+    "EagerAllowed",
     "Frame",
     "FrameT",
+    "IntoBackend",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
@@ -458,4 +461,5 @@ __all__ = [
     "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyAllowed",
 ]

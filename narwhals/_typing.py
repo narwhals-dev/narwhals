@@ -68,12 +68,29 @@ Ibis: TypeAlias = Literal[_Ibis, _IbisImpl]
 PandasLike: TypeAlias = Literal[_PandasLike, _PandasLikeImpl]
 SparkLike: TypeAlias = Literal[_SparkLike, _SparkLikeImpl]
 EagerOnly: TypeAlias = Literal[PandasLike, Arrow]
-EagerAllowed: TypeAlias = Literal[EagerOnly, Polars]
 LazyOnly: TypeAlias = Literal[SparkLike, Dask, DuckDB, Ibis]
+EagerAllowed: TypeAlias = Literal[EagerOnly, Polars]
+"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of an eager backend.
+
+- A string name, one of: `"cudf"`, `"modin"`, `"pandas"`, `"pyarrow"`, `"polars"`.
+- An Implementation, such as: `Implementation.CUDF`, `Implementation.MODIN`, ...
+"""
+
 LazyAllowed: TypeAlias = Literal[LazyOnly, Polars]
+"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of a lazy backend.
+
+- A string name, such as: `"duckdb"`, `"ibis"`, `"dask"`, `"sqlframe"`, ...
+- An Implementation, such as: `Implementation.POLARS`, `Implementation.PYSPARK`, ...
+"""
 
 BackendName: TypeAlias = Literal[_EagerAllowed, _LazyAllowed]
 Backend: TypeAlias = Literal[EagerAllowed, LazyAllowed]
+"""A string name or [`narwhals.Implementation`][narwhals.Implementation] of a supported
+backend (either eager or lazy).
+
+- A string name, such as: `"duckdb"`, `"ibis"`, `"pandas"`, `"pyarrow"`, `"polars"`, ...
+- An Implementation, such as: `Implementation.DASK`, `Implementation.PYSPARK`, ...
+"""
 
 BackendT = TypeVar("BackendT", bound=Backend)
 IntoBackend: TypeAlias = Union[BackendT, ModuleType]
@@ -134,7 +151,6 @@ Examples:
     |]                 |
     └──────────────────┘
 """
-
 
 IntoBackendAny: TypeAlias = IntoBackend[Backend]
 IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
