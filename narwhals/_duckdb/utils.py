@@ -7,7 +7,7 @@ import duckdb
 import duckdb.typing as duckdb_dtypes
 from duckdb.typing import DuckDBPyType
 
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -302,7 +302,7 @@ def generate_order_by_sql(
         return ""
     by_sql = ",".join(
         f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
-        for x, _descending, _nulls_last in zip(order_by, descending, nulls_last)
+        for x, _descending, _nulls_last in zip_strict(order_by, descending, nulls_last)
     )
     return f"order by {by_sql}"
 
