@@ -765,8 +765,13 @@ class EagerExpr(
             udf_series_in = self(df)
             output_names = (input_series.name for input_series in udf_series_in)
             udf_series_out = tuple(function(series) for series in udf_series_in)
+
+            _first_in = udf_series_in[0]
+            _first_out = udf_series_out[0]
+
             result: Sequence[EagerSeriesT]
-            if is_numpy_array(udf_series_out[0]) or is_numpy_scalar(udf_series_out[0]):
+
+            if is_numpy_array(_first_out):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
@@ -774,8 +779,20 @@ class EagerExpr(
                     from_numpy(array).alias(output_name)
                     for array, output_name in zip(udf_series_out, output_names)
                 )
-            else:
+
+            elif is_numpy_scalar(_first_out):
+                result = tuple(
+                    _first_in._from_scalar(array.item()).alias(output_name)
+                    for array, output_name in zip(udf_series_out, output_names)
+                )
+            elif isinstance(_first_out, _first_in.__class__):  # compliant series
                 result = udf_series_out
+            else:  # If everything else fails, assume scalar case
+                result = tuple(
+                    _first_in._from_scalar(value).alias(output_name)
+                    for value, output_name in zip(udf_series_out, output_names)
+                )
+
             if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
 
