@@ -28,7 +28,7 @@ def test_read_csv(tmpdir: pytest.TempdirFactory, eager_backend: EagerAllowed) ->
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
     df_pl.write_csv(filepath, separator=";")
-    result = nw.read_csv(filepath, backend=backend, separator=";")
+    result = nw.read_csv(filepath, backend=eager_backend, separator=";")
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
