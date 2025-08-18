@@ -137,6 +137,8 @@ typing-modules = ["narwhals._typing_compat"]
 extend-safe-fixes = [
   "C419",    # unnecessary-comprehension-in-call
   "C420",    # unnecessary-dict-comprehension-for-iterable
+  "EM101",   # raw-string-in-exception
+  "EM102",   # f-string-in-exception
   "PLR6201", # literal-membership
   "TC",      # flake8-type-checking
   "UP",      # pyupgrade
