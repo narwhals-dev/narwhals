@@ -392,7 +392,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     # Aggregations
     def all(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
-            return self._coalesce(self._function("bool_and", expr), self._lit(True))  # noqa: FBT003
+            return self._coalesce(self._function("bool_and", expr), self._lit(True))
 
         def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
@@ -402,7 +402,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                     self._window_expression(
                         self._function("bool_and", expr), inputs.partition_by
                     ),
-                    self._lit(True),  # noqa: FBT003
+                    self._lit(True),
                 )
                 for expr in self(df)
             ]
@@ -411,7 +411,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def any(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
-            return self._coalesce(self._function("bool_or", expr), self._lit(False))  # noqa: FBT003
+            return self._coalesce(self._function("bool_or", expr), self._lit(False))
 
         def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
@@ -421,7 +421,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                     self._window_expression(
                         self._function("bool_or", expr), inputs.partition_by
                     ),
-                    self._lit(False),  # noqa: FBT003
+                    self._lit(False),
                 )
                 for expr in self(df)
             ]

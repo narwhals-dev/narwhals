@@ -309,7 +309,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def is_in(self, values: Sequence[Any]) -> Self:
         def _is_in(expr: Column) -> Column:
-            return expr.isin(values) if values else self._F.lit(False)  # noqa: FBT003
+            return expr.isin(values) if values else self._F.lit(False)
 
         return self._with_elementwise(_is_in)
 

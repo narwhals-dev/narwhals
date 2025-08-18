@@ -38,7 +38,7 @@ def test_fill_null_pandas_downcast() -> None:
     import pandas as pd
 
     df = nw.from_native(pd.DataFrame({"a": [True, None]}))
-    result = df.select(nw.col("a").fill_null(False))  # noqa: FBT003
+    result = df.select(nw.col("a").fill_null(False))
     expected = {"a": [True, False]}
     assert_equal_data(result, expected)
     assert result["a"].to_native().dtype == "object"

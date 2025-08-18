@@ -101,7 +101,7 @@ class DaskNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if s.dtype == "bool" else s.fillna(True)  # noqa: FBT003
+                    s if s.dtype == "bool" else s.fillna(True)
                     for s in series
                 )
                 if ignore_nulls
@@ -126,7 +126,7 @@ class DaskNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if s.dtype == "bool" else s.fillna(False)  # noqa: FBT003
+                    s if s.dtype == "bool" else s.fillna(False)
                     for s in series
                 )
                 if ignore_nulls

@@ -32,7 +32,7 @@ class SQLNamespace(
     def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             it = (
-                (self._coalesce(col, self._lit(False)) for col in cols)  # noqa: FBT003
+                (self._coalesce(col, self._lit(False)) for col in cols)
                 if ignore_nulls
                 else cols
             )
@@ -43,7 +43,7 @@ class SQLNamespace(
     def all_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             it = (
-                (self._coalesce(col, self._lit(True)) for col in cols)  # noqa: FBT003
+                (self._coalesce(col, self._lit(True)) for col in cols)
                 if ignore_nulls
                 else cols
             )
