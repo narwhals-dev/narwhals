@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
 import pytest
@@ -49,16 +48,10 @@ def test_with_row_index_lazy(
 
 def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
     frame = nw.from_native(constructor(data))
-
     msg = r"(LazyFrame\.)?with_row_index\(\) missing 1 required keyword-only argument: 'order_by'$"
-    context = (
-        pytest.raises(TypeError, match=msg)
-        if isinstance(frame, nw.LazyFrame)
-        else does_not_raise()
-    )
-
-    with context:
-        result = frame.with_row_index()  # type: ignore[call-arg]
-
-        expected = {"index": [0, 1], **data}
-        assert_equal_data(result, expected)
+    if isinstance(frame, nw.LazyFrame):
+        with pytest.raises(TypeError, match=msg):
+            frame.with_row_index()  # type: ignore[call-arg]
+    else:
+        result = frame.with_row_index()
+        assert_equal_data(result, {"index": [0, 1], **data})
