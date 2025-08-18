@@ -98,6 +98,35 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     # We need to override any method which don't return Self so that type
     # annotations are correct.
 
+    @classmethod
+    def from_arrow(
+        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    ) -> DataFrame[Any]:
+        result = super().from_arrow(native_frame, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: ModuleType | Implementation | str | None = None,
+    ) -> DataFrame[Any]:
+        result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> DataFrame[Any]:
+        result = super().from_numpy(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
     @property
     def _series(self) -> type[Series[Any]]:
         return cast("type[Series[Any]]", Series)
@@ -205,7 +234,17 @@ class Series(NwSeries[IntoSeriesT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    # TODO @dangotbanned: Fix `from_numpy` override missing in `v2` in another PR
+    @classmethod
+    def from_numpy(
+        cls,
+        name: str,
+        values: _1DArray,
+        dtype: IntoDType | None = None,
+        *,
+        backend: ModuleType | Implementation | str,
+    ) -> Series[Any]:
+        result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
 
     @classmethod
     def from_iterable(
