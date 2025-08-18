@@ -498,6 +498,8 @@ class Expr:
         self,
         function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
+        *,
+        returns_scalar: bool = False,
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
 
@@ -510,6 +512,10 @@ class Expr:
             return_dtype: Dtype of the output Series.
                 If not set, the dtype will be inferred based on the first non-null value
                 that is returned by the function.
+            returns_scalar: If the function returns a scalar, by default it will be wrapped
+                in a list in the output, since the assumption is that the function always
+                returns something Series-like.
+                If you want to keep the result as a scalar, set this argument to True.
 
         Examples:
             >>> import pandas as pd
@@ -530,12 +536,18 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        # safest assumptions
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).map_batches(
-                function=function, return_dtype=return_dtype
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).map_batches(
+                function=function,
+                return_dtype=return_dtype,
+                returns_scalar=returns_scalar,
             )
-        )
+
+        if returns_scalar:
+            return self._with_orderable_aggregation(compliant_expr)
+        # safest assumptions
+        return self._with_orderable_filtration(compliant_expr)
 
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
