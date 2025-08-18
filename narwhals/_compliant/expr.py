@@ -776,7 +776,6 @@ class EagerExpr(
                     from_numpy(array).alias(output_name)
                     for array, output_name in zip(udf_series_out, output_names)
                 )
-
             elif is_numpy_scalar(_first_out):
                 result = tuple(
                     _first_in._from_scalar(array.item()).alias(output_name)
