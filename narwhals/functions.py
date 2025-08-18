@@ -568,7 +568,7 @@ def validate_separator(separator: str, native_separator: str, **kwargs: Any) -> 
         raise TypeError(msg)
 
 
-def validate_separator_pyarrow(separator: str, **kwargs: Any) -> None:
+def validate_separator_pyarrow(separator: str, **kwargs: Any) -> Any:
     if "parse_options" in kwargs:
         parse_options = kwargs.pop("parse_options")
         if parse_options.delimiter != separator:
@@ -577,6 +577,10 @@ def validate_separator_pyarrow(separator: str, **kwargs: Any) -> None:
                 f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
             )
             raise TypeError(msg)
+        return kwargs
+    from pyarrow import csv  # ignore-banned-import
+
+    return {"parse_options": csv.ParseOptions(delimiter=separator)}
 
 
 def read_csv(
@@ -625,12 +629,10 @@ def read_csv(
     elif impl is Implementation.POLARS:
         native_frame = native_namespace.read_csv(source, separator=separator, **kwargs)
     elif impl is Implementation.PYARROW:
-        validate_separator_pyarrow(separator, **kwargs)
+        kwargs = validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(
-            source, parse_options=csv.ParseOptions(delimiter=separator), **kwargs
-        )
+        native_frame = csv.read_csv(source, **kwargs)
     elif impl in {
         Implementation.PYSPARK,
         Implementation.DASK,
@@ -717,12 +719,10 @@ def scan_csv(
         validate_separator(separator, "delim", **kwargs)
         native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
-        validate_separator_pyarrow(separator, **kwargs)
+        kwargs = validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
-        native_frame = csv.read_csv(
-            source, parse_options=csv.ParseOptions(delimiter=separator), **kwargs
-        )
+        native_frame = csv.read_csv(source, **kwargs)
     elif implementation.is_spark_like():
         validate_separator(separator, "sep", **kwargs)
         validate_separator(separator, "delimiter", **kwargs)

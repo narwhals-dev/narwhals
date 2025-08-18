@@ -102,10 +102,17 @@ def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> No
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
 def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("pyarrow")
+    from pyarrow import csv
+
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
     result = nw.scan_csv(filepath, backend=pd, engine="pyarrow")
+    assert_equal_data(result, data)
+    result = nw.scan_csv(
+        filepath, backend="pyarrow", parse_options=csv.ParseOptions(delimiter=",")
+    )
     assert_equal_data(result, data)
 
 
