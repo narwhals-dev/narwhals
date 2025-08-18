@@ -150,8 +150,8 @@ class PandasLikeDataFrame(
 
         implementation = context._implementation
         ns = implementation.to_native_namespace()
-        Series = cast("type[pd.Series[Any]]", ns.Series)  # noqa: N806
-        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)  # noqa: N806
+        Series = cast("type[pd.Series[Any]]", ns.Series)
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
         aligned_data: dict[str, pd.Series[Any] | Any] = {}
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
@@ -200,7 +200,7 @@ class PandasLikeDataFrame(
         from narwhals.schema import Schema
 
         implementation = context._implementation
-        DataFrame: Constructor = implementation.to_native_namespace().DataFrame  # noqa: N806
+        DataFrame: Constructor = implementation.to_native_namespace().DataFrame
         if isinstance(schema, (Mapping, Schema)):
             it: Iterable[DTypeBackend] = (
                 get_dtype_backend(native_type, implementation)

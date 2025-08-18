@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: N806
 import operator as op
 from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
 

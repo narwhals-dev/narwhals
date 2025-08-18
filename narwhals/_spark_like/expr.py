@@ -102,7 +102,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self.over([self._F.lit(1)], [])
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
@@ -118,7 +118,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return import_native_dtypes(self._implementation)
 
     @property
-    def _Window(self) -> type[Window]:  # noqa: N802
+    def _Window(self) -> type[Window]:
         if TYPE_CHECKING:
             from sqlframe.base.window import Window
 
@@ -131,7 +131,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         descending: Sequence[bool] | None = None,
         nulls_last: Sequence[bool] | None = None,
     ) -> Iterator[Column]:
-        F = self._F  # noqa: N806
+        F = self._F
         descending = descending or [False] * len(cols)
         nulls_last = nulls_last or [False] * len(cols)
         mapping = {
@@ -267,7 +267,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(_null_count)
 
     def std(self, ddof: int) -> Self:
-        F = self._F  # noqa: N806
+        F = self._F
         if ddof == 0:
             return self._with_callable(F.stddev_pop)
         if ddof == 1:
@@ -280,7 +280,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_callable(func)
 
     def var(self, ddof: int) -> Self:
-        F = self._F  # noqa: N806
+        F = self._F
         if ddof == 0:
             return self._with_callable(F.var_pop)
         if ddof == 1:

@@ -180,6 +180,15 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = [
+  "Series", 
+  "DataFrame", 
+  "_Window", 
+  "F", 
+  "_F",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "narwhals/expr_dt.py" = ["RUF002"]
 "narwhals/_*/utils.py" = [
