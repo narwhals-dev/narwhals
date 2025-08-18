@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -14,12 +14,7 @@ def test_map_batches_expr(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(expected, {"a": [2, 3, 4], "b": [5, 6, 7]})
 
 
-def test_map_batches_expr_numpy(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor_eager):
-        # https://github.com/narwhals-dev/narwhals/issues/2995
-        request.applymarker(pytest.mark.xfail(strict=False))
+def test_map_batches_expr_numpy(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = df.select(
         nw.col("a")
@@ -28,7 +23,9 @@ def test_map_batches_expr_numpy(
     )
     assert_equal_data(expected, {"a": [9.0]})
 
-    expected = df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
+    expected = df.select(
+        nw.all().map_batches(lambda s: s.to_numpy().argmax(), returns_scalar=True)
+    )
     assert_equal_data(expected, {"a": [2], "b": [2], "z": [2]})
 
 
@@ -36,3 +33,20 @@ def test_map_batches_expr_names(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = nw.from_native(df.select(nw.all().map_batches(lambda x: x.to_numpy())))
     assert_equal_data(expected, {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]})
+
+
+def test_map_batches_exception(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 32, 3):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data))
+    msg = (
+        r"`map(?:_batches)?` with `returns_scalar=False` must return a Series; found "
+        "'numpy.int64'.\n\nIf `returns_scalar` is set to `True`, a returned value can be "
+        "a scalar value."
+    )
+
+    with pytest.raises(TypeError, match=msg):
+        df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))

@@ -149,14 +149,22 @@ class PolarsExpr:
         return self._with_native(native)
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
+        self,
+        function: Callable[[Any], Any],
+        return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self:
+        pl_version = self._backend_version
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version)
             if return_dtype
             else None
+            if pl_version < (1, 32)
+            else pl.self_dtype()
         )
-        native = self.native.map_batches(function, return_dtype_pl)
+        kwargs = {} if pl_version < (0, 20, 31) else {"returns_scalar": returns_scalar}
+        native = self.native.map_batches(function, return_dtype_pl, **kwargs)
         return self._with_native(native)
 
     @requires.backend_version((1,))
