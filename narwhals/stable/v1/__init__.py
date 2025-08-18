@@ -59,7 +59,7 @@ from narwhals.stable.v1.dtypes import (
     UInt128,
     Unknown,
 )
-from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoLazyFrameT
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
 if TYPE_CHECKING:
@@ -1375,7 +1375,6 @@ __all__ = [
     "Int32",
     "Int64",
     "Int128",
-    "IntoFrameT",
     "LazyFrame",
     "List",
     "Object",
