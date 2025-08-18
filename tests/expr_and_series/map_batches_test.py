@@ -36,7 +36,7 @@ def test_map_batches_expr_scalar(
         dtype.is_nested()
         and df.implementation.is_pandas_like()
         and PANDAS_VERSION < (2, 2)
-    ):
+    ):  # pragma: no cover
         reason = "pandas is too old for nested types"
         pytest.skip(reason=reason)
 
