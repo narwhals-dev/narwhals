@@ -1083,7 +1083,8 @@ else:
 
     if sys.version_info >= (3, 10):
         zip_strict = partial(zip, strict=True)
-    else:  # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
+    else:  # pragma: no cover
+        # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
 
         def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
             # For trivial cases, use pure zip.
