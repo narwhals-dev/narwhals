@@ -559,6 +559,26 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+def validate_separator(separator: str, native_separator: str, **kwargs: Any) -> None:
+    if native_separator in kwargs and kwargs[native_separator] != separator:
+        msg = (
+            "`separator` and `parse_options.delimiter` do not match: "
+            f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
+        )
+        raise TypeError(msg)
+
+
+def validate_separator_pyarrow(separator: str, **kwargs: Any) -> None:
+    if "parse_options" in kwargs:
+        parse_options = kwargs.pop("parse_options")
+        if parse_options.delimiter != separator:
+            msg = (
+                "`separator` and `parse_options.delimiter` do not match: "
+                f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
+            )
+            raise TypeError(msg)
+
+
 def read_csv(
     source: str,
     *,
@@ -600,13 +620,12 @@ def read_csv(
     native_namespace = impl.to_native_namespace()
     native_frame: NativeFrame
     if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
+        validate_separator(separator, "sep", **kwargs)
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
     elif impl is Implementation.POLARS:
         native_frame = native_namespace.read_csv(source, separator=separator, **kwargs)
     elif impl is Implementation.PYARROW:
-        if separator is not None and "parse_options" in kwargs:
-            msg = "Can't pass both `separator` and `parse_options`."
-            raise TypeError(msg)
+        validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(
@@ -691,19 +710,22 @@ def scan_csv(
         Implementation.DASK,
         Implementation.IBIS,
     }:
+        validate_separator(separator, "sep", **kwargs)
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
     elif implementation is Implementation.DUCKDB:
+        validate_separator(separator, "delimiter", **kwargs)
+        validate_separator(separator, "delim", **kwargs)
         native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
-        if separator is not None and "parse_options" in kwargs:
-            msg = "Can't pass both `separator` and `parse_options`."
-            raise TypeError(msg)
+        validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
 
         native_frame = csv.read_csv(
             source, parse_options=csv.ParseOptions(delimiter=separator), **kwargs
         )
     elif implementation.is_spark_like():
+        validate_separator(separator, "sep", **kwargs)
+        validate_separator(separator, "delimiter", **kwargs)
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)

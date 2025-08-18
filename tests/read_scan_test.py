@@ -61,20 +61,12 @@ def test_read_csv_raise_with_lazy(tmpdir: pytest.TempdirFactory, backend: str) -
         nw.read_csv(filepath, backend=backend)
 
 
-def test_scan_csv(
-    tmpdir: pytest.TempdirFactory,
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
+def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
         kwargs = {"session": DuckDBSession(), "inferSchema": True}
-
-        request.applymarker(
-            pytest.mark.xfail(reason="https://github.com/eakmanrq/sqlframe/issues/469")
-        )
     elif "pyspark" in str(constructor):
         if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
             from pyspark.sql.connect.session import SparkSession
@@ -126,15 +118,22 @@ def test_scan_csv_kwargs(tmpdir: pytest.TempdirFactory) -> None:
 
 
 def test_read_csv_raise_sep_multiple(tmpdir: pytest.TempdirFactory) -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    pytest.importorskip("sqlframe")
+    import duckdb
+    import pandas as pd
     import pyarrow as pa
+    import sqlframe
     from pyarrow import csv
+    from sqlframe.duckdb import DuckDBSession
 
     df_pl = pl.DataFrame(data)
     filepath = str(tmpdir / "file.csv")  # type: ignore[operator]
     df_pl.write_csv(filepath)
 
-    msg = "Can't pass both `separator` and `parse_options`."
+    msg = "do not match:"
     with pytest.raises(TypeError, match=msg):
         nw.read_csv(
             filepath,
@@ -148,6 +147,32 @@ def test_read_csv_raise_sep_multiple(tmpdir: pytest.TempdirFactory) -> None:
             backend=pa,
             separator="|",
             parse_options=csv.ParseOptions(delimiter=";"),
+        )
+    with pytest.raises(TypeError, match=msg):
+        nw.read_csv(filepath, backend=pd, separator="|", sep=";")
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(filepath, backend=pd, separator="|", sep=";")
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(filepath, backend=duckdb, separator="|", delimiter=";")
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(filepath, backend=duckdb, separator="|", delim=";")
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(
+            filepath,
+            backend=sqlframe,
+            separator="|",
+            sep=";",
+            session=DuckDBSession(),
+            inferSchema=True,
+        )
+    with pytest.raises(TypeError, match=msg):
+        nw.scan_csv(
+            filepath,
+            backend=sqlframe,
+            separator="|",
+            delimiter=";",
+            session=DuckDBSession(),
+            inferSchema=True,
         )
 
 
