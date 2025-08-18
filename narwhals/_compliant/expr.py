@@ -28,7 +28,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant
+from narwhals._utils import _StoresCompliant, qualified_type_name
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
@@ -785,7 +785,7 @@ class EagerExpr(
                 _type = type(native_result[_idx])
                 msg = (
                     "`map_batches` with `returns_scalar=False` must return a Series; "
-                    f"found '{_type.__module__}.{_type.__name__}'.\n\nIf `returns_scalar` "
+                    f"found '{qualified_type_name(_type)}'.\n\nIf `returns_scalar` "
                     "is set to `True`, a returned value can be a scalar value."
                 )
                 raise TypeError(msg)
