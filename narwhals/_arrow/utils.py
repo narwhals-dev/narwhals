@@ -80,6 +80,11 @@ def extract_py_scalar(value: Any, /) -> Any:
     return maybe_extract_py_scalar(value, return_py_scalar=True)
 
 
+def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
+    """Return True for any base `pyarrow` container."""
+    return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
+
+
 def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ChunkedArrayAny:
@@ -87,7 +92,7 @@ def chunked_array(
         return arr
     if isinstance(arr, list):
         return pa.chunked_array(arr, dtype)
-    return pa.chunked_array([arr], arr.type)
+    return pa.chunked_array([arr], dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:

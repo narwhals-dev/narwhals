@@ -122,6 +122,22 @@ def test_field_repr() -> None:
     assert repr(dtype) == "Field('a', <class 'narwhals.dtypes.Int32'>)"
 
 
+def test_field_eq() -> None:
+    field_1 = nw.Field("a", nw.String)
+    field_2 = nw.Field("a", nw.String())
+    field_3 = nw.Field("b", nw.Datetime())
+    field_4 = nw.Field("b", nw.Datetime("ms"))
+    field_5 = nw.Field("b", nw.Datetime)
+
+    assert field_1 == field_2
+    assert field_2 != field_3
+    # bit of a head-scratcher
+    assert field_3 != field_4
+    assert field_3 == field_5
+    assert field_4 == field_5
+    assert field_1 != field_1.dtype
+
+
 def test_struct_hashes() -> None:
     dtypes = (
         nw.Struct,

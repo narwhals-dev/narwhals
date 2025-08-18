@@ -25,8 +25,6 @@ if TYPE_CHECKING:
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
     try:
-        if module_name == "polars":
-            return Implementation.POLARS._backend_version()
         return parse_version(__import__(module_name).__version__)
     except ImportError:
         return (0, 0, 0)
@@ -146,6 +144,12 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             assert are_equivalent_values, (
                 f"Mismatch at index {i}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
+
+
+def assert_equal_series(
+    result: nw.Series[Any], expected: Sequence[Any], name: str
+) -> None:
+    assert_equal_data(result.to_frame(), {name: expected})
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:

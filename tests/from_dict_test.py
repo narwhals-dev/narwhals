@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from importlib.util import find_spec
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
@@ -9,35 +9,27 @@ import narwhals as nw
 from narwhals._utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
-TEST_EAGER_BACKENDS: list[Implementation | str] = []
-TEST_EAGER_BACKENDS.extend(
-    (Implementation.POLARS, "polars") if find_spec("polars") is not None else ()
-)
-TEST_EAGER_BACKENDS.extend(
-    (Implementation.PANDAS, "pandas") if find_spec("pandas") is not None else ()
-)
-TEST_EAGER_BACKENDS.extend(
-    (Implementation.PYARROW, "pyarrow") if find_spec("pyarrow") is not None else ()
-)
+if TYPE_CHECKING:
+    from narwhals._namespace import EagerAllowed
 
 
-@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict(backend: Implementation | str) -> None:
-    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend)
+def test_from_dict(eager_backend: EagerAllowed) -> None:
+    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=eager_backend)
     expected = {"c": [1, 2], "d": [5, 6]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
 
-@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_schema(backend: Implementation | str) -> None:
+def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
-    result = nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend=backend, schema=schema)
+    result = nw.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
     assert result.collect_schema() == schema
     with pytest.deprecated_call():
         result = nw.from_dict(
             {"c": [1, 2], "d": [5, 6]},
-            native_namespace=backend,  # type: ignore[arg-type]
+            native_namespace=eager_backend,  # type: ignore[arg-type]
             schema=schema,
         )
         assert result.collect_schema() == schema
@@ -86,16 +78,14 @@ def test_from_dict_one_native_one_narwhals(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_empty(backend: Implementation | str) -> None:
-    result = nw.from_dict({}, backend=backend)
+def test_from_dict_empty(eager_backend: EagerAllowed) -> None:
+    result = nw.from_dict({}, backend=eager_backend)
     assert result.shape == (0, 0)
 
 
-@pytest.mark.parametrize("backend", TEST_EAGER_BACKENDS)
-def test_from_dict_empty_with_schema(backend: Implementation | str) -> None:
+def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
-    result = nw.from_dict({}, schema, backend=backend)
+    result = nw.from_dict({}, schema, backend=eager_backend)
     assert result.schema == schema
 
 
