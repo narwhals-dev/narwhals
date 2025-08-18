@@ -762,27 +762,27 @@ class EagerExpr(
         returns_scalar: bool,
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
-            input_series_list = self(df)
-            output_names = (input_series.name for input_series in input_series_list)
-            native_result = tuple(function(series) for series in input_series_list)
+            udf_series_in = self(df)
+            output_names = (input_series.name for input_series in udf_series_in)
+            udf_series_out = tuple(function(series) for series in udf_series_in)
             result: Sequence[EagerSeriesT]
-            if is_numpy_array(native_result[0]) or is_numpy_scalar(native_result[0]):
+            if is_numpy_array(udf_series_out[0]) or is_numpy_scalar(udf_series_out[0]):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
                 result = tuple(
                     from_numpy(array).alias(output_name)
-                    for array, output_name in zip(native_result, output_names)
+                    for array, output_name in zip(udf_series_out, output_names)
                 )
             else:
-                result = native_result
+                result = udf_series_out
             if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
 
             is_scalar_result = tuple(len(r) == 1 for r in result)
             if (not returns_scalar) and any(is_scalar_result) and (len(df) > 1):
                 _idx = is_scalar_result.index(True)  # Index of first result with length 1
-                _type = type(native_result[_idx])
+                _type = type(udf_series_out[_idx])
                 msg = (
                     "`map_batches` with `returns_scalar=False` must return a Series; "
                     f"found '{qualified_type_name(_type)}'.\n\nIf `returns_scalar` "

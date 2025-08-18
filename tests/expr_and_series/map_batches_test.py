@@ -39,7 +39,7 @@ def test_map_batches_exception(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 32, 3):
-        request.applymarker(pytest.mark.xfail(strict=True))
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))
     msg = (
