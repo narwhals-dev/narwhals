@@ -190,7 +190,10 @@ extend-ignore-names = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"]
+"narwhals/expr_dt.py" = ["RUF002"] 
+"narwhals/typing.py" = [
+  "PYI042",  # snake-case-type-alias (catches `_1DArray`)
+] 
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
