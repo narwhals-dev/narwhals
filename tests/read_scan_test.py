@@ -58,7 +58,7 @@ def test_scan_csv(tmpdir: pytest.TempdirFactory, constructor: Constructor) -> No
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
 
-        kwargs = {"session": DuckDBSession(), "inferSchema": True}
+        kwargs = {"session": DuckDBSession(), "inferSchema": True, "header": True}
     elif "pyspark" in str(constructor):
         if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
             from pyspark.sql.connect.session import SparkSession
