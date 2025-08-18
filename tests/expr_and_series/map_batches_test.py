@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -27,6 +32,14 @@ def test_map_batches_expr_scalar(
     constructor_eager: ConstructorEager, value: Any, dtype: DType
 ) -> None:
     df = nw.from_native(constructor_eager(data))
+    if (
+        dtype.is_nested()
+        and df.implementation.is_pandas_like()
+        and PANDAS_VERSION < (2, 2)
+    ):
+        reason = "pandas is too old for nested types"
+        pytest.skip(reason=reason)
+
     expected = df.select(
         nw.col("a", "b").map_batches(
             lambda _: value, returns_scalar=True, return_dtype=dtype
