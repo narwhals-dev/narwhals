@@ -358,10 +358,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             df_compliant = obj.from_native(
                 native_object, eager_only=eager_only, series_only=series_only
             )
-        except TypeError:
+        except RuntimeError as e:
             if "daft" in str(type(native_object)):
                 msg = "Hint: you might be missing the `narwhals-daft` plugin"
-                raise RuntimeError(msg)
+                raise RuntimeError(msg) from e
             # continue looping over the plugins
             continue
         else:
