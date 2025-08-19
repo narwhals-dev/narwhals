@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
@@ -536,21 +537,22 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     discovered_plugins = entry_points(group="narwhals.plugins")
 
-    for plugin in discovered_plugins:
-        obj = plugin.load()
+    if sys.version_info >= (3, 10):
+        for plugin in discovered_plugins:
+            obj = plugin.load()  # pragma: no cover
 
-        try:
-            df_compliant = obj.from_native(
-                native_object, eager_only=False, series_only=False
-            )
-        except Exception as e:
-            if "daft" in str(type(native_object)):
-                msg = "Hint: you might be missing the `narwhals-daft` plugin"
-                raise Exception(msg) from e  # noqa: TRY002
-            # continue looping over the plugins
-            continue
-        else:
-            return df_compliant.to_narwhals()
+            try:
+                df_compliant = obj.from_native(  # pragma: no cover
+                    native_object, eager_only=False, series_only=False
+                )
+            except Exception as e:
+                if "daft" in str(type(native_object)):  # pragma: no cover
+                    msg = "Hint: you might be missing the `narwhals-daft` plugin"
+                    raise Exception(msg) from e  # noqa: TRY002
+                # continue looping over the plugins
+                continue  # pragma: no cover
+            else:
+                return df_compliant.to_narwhals()  # pragma: no cover
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
