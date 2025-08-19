@@ -347,26 +347,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
         raise ValueError(msg)
 
-    from importlib.metadata import entry_points
-
-    discovered_plugins = entry_points(group="narwhals.plugins")
-
-    for plugin in discovered_plugins:
-        obj = plugin.load()
-
-        try:
-            df_compliant = obj.from_native(
-                native_object, eager_only=eager_only, series_only=series_only
-            )
-        except RuntimeError as e:
-            if "daft" in str(type(native_object)):
-                msg = "Hint: you might be missing the `narwhals-daft` plugin"
-                raise RuntimeError(msg) from e
-            # continue looping over the plugins
-            continue
-        else:
-            return df_compliant.to_narwhals()
-
     # Extensions
     if is_compliant_dataframe(native_object):
         if series_only:
@@ -551,6 +531,27 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
+
+    from importlib.metadata import entry_points
+
+    discovered_plugins = entry_points(group="narwhals.plugins")
+
+    for plugin in discovered_plugins:
+        obj = plugin.load()
+
+        try:
+            print(type(native_object))
+            df_compliant = obj.from_native(
+                native_object, eager_only=False, series_only=False
+            )
+        except Exception as e:
+            if "daft" in str(type(native_object)):
+                msg = "Hint: you might be missing the `narwhals-daft` plugin"
+                raise Exception(msg) from e
+            # continue looping over the plugins
+            continue
+        else:
+            return df_compliant.to_narwhals()
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
