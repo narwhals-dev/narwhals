@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
-
-data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 
 
 @pytest.mark.parametrize(
@@ -24,8 +23,9 @@ data = {"a": [0, 0, 2, -1], "b": [1, 3, 2, None]}
 def test_sort_series(
     constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
 ) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["b"]
+    series = nw.from_native(constructor_eager({"a": [1, 3, 2, None]}), eager_only=True)[
+        "a"
+    ]
     result = series.sort(descending=descending, nulls_last=nulls_last)
-    assert (
-        result == nw.from_native(constructor_eager({"a": expected}), eager_only=True)["a"]
-    )
+
+    assert_equal_data({"a": result}, {"a": expected})
