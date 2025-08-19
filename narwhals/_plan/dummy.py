@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import pyarrow as pa
-    from typing_extensions import Never, Self, TypeAlias
+    from typing_extensions import Never, Self
 
     from narwhals._plan.categorical import ExprCatNamespace
     from narwhals._plan.common import ExprIR
@@ -66,9 +66,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-
-
-CompliantFrame: TypeAlias = "CompliantBaseFrame[t.Any, NativeFrameT]"
 
 
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
@@ -815,7 +812,7 @@ class SelectorV1(Selector):
 
 
 class BaseFrame(Generic[NativeFrameT]):
-    _compliant: CompliantFrame[NativeFrameT]
+    _compliant: CompliantBaseFrame[t.Any, NativeFrameT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
@@ -838,7 +835,9 @@ class BaseFrame(Generic[NativeFrameT]):
         raise NotImplementedError
 
     @classmethod
-    def _from_compliant(cls, compliant: CompliantFrame[NativeFrameT], /) -> Self:
+    def _from_compliant(
+        cls, compliant: CompliantBaseFrame[t.Any, NativeFrameT], /
+    ) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
