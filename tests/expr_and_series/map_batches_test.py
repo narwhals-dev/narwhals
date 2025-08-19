@@ -20,8 +20,8 @@ data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
 def test_map_batches_expr_compliant(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1))
-    assert_equal_data(expected, {"a": [2, 3, 4], "b": [5, 6, 7]})
+    expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1).name.suffix("1"))
+    assert_equal_data(expected, {"a1": [2, 3, 4], "b1": [5, 6, 7]})
 
 
 @pytest.mark.parametrize(
