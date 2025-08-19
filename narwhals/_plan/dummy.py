@@ -817,27 +817,6 @@ class SelectorV1(Selector):
     _version: t.ClassVar[Version] = Version.V1
 
 
-class DummyCompliantExpr:
-    _ir: ExprIR
-    _version: Version
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @classmethod
-    def _from_ir(cls, ir: ExprIR, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._ir = ir
-        obj._version = version
-        return obj
-
-    def to_narwhals(self) -> Expr:
-        if self.version is Version.MAIN:
-            return Expr._from_ir(self._ir)
-        return ExprV1._from_ir(self._ir)
-
-
 class DummyFrame(Generic[NativeFrameT]):
     _compliant: CompliantFrame[NativeFrameT]
     _version: t.ClassVar[Version] = Version.MAIN
