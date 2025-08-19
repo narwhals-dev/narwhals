@@ -8,7 +8,7 @@ import polars as pl
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, zip_strict
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
@@ -118,11 +118,11 @@ class PolarsNamespace:
         return self._expr(pl.len(), self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)
 
     def any_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
     def concat(
@@ -175,7 +175,7 @@ class PolarsNamespace:
             else:
                 init_value, *values = [
                     pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
-                    for expr, nm in zip(pl_exprs, null_mask)
+                    for expr, nm in zip_strict(pl_exprs, null_mask)
                 ]
                 separators = [
                     pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
@@ -184,7 +184,7 @@ class PolarsNamespace:
                 result = pl.fold(  # type: ignore[assignment]
                     acc=init_value,
                     function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values)],
+                    exprs=[s + v for s, v in zip_strict(separators, values)],
                 )
 
             return self._expr(result, version=self._version)

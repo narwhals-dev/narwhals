@@ -27,7 +27,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
         return (self.compliant._F.dayofweek(expr) + 6) % 7
 
     def to_string(self, format: str) -> SparkLikeExpr:
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         def _to_string(expr: Column) -> Column:
             # Handle special formats
@@ -106,7 +106,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
             msg = "Offsetting by nanoseconds is not yet supported for Spark-like."
             raise NotImplementedError(msg)
 
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         def _offset_by(expr: Column) -> Column:
             # https://github.com/eakmanrq/sqlframe/issues/441
@@ -151,7 +151,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
 
     def _format_iso_week_with_day(self, expr: Column) -> Column:
         """Format datetime as ISO week string with day."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         year = F.date_format(expr, "yyyy")
         week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
@@ -160,7 +160,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
 
     def _format_iso_week(self, expr: Column) -> Column:
         """Format datetime as ISO week string."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         year = F.date_format(expr, "yyyy")
         week = F.lpad(F.weekofyear(expr).cast("string"), 2, "0")
@@ -170,7 +170,7 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
         self, expr: Column, format: str
     ) -> tuple[str, tuple[Column, ...]]:
         """Format microseconds if present in format, else it's a no-op."""
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
 
         suffix: tuple[Column, ...]
         if format.endswith((".%f", "%.f")):
