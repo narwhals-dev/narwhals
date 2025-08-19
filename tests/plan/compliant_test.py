@@ -20,7 +20,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals.typing import PythonLiteral
 
 
@@ -64,7 +64,7 @@ def data_indexed() -> dict[str, Any]:
     }
 
 
-def _ids_ir(expr: DummyExpr | Any) -> str:
+def _ids_ir(expr: Expr | Any) -> str:
     if is_expr(expr):
         return repr(expr._ir)
     return repr(expr)
@@ -403,9 +403,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     ids=_ids_ir,
 )
 def test_select(
-    expr: DummyExpr | Sequence[DummyExpr],
-    expected: dict[str, Any],
-    data_small: dict[str, Any],
+    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_small: dict[str, Any]
 ) -> None:
     frame = pa.table(data_small)
     df = DummyDataFrame.from_native(frame)
@@ -477,9 +475,7 @@ def test_select(
     ],
 )
 def test_with_columns(
-    expr: DummyExpr | Sequence[DummyExpr],
-    expected: dict[str, Any],
-    data_smaller: dict[str, Any],
+    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_smaller: dict[str, Any]
 ) -> None:
     frame = pa.table(data_smaller)
     df = DummyDataFrame.from_native(frame)
@@ -487,11 +483,11 @@ def test_with_columns(
     assert_equal_data(result, expected)
 
 
-def first(*names: str) -> DummyExpr:
+def first(*names: str) -> Expr:
     return nwd.col(*names).first()
 
 
-def last(*names: str) -> DummyExpr:
+def last(*names: str) -> Expr:
     return nwd.col(*names).last()
 
 
@@ -507,7 +503,7 @@ def last(*names: str) -> DummyExpr:
     ],
 )
 def test_first_last_expr_with_columns(
-    data_indexed: dict[str, Any], agg: DummyExpr, expected: PythonLiteral
+    data_indexed: dict[str, Any], agg: Expr, expected: PythonLiteral
 ) -> None:
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))

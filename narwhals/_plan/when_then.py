@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._plan.common import Immutable, is_expr
-from narwhals._plan.dummy import DummyExpr
+from narwhals._plan.dummy import Expr
 from narwhals._plan.expr_parsing import (
     parse_into_expr_ir,
     parse_predicates_constraints_into_expr_ir,
@@ -25,7 +25,7 @@ class When(Immutable):
         return Then(condition=self.condition, statement=parse_into_expr_ir(expr))
 
     @staticmethod
-    def _from_expr(expr: DummyExpr, /) -> When:
+    def _from_expr(expr: Expr, /) -> When:
         return When(condition=expr._ir)
 
     @staticmethod
@@ -33,7 +33,7 @@ class When(Immutable):
         return When(condition=ir)
 
 
-class Then(Immutable, DummyExpr):
+class Then(Immutable, Expr):
     __slots__ = ("condition", "statement")
     condition: ExprIR
     statement: ExprIR
@@ -46,7 +46,7 @@ class Then(Immutable, DummyExpr):
             conditions=(self.condition, condition), statements=(self.statement,)
         )
 
-    def otherwise(self, statement: IntoExpr, /) -> DummyExpr:
+    def otherwise(self, statement: IntoExpr, /) -> Expr:
         return self._from_ir(self._otherwise(statement))
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
@@ -57,12 +57,12 @@ class Then(Immutable, DummyExpr):
         return self._otherwise()
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> DummyExpr:  # type: ignore[override]
-        return DummyExpr._from_ir(ir)
+    def _from_ir(cls, ir: ExprIR, /) -> Expr:  # type: ignore[override]
+        return Expr._from_ir(ir)
 
-    def __eq__(self, value: object) -> DummyExpr | bool:  # type: ignore[override]
+    def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
         if is_expr(value):
-            return super(DummyExpr, self).__eq__(value)
+            return super(Expr, self).__eq__(value)
         return super().__eq__(value)
 
 
@@ -78,7 +78,7 @@ class ChainedWhen(Immutable):
         )
 
 
-class ChainedThen(Immutable, DummyExpr):
+class ChainedThen(Immutable, Expr):
     """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/arity.rs#L89-L130."""
 
     __slots__ = ("conditions", "statements")
@@ -93,7 +93,7 @@ class ChainedThen(Immutable, DummyExpr):
             conditions=(*self.conditions, condition), statements=self.statements
         )
 
-    def otherwise(self, statement: IntoExpr, /) -> DummyExpr:
+    def otherwise(self, statement: IntoExpr, /) -> Expr:
         return self._from_ir(self._otherwise(statement))
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
@@ -109,12 +109,12 @@ class ChainedThen(Immutable, DummyExpr):
         return self._otherwise()
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> DummyExpr:  # type: ignore[override]
-        return DummyExpr._from_ir(ir)
+    def _from_ir(cls, ir: ExprIR, /) -> Expr:  # type: ignore[override]
+        return Expr._from_ir(ir)
 
-    def __eq__(self, value: object) -> DummyExpr | bool:  # type: ignore[override]
+    def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
         if is_expr(value):
-            return super(DummyExpr, self).__eq__(value)
+            return super(Expr, self).__eq__(value)
         return super().__eq__(value)
 
 

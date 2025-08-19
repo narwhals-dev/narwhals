@@ -26,14 +26,14 @@ from narwhals.exceptions import InvalidOperationError as OrderDependentExprError
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import DummyExpr, DummySeries
+    from narwhals._plan.dummy import DummySeries, Expr
     from narwhals._plan.expr import SortBy
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-def col(*names: str | t.Iterable[str]) -> DummyExpr:
+def col(*names: str | t.Iterable[str]) -> Expr:
     flat_names = tuple(flatten(names))
     node = (
         Column(name=flat_names[0])
@@ -43,7 +43,7 @@ def col(*names: str | t.Iterable[str]) -> DummyExpr:
     return node.to_narwhals()
 
 
-def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
+def nth(*indices: int | t.Sequence[int]) -> Expr:
     flat_indices = tuple(flatten(indices))
     node = (
         Nth(index=flat_indices[0])
@@ -55,7 +55,7 @@ def nth(*indices: int | t.Sequence[int]) -> DummyExpr:
 
 def lit(
     value: NonNestedLiteral | DummySeries[NativeSeriesT], dtype: IntoDType | None = None
-) -> DummyExpr:
+) -> Expr:
     if is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
     if not is_non_nested_literal(value):
@@ -68,64 +68,64 @@ def lit(
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
-def len() -> DummyExpr:
+def len() -> Expr:
     return Len().to_narwhals()
 
 
-def all() -> DummyExpr:
+def all() -> Expr:
     return All().to_narwhals()
 
 
-def exclude(*names: str | t.Iterable[str]) -> DummyExpr:
+def exclude(*names: str | t.Iterable[str]) -> Expr:
     return all().exclude(*names)
 
 
-def max(*columns: str) -> DummyExpr:
+def max(*columns: str) -> Expr:
     return col(columns).max()
 
 
-def mean(*columns: str) -> DummyExpr:
+def mean(*columns: str) -> Expr:
     return col(columns).mean()
 
 
-def min(*columns: str) -> DummyExpr:
+def min(*columns: str) -> Expr:
     return col(columns).min()
 
 
-def median(*columns: str) -> DummyExpr:
+def median(*columns: str) -> Expr:
     return col(columns).median()
 
 
-def sum(*columns: str) -> DummyExpr:
+def sum(*columns: str) -> Expr:
     return col(columns).sum()
 
 
-def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.SumHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MinHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
 
 
-def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> DummyExpr:
+def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
 
@@ -135,7 +135,7 @@ def concat_str(
     *more_exprs: IntoExpr,
     separator: str = "",
     ignore_nulls: bool = False,
-) -> DummyExpr:
+) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return (
         ConcatHorizontal(separator=separator, ignore_nulls=ignore_nulls)
@@ -162,11 +162,11 @@ def when(
         ...     .otherwise(4)
         ... )
         >>> when_then_many
-        Narwhals DummyExpr (main):
+        nw._plan.Expr(main):
         .when([(col('x')) == (lit(str: a))]).then(lit(int: 1)).otherwise(.when([(col('x')) == (lit(str: b))]).then(lit(int: 2)).otherwise(.when([(col('x')) == (lit(str: c))]).then(lit(int: 3)).otherwise(lit(int: 4))))
         >>>
         >>> nwd.when(nwd.col("y") == "b").then(1)
-        Narwhals DummyExpr (main):
+        nw._plan.Expr(main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
     condition = parse.parse_predicates_constraints_into_expr_ir(
@@ -182,7 +182,7 @@ def int_range(
     *,
     dtype: IntegerType | type[IntegerType] = Version.MAIN.dtypes.Int64,
     eager: bool = False,
-) -> DummyExpr:
+) -> Expr:
     if end is None:
         end = start
         start = 0
@@ -219,7 +219,7 @@ def _order_dependent_error(node: agg.OrderableAggExpr) -> OrderDependentExprErro
     return OrderDependentExprError(msg)
 
 
-def ensure_orderable_rules(*exprs: DummyExpr) -> tuple[DummyExpr, ...]:
+def ensure_orderable_rules(*exprs: Expr) -> tuple[Expr, ...]:
     for expr in exprs:
         node = expr._ir
         if isinstance(node, agg.OrderableAggExpr):

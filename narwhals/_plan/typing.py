@@ -10,7 +10,7 @@ if t.TYPE_CHECKING:
     from narwhals import dtypes
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, NamedIR, SelectorIR
-    from narwhals._plan.dummy import DummyExpr, DummySeries
+    from narwhals._plan.dummy import DummySeries, Expr
     from narwhals._plan.functions import RollingWindow
     from narwhals._plan.ranges import RangeFunction
     from narwhals.typing import (
@@ -88,5 +88,5 @@ Using instead of `Sequence`, as a `list` can be passed there (can't break immuta
 Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 """Placeholder for `map_batches(function=...)`."""
 
-IntoExprColumn: TypeAlias = "DummyExpr | DummySeries[t.Any] | str"
+IntoExprColumn: TypeAlias = "Expr | DummySeries[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"

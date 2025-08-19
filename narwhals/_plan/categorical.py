@@ -6,7 +6,7 @@ from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
 
 
 class CategoricalFunction(Function): ...
@@ -33,7 +33,7 @@ class ExprCatNamespace(ExprNamespace[IRCatNamespace]):
     def _ir_namespace(self) -> type[IRCatNamespace]:
         return IRCatNamespace
 
-    def get_categories(self) -> DummyExpr:
+    def get_categories(self) -> Expr:
         return self._to_narwhals(
             self._ir.get_categories().to_function_expr(self._expr._ir)
         )

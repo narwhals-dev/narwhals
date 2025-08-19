@@ -91,16 +91,16 @@ def _parse_sort_by(
 
 # NOTE: Overly simplified placeholders for mocking typing
 # Entirely ignoring namespace + function binding
-class DummyExpr:
+class Expr:
     _ir: ExprIR
     _version: t.ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
-        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!r}"
+        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!r}"
 
     def __str__(self) -> str:
         """Use `print(self)` for formatting."""
-        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!s}"
+        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!s}"
 
     def _repr_html_(self) -> str:
         return self._ir._repr_html_()
@@ -693,7 +693,7 @@ class DummyExpr:
         return ExprStringNamespace(_expr=self)
 
 
-class DummySelector(DummyExpr):
+class DummySelector(Expr):
     """Selectors placeholder.
 
     Examples:
@@ -719,14 +719,14 @@ class DummySelector(DummyExpr):
         obj._ir = ir
         return obj
 
-    def _to_expr(self) -> DummyExpr:
+    def _to_expr(self) -> Expr:
         return self._ir.to_narwhals(self.version)
 
     @t.overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
     @t.overload
-    def __or__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __or__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __or__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __or__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -735,8 +735,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
     @t.overload
-    def __and__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __and__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __and__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __and__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             other = by_name(name)
         if isinstance(other, type(self)):
@@ -747,8 +747,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
     @t.overload
-    def __sub__(self, other: IntoExpr) -> DummyExpr: ...
-    def __sub__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __sub__(self, other: IntoExpr) -> Expr: ...
+    def __sub__(self, other: IntoExpr) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.Sub()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -757,8 +757,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
     @t.overload
-    def __xor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -767,7 +767,7 @@ class DummySelector(DummyExpr):
     def __invert__(self) -> Self:
         return self._from_ir(expr.InvertSelector(selector=self._ir))
 
-    def __add__(self, other: t.Any) -> DummyExpr:  # type: ignore[override]
+    def __add__(self, other: t.Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
@@ -784,8 +784,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rand__(self, other: Self) -> Self: ...
     @t.overload
-    def __rand__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) & self
         return self._to_expr().__rand__(other)
@@ -793,8 +793,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __ror__(self, other: Self) -> Self: ...
     @t.overload
-    def __ror__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) | self
         return self._to_expr().__ror__(other)
@@ -802,14 +802,14 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rxor__(self, other: Self) -> Self: ...
     @t.overload
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) ^ self
         return self._to_expr().__rxor__(other)
 
 
-class DummyExprV1(DummyExpr):
+class ExprV1(Expr):
     _version: t.ClassVar[Version] = Version.V1
 
 
@@ -832,10 +832,10 @@ class DummyCompliantExpr:
         obj._version = version
         return obj
 
-    def to_narwhals(self) -> DummyExpr:
+    def to_narwhals(self) -> Expr:
         if self.version is Version.MAIN:
-            return DummyExpr._from_ir(self._ir)
-        return DummyExprV1._from_ir(self._ir)
+            return Expr._from_ir(self._ir)
+        return ExprV1._from_ir(self._ir)
 
 
 class DummyFrame(Generic[NativeFrameT]):

@@ -7,10 +7,10 @@ from narwhals._plan.common import ExprIR, NamedIR, is_expr
 if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
 
 
-def _unwrap_ir(obj: DummyExpr | ExprIR | NamedIR) -> ExprIR:
+def _unwrap_ir(obj: Expr | ExprIR | NamedIR) -> ExprIR:
     if is_expr(obj):
         return obj._ir
     if isinstance(obj, ExprIR):
@@ -21,9 +21,7 @@ def _unwrap_ir(obj: DummyExpr | ExprIR | NamedIR) -> ExprIR:
 
 
 def assert_expr_ir_equal(
-    actual: DummyExpr | ExprIR | NamedIR,
-    expected: DummyExpr | ExprIR | NamedIR | LiteralString,
-    /,
+    actual: Expr | ExprIR | NamedIR, expected: Expr | ExprIR | NamedIR | LiteralString, /
 ) -> None:
     """Assert that `actual` is equivalent to `expected`.
 

@@ -18,7 +18,7 @@ from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 
@@ -81,7 +81,7 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         assert_expr_ir_equal(lhs, rhs)
 
 
-def named_ir(name: str, expr: DummyExpr | ExprIR, /) -> NamedIR[ExprIR]:
+def named_ir(name: str, expr: Expr | ExprIR, /) -> NamedIR[ExprIR]:
     """Helper constructor for test compare."""
     ir = expr._ir if is_expr(expr) else expr
     return NamedIR(expr=ir, name=name)
