@@ -22,6 +22,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -77,7 +78,7 @@ class SparkLikeLazyFrame(
         return self._implementation._backend_version()
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
@@ -93,7 +94,7 @@ class SparkLikeLazyFrame(
         return import_native_dtypes(self._implementation)
 
     @property
-    def _Window(self) -> type[Window]:  # noqa: N802
+    def _Window(self) -> type[Window]:
         if TYPE_CHECKING:
             from sqlframe.base.window import Window
 
@@ -335,7 +336,7 @@ class SparkLikeLazyFrame(
                 for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
         return self._with_native(self.native.sort(*sort_cols))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
@@ -423,7 +424,7 @@ class SparkLikeLazyFrame(
                 and_,
                 (
                     getattr(self.native, left_key) == getattr(other_native, right_key)
-                    for left_key, right_key in zip(left_on_, right_on_remapped)
+                    for left_key, right_key in zip_strict(left_on_, right_on_remapped)
                 ),
             )
             if how == "full"
