@@ -23,7 +23,7 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import TypeVar
+    from typing import NoReturn, TypeVar
 
     from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
@@ -88,6 +88,19 @@ class Expr:
 
     def __repr__(self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
+
+    def __bool__(self) -> NoReturn:
+        msg = (
+            f"the truth value of {type(self)} is ambiguous"
+            "\n\n"
+            "You probably got here by using a Python standard library function instead "
+            "of the native expressions API.\n"
+            "Here are some things you might want to try:\n"
+            "- instead of `nw.col('a') and nw.col('b')`, use `nw.col('a') & nw.col('b')`\n"
+            "- instead of `nw.col('a') in [y, z]`, use `nw.col('a').is_in([y, z])`\n"
+            "- instead of `max(nw.col('a'), nw.col('b'))`, use `nw.max_horizontal(nw.col('a'), nw.col('b'))`\n"
+        )
+        raise TypeError(msg)
 
     def _taxicab_norm(self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
