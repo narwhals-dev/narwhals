@@ -94,7 +94,7 @@ class ArrowDataFrame(EagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"])
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
     # NOTE: Not handling actual expressions yet
-    # `DummyFrame` is typed for just `str` names
+    # `BaseFrame` is typed for just `str` names
     def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
         df_by = self.select(by)
         indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))
