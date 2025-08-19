@@ -69,6 +69,17 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
 
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import (
+        Arrow,
+        Backend,
+        Dask,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        Pandas,
+        Polars,
+    )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -107,7 +118,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
     ) -> DataFrame[Any]:
         result = super().from_arrow(native_frame, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -118,7 +129,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         data: Mapping[str, Any],
         schema: Mapping[str, DType] | Schema | None = None,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -129,7 +140,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         data: _2DArray,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
         result = super().from_numpy(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -182,7 +193,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
+        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
     ) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend))
 
@@ -251,7 +262,7 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
@@ -306,7 +317,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -318,7 +329,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         result = super().from_iterable(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -1217,7 +1228,7 @@ def new_series(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
@@ -1226,7 +1237,7 @@ def new_series(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(_new_series_impl(name, values, dtype, backend=backend))
 
 
@@ -1234,7 +1245,7 @@ def new_series(
 def from_arrow(
     native_frame: IntoArrowTable,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
@@ -1243,7 +1254,7 @@ def from_arrow(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.from_arrow(native_frame, backend=backend))
 
 
@@ -1252,7 +1263,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -1269,7 +1280,7 @@ def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
@@ -1278,7 +1289,7 @@ def from_numpy(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.from_numpy(data, schema, backend=backend))
 
 
@@ -1286,7 +1297,7 @@ def from_numpy(
 def read_csv(
     source: str,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
@@ -1296,7 +1307,7 @@ def read_csv(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
 
 
@@ -1304,7 +1315,7 @@ def read_csv(
 def scan_csv(
     source: str,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> LazyFrame[Any]:
@@ -1314,7 +1325,7 @@ def scan_csv(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[Backend]", backend)
     return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
 
 
@@ -1322,7 +1333,7 @@ def scan_csv(
 def read_parquet(
     source: str,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> DataFrame[Any]:
@@ -1332,7 +1343,7 @@ def read_parquet(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[EagerAllowed]", backend)
     return _stableify(nw_f.read_parquet(source, backend=backend, **kwargs))
 
 
@@ -1340,7 +1351,7 @@ def read_parquet(
 def scan_parquet(
     source: str,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
     **kwargs: Any,
 ) -> LazyFrame[Any]:
@@ -1350,7 +1361,7 @@ def scan_parquet(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    backend = cast("ModuleType | Implementation | str", backend)
+    backend = cast("IntoBackend[Backend]", backend)
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 

@@ -6,11 +6,11 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from narwhals._utils import Implementation
+from narwhals.utils import Implementation
 from tests.utils import Constructor, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals._namespace import EagerAllowed
+    from narwhals._typing import EagerAllowed, Polars
 
 
 def test_from_dict(eager_backend: EagerAllowed) -> None:
@@ -36,9 +36,7 @@ def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
-def test_from_dict_without_backend(
-    constructor: Constructor, backend: Implementation | str
-) -> None:
+def test_from_dict_without_backend(constructor: Constructor, backend: Polars) -> None:
     pytest.importorskip("polars")
 
     df = (
@@ -59,12 +57,12 @@ def test_from_dict_without_backend_invalid(constructor: Constructor) -> None:
 def test_from_dict_with_backend_invalid() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
-        nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")
+        nw.from_dict({"c": [1, 2], "d": [5, 6]}, backend="duckdb")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor, backend: Implementation | str
+    constructor: Constructor, backend: Polars
 ) -> None:
     pytest.importorskip("polars")
 
