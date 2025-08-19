@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable
 
+from narwhals._utils import zip_strict
 from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
 from narwhals.functions import new_series
 from narwhals.testing.asserts.utils import raise_assertion_error
@@ -205,7 +206,7 @@ def _check_list_like(
     # `check_order` value at the top level.
     impl = l_vals.implementation
     try:
-        for l_val, r_val in zip(l_vals, r_vals):
+        for l_val, r_val in zip_strict(l_vals, r_vals):
             check_fn(
                 new_series(name="", values=l_val, dtype=l_dtype.inner, backend=impl),  # type: ignore[arg-type]
                 new_series(name="", values=r_val, dtype=r_dtype.inner, backend=impl),  # type: ignore[arg-type]
@@ -227,7 +228,7 @@ def _check_struct(
     #   * dtype differs, regardless of `check_dtypes=False`
     #   * order applies only at top level
     try:
-        for l_field, r_field in zip(l_dtype.fields, r_dtype.fields):
+        for l_field, r_field in zip_strict(l_dtype.fields, r_dtype.fields):
             check_fn(l_vals.struct.field(l_field.name), r_vals.struct.field(r_field.name))
     except AssertionError:
         raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
