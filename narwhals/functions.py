@@ -562,7 +562,7 @@ def show_versions() -> None:
 def validate_separator(separator: str, native_separator: str, **kwargs: Any) -> None:
     if native_separator in kwargs and kwargs[native_separator] != separator:
         msg = (
-            "`separator` and `parse_options.delimiter` do not match: "
+            f"`separator` and `{native_separator}` do not match: "
             f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
         )
         raise TypeError(msg)
