@@ -42,7 +42,7 @@ ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
-FrameAny: TypeAlias = "DummyCompliantFrame[Any, Any]"
+FrameAny: TypeAlias = "CompliantBaseFrame[Any, Any]"
 DataFrameAny: TypeAlias = "DummyCompliantDataFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
@@ -658,7 +658,7 @@ class LazyNamespace(
         return self._lazyframe
 
 
-class DummyCompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
+class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     _native: NativeFrameT
 
     def __narwhals_namespace__(self) -> Any: ...
@@ -691,7 +691,7 @@ class DummyCompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
 
 class DummyCompliantDataFrame(
-    DummyCompliantFrame[SeriesT, NativeFrameT],
+    CompliantBaseFrame[SeriesT, NativeFrameT],
     Protocol[SeriesT, NativeFrameT, NativeSeriesT],
 ):
     @classmethod

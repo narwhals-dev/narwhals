@@ -45,8 +45,8 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.protocols import (
+        CompliantBaseFrame,
         DummyCompliantDataFrame,
-        DummyCompliantFrame,
         DummyCompliantSeries,
     )
     from narwhals._plan.schema import FrozenSchema
@@ -68,7 +68,7 @@ if TYPE_CHECKING:
     )
 
 
-CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT]"
+CompliantFrame: TypeAlias = "CompliantBaseFrame[t.Any, NativeFrameT]"
 CompliantDataFrame: TypeAlias = (
     "DummyCompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]"
 )
