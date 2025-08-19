@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.dummy import Series
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatHorizontal
@@ -74,7 +74,7 @@ class ArrowNamespace(
     @overload
     def lit(
         self,
-        node: expr.Literal[DummySeries[ChunkedArrayAny]],
+        node: expr.Literal[Series[ChunkedArrayAny]],
         frame: ArrowDataFrame,
         name: str,
     ) -> ArrowExpr: ...
@@ -82,14 +82,14 @@ class ArrowNamespace(
     @overload
     def lit(
         self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
         frame: ArrowDataFrame,
         name: str,
     ) -> ArrowExpr | ArrowScalar: ...
 
     def lit(
         self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[ChunkedArrayAny]],
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
         frame: ArrowDataFrame,
         name: str,
     ) -> ArrowExpr | ArrowScalar:

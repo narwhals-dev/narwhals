@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import Interval, IntervalUnit
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
@@ -229,92 +229,92 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
     def _ir_namespace(self) -> type[IRDateTimeNamespace]:
         return IRDateTimeNamespace
 
-    def date(self) -> DummyExpr:
+    def date(self) -> Expr:
         return self._to_narwhals(self._ir.date().to_function_expr(self._expr._ir))
 
-    def year(self) -> DummyExpr:
+    def year(self) -> Expr:
         return self._to_narwhals(self._ir.year().to_function_expr(self._expr._ir))
 
-    def month(self) -> DummyExpr:
+    def month(self) -> Expr:
         return self._to_narwhals(self._ir.month().to_function_expr(self._expr._ir))
 
-    def day(self) -> DummyExpr:
+    def day(self) -> Expr:
         return self._to_narwhals(self._ir.day().to_function_expr(self._expr._ir))
 
-    def hour(self) -> DummyExpr:
+    def hour(self) -> Expr:
         return self._to_narwhals(self._ir.hour().to_function_expr(self._expr._ir))
 
-    def minute(self) -> DummyExpr:
+    def minute(self) -> Expr:
         return self._to_narwhals(self._ir.minute().to_function_expr(self._expr._ir))
 
-    def second(self) -> DummyExpr:
+    def second(self) -> Expr:
         return self._to_narwhals(self._ir.second().to_function_expr(self._expr._ir))
 
-    def millisecond(self) -> DummyExpr:
+    def millisecond(self) -> Expr:
         return self._to_narwhals(self._ir.millisecond().to_function_expr(self._expr._ir))
 
-    def microsecond(self) -> DummyExpr:
+    def microsecond(self) -> Expr:
         return self._to_narwhals(self._ir.microsecond().to_function_expr(self._expr._ir))
 
-    def nanosecond(self) -> DummyExpr:
+    def nanosecond(self) -> Expr:
         return self._to_narwhals(self._ir.nanosecond().to_function_expr(self._expr._ir))
 
-    def ordinal_day(self) -> DummyExpr:
+    def ordinal_day(self) -> Expr:
         return self._to_narwhals(self._ir.ordinal_day().to_function_expr(self._expr._ir))
 
-    def weekday(self) -> DummyExpr:
+    def weekday(self) -> Expr:
         return self._to_narwhals(self._ir.weekday().to_function_expr(self._expr._ir))
 
-    def total_minutes(self) -> DummyExpr:
+    def total_minutes(self) -> Expr:
         return self._to_narwhals(
             self._ir.total_minutes().to_function_expr(self._expr._ir)
         )
 
-    def total_seconds(self) -> DummyExpr:
+    def total_seconds(self) -> Expr:
         return self._to_narwhals(
             self._ir.total_seconds().to_function_expr(self._expr._ir)
         )
 
-    def total_milliseconds(self) -> DummyExpr:
+    def total_milliseconds(self) -> Expr:
         return self._to_narwhals(
             self._ir.total_milliseconds().to_function_expr(self._expr._ir)
         )
 
-    def total_microseconds(self) -> DummyExpr:
+    def total_microseconds(self) -> Expr:
         return self._to_narwhals(
             self._ir.total_microseconds().to_function_expr(self._expr._ir)
         )
 
-    def total_nanoseconds(self) -> DummyExpr:
+    def total_nanoseconds(self) -> Expr:
         return self._to_narwhals(
             self._ir.total_nanoseconds().to_function_expr(self._expr._ir)
         )
 
-    def to_string(self, format: str) -> DummyExpr:
+    def to_string(self, format: str) -> Expr:
         return self._to_narwhals(
             self._ir.to_string(format=format).to_function_expr(self._expr._ir)
         )
 
-    def replace_time_zone(self, time_zone: str | None) -> DummyExpr:
+    def replace_time_zone(self, time_zone: str | None) -> Expr:
         return self._to_narwhals(
             self._ir.replace_time_zone(time_zone=time_zone).to_function_expr(
                 self._expr._ir
             )
         )
 
-    def convert_time_zone(self, time_zone: str) -> DummyExpr:
+    def convert_time_zone(self, time_zone: str) -> Expr:
         return self._to_narwhals(
             self._ir.convert_time_zone(time_zone=time_zone).to_function_expr(
                 self._expr._ir
             )
         )
 
-    def timestamp(self, time_unit: TimeUnit = "us") -> DummyExpr:
+    def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
         return self._to_narwhals(
             self._ir.timestamp(time_unit=time_unit).to_function_expr(self._expr._ir)
         )
 
-    def truncate(self, every: str) -> DummyExpr:
+    def truncate(self, every: str) -> Expr:
         return self._to_narwhals(
             self._ir.truncate(every=every).to_function_expr(self._expr._ir)
         )

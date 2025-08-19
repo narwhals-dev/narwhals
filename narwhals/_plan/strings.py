@@ -6,7 +6,7 @@ from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
 
 
 class StringFunction(Function):
@@ -197,68 +197,66 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
     def _ir_namespace(self) -> type[IRStringNamespace]:
         return IRStringNamespace
 
-    def len_chars(self) -> DummyExpr:
+    def len_chars(self) -> Expr:
         return self._to_narwhals(self._ir.len_chars().to_function_expr(self._expr._ir))
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
-    ) -> DummyExpr:
+    ) -> Expr:
         return self._to_narwhals(
             self._ir.replace(pattern, value, literal=literal, n=n).to_function_expr(
                 self._expr._ir
             )
         )
 
-    def replace_all(
-        self, pattern: str, value: str, *, literal: bool = False
-    ) -> DummyExpr:
+    def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
         return self._to_narwhals(
             self._ir.replace_all(pattern, value, literal=literal).to_function_expr(
                 self._expr._ir
             )
         )
 
-    def strip_chars(self, characters: str | None = None) -> DummyExpr:
+    def strip_chars(self, characters: str | None = None) -> Expr:
         return self._to_narwhals(
             self._ir.strip_chars(characters).to_function_expr(self._expr._ir)
         )
 
-    def starts_with(self, prefix: str) -> DummyExpr:
+    def starts_with(self, prefix: str) -> Expr:
         return self._to_narwhals(
             self._ir.starts_with(prefix).to_function_expr(self._expr._ir)
         )
 
-    def ends_with(self, suffix: str) -> DummyExpr:
+    def ends_with(self, suffix: str) -> Expr:
         return self._to_narwhals(
             self._ir.ends_with(suffix).to_function_expr(self._expr._ir)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> DummyExpr:
+    def contains(self, pattern: str, *, literal: bool = False) -> Expr:
         return self._to_narwhals(
             self._ir.contains(pattern, literal=literal).to_function_expr(self._expr._ir)
         )
 
-    def slice(self, offset: int, length: int | None = None) -> DummyExpr:
+    def slice(self, offset: int, length: int | None = None) -> Expr:
         return self._to_narwhals(
             self._ir.slice(offset, length).to_function_expr(self._expr._ir)
         )
 
-    def head(self, n: int = 5) -> DummyExpr:
+    def head(self, n: int = 5) -> Expr:
         return self._to_narwhals(self._ir.head(n).to_function_expr(self._expr._ir))
 
-    def tail(self, n: int = 5) -> DummyExpr:
+    def tail(self, n: int = 5) -> Expr:
         return self._to_narwhals(self._ir.tail(n).to_function_expr(self._expr._ir))
 
-    def split(self, by: str) -> DummyExpr:
+    def split(self, by: str) -> Expr:
         return self._to_narwhals(self._ir.split(by).to_function_expr(self._expr._ir))
 
-    def to_datetime(self, format: str | None = None) -> DummyExpr:
+    def to_datetime(self, format: str | None = None) -> Expr:
         return self._to_narwhals(
             self._ir.to_datetime(format).to_function_expr(self._expr._ir)
         )
 
-    def to_lowercase(self) -> DummyExpr:
+    def to_lowercase(self) -> Expr:
         return self._to_narwhals(self._ir.to_lowercase().to_function_expr(self._expr._ir))
 
-    def to_uppercase(self) -> DummyExpr:
+    def to_uppercase(self) -> Expr:
         return self._to_narwhals(self._ir.to_uppercase().to_function_expr(self._expr._ir))

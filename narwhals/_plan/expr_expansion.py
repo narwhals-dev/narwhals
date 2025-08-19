@@ -81,7 +81,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
@@ -152,7 +152,7 @@ class ExpansionFlags(Immutable):
         )
 
     @classmethod
-    def from_expr(cls, expr: DummyExpr, /) -> ExpansionFlags:
+    def from_expr(cls, expr: Expr, /) -> ExpansionFlags:
         return cls.from_ir(expr._ir)
 
     def with_multiple_columns(self) -> ExpansionFlags:

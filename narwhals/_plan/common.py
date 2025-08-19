@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
-    from narwhals._plan.dummy import DummyExpr, DummySelector, DummySeries
+    from narwhals._plan.dummy import Expr, Selector, Series
     from narwhals._plan.expr import (
         AggExpr,
         BinaryExpr,
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals._plan.protocols import DummyCompliantSeries
+    from narwhals._plan.protocols import CompliantSeries
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
@@ -170,12 +170,12 @@ def _field_str(name: str, value: Any) -> str:
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
-    def to_narwhals(self, version: Version = Version.MAIN) -> DummyExpr:
+    def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy
 
         if version is Version.MAIN:
-            return dummy.DummyExpr._from_ir(self)
-        return dummy.DummyExprV1._from_ir(self)
+            return dummy.Expr._from_ir(self)
+        return dummy.ExprV1._from_ir(self)
 
     @property
     def is_scalar(self) -> bool:
@@ -277,12 +277,12 @@ class ExprIR(Immutable):
 
 
 class SelectorIR(ExprIR):
-    def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
+    def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan import dummy
 
         if version is Version.MAIN:
-            return dummy.DummySelector._from_ir(self)
-        return dummy.DummySelectorV1._from_ir(self)
+            return dummy.Selector._from_ir(self)
+        return dummy.SelectorV1._from_ir(self)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.
@@ -370,13 +370,13 @@ class IRNamespace(Immutable):
     _ir: ExprIR
 
     @classmethod
-    def from_expr(cls, expr: DummyExpr, /) -> Self:
+    def from_expr(cls, expr: Expr, /) -> Self:
         return cls(_ir=expr._ir)
 
 
 class ExprNamespace(Immutable, Generic[IRNamespaceT]):
     __slots__ = ("_expr",)
-    _expr: DummyExpr
+    _expr: Expr
 
     @property
     def _ir_namespace(self) -> type[IRNamespaceT]:
@@ -386,7 +386,7 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
     def _ir(self) -> IRNamespaceT:
         return self._ir_namespace.from_expr(self._expr)
 
-    def _to_narwhals(self, ir: ExprIR, /) -> DummyExpr:
+    def _to_narwhals(self, ir: ExprIR, /) -> Expr:
         return self._expr._from_ir(ir)
 
 
@@ -433,13 +433,13 @@ def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
     return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
 
 
-def is_expr(obj: Any) -> TypeIs[DummyExpr]:
-    from narwhals._plan.dummy import DummyExpr
+def is_expr(obj: Any) -> TypeIs[Expr]:
+    from narwhals._plan.dummy import Expr
 
-    return isinstance(obj, DummyExpr)
+    return isinstance(obj, Expr)
 
 
-def is_column(obj: Any) -> TypeIs[DummyExpr]:
+def is_column(obj: Any) -> TypeIs[Expr]:
     """Indicate if the given object is a basic/unaliased column.
 
     https://github.com/pola-rs/polars/blob/a3d6a3a7863b4d42e720a05df69ff6b6f5fc551f/py-polars/polars/_utils/various.py#L164-L168.
@@ -447,26 +447,22 @@ def is_column(obj: Any) -> TypeIs[DummyExpr]:
     return is_expr(obj) and obj.meta.is_column()
 
 
-def is_series(
-    obj: DummySeries[NativeSeriesT] | Any,
-) -> TypeIs[DummySeries[NativeSeriesT]]:
-    from narwhals._plan.dummy import DummySeries
+def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
+    from narwhals._plan.dummy import Series
 
-    return isinstance(obj, DummySeries)
+    return isinstance(obj, Series)
 
 
 def is_compliant_series(
-    obj: DummyCompliantSeries[NativeSeriesT] | Any,
-) -> TypeIs[DummyCompliantSeries[NativeSeriesT]]:
+    obj: CompliantSeries[NativeSeriesT] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
-def is_iterable_reject(
-    obj: Any,
-) -> TypeIs[str | bytes | DummySeries | DummyCompliantSeries]:
-    from narwhals._plan.dummy import DummySeries
+def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
+    from narwhals._plan.dummy import Series
 
-    return isinstance(obj, (str, bytes, DummySeries)) or is_compliant_series(obj)
+    return isinstance(obj, (str, bytes, Series)) or is_compliant_series(obj)
 
 
 def is_regex_projection(name: str) -> bool:

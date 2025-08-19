@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.protocols import DummyCompliantSeries
+from narwhals._plan.protocols import CompliantSeries
 from narwhals._utils import Version
 from narwhals.dependencies import is_numpy_array_1d
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
 
-class ArrowSeries(DummyCompliantSeries["ChunkedArrayAny"]):
+class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
 

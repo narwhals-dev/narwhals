@@ -9,7 +9,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
-from narwhals._plan.protocols import DummyEagerDataFrame
+from narwhals._plan.protocols import EagerDataFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
@@ -21,14 +21,14 @@ if t.TYPE_CHECKING:
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
-    from narwhals._plan.dummy import DummyDataFrame
+    from narwhals._plan.dummy import DataFrame
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
 
 
-class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
+class ArrowDataFrame(EagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 
@@ -49,10 +49,10 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
     def __len__(self) -> int:
         return self.native.num_rows
 
-    def to_narwhals(self) -> DummyDataFrame[pa.Table, ChunkedArrayAny]:
-        from narwhals._plan.dummy import DummyDataFrame
+    def to_narwhals(self) -> DataFrame[pa.Table, ChunkedArrayAny]:
+        from narwhals._plan.dummy import DataFrame
 
-        return DummyDataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
+        return DataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
 
     @classmethod
     def from_dict(
@@ -94,7 +94,7 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 
     # NOTE: Not handling actual expressions yet
-    # `DummyFrame` is typed for just `str` names
+    # `BaseFrame` is typed for just `str` names
     def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self:
         df_by = self.select(by)
         indices = pc.sort_indices(df_by.native, options=options.to_arrow(df_by.columns))

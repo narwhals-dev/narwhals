@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from datetime import timezone
     from typing import TypeVar
 
-    from narwhals._plan.dummy import DummySelector
+    from narwhals._plan import dummy
     from narwhals._plan.expr import RootSelector
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
@@ -154,32 +154,32 @@ class String(Selector):
         return isinstance(dtype, dtypes.String)
 
 
-def all() -> DummySelector:
+def all() -> dummy.Selector:
     return All().to_selector().to_narwhals()
 
 
 def by_dtype(
     *dtypes: DType | type[DType] | Iterable[DType | type[DType]],
-) -> DummySelector:
+) -> dummy.Selector:
     return ByDType.from_dtypes(*dtypes).to_selector().to_narwhals()
 
 
-def by_name(*names: str | Iterable[str]) -> DummySelector:
+def by_name(*names: str | Iterable[str]) -> dummy.Selector:
     return Matches.from_names(*names).to_selector().to_narwhals()
 
 
-def boolean() -> DummySelector:
+def boolean() -> dummy.Selector:
     return Boolean().to_selector().to_narwhals()
 
 
-def categorical() -> DummySelector:
+def categorical() -> dummy.Selector:
     return Categorical().to_selector().to_narwhals()
 
 
 def datetime(
     time_unit: TimeUnit | Iterable[TimeUnit] | None = None,
     time_zone: str | timezone | Iterable[str | timezone | None] | None = ("*", None),
-) -> DummySelector:
+) -> dummy.Selector:
     return (
         Datetime.from_time_unit_and_time_zone(time_unit, time_zone)
         .to_selector()
@@ -187,13 +187,13 @@ def datetime(
     )
 
 
-def matches(pattern: str) -> DummySelector:
+def matches(pattern: str) -> dummy.Selector:
     return Matches.from_string(pattern).to_selector().to_narwhals()
 
 
-def numeric() -> DummySelector:
+def numeric() -> dummy.Selector:
     return Numeric().to_selector().to_narwhals()
 
 
-def string() -> DummySelector:
+def string() -> dummy.Selector:
     return String().to_selector().to_narwhals()

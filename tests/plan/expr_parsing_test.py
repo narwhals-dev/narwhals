@@ -13,7 +13,7 @@ import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan import boolean, expr, functions as F, operators as ops
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.dummy import DummyExpr, DummySeries
+from narwhals._plan.dummy import Expr, Series
 from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals._plan.literal import SeriesLiteral
@@ -83,14 +83,14 @@ def test_parsing(
     ],
 )
 def test_function_expr_horizontal(
-    function: Callable[..., DummyExpr],
+    function: Callable[..., Expr],
     ir_node: type[Function],
     args: Seq[IntoExpr | Iterable[IntoExpr]],
 ) -> None:
     variadic = function(*args)
     sequence = function(args)
-    assert isinstance(variadic, DummyExpr)
-    assert isinstance(sequence, DummyExpr)
+    assert isinstance(variadic, Expr)
+    assert isinstance(sequence, Expr)
     variadic_node = variadic._ir
     sequence_node = sequence._ir
     unrelated_node = nwd.lit(1)._ir
@@ -247,7 +247,7 @@ def test_invalid_binary_expr_length_changing() -> None:
         a.map_batches(lambda x: x) / b.gather_every(1, 0)
 
 
-def _is_expr_ir_binary_expr(expr: DummyExpr) -> bool:
+def _is_expr_ir_binary_expr(expr: Expr) -> bool:
     return isinstance(expr._ir, BinaryExpr)
 
 
@@ -300,7 +300,7 @@ def test_is_in_series() -> None:
     import pyarrow as pa
 
     native = pa.chunked_array([pa.array([1, 2, 3])])
-    other = DummySeries.from_native(native)
+    other = Series.from_native(native)
     expr = nwd.col("a").is_in(other)
     ir = expr._ir
     assert isinstance(ir, FunctionExpr)
@@ -393,7 +393,7 @@ def test_lit_series_roundtrip() -> None:
 
     data = ["a", "b", "c"]
     native = pa.chunked_array([pa.array(data)])
-    series = DummySeries.from_native(native)
+    series = Series.from_native(native)
     lit_series = nwd.lit(series)
     assert lit_series.meta.is_literal()
     ir = lit_series._ir
@@ -401,7 +401,7 @@ def test_lit_series_roundtrip() -> None:
     assert isinstance(ir.dtype, nw.String)
     assert isinstance(ir.value, SeriesLiteral)
     unwrapped = ir.unwrap()
-    assert isinstance(unwrapped, DummySeries)
+    assert isinstance(unwrapped, Series)
     assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
     assert unwrapped.to_list() == data
 
@@ -443,8 +443,8 @@ def test_operators_left_right(
     }
     result_1 = function(arg_1, arg_2)
     result_2 = function(arg_2, arg_1)
-    assert isinstance(result_1, DummyExpr)
-    assert isinstance(result_2, DummyExpr)
+    assert isinstance(result_1, Expr)
+    assert isinstance(result_2, Expr)
     ir_1 = result_1._ir
     ir_2 = result_2._ir
     if op in {ops.Eq, ops.NotEq}:

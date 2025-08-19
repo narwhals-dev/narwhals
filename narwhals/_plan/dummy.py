@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import pyarrow as pa
-    from typing_extensions import Never, Self, TypeAlias
+    from typing_extensions import Never, Self
 
     from narwhals._plan.categorical import ExprCatNamespace
     from narwhals._plan.common import ExprIR
@@ -45,9 +45,9 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.protocols import (
-        DummyCompliantDataFrame,
-        DummyCompliantFrame,
-        DummyCompliantSeries,
+        CompliantBaseFrame,
+        CompliantDataFrame,
+        CompliantSeries,
     )
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.strings import ExprStringNamespace
@@ -68,12 +68,6 @@ if TYPE_CHECKING:
     )
 
 
-CompliantFrame: TypeAlias = "DummyCompliantFrame[t.Any, NativeFrameT]"
-CompliantDataFrame: TypeAlias = (
-    "DummyCompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]"
-)
-
-
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
 def _parse_sort_by(
     by: IntoExpr | Iterable[IntoExpr] = (),
@@ -91,16 +85,16 @@ def _parse_sort_by(
 
 # NOTE: Overly simplified placeholders for mocking typing
 # Entirely ignoring namespace + function binding
-class DummyExpr:
+class Expr:
     _ir: ExprIR
     _version: t.ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
-        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!r}"
+        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!r}"
 
     def __str__(self) -> str:
         """Use `print(self)` for formatting."""
-        return f"Narwhals DummyExpr ({self.version.name.lower()}):\n{self._ir!s}"
+        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!s}"
 
     def _repr_html_(self) -> str:
         return self._ir._repr_html_()
@@ -693,25 +687,25 @@ class DummyExpr:
         return ExprStringNamespace(_expr=self)
 
 
-class DummySelector(DummyExpr):
+class Selector(Expr):
     """Selectors placeholder.
 
     Examples:
         >>> from narwhals._plan import selectors as ncs
         >>>
         >>> (ncs.matches("[^z]a") & ncs.string()) | ncs.datetime("us", None)
-        Narwhals DummySelector (main):
+        nw._plan.Selector(main):
         [([(ncs.matches(pattern='[^z]a')) & (ncs.string())]) | (ncs.datetime(time_unit=['us'], time_zone=[None]))]
         >>>
         >>> ~(ncs.boolean() | ncs.matches(r"is_.*"))
-        Narwhals DummySelector (main):
+        nw._plan.Selector(main):
         ~[(ncs.boolean()) | (ncs.matches(pattern='is_.*'))]
     """
 
     _ir: expr.SelectorIR
 
     def __repr__(self) -> str:
-        return f"Narwhals DummySelector ({self.version.name.lower()}):\n{self._ir!r}"
+        return f"nw._plan.Selector({self.version.name.lower()}):\n{self._ir!r}"
 
     @classmethod
     def _from_ir(cls, ir: expr.SelectorIR, /) -> Self:  # type: ignore[override]
@@ -719,14 +713,14 @@ class DummySelector(DummyExpr):
         obj._ir = ir
         return obj
 
-    def _to_expr(self) -> DummyExpr:
+    def _to_expr(self) -> Expr:
         return self._ir.to_narwhals(self.version)
 
     @t.overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
     @t.overload
-    def __or__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __or__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __or__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __or__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.Or()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -735,8 +729,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
     @t.overload
-    def __and__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __and__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __and__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __and__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             other = by_name(name)
         if isinstance(other, type(self)):
@@ -747,8 +741,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
     @t.overload
-    def __sub__(self, other: IntoExpr) -> DummyExpr: ...
-    def __sub__(self, other: IntoExpr) -> Self | DummyExpr:
+    def __sub__(self, other: IntoExpr) -> Expr: ...
+    def __sub__(self, other: IntoExpr) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.Sub()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -757,8 +751,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
     @t.overload
-    def __xor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __xor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
             op = ops.ExclusiveOr()
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
@@ -767,7 +761,7 @@ class DummySelector(DummyExpr):
     def __invert__(self) -> Self:
         return self._from_ir(expr.InvertSelector(selector=self._ir))
 
-    def __add__(self, other: t.Any) -> DummyExpr:  # type: ignore[override]
+    def __add__(self, other: t.Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
@@ -784,8 +778,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rand__(self, other: Self) -> Self: ...
     @t.overload
-    def __rand__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) & self
         return self._to_expr().__rand__(other)
@@ -793,8 +787,8 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __ror__(self, other: Self) -> Self: ...
     @t.overload
-    def __ror__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) | self
         return self._to_expr().__ror__(other)
@@ -802,44 +796,23 @@ class DummySelector(DummyExpr):
     @t.overload  # type: ignore[override]
     def __rxor__(self, other: Self) -> Self: ...
     @t.overload
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> DummyExpr: ...
-    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | DummyExpr:
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
+    def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) ^ self
         return self._to_expr().__rxor__(other)
 
 
-class DummyExprV1(DummyExpr):
+class ExprV1(Expr):
     _version: t.ClassVar[Version] = Version.V1
 
 
-class DummySelectorV1(DummySelector):
+class SelectorV1(Selector):
     _version: t.ClassVar[Version] = Version.V1
 
 
-class DummyCompliantExpr:
-    _ir: ExprIR
-    _version: Version
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @classmethod
-    def _from_ir(cls, ir: ExprIR, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._ir = ir
-        obj._version = version
-        return obj
-
-    def to_narwhals(self) -> DummyExpr:
-        if self.version is Version.MAIN:
-            return DummyExpr._from_ir(self._ir)
-        return DummyExprV1._from_ir(self._ir)
-
-
-class DummyFrame(Generic[NativeFrameT]):
-    _compliant: CompliantFrame[NativeFrameT]
+class BaseFrame(Generic[NativeFrameT]):
+    _compliant: CompliantBaseFrame[t.Any, NativeFrameT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
@@ -862,7 +835,9 @@ class DummyFrame(Generic[NativeFrameT]):
         raise NotImplementedError
 
     @classmethod
-    def _from_compliant(cls, compliant: CompliantFrame[NativeFrameT], /) -> Self:
+    def _from_compliant(
+        cls, compliant: CompliantBaseFrame[t.Any, NativeFrameT], /
+    ) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
@@ -915,18 +890,18 @@ class DummyFrame(Generic[NativeFrameT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
-class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
-    _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
+class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
+    _compliant: CompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]
 
     @property
-    def _series(self) -> type[DummySeries[NativeSeriesT]]:
-        return DummySeries[NativeSeriesT]
+    def _series(self) -> type[Series[NativeSeriesT]]:
+        return Series[NativeSeriesT]
 
     # NOTE: Gave up on trying to get typing working for now
     @classmethod
     def from_native(  # type: ignore[override]
         cls, native: NativeFrame, /
-    ) -> DummyDataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
+    ) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
         if is_pyarrow_table(native):
             from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
@@ -937,7 +912,7 @@ class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSerie
     @t.overload
     def to_dict(
         self, *, as_series: t.Literal[True] = ...
-    ) -> dict[str, DummySeries[NativeSeriesT]]: ...
+    ) -> dict[str, Series[NativeSeriesT]]: ...
 
     @t.overload
     def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
@@ -945,11 +920,11 @@ class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSerie
     @t.overload
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]: ...
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]: ...
 
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]:
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]:
         if as_series:
             return {
                 key: self._series._from_compliant(value)
@@ -961,8 +936,8 @@ class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSerie
         return len(self._compliant)
 
 
-class DummySeries(Generic[NativeSeriesT]):
-    _compliant: DummyCompliantSeries[NativeSeriesT]
+class Series(Generic[NativeSeriesT]):
+    _compliant: CompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
@@ -981,7 +956,7 @@ class DummySeries(Generic[NativeSeriesT]):
     @classmethod
     def from_native(
         cls, native: NativeSeries, name: str = "", /
-    ) -> DummySeries[pa.ChunkedArray[t.Any]]:
+    ) -> Series[pa.ChunkedArray[t.Any]]:
         if is_pyarrow_chunked_array(native):
             from narwhals._plan.arrow.series import ArrowSeries
 
@@ -992,7 +967,7 @@ class DummySeries(Generic[NativeSeriesT]):
         raise NotImplementedError(type(native))
 
     @classmethod
-    def _from_compliant(cls, compliant: DummyCompliantSeries[NativeSeriesT], /) -> Self:
+    def _from_compliant(cls, compliant: CompliantSeries[NativeSeriesT], /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
@@ -1007,5 +982,5 @@ class DummySeries(Generic[NativeSeriesT]):
         yield from self.to_native()
 
 
-class DummySeriesV1(DummySeries[NativeSeriesT]):
+class SeriesV1(Series[NativeSeriesT]):
     _version: t.ClassVar[Version] = Version.V1

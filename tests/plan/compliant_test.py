@@ -12,7 +12,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
-from narwhals._plan.dummy import DummyDataFrame
+from narwhals._plan.dummy import DataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
@@ -20,7 +20,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals.typing import PythonLiteral
 
 
@@ -64,7 +64,7 @@ def data_indexed() -> dict[str, Any]:
     }
 
 
-def _ids_ir(expr: DummyExpr | Any) -> str:
+def _ids_ir(expr: Expr | Any) -> str:
     if is_expr(expr):
         return repr(expr._ir)
     return repr(expr)
@@ -403,12 +403,10 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     ids=_ids_ir,
 )
 def test_select(
-    expr: DummyExpr | Sequence[DummyExpr],
-    expected: dict[str, Any],
-    data_small: dict[str, Any],
+    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_small: dict[str, Any]
 ) -> None:
     frame = pa.table(data_small)
-    df = DummyDataFrame.from_native(frame)
+    df = DataFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
@@ -477,21 +475,19 @@ def test_select(
     ],
 )
 def test_with_columns(
-    expr: DummyExpr | Sequence[DummyExpr],
-    expected: dict[str, Any],
-    data_smaller: dict[str, Any],
+    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_smaller: dict[str, Any]
 ) -> None:
     frame = pa.table(data_smaller)
-    df = DummyDataFrame.from_native(frame)
+    df = DataFrame.from_native(frame)
     result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
 
-def first(*names: str) -> DummyExpr:
+def first(*names: str) -> Expr:
     return nwd.col(*names).first()
 
 
-def last(*names: str) -> DummyExpr:
+def last(*names: str) -> Expr:
     return nwd.col(*names).last()
 
 
@@ -507,12 +503,12 @@ def last(*names: str) -> DummyExpr:
     ],
 )
 def test_first_last_expr_with_columns(
-    data_indexed: dict[str, Any], agg: DummyExpr, expected: PythonLiteral
+    data_indexed: dict[str, Any], agg: Expr, expected: PythonLiteral
 ) -> None:
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_broadcast = height * [expected]
-    frame = DummyDataFrame.from_native(pa.table(data_indexed))
+    frame = DataFrame.from_native(pa.table(data_indexed))
     expr = agg.over(order_by="idx").alias("result")
     result = frame.with_columns(expr).select("result").to_dict(as_series=False)
     assert_equal_data(result, {"result": expected_broadcast})

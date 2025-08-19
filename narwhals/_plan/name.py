@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasName
-    from narwhals._plan.dummy import DummyExpr
+    from narwhals._plan.dummy import Expr
     from narwhals._plan.typing import MapIR
 
 
@@ -117,25 +117,25 @@ class ExprNameNamespace(ExprNamespace[IRNameNamespace]):
     def _ir_namespace(self) -> type[IRNameNamespace]:
         return IRNameNamespace
 
-    def keep(self) -> DummyExpr:
+    def keep(self) -> Expr:
         return self._to_narwhals(self._ir.keep())
 
-    def map(self, function: AliasName) -> DummyExpr:
+    def map(self, function: AliasName) -> Expr:
         """Define an alias by mapping a function over the original root column name."""
         return self._to_narwhals(self._ir.map(function))
 
-    def prefix(self, prefix: str) -> DummyExpr:
+    def prefix(self, prefix: str) -> Expr:
         """Add a prefix to the root column name."""
         return self._to_narwhals(self._ir.prefix(prefix))
 
-    def suffix(self, suffix: str) -> DummyExpr:
+    def suffix(self, suffix: str) -> Expr:
         """Add a suffix to the root column name."""
         return self._to_narwhals(self._ir.suffix(suffix))
 
-    def to_lowercase(self) -> DummyExpr:
+    def to_lowercase(self) -> Expr:
         """Update the root column name to use lowercase characters."""
         return self._to_narwhals(self._ir.to_lowercase())
 
-    def to_uppercase(self) -> DummyExpr:
+    def to_uppercase(self) -> Expr:
         """Update the root column name to use uppercase characters."""
         return self._to_narwhals(self._ir.to_uppercase())
