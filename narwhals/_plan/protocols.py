@@ -41,7 +41,7 @@ ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
-SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
+SeriesAny: TypeAlias = "CompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantBaseFrame[Any, Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
@@ -736,7 +736,7 @@ class EagerDataFrame(
         return ns._concat_horizontal(self._evaluate_irs(irs))
 
 
-class DummyCompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
+class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     _native: NativeSeriesT
     _name: str
 

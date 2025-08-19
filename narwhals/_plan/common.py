@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals._plan.protocols import DummyCompliantSeries
+    from narwhals._plan.protocols import CompliantSeries
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
@@ -454,12 +454,12 @@ def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]
 
 
 def is_compliant_series(
-    obj: DummyCompliantSeries[NativeSeriesT] | Any,
-) -> TypeIs[DummyCompliantSeries[NativeSeriesT]]:
+    obj: CompliantSeries[NativeSeriesT] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT]]:
     return _hasattr_static(obj, "__narwhals_series__")
 
 
-def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | DummyCompliantSeries]:
+def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
     from narwhals._plan.dummy import Series
 
     return isinstance(obj, (str, bytes, Series)) or is_compliant_series(obj)

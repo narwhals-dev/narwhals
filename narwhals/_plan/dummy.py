@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals._plan.protocols import (
         CompliantBaseFrame,
         CompliantDataFrame,
-        DummyCompliantSeries,
+        CompliantSeries,
     )
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.strings import ExprStringNamespace
@@ -938,7 +938,7 @@ class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
 
 
 class Series(Generic[NativeSeriesT]):
-    _compliant: DummyCompliantSeries[NativeSeriesT]
+    _compliant: CompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
 
     @property
@@ -968,7 +968,7 @@ class Series(Generic[NativeSeriesT]):
         raise NotImplementedError(type(native))
 
     @classmethod
-    def _from_compliant(cls, compliant: DummyCompliantSeries[NativeSeriesT], /) -> Self:
+    def _from_compliant(cls, compliant: CompliantSeries[NativeSeriesT], /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
