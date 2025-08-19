@@ -137,6 +137,8 @@ typing-modules = ["narwhals._typing_compat"]
 extend-safe-fixes = [
   "C419",    # unnecessary-comprehension-in-call
   "C420",    # unnecessary-dict-comprehension-for-iterable
+  "EM101",   # raw-string-in-exception
+  "EM102",   # f-string-in-exception
   "PLR6201", # literal-membership
   "TC",      # flake8-type-checking
   "UP",      # pyupgrade
@@ -165,6 +167,7 @@ ignore = [
   "D107",    # undocumented-public-init
   "DTZ001",  # call-datetime-without-tzinfo
   "E501",    # line-too-long
+  "FBT003",  # boolean-positional-value-in-call (We enforce at definition site when it is a flag, not a value (e.g. `lit(False)`))
   "FIX",     # flake8-fixme
   "PD010",   # pandas-use-of-dot-pivot-or-unstack
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
@@ -180,8 +183,20 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = [
+  "Series", 
+  "DataFrame", 
+  "_Window", 
+  "F", 
+  "_F",
+]
+
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"]
+"narwhals/expr_dt.py" = ["RUF002"] 
+"narwhals/typing.py" = [
+  "PYI042",  # snake-case-type-alias (catches `_1DArray`)
+] 
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]

@@ -19,6 +19,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._sql.when_then import SQLThen, SQLWhen
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -59,7 +60,7 @@ class SparkLikeNamespace(
         return SparkLikeLazyFrame
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
@@ -124,7 +125,7 @@ class SparkLikeNamespace(
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
-            F = exprs[0]._F  # noqa: N806
+            F = exprs[0]._F
             numerator = reduce(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
@@ -188,7 +189,7 @@ class SparkLikeNamespace(
             else:
                 init_value, *values = [
                     df._F.when(~nm, col).otherwise(df._F.lit(""))
-                    for col, nm in zip(cols_casted, null_mask)
+                    for col, nm in zip_strict(cols_casted, null_mask)
                 ]
 
                 separators = (
@@ -199,7 +200,7 @@ class SparkLikeNamespace(
                     lambda x, y: df._F.format_string("%s%s", x, y),
                     (
                         df._F.format_string("%s%s", s, v)
-                        for s, v in zip(separators, values)
+                        for s, v in zip_strict(separators, values)
                     ),
                     init_value,
                 )

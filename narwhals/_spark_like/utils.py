@@ -285,7 +285,7 @@ def strptime_to_pyspark_format(format: str | None) -> str | None:
     return pyspark_format.replace("T", " ")
 
 
-def true_divide(F: Any, left: Column, right: Column) -> Column:  # noqa: N803
+def true_divide(F: Any, left: Column, right: Column) -> Column:
     # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
     divide = getattr(F, "try_divide", operator.truediv)
     return divide(left, right)

@@ -1,6 +1,7 @@
 # Test assorted functions which we overwrite in stable.v1
 from __future__ import annotations
 
+from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Callable, cast
@@ -37,6 +38,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    assert_equal_series,
 )
 
 if TYPE_CHECKING:
@@ -44,7 +46,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
-    from narwhals._namespace import EagerAllowed
+    from narwhals._typing import EagerAllowed
     from narwhals.stable.v1.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
@@ -69,8 +71,8 @@ def test_toplevel() -> None:
         mean_h=nw_v1.mean_horizontal("a"),
         len=nw_v1.len(),
         concat_str=nw_v1.concat_str(nw_v1.lit("a"), nw_v1.lit("b")),
-        any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
-        all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),  # noqa: FBT003
+        any_h=nw_v1.any_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
+        all_h=nw_v1.all_horizontal(nw_v1.lit(True), nw_v1.lit(True)),
         first=nw_v1.nth(0),
         no_first=nw_v1.exclude("a", "c"),
         coalesce=nw_v1.coalesce("c", "a"),
@@ -1049,3 +1051,30 @@ def test_series_from_numpy(
     if dtype:
         assert result.dtype == dtype
     assert_equal_data(result.to_frame(), {name: expected})
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v1.Int64, [5, 2, 0, 1]),
+        (nw_v1.String, ("a", "b", "c")),
+        (nw_v1.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (
+            nw_v1.Datetime("ns"),
+            deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
+        ),
+    ],
+    ids=str,
+)
+def test_series_from_iterable(
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+) -> None:
+    data = expected
+    name = "abc"
+    result = nw_v1.Series.from_iterable(name, data, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V1
+    assert isinstance(result, nw_v1.Series)
+    if dtype:
+        assert result.dtype == dtype
+    assert_equal_series(result, expected, name)

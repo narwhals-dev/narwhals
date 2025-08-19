@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
         if not format:
             function = F.to_timestamp
         elif _is_naive_format(format):
@@ -28,7 +28,7 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
         )
 
     def to_date(self, format: str | None) -> SparkLikeExpr:
-        F = self.compliant._F  # noqa: N806
+        F = self.compliant._F
         return self.compliant._with_elementwise(
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
