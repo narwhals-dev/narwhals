@@ -60,11 +60,21 @@ from narwhals.typing import IntoDataFrameT, IntoFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
-    from types import ModuleType
 
     from typing_extensions import ParamSpec, Self
 
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import (
+        Arrow,
+        Backend,
+        Dask,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        Pandas,
+        Polars,
+    )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -146,7 +156,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
+        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
     ) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend))
 
@@ -183,7 +193,7 @@ class LazyFrame(NwLazyFrame[IntoFrameT]):
         return DataFrame
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         return _stableify(super().collect(backend=backend, **kwargs))
 
@@ -214,7 +224,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         result = super().from_iterable(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -957,7 +967,7 @@ def new_series(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: ModuleType | Implementation | str,
+    backend: IntoBackend[EagerAllowed],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -982,7 +992,7 @@ def new_series(
 
 
 def from_arrow(
-    native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -1007,7 +1017,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
-    backend: ModuleType | Implementation | str | None = None,
+    backend: IntoBackend[EagerAllowed] | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -1042,7 +1052,7 @@ def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
     *,
-    backend: ModuleType | Implementation | str,
+    backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -1071,7 +1081,7 @@ def from_numpy(
 
 
 def read_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1095,7 +1105,7 @@ def read_csv(
 
 
 def scan_csv(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1122,7 +1132,7 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -1146,7 +1156,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: ModuleType | Implementation | str, **kwargs: Any
+    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 

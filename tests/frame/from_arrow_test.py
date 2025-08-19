@@ -13,7 +13,7 @@ from narwhals._utils import Implementation
 from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals._namespace import EagerAllowed
+    from narwhals._typing import EagerAllowed
 
 
 @pytest.fixture
@@ -88,4 +88,4 @@ def test_dataframe_from_arrow_invalid(table: pa.Table, data: dict[str, Any]) -> 
         nw.DataFrame.from_arrow(data, backend=pa)  # type: ignore[arg-type]
     pytest.importorskip("sqlframe")
     with pytest.raises(ValueError, match="lazy"):
-        nw.DataFrame.from_arrow(table, backend="sqlframe")
+        nw.DataFrame.from_arrow(table, backend="sqlframe")  # type: ignore[arg-type]
