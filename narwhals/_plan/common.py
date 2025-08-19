@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
-    from narwhals._plan.dummy import DummySelector, DummySeries, Expr
+    from narwhals._plan.dummy import DummySeries, Expr, Selector
     from narwhals._plan.expr import (
         AggExpr,
         BinaryExpr,
@@ -277,12 +277,12 @@ class ExprIR(Immutable):
 
 
 class SelectorIR(ExprIR):
-    def to_narwhals(self, version: Version = Version.MAIN) -> DummySelector:
+    def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan import dummy
 
         if version is Version.MAIN:
-            return dummy.DummySelector._from_ir(self)
-        return dummy.DummySelectorV1._from_ir(self)
+            return dummy.Selector._from_ir(self)
+        return dummy.SelectorV1._from_ir(self)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.

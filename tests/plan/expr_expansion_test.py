@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.dummy import DummySelector, Expr
+    from narwhals._plan.dummy import Expr, Selector
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
 
@@ -248,7 +248,7 @@ def test_map_ir_recursive(expr: Expr, function: MapIR, expected: Expr) -> None:
     ],
 )
 def test_replace_selector(
-    expr: DummySelector | Expr, expected: Expr | ExprIR, schema_1: dict[str, DType]
+    expr: Selector | Expr, expected: Expr | ExprIR, schema_1: dict[str, DType]
 ) -> None:
     actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
     assert_expr_ir_equal(actual, expected)
