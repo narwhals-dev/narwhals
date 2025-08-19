@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -25,4 +26,5 @@ def test_iter_columns(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = df.to_dict(as_series=True)
     result = {series.name: series for series in df.iter_columns()}
-    assert result == expected
+
+    assert_equal_data(result, expected)
