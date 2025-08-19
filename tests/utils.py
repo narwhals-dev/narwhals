@@ -12,11 +12,11 @@ import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version
+from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterator, Mapping, Sequence
+    from collections.abc import Container, Mapping, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -73,13 +73,6 @@ _NAME_PANDAS_LIKE = frozenset[NamePandasLike](
         "cudf_constructor",
     )
 )
-
-
-def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
-    if len(left) != len(right):
-        msg = f"{len(left)=} != {len(right)=}\nLeft: {left}\nRight: {right}"  # pragma: no cover
-        raise ValueError(msg)  # pragma: no cover
-    return zip(left, right)
 
 
 def _to_comparable_list(column_values: Any) -> Any:

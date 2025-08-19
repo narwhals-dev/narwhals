@@ -21,7 +21,7 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
     from narwhals._compliant.typing import ScalarKwargs
@@ -82,14 +82,11 @@ class ArrowNamespace(
 
     def all_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = chain.from_iterable(expr(df) for expr in exprs)
+            series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
             align = self._series._align_full_broadcast
-            it = (
-                (s.fill_null(True, None, None) for s in series)  # noqa: FBT003
-                if ignore_nulls
-                else series
-            )
-            return [reduce(operator.and_, align(*it))]
+            if ignore_nulls:
+                series = (s.fill_null(True, None, None) for s in series)
+            return [reduce(operator.and_, align(*series))]
 
         return self._expr._from_callable(
             func=func,
@@ -102,14 +99,11 @@ class ArrowNamespace(
 
     def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            series = chain.from_iterable(expr(df) for expr in exprs)
+            series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
             align = self._series._align_full_broadcast
-            it = (
-                (s.fill_null(False, None, None) for s in series)  # noqa: FBT003
-                if ignore_nulls
-                else series
-            )
-            return [reduce(operator.or_, align(*it))]
+            if ignore_nulls:
+                series = (s.fill_null(False, None, None) for s in series)
+            return [reduce(operator.or_, align(*series))]
 
         return self._expr._from_callable(
             func=func,

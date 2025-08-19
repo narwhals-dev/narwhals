@@ -17,6 +17,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -157,7 +158,7 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(True, None, None)
                     for s in series
                 )
                 if ignore_nulls
@@ -190,7 +191,7 @@ class PandasLikeNamespace(
             it = (
                 (
                     # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)  # noqa: FBT003
+                    s if is_non_nullable_boolean(s) else s.fill_null(False, None, None)
                     for s in series
                 )
                 if ignore_nulls
@@ -345,7 +346,7 @@ class PandasLikeNamespace(
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
                 init_value, *values = [
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask)
+                    s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
                 ]
 
                 sep_array = init_value.from_iterable(
@@ -356,7 +357,9 @@ class PandasLikeNamespace(
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
-                    operator.add, (s + v for s, v in zip(separators, values)), init_value
+                    operator.add,
+                    (s + v for s, v in zip_strict(separators, values)),
+                    init_value,
                 )
 
             return [result]

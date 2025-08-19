@@ -200,7 +200,7 @@ class PandasLikeSeries(PandasLikeToPandas["pd.Series[Any]"], EagerSeries[Any]):
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
-        Series = series[0].__native_namespace__().Series  # noqa: N806
+        Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         max_length = max(lengths)
         idx = series[lengths.index(max_length)].native.index
@@ -1065,7 +1065,7 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
 
     def to_frame(self) -> PandasLikeDataFrame:
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native
-        DataFrame = self._series.__native_namespace__().DataFrame  # noqa: N806
+        DataFrame = self._series.__native_namespace__().DataFrame
         return from_native(DataFrame(self._data), context=self._series)
 
     # NOTE: *Could* be handled at narwhals-level
