@@ -109,7 +109,7 @@ def test_logic_operators_expr_scalar(
     data = {"a": [True, True, False, False]}
     df = nw.from_native(constructor(data))
 
-    result = df.select(a=getattr(nw.col("a"), operator)(False))  # noqa: FBT003
+    result = df.select(a=getattr(nw.col("a"), operator)(False))
     assert_equal_data(result, {"a": expected})
 
 

@@ -31,23 +31,17 @@ class SQLNamespace(
     # Horizontal functions
     def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
-            it = (
-                (self._coalesce(col, self._lit(False)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.or_, it)
+            if ignore_nulls:
+                cols = (self._coalesce(col, self._lit(False)) for col in cols)
+            return reduce(operator.or_, cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def all_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
-            it = (
-                (self._coalesce(col, self._lit(True)) for col in cols)  # noqa: FBT003
-                if ignore_nulls
-                else cols
-            )
-            return reduce(operator.and_, it)
+            if ignore_nulls:
+                cols = (self._coalesce(col, self._lit(True)) for col in cols)
+            return reduce(operator.and_, cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

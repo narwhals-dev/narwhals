@@ -55,7 +55,7 @@ def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
 
 def test_select_boolean_cols() -> None:
     df = nw.from_native(pd.DataFrame({True: [1, 2], False: [3, 4]}), eager_only=True)
-    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
+    result = df.group_by(True).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2]})  # type: ignore[dict-item]
     result = df.select(nw.col([False, True]))  # type: ignore[list-item]
     assert_equal_data(result.to_dict(as_series=False), {True: [1, 2], False: [3, 4]})  # type: ignore[dict-item]
@@ -65,7 +65,7 @@ def test_select_boolean_cols_multi_group_by() -> None:
     df = nw.from_native(
         pd.DataFrame({True: [1, 2], False: [3, 4], 2: [1, 1]}), eager_only=True
     )
-    result = df.group_by(True, 2).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload] # noqa: FBT003
+    result = df.group_by(True, 2).agg(nw.col(False).max())  # type: ignore[arg-type, call-overload]
     assert_equal_data(
         result.to_dict(as_series=False),
         {True: [1, 2], 2: [1, 1], False: [3, 4]},  # type: ignore[dict-item]

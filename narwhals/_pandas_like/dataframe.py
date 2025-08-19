@@ -29,6 +29,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     parse_columns_to_drop,
     scale_bytes,
+    zip_strict,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -150,8 +151,8 @@ class PandasLikeDataFrame(
 
         implementation = context._implementation
         ns = implementation.to_native_namespace()
-        Series = cast("type[pd.Series[Any]]", ns.Series)  # noqa: N806
-        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)  # noqa: N806
+        Series = cast("type[pd.Series[Any]]", ns.Series)
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
         aligned_data: dict[str, pd.Series[Any] | Any] = {}
         left_most: PandasLikeSeries | None = None
         for name, series in data.items():
@@ -200,7 +201,7 @@ class PandasLikeDataFrame(
         from narwhals.schema import Schema
 
         implementation = context._implementation
-        DataFrame: Constructor = implementation.to_native_namespace().DataFrame  # noqa: N806
+        DataFrame: Constructor = implementation.to_native_namespace().DataFrame
         if isinstance(schema, (Mapping, Schema)):
             it: Iterable[DTypeBackend] = (
                 get_dtype_backend(native_type, implementation)
@@ -560,7 +561,7 @@ class PandasLikeDataFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip(left_on, right_on)
+            for left_key, right_key in zip_strict(left_on, right_on)
             if right_key != left_key
         ]
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.

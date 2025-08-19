@@ -28,8 +28,8 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant
-from narwhals.dependencies import get_numpy, is_numpy_array
+from narwhals._utils import _StoresCompliant, qualified_type_name, zip_strict
+from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -133,6 +133,8 @@ class CompliantExpr(
         self,
         function: Callable[[CompliantSeries[Any]], CompliantExpr[Any, Any]],
         return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self: ...
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
@@ -280,13 +282,13 @@ class EagerExpr(
             if alias_output_names:
                 return [
                     series.alias(name)
-                    for series, name in zip(
+                    for series, name in zip_strict(
                         self(df), alias_output_names(self._evaluate_output_names(df))
                     )
                 ]
             return [
                 series.alias(name)
-                for series, name in zip(self(df), self._evaluate_output_names(df))
+                for series, name in zip_strict(self(df), self._evaluate_output_names(df))
             ]
 
         return self.__class__(
@@ -753,24 +755,40 @@ class EagerExpr(
         )
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
+        self,
+        function: Callable[[Any], Any],
+        return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
-            input_series_list = self(df)
-            output_names = [input_series.name for input_series in input_series_list]
-            result = [function(series) for series in input_series_list]
-            if is_numpy_array(result[0]) or (
-                (np := get_numpy()) is not None and np.isscalar(result[0])
-            ):
+            udf_series_in = self(df)
+            output_names = (input_series.name for input_series in udf_series_in)
+            udf_series_out = tuple(function(series) for series in udf_series_in)
+            result: Sequence[EagerSeriesT]
+            if is_numpy_array(udf_series_out[0]) or is_numpy_scalar(udf_series_out[0]):
                 from_numpy = partial(
                     self.__narwhals_namespace__()._series.from_numpy, context=self
                 )
-                result = [
+                result = tuple(
                     from_numpy(array).alias(output_name)
-                    for array, output_name in zip(result, output_names)
-                ]
+                    for array, output_name in zip_strict(udf_series_out, output_names)
+                )
+            else:
+                result = udf_series_out
             if return_dtype is not None:
                 result = [series.cast(return_dtype) for series in result]
+
+            is_scalar_result = tuple(len(r) == 1 for r in result)
+            if (not returns_scalar) and any(is_scalar_result) and (len(df) > 1):
+                _idx = is_scalar_result.index(True)  # Index of first result with length 1
+                _type = type(udf_series_out[_idx])
+                msg = (
+                    "`map_batches` with `returns_scalar=False` must return a Series; "
+                    f"found '{qualified_type_name(_type)}'.\n\nIf `returns_scalar` "
+                    "is set to `True`, a returned value can be a scalar value."
+                )
+                raise TypeError(msg)
             return result
 
         return self._from_callable(
