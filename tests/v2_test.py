@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
-    from narwhals._namespace import EagerAllowed
+    from narwhals._typing import EagerAllowed
     from narwhals.stable.v2.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
 
