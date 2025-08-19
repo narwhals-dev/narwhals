@@ -26,7 +26,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -263,7 +263,7 @@ class DaskNamespace(
                 )
             else:
                 init_value, *values = [
-                    s.where(~nm, "") for s, nm in zip(series, null_mask)
+                    s.where(~nm, "") for s, nm in zip_strict(series, null_mask)
                 ]
 
                 separators = (
@@ -271,7 +271,9 @@ class DaskNamespace(
                     for nm in null_mask[:-1]
                 )
                 result = reduce(
-                    operator.add, (s + v for s, v in zip(separators, values)), init_value
+                    operator.add,
+                    (s + v for s, v in zip_strict(separators, values)),
+                    init_value,
                 )
 
             return [result]

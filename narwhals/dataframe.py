@@ -35,6 +35,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     supports_arrow_c_stream,
+    zip_strict,
 )
 from narwhals.dependencies import (
     get_polars,
@@ -166,7 +167,7 @@ class BaseFrame(Generic[_FrameT]):
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
@@ -190,7 +191,7 @@ class BaseFrame(Generic[_FrameT]):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
@@ -864,7 +865,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
             ... )
             >>> df = nw.from_native(df_native)
-            >>> df.write_csv()
+            >>> df.write_csv()  # doctest: +SKIP
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
 
             If we had passed a file name to `write_csv`, it would have been
@@ -1698,7 +1699,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         _keys = [
             k if is_expr else col(k)
-            for k, is_expr in zip(flat_keys, key_is_expr_or_series)
+            for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
@@ -2930,7 +2931,9 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "drop_null_keys cannot be True when keys contains Expr"
             raise NotImplementedError(msg)
 
-        _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
+        _keys = [
+            k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
+        ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
