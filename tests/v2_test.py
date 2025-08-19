@@ -51,8 +51,8 @@ def test_toplevel() -> None:
         mean_h=nw_v2.mean_horizontal("a"),
         len=nw_v2.len(),
         concat_str=nw_v2.concat_str(nw_v2.lit("a"), nw_v2.lit("b")),
-        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
-        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
+        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
+        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         first=nw_v2.nth(0),
         no_first=nw_v2.exclude("a", "c"),
         coalesce=nw_v2.coalesce("c", "a"),
