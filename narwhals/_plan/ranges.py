@@ -13,13 +13,6 @@ if TYPE_CHECKING:
 
 
 class RangeFunction(Function):
-    def __repr__(self) -> str:
-        tp = type(self)
-        if tp is RangeFunction:
-            return tp.__name__
-        m: dict[type[RangeFunction], str] = {IntRange: "int_range"}
-        return m[tp]
-
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expr import RangeExpr
 

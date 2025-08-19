@@ -21,29 +21,7 @@ OtherT = TypeVar("OtherT")
 ExprT = TypeVar("ExprT", bound="ExprIR", default="ExprIR")
 
 
-class BooleanFunction(Function):
-    def __repr__(self) -> str:
-        tp = type(self)
-        if tp in {BooleanFunction, IsIn}:
-            return tp.__name__
-        if isinstance(self, IsIn):
-            return "is_in"
-        m: dict[type[BooleanFunction], str] = {
-            All: "all",
-            Any: "any",
-            AllHorizontal: "all_horizontal",
-            AnyHorizontal: "any_horizontal",
-            IsBetween: "is_between",
-            IsDuplicated: "is_duplicated",
-            IsFinite: "is_finite",
-            IsNan: "is_nan",
-            IsNull: "is_null",
-            IsFirstDistinct: "is_first_distinct",
-            IsLastDistinct: "is_last_distinct",
-            IsUnique: "is_unique",
-            Not: "not",
-        }
-        return m[tp]
+class BooleanFunction(Function): ...
 
 
 class All(BooleanFunction):
@@ -114,6 +92,9 @@ class IsIn(BooleanFunction, t.Generic[OtherT]):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
+
+    def __repr__(self) -> str:
+        return "is_in"
 
 
 class IsInSeq(IsIn["Seq[t.Any]"]):

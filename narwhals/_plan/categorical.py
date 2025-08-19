@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
-class CategoricalFunction(Function): ...
+class CategoricalFunction(Function, accessor="cat"): ...
 
 
 class GetCategories(CategoricalFunction):
@@ -18,9 +18,6 @@ class GetCategories(CategoricalFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.groupwise()
-
-    def __repr__(self) -> str:
-        return "cat.get_categories"
 
 
 class IRCatNamespace(IRNamespace):

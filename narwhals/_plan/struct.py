@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
-class StructFunction(Function): ...
+class StructFunction(Function, accessor="struct"): ...
 
 
 class FieldByName(StructFunction):
@@ -23,7 +23,7 @@ class FieldByName(StructFunction):
         return FunctionOptions.elementwise()
 
     def __repr__(self) -> str:
-        return f"struct.field_by_name({self.name!r})"
+        return f"{super().__repr__()}({self.name!r})"
 
 
 class IRStructNamespace(IRNamespace):

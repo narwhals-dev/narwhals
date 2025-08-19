@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
-class ListFunction(Function): ...
+class ListFunction(Function, accessor="list"): ...
 
 
 class Len(ListFunction):
@@ -18,9 +18,6 @@ class Len(ListFunction):
     @property
     def function_options(self) -> FunctionOptions:
         return FunctionOptions.elementwise()
-
-    def __repr__(self) -> str:
-        return "list.len"
 
 
 class IRListNamespace(IRNamespace):
