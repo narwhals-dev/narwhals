@@ -112,7 +112,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
     ) -> DataFrame[Any]:
         result = super().from_arrow(native_frame, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -123,7 +123,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         data: Mapping[str, Any],
         schema: Mapping[str, DType] | Schema | None = None,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -134,7 +134,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         data: _2DArray,
         schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
         result = super().from_numpy(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -253,7 +253,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
