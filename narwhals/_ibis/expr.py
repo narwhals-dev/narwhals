@@ -178,10 +178,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(invert)
 
     def all(self) -> Self:
-        return self._with_callable(lambda expr: expr.all().fill_null(lit(True)))  # noqa: FBT003
+        return self._with_callable(lambda expr: expr.all().fill_null(lit(True)))
 
     def any(self) -> Self:
-        return self._with_callable(lambda expr: expr.any().fill_null(lit(False)))  # noqa: FBT003
+        return self._with_callable(lambda expr: expr.any().fill_null(lit(False)))
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
