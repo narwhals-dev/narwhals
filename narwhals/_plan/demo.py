@@ -26,7 +26,7 @@ from narwhals.exceptions import InvalidOperationError as OrderDependentExprError
 if t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import DummySeries, Expr
+    from narwhals._plan.dummy import Expr, Series
     from narwhals._plan.expr import SortBy
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
@@ -54,7 +54,7 @@ def nth(*indices: int | t.Sequence[int]) -> Expr:
 
 
 def lit(
-    value: NonNestedLiteral | DummySeries[NativeSeriesT], dtype: IntoDType | None = None
+    value: NonNestedLiteral | Series[NativeSeriesT], dtype: IntoDType | None = None
 ) -> Expr:
     if is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()

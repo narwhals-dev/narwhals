@@ -13,7 +13,7 @@ import narwhals as nw
 import narwhals._plan.demo as nwd
 from narwhals._plan import boolean, expr, functions as F, operators as ops
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.dummy import DummySeries, Expr
+from narwhals._plan.dummy import Expr, Series
 from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals._plan.literal import SeriesLiteral
@@ -300,7 +300,7 @@ def test_is_in_series() -> None:
     import pyarrow as pa
 
     native = pa.chunked_array([pa.array([1, 2, 3])])
-    other = DummySeries.from_native(native)
+    other = Series.from_native(native)
     expr = nwd.col("a").is_in(other)
     ir = expr._ir
     assert isinstance(ir, FunctionExpr)
@@ -393,7 +393,7 @@ def test_lit_series_roundtrip() -> None:
 
     data = ["a", "b", "c"]
     native = pa.chunked_array([pa.array(data)])
-    series = DummySeries.from_native(native)
+    series = Series.from_native(native)
     lit_series = nwd.lit(series)
     assert lit_series.meta.is_literal()
     ir = lit_series._ir
@@ -401,7 +401,7 @@ def test_lit_series_roundtrip() -> None:
     assert isinstance(ir.dtype, nw.String)
     assert isinstance(ir.value, SeriesLiteral)
     unwrapped = ir.unwrap()
-    assert isinstance(unwrapped, DummySeries)
+    assert isinstance(unwrapped, Series)
     assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
     assert unwrapped.to_list() == data
 

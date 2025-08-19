@@ -898,8 +898,8 @@ class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
     _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
 
     @property
-    def _series(self) -> type[DummySeries[NativeSeriesT]]:
-        return DummySeries[NativeSeriesT]
+    def _series(self) -> type[Series[NativeSeriesT]]:
+        return Series[NativeSeriesT]
 
     # NOTE: Gave up on trying to get typing working for now
     @classmethod
@@ -916,7 +916,7 @@ class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
     @t.overload
     def to_dict(
         self, *, as_series: t.Literal[True] = ...
-    ) -> dict[str, DummySeries[NativeSeriesT]]: ...
+    ) -> dict[str, Series[NativeSeriesT]]: ...
 
     @t.overload
     def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
@@ -924,11 +924,11 @@ class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
     @t.overload
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]: ...
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]: ...
 
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, DummySeries[NativeSeriesT]] | dict[str, list[t.Any]]:
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]:
         if as_series:
             return {
                 key: self._series._from_compliant(value)
@@ -940,7 +940,7 @@ class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
         return len(self._compliant)
 
 
-class DummySeries(Generic[NativeSeriesT]):
+class Series(Generic[NativeSeriesT]):
     _compliant: DummyCompliantSeries[NativeSeriesT]
     _version: t.ClassVar[Version] = Version.MAIN
 
@@ -960,7 +960,7 @@ class DummySeries(Generic[NativeSeriesT]):
     @classmethod
     def from_native(
         cls, native: NativeSeries, name: str = "", /
-    ) -> DummySeries[pa.ChunkedArray[t.Any]]:
+    ) -> Series[pa.ChunkedArray[t.Any]]:
         if is_pyarrow_chunked_array(native):
             from narwhals._plan.arrow.series import ArrowSeries
 
@@ -986,5 +986,5 @@ class DummySeries(Generic[NativeSeriesT]):
         yield from self.to_native()
 
 
-class DummySeriesV1(DummySeries[NativeSeriesT]):
+class SeriesV1(Series[NativeSeriesT]):
     _version: t.ClassVar[Version] = Version.V1

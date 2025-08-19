@@ -12,7 +12,7 @@ from narwhals._utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import BaseFrame, DataFrame, DummySeries
+    from narwhals._plan.dummy import BaseFrame, DataFrame, Series
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
@@ -627,12 +627,12 @@ class EagerNamespace(
     ) -> EagerScalarT_co: ...
     @overload
     def lit(
-        self, node: expr.Literal[DummySeries[Any]], frame: EagerDataFrameT, name: str
+        self, node: expr.Literal[Series[Any]], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
     @overload
     def lit(
         self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[DummySeries[Any]],
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[Any]],
         frame: EagerDataFrameT,
         name: str,
     ) -> EagerExprT_co | EagerScalarT_co: ...
@@ -754,10 +754,10 @@ class DummyCompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def name(self) -> str:
         return self._name
 
-    def to_narwhals(self) -> DummySeries[NativeSeriesT]:
-        from narwhals._plan.dummy import DummySeries
+    def to_narwhals(self) -> Series[NativeSeriesT]:
+        from narwhals._plan.dummy import Series
 
-        return DummySeries[NativeSeriesT]._from_compliant(self)
+        return Series[NativeSeriesT]._from_compliant(self)
 
     @classmethod
     def from_native(

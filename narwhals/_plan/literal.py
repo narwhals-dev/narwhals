@@ -8,7 +8,7 @@ from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import DummySeries
+    from narwhals._plan.dummy import Series
     from narwhals._plan.expr import Literal
     from narwhals.dtypes import DType
 
@@ -55,14 +55,14 @@ class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
         return self.value
 
 
-class SeriesLiteral(LiteralValue["DummySeries[NativeSeriesT]"]):
+class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
     """We already need this.
 
     https://github.com/narwhals-dev/narwhals/blob/e51eba891719a5eb1f7ce91c02a477af39c0baee/narwhals/_expression_parsing.py#L96-L97
     """
 
     __slots__ = ("value",)
-    value: DummySeries[NativeSeriesT]
+    value: Series[NativeSeriesT]
 
     @property
     def dtype(self) -> DType:
@@ -75,7 +75,7 @@ class SeriesLiteral(LiteralValue["DummySeries[NativeSeriesT]"]):
     def __repr__(self) -> str:
         return "Series"
 
-    def unwrap(self) -> DummySeries[NativeSeriesT]:
+    def unwrap(self) -> Series[NativeSeriesT]:
         return self.value
 
 
@@ -104,6 +104,6 @@ def is_literal_scalar(
 
 
 def is_literal_series(
-    obj: Literal[DummySeries[NativeSeriesT]] | Any,
-) -> TypeIs[Literal[DummySeries[NativeSeriesT]]]:
+    obj: Literal[Series[NativeSeriesT]] | Any,
+) -> TypeIs[Literal[Series[NativeSeriesT]]]:
     return is_literal(obj) and _is_series(obj.value)

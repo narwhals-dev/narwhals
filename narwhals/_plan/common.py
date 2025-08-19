@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
-    from narwhals._plan.dummy import DummySeries, Expr, Selector
+    from narwhals._plan.dummy import Expr, Selector, Series
     from narwhals._plan.expr import (
         AggExpr,
         BinaryExpr,
@@ -447,12 +447,10 @@ def is_column(obj: Any) -> TypeIs[Expr]:
     return is_expr(obj) and obj.meta.is_column()
 
 
-def is_series(
-    obj: DummySeries[NativeSeriesT] | Any,
-) -> TypeIs[DummySeries[NativeSeriesT]]:
-    from narwhals._plan.dummy import DummySeries
+def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
+    from narwhals._plan.dummy import Series
 
-    return isinstance(obj, DummySeries)
+    return isinstance(obj, Series)
 
 
 def is_compliant_series(
@@ -461,12 +459,10 @@ def is_compliant_series(
     return _hasattr_static(obj, "__narwhals_series__")
 
 
-def is_iterable_reject(
-    obj: Any,
-) -> TypeIs[str | bytes | DummySeries | DummyCompliantSeries]:
-    from narwhals._plan.dummy import DummySeries
+def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | DummyCompliantSeries]:
+    from narwhals._plan.dummy import Series
 
-    return isinstance(obj, (str, bytes, DummySeries)) or is_compliant_series(obj)
+    return isinstance(obj, (str, bytes, Series)) or is_compliant_series(obj)
 
 
 def is_regex_projection(name: str) -> bool:
