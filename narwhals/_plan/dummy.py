@@ -817,7 +817,7 @@ class SelectorV1(Selector):
     _version: t.ClassVar[Version] = Version.V1
 
 
-class DummyFrame(Generic[NativeFrameT]):
+class BaseFrame(Generic[NativeFrameT]):
     _compliant: CompliantFrame[NativeFrameT]
     _version: t.ClassVar[Version] = Version.MAIN
 
@@ -894,7 +894,7 @@ class DummyFrame(Generic[NativeFrameT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
-class DummyDataFrame(DummyFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
+class DummyDataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
     _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
 
     @property

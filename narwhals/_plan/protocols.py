@@ -12,7 +12,7 @@ from narwhals._utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import DummyDataFrame, DummyFrame, DummySeries
+    from narwhals._plan.dummy import BaseFrame, DummyDataFrame, DummySeries
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
@@ -668,7 +668,7 @@ class DummyCompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
     @property
     def columns(self) -> list[str]: ...
-    def to_narwhals(self) -> DummyFrame[NativeFrameT]: ...
+    def to_narwhals(self) -> BaseFrame[NativeFrameT]: ...
 
     @classmethod
     def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
