@@ -9,7 +9,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
-from narwhals._plan.protocols import DummyEagerDataFrame
+from narwhals._plan.protocols import EagerDataFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
@@ -28,7 +28,7 @@ if t.TYPE_CHECKING:
     from narwhals.schema import Schema
 
 
-class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
+class ArrowDataFrame(EagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"]):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 

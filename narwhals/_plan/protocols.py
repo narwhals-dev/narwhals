@@ -48,7 +48,7 @@ NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
-EagerDataFrameAny: TypeAlias = "DummyEagerDataFrame[Any, Any, Any]"
+EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
 LazyExprAny: TypeAlias = "LazyExpr[Any, Any, Any]"
 LazyScalarAny: TypeAlias = "LazyScalar[Any, Any, Any]"
@@ -722,7 +722,7 @@ class CompliantDataFrame(
     def with_row_index(self, name: str) -> Self: ...
 
 
-class DummyEagerDataFrame(
+class EagerDataFrame(
     CompliantDataFrame[SeriesT, NativeFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeFrameT, NativeSeriesT],
 ):
