@@ -9,6 +9,7 @@ from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
 
 if TYPE_CHECKING:
+    from narwhals._typing import Dask, DuckDB, Ibis, Polars
     from tests.utils import ConstructorEager
 
 
@@ -60,7 +61,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     ],
 )
 def test_lazy_backend(
-    constructor_eager: ConstructorEager, backend: Implementation | str
+    constructor_eager: ConstructorEager, backend: Polars | DuckDB | Ibis | Dask
 ) -> None:
     implementation = Implementation.from_backend(backend)
     pytest.importorskip(implementation.name.lower())
@@ -73,4 +74,6 @@ def test_lazy_backend(
 def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(ValueError, match="Not-supported backend"):
-        df.lazy(backend=Implementation.PANDAS)
+        df.lazy(backend=Implementation.PANDAS)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="Not-supported backend"):
+        df.lazy(backend="pyspark")  # type: ignore[arg-type]
