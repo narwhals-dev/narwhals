@@ -60,7 +60,7 @@ class SparkLikeNamespace(
         return SparkLikeLazyFrame
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
@@ -125,7 +125,7 @@ class SparkLikeNamespace(
     def mean_horizontal(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         def func(cols: Iterable[Column]) -> Column:
             cols = list(cols)
-            F = exprs[0]._F  # noqa: N806
+            F = exprs[0]._F
             numerator = reduce(
                 operator.add, (self._F.coalesce(col, self._F.lit(0)) for col in cols)
             )
