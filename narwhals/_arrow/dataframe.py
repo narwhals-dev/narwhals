@@ -450,7 +450,7 @@ class ArrowDataFrame(
         else:
             sorting = [
                 (key, "ascending" if is_ascending else "descending")
-                for key, is_ascending in zip(by, reverse)
+                for key, is_ascending in zip_strict(by, reverse)
             ]
         return self._with_native(
             self.native.take(pc.select_k_unstable(self.native, k, sorting)),  # type: ignore[call-overload]

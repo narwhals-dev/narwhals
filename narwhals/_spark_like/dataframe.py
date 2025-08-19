@@ -347,7 +347,7 @@ class SparkLikeLazyFrame(
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )
-        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
         return self._with_native(self.native.sort(*sort_cols).limit(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
