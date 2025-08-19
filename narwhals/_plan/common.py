@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
 from narwhals._plan.typing import (
+    Accessor,
     DTypeT,
     ExprIRT,
     ExprIRT2,
@@ -398,6 +400,9 @@ class Function(Immutable):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
     """
 
+    _accessor: ClassVar[Accessor | None] = None
+    """Namespace accessor name, if any."""
+
     @property
     def function_options(self) -> FunctionOptions:
         from narwhals._plan.options import FunctionOptions
@@ -415,6 +420,43 @@ class Function(Immutable):
         options = self.function_options
         # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L442-L450.
         return FunctionExpr(input=inputs, function=self, options=options)
+
+    def __init_subclass__(
+        cls, *args: Any, accessor: Accessor | None = None, **kwds: Any
+    ) -> None:
+        # NOTE: Hook for defining namespaced functions
+        # All subclasses will use the prefix in `accessor` for their repr
+        super().__init_subclass__(*args, **kwds)
+        if accessor:
+            cls._accessor = accessor
+
+    def __repr__(self) -> str:
+        return _function_repr(type(self))
+
+
+# TODO @dangotbanned: Add caching strategy?
+def _function_repr(tp: type[Function], /) -> str:
+    name = _pascal_to_snake_case(tp.__name__)
+    return f"{ns_name}.{name}" if (ns_name := tp._accessor) else name
+
+
+def _pascal_to_snake_case(s: str) -> str:
+    """Convert a PascalCase, camelCase string to snake_case.
+
+    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
+    """
+    # Handle the sequence of uppercase letters followed by a lowercase letter
+    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
+    # Insert an underscore between a lowercase letter and an uppercase letter
+    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
+
+
+_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
+
+
+def _re_repl_snake(match: re.Match[str], /) -> str:
+    return f"{match.group(1)}_{match.group(2)}"
 
 
 _NON_NESTED_LITERAL_TPS = (
