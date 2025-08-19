@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -344,9 +345,9 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
-_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
-_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
@@ -390,6 +391,7 @@ Examples:
     |└─────┴──────────┘|
     └──────────────────┘
 """
+
 
 # TODO @dangotbanned: fix this?
 # Constructor allows tuples, but we don't support that *everywhere* yet
@@ -443,12 +445,15 @@ MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 __all__ = [
+    "Backend",
     "CompliantDataFrame",
     "CompliantLazyFrame",
     "CompliantSeries",
     "DataFrameT",
+    "EagerAllowed",
     "Frame",
     "FrameT",
+    "IntoBackend",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
@@ -456,4 +461,5 @@ __all__ = [
     "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyAllowed",
 ]

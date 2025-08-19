@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
 from narwhals._utils import (
@@ -13,9 +13,10 @@ from narwhals._utils import (
     is_compliant_series,
     is_eager_allowed,
     is_index_selector,
+    qualified_type_name,
     supports_arrow_c_stream,
 )
-from narwhals.dependencies import is_numpy_array_1d, is_numpy_scalar
+from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.series_cat import SeriesCatNamespace
@@ -28,6 +29,7 @@ from narwhals.typing import IntoSeriesT
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import NoReturn
 
     import pandas as pd
     import polars as pl
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -99,7 +102,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 
@@ -157,6 +160,71 @@ class Series(Generic[IntoSeriesT]):
         )
         raise ValueError(msg)
 
+    @classmethod
+    def from_iterable(
+        cls,
+        name: str,
+        values: Iterable[Any],
+        dtype: IntoDType | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> Series[Any]:
+        """Construct a Series from an iterable.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: One-dimensional data represented as an iterable.
+            dtype: (Narwhals) dtype. If not provided, the native library
+                may auto-infer it from `values`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Returns:
+            A new Series
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> values = [4, 1, 3, 2]
+            >>> nw.Series.from_iterable("a", values, dtype=nw.UInt32, backend="pandas")
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |0    4                |
+            |1    1                |
+            |2    3                |
+            |3    2                |
+            |Name: a, dtype: uint32|
+            └──────────────────────┘
+        """
+        if is_numpy_array(values):
+            return cls.from_numpy(name, values, dtype, backend=backend)
+        if dtype:
+            _validate_into_dtype(dtype)
+        if not isinstance(values, Iterable):
+            msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
+            raise TypeError(msg)
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._series.from_iterable(
+                values, context=ns, name=name, dtype=dtype
+            )
+            return cls(compliant, level="full")
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
     @property
     def implementation(self) -> Implementation:
         """Return implementation of native Series.
@@ -184,6 +252,18 @@ class Series(Generic[IntoSeriesT]):
             False
         """
         return self._compliant_series._implementation
+
+    def __bool__(self) -> NoReturn:
+        msg = (
+            "the truth value of a Series is ambiguous"
+            "\n\n"
+            "Here are some things you might want to try:\n"
+            "- instead of `if s`, use `if not s.is_empty()`\n"
+            "- instead of `s1 and s2`, use `s1 & s2`\n"
+            "- instead of `s1 or s2`, use `s1 | s2`\n"
+            "- instead of `s in [y, z]`, use `s.is_in([y, z])`\n"
+        )
+        raise TypeError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> _1DArray:  # noqa: FBT001
         return self._compliant_series.__array__(dtype=dtype, copy=copy)

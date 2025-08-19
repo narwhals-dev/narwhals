@@ -24,8 +24,8 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
-    from narwhals._namespace import EagerAllowed
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals._typing import EagerAllowed
     from narwhals.typing import NativeFrame, NativeLazyFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
@@ -326,4 +326,10 @@ TEST_EAGER_BACKENDS.extend(
 
 @pytest.fixture(params=TEST_EAGER_BACKENDS)
 def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(params=[el for el in TEST_EAGER_BACKENDS if not isinstance(el, str)])
+def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
+    """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]

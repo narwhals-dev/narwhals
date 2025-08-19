@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import deque
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -10,12 +12,21 @@ import pytest
 
 import narwhals.stable.v2 as nw_v2
 from narwhals.utils import Version
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    assert_equal_data,
+    assert_equal_series,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from typing_extensions import assert_type
 
+    from narwhals._typing import EagerAllowed
     from narwhals.stable.v2.typing import IntoDataFrameT
+    from narwhals.typing import IntoDType
 
 
 def test_toplevel() -> None:
@@ -37,8 +48,8 @@ def test_toplevel() -> None:
         mean_h=nw_v2.mean_horizontal("a"),
         len=nw_v2.len(),
         concat_str=nw_v2.concat_str(nw_v2.lit("a"), nw_v2.lit("b")),
-        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
-        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),  # noqa: FBT003
+        any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
+        all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         first=nw_v2.nth(0),
         no_first=nw_v2.exclude("a", "c"),
         coalesce=nw_v2.coalesce("c", "a"),
@@ -332,3 +343,41 @@ def test_imports() -> None:
     from narwhals.stable.v2.dtypes import Enum  # noqa: F401
     from narwhals.stable.v2.selectors import datetime  # noqa: F401
     from narwhals.stable.v2.typing import IntoDataFrame  # noqa: F401
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v2.Int64, [5, 2, 0, 1]),
+        (nw_v2.String, ("a", "b", "c")),
+        (nw_v2.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (
+            nw_v2.Datetime("ms"),
+            deque([datetime(2005, 1, 1, 10), datetime(2002, 1, 1, 10, 43)]),
+        ),
+    ],
+    ids=str,
+)
+def test_series_from_iterable(
+    eager_backend: EagerAllowed,
+    dtype: IntoDType | None,
+    expected: Sequence[Any],
+    request: pytest.FixtureRequest,
+) -> None:
+    data = expected
+    name = "abc"
+    result = nw_v2.Series.from_iterable(name, data, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.Series)
+    if dtype:
+        request.applymarker(
+            pytest.mark.xfail(
+                result.implementation.is_pandas_like()
+                and dtype.is_temporal()
+                and PANDAS_VERSION < (2,),
+                reason='Pandas does not support "ms" or "us" time units before version 2.0',
+            )
+        )
+        assert result.dtype == dtype
+    assert_equal_series(result, expected, name)

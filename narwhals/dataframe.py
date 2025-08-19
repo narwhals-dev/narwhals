@@ -11,6 +11,7 @@ from typing import (
     Literal,
     NoReturn,
     TypeVar,
+    get_args,
     overload,
 )
 
@@ -21,9 +22,12 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
+from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
+    can_dataframe_lazy,
+    can_lazyframe_collect,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -35,6 +39,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_slice_none,
     supports_arrow_c_stream,
+    zip_strict,
 )
 from narwhals.dependencies import (
     get_polars,
@@ -67,6 +72,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -166,7 +172,7 @@ class BaseFrame(Generic[_FrameT]):
         compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
@@ -190,7 +196,7 @@ class BaseFrame(Generic[_FrameT]):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip(compliant_exprs, kinds)
+            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
@@ -481,7 +487,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: ModuleType | Implementation | str
+        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -538,7 +544,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | None = None,
         *,
-        backend: ModuleType | Implementation | str | None = None,
+        backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
@@ -597,7 +603,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
@@ -718,7 +724,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
-        self, backend: ModuleType | Implementation | str | None = None
+        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -745,7 +751,6 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Examples:
             >>> import polars as pl
-            >>> import pyarrow as pa
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [1, 2], "b": [4, 6]})
             >>> df = nw.from_native(df_native)
@@ -776,22 +781,14 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        lazy_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_lazy_backends = (
-            Implementation.DASK,
-            Implementation.DUCKDB,
-            Implementation.POLARS,
-            Implementation.IBIS,
-        )
-        if lazy_backend is not None and lazy_backend not in supported_lazy_backends:
-            msg = (
-                "Not-supported backend."
-                f"\n\nExpected one of {supported_lazy_backends} or `None`, got {lazy_backend}"
-            )
-            raise ValueError(msg)
-        return self._lazyframe(
-            self._compliant_frame.lazy(backend=lazy_backend), level="lazy"
-        )
+        lazy = self._compliant_frame.lazy
+        if backend is None:
+            return self._lazyframe(lazy(None), level="lazy")
+        lazy_backend = Implementation.from_backend(backend)
+        if can_dataframe_lazy(lazy_backend):
+            return self._lazyframe(lazy(lazy_backend), level="lazy")
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_DataFrameLazyImpl)} or `None`, got {lazy_backend}"
+        raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
         """Convert Narwhals DataFrame to native one.
@@ -1706,7 +1703,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         _keys = [
             k if is_expr else col(k)
-            for k, is_expr in zip(flat_keys, key_is_expr_or_series)
+            for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
@@ -2364,7 +2361,7 @@ class LazyFrame(BaseFrame[FrameT]):
         raise TypeError(msg)
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None = None, **kwargs: Any
+        self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
     ) -> DataFrame[Any]:
         r"""Materialize this LazyFrame into a DataFrame.
 
@@ -2423,18 +2420,14 @@ class LazyFrame(BaseFrame[FrameT]):
             |  b: [[2,4]]      |
             └──────────────────┘
         """
-        eager_backend = None if backend is None else Implementation.from_backend(backend)
-        supported_eager_backends = (
-            Implementation.POLARS,
-            Implementation.PANDAS,
-            Implementation.PYARROW,
-        )
-        if eager_backend is not None and eager_backend not in supported_eager_backends:
-            msg = f"Unsupported `backend` value.\nExpected one of {supported_eager_backends} or None, got: {eager_backend}."
-            raise ValueError(msg)
-        return self._dataframe(
-            self._compliant_frame.collect(backend=eager_backend, **kwargs), level="full"
-        )
+        collect = self._compliant_frame.collect
+        if backend is None:
+            return self._dataframe(collect(None, **kwargs), level="full")
+        eager_backend = Implementation.from_backend(backend)
+        if can_lazyframe_collect(eager_backend):
+            return self._dataframe(collect(eager_backend, **kwargs), level="full")
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
+        raise ValueError(msg)
 
     def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.
@@ -2975,7 +2968,9 @@ class LazyFrame(BaseFrame[FrameT]):
             msg = "drop_null_keys cannot be True when keys contains Expr"
             raise NotImplementedError(msg)
 
-        _keys = [k if is_expr else col(k) for k, is_expr in zip(flat_keys, key_is_expr)]
+        _keys = [
+            k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
+        ]
         expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
 
         if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):

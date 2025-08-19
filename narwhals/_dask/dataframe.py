@@ -17,6 +17,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    zip_strict,
 )
 from narwhals.typing import CompliantLazyFrame
 
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -111,7 +113,7 @@ class DaskLazyFrame(
         return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         result = self.native.compute(**kwargs)
 
@@ -300,7 +302,7 @@ class DaskLazyFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip(left_on, right_on)
+            for left_key, right_key in zip_strict(left_on, right_on)
             if right_key != left_key
         ]
         return result_native.drop(columns=extra)
