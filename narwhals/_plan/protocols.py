@@ -43,7 +43,7 @@ ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "DummyCompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantBaseFrame[Any, Any]"
-DataFrameAny: TypeAlias = "DummyCompliantDataFrame[Any, Any, Any]"
+DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
@@ -690,7 +690,7 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self: ...
 
 
-class DummyCompliantDataFrame(
+class CompliantDataFrame(
     CompliantBaseFrame[SeriesT, NativeFrameT],
     Protocol[SeriesT, NativeFrameT, NativeSeriesT],
 ):
@@ -723,7 +723,7 @@ class DummyCompliantDataFrame(
 
 
 class DummyEagerDataFrame(
-    DummyCompliantDataFrame[SeriesT, NativeFrameT, NativeSeriesT],
+    CompliantDataFrame[SeriesT, NativeFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...

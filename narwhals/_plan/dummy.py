@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.protocols import (
         CompliantBaseFrame,
-        DummyCompliantDataFrame,
+        CompliantDataFrame,
         DummyCompliantSeries,
     )
     from narwhals._plan.schema import FrozenSchema
@@ -69,9 +69,6 @@ if TYPE_CHECKING:
 
 
 CompliantFrame: TypeAlias = "CompliantBaseFrame[t.Any, NativeFrameT]"
-CompliantDataFrame: TypeAlias = (
-    "DummyCompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]"
-)
 
 
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
@@ -895,7 +892,7 @@ class BaseFrame(Generic[NativeFrameT]):
 
 
 class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
-    _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
+    _compliant: CompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]
 
     @property
     def _series(self) -> type[Series[NativeSeriesT]]:
