@@ -78,7 +78,7 @@ class SparkLikeLazyFrame(
         return self._implementation._backend_version()
 
     @property
-    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202, N802
+    def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
         if TYPE_CHECKING:
             from sqlframe.base import functions
 
@@ -94,7 +94,7 @@ class SparkLikeLazyFrame(
         return import_native_dtypes(self._implementation)
 
     @property
-    def _Window(self) -> type[Window]:  # noqa: N802
+    def _Window(self) -> type[Window]:
         if TYPE_CHECKING:
             from sqlframe.base.window import Window
 
