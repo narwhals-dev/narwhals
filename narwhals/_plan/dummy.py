@@ -894,7 +894,7 @@ class BaseFrame(Generic[NativeFrameT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
-class DummyDataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
+class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
     _compliant: CompliantDataFrame[NativeFrameT, NativeSeriesT]
 
     @property
@@ -905,7 +905,7 @@ class DummyDataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeries
     @classmethod
     def from_native(  # type: ignore[override]
         cls, native: NativeFrame, /
-    ) -> DummyDataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
+    ) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
         if is_pyarrow_table(native):
             from narwhals._plan.arrow.dataframe import ArrowDataFrame
 

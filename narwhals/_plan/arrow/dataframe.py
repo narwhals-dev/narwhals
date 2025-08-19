@@ -21,7 +21,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.common import ExprIR, NamedIR
-    from narwhals._plan.dummy import DummyDataFrame
+    from narwhals._plan.dummy import DataFrame
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
@@ -49,10 +49,10 @@ class ArrowDataFrame(DummyEagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayA
     def __len__(self) -> int:
         return self.native.num_rows
 
-    def to_narwhals(self) -> DummyDataFrame[pa.Table, ChunkedArrayAny]:
-        from narwhals._plan.dummy import DummyDataFrame
+    def to_narwhals(self) -> DataFrame[pa.Table, ChunkedArrayAny]:
+        from narwhals._plan.dummy import DataFrame
 
-        return DummyDataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
+        return DataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
 
     @classmethod
     def from_dict(

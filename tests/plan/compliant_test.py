@@ -12,7 +12,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
 from narwhals._plan.common import is_expr
-from narwhals._plan.dummy import DummyDataFrame
+from narwhals._plan.dummy import DataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
@@ -406,7 +406,7 @@ def test_select(
     expr: Expr | Sequence[Expr], expected: dict[str, Any], data_small: dict[str, Any]
 ) -> None:
     frame = pa.table(data_small)
-    df = DummyDataFrame.from_native(frame)
+    df = DataFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
@@ -478,7 +478,7 @@ def test_with_columns(
     expr: Expr | Sequence[Expr], expected: dict[str, Any], data_smaller: dict[str, Any]
 ) -> None:
     frame = pa.table(data_smaller)
-    df = DummyDataFrame.from_native(frame)
+    df = DataFrame.from_native(frame)
     result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
@@ -508,7 +508,7 @@ def test_first_last_expr_with_columns(
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_broadcast = height * [expected]
-    frame = DummyDataFrame.from_native(pa.table(data_indexed))
+    frame = DataFrame.from_native(pa.table(data_indexed))
     expr = agg.over(order_by="idx").alias("result")
     result = frame.with_columns(expr).select("result").to_dict(as_series=False)
     assert_equal_data(result, {"result": expected_broadcast})

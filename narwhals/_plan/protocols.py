@@ -12,7 +12,7 @@ from narwhals._utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import BaseFrame, DummyDataFrame, DummySeries
+    from narwhals._plan.dummy import BaseFrame, DataFrame, DummySeries
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
@@ -703,7 +703,7 @@ class DummyCompliantDataFrame(
         schema: Mapping[str, DType] | Schema | None = None,
     ) -> Self: ...
 
-    def to_narwhals(self) -> DummyDataFrame[NativeFrameT, NativeSeriesT]: ...
+    def to_narwhals(self) -> DataFrame[NativeFrameT, NativeSeriesT]: ...
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
