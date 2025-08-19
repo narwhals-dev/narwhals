@@ -12,7 +12,7 @@ from narwhals._plan import (
     expr,
     expr_expansion,
     expr_parsing as parse,
-    functions as F,  # noqa: N812
+    functions as F,
     operators as ops,
 )
 from narwhals._plan.common import NamedIR, into_dtype, is_column, is_expr, is_series

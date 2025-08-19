@@ -7,7 +7,7 @@ from narwhals._plan import (
     aggregation as agg,
     boolean,
     expr_parsing as parse,
-    functions as F,  # noqa: N812
+    functions as F,
 )
 from narwhals._plan.common import (
     into_dtype,

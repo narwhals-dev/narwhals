@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan import expr, functions as F  # noqa: N812
+    from narwhals._plan import expr, functions as F
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
     from narwhals._plan.arrow.series import ArrowSeries

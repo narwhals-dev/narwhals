@@ -11,12 +11,7 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan.demo as nwd
-from narwhals._plan import (
-    boolean,
-    expr,
-    functions as F,  # noqa: N812
-    operators as ops,
-)
+from narwhals._plan import boolean, expr, functions as F, operators as ops
 from narwhals._plan.common import ExprIR, Function
 from narwhals._plan.dummy import DummyExpr, DummySeries
 from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr

@@ -3,13 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan import (  # noqa: N812
-    aggregation as agg,
-    boolean,
-    expr,
-    functions as F,
-    strings,
-)
+from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
 from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar

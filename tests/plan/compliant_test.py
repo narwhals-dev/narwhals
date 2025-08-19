@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: FBT003
 from typing import TYPE_CHECKING, Any
 
 import pytest
