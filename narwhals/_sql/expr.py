@@ -29,7 +29,13 @@ if TYPE_CHECKING:
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
-    from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
+    from narwhals.typing import (
+        ModeKeepStrategy,
+        NumericLiteral,
+        PythonLiteral,
+        RankMethod,
+        TemporalLiteral,
+    )
 
 
 class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
@@ -740,6 +746,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             implementation=self._implementation,
         )
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        if keep != "any":
+            msg = (
+                f"`keep='{keep}'` is not implemented for backend {self._implementation}\n\n"
+                "Hint: Use `nw.col(...).mode(keep='any')` instead."
+            )
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: self._function("mode", expr))
+
     # Namespaces
     @property
     def str(self) -> SQLExprStringNamespace[Self]: ...
@@ -758,7 +774,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     sort: not_implemented = not_implemented()
     tail: not_implemented = not_implemented()

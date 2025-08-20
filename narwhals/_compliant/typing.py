@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals.typing import (
         FillNullStrategy,
+        ModeKeepStrategy,
         NativeFrame,
         NativeSeries,
         RankMethod,
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
         half_life: float | None
         ignore_nulls: bool
         interpolation: RollingInterpolationMethod
+        keep: ModeKeepStrategy
         limit: int | None
         method: RankMethod
         min_samples: int

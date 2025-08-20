@@ -13,7 +13,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -34,6 +34,7 @@ from narwhals.stable.v1.dependencies import (
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -1078,3 +1079,27 @@ def test_series_from_iterable(
     if dtype:
         assert result.dtype == dtype
     assert_equal_series(result, expected, name)
+
+
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    df = nw_v1.from_native(constructor_eager(data))
+    result = df.select(nw_v1.col("a").mode()).sort("a")
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.mode().sort()
+    expected = {"a": [1, 2]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(ShapeError):
+        df.select(nw_v1.col("a", "b").mode())

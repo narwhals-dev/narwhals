@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -2069,7 +2070,7 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_arrow()
 
-    def mode(self) -> Self:
+    def mode(self, *, keep: ModeKeepStrategy = "any") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
@@ -2083,7 +2084,7 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
-        return self._with_compliant(self._compliant_series.mode())
+        return self._with_compliant(self._compliant_series.mode(keep=keep))
 
     def is_finite(self) -> Self:
         """Returns a boolean Series indicating which values are finite.

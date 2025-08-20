@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -648,6 +649,14 @@ class DaskExpr(
 
         return self._with_callable(da.sqrt, "sqrt")
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            result = expr.to_frame().mode()[_name]
+            return result.head(1) if keep == "any" else result
+
+        return self._with_callable(func, "mode")
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -663,7 +672,6 @@ class DaskExpr(
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     rank: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()

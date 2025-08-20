@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         IntoExpr,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -1567,7 +1568,7 @@ class Expr:
             ),
         )
 
-    def mode(self) -> Self:
+    def mode(self, *, keep: ModeKeepStrategy = "any") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
@@ -1585,7 +1586,13 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).mode(keep=keep)
+
+        if keep == "any":
+            return self._with_aggregation(compliant_expr)
+        return self._with_filtration(compliant_expr)
 
     def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
