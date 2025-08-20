@@ -21,6 +21,7 @@ from narwhals._utils import (
     parse_columns_to_drop,
     scale_bytes,
     supports_arrow_c_stream,
+    zip_strict,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -202,7 +204,7 @@ class ArrowDataFrame(
         return self.native.to_pylist()
 
     def iter_columns(self) -> Iterator[ArrowSeries]:
-        for name, series in zip(self.columns, self.native.itercolumns()):
+        for name, series in zip_strict(self.columns, self.native.itercolumns()):
             yield ArrowSeries.from_native(series, context=self, name=name)
 
     _iter_columns = iter_columns
@@ -216,7 +218,7 @@ class ArrowDataFrame(
         if not named:
             for i in range(0, num_rows, buffer_size):
                 rows = df[i : i + buffer_size].to_pydict().values()
-                yield from zip(*rows)
+                yield from zip_strict(*rows)
         else:
             for i in range(0, num_rows, buffer_size):
                 yield from df[i : i + buffer_size].to_pylist()
@@ -287,10 +289,9 @@ class ArrowDataFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        schema = self.native.schema
         return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in zip(schema.names, schema.types)
+            field.name: native_to_narwhals_dtype(field.type, self._version)
+            for field in self.native.schema
         }
 
     def collect_schema(self) -> dict[str, DType]:
@@ -431,7 +432,7 @@ class ArrowDataFrame(
         else:
             sorting = [
                 (key, "descending" if is_descending else "ascending")
-                for key, is_descending in zip(by, descending)
+                for key, is_descending in zip_strict(by, descending)
             ]
 
         null_placement = "at_end" if nulls_last else "at_start"
@@ -511,7 +512,7 @@ class ArrowDataFrame(
             )
         return self._with_native(df.slice(abs(n)), validate_column_names=False)
 
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
         if backend is None:
             return self
         if backend is Implementation.DUCKDB:
@@ -557,7 +558,7 @@ class ArrowDataFrame(
         raise AssertionError  # pragma: no cover
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
             from narwhals._arrow.dataframe import ArrowDataFrame

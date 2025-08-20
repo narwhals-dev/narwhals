@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from narwhals._utils import is_eager_allowed
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from tests.conftest import (
     dask_lazy_p1_constructor,
@@ -113,12 +114,11 @@ def test_is_close_series_with_series(
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
+    backend = df.implementation
+    assert is_eager_allowed(backend)
 
     nulls = nw.new_series(
-        name="nulls",
-        values=[None] * len(x),
-        dtype=nw.Float64(),
-        backend=df.implementation,
+        name="nulls", values=[None] * len(x), dtype=nw.Float64(), backend=backend
     )
     x = x.zip_with(x != NAN_PLACEHOLDER, x**0.5).zip_with(x != NULL_PLACEHOLDER, nulls)
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
@@ -141,12 +141,11 @@ def test_is_close_series_with_scalar(
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     y = df["y"]
+    backend = df.implementation
+    assert is_eager_allowed(backend)
 
     nulls = nw.new_series(
-        name="nulls",
-        values=[None] * len(y),
-        dtype=nw.Float64(),
-        backend=df.implementation,
+        name="nulls", values=[None] * len(y), dtype=nw.Float64(), backend=backend
     )
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)

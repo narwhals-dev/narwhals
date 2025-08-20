@@ -28,7 +28,7 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, qualified_type_name
+from narwhals._utils import _StoresCompliant, qualified_type_name, zip_strict
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
@@ -282,13 +282,13 @@ class EagerExpr(
             if alias_output_names:
                 return [
                     series.alias(name)
-                    for series, name in zip(
+                    for series, name in zip_strict(
                         self(df), alias_output_names(self._evaluate_output_names(df))
                     )
                 ]
             return [
                 series.alias(name)
-                for series, name in zip(self(df), self._evaluate_output_names(df))
+                for series, name in zip_strict(self(df), self._evaluate_output_names(df))
             ]
 
         return self.__class__(
@@ -772,7 +772,7 @@ class EagerExpr(
                 )
                 result = tuple(
                     from_numpy(array).alias(output_name)
-                    for array, output_name in zip(udf_series_out, output_names)
+                    for array, output_name in zip_strict(udf_series_out, output_names)
                 )
             else:
                 result = udf_series_out

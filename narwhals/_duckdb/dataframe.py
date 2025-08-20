@@ -26,6 +26,7 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     requires,
+    zip_strict,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
@@ -47,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -129,7 +131,7 @@ class DuckDBLazyFrame(
             yield col(name)
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -187,7 +189,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
@@ -231,7 +233,9 @@ class DuckDBLazyFrame(
             column_name: native_to_narwhals_dtype(
                 duckdb_dtype, self._version, deferred_time_zone
             )
-            for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
+            for column_name, duckdb_dtype in zip_strict(
+                self.native.columns, self.native.types
+            )
         }
 
     @property
@@ -295,7 +299,7 @@ class DuckDBLazyFrame(
             assert right_on is not None  # noqa: S101
             it = (
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip(left_on, right_on)
+                for left, right in zip_strict(left_on, right_on)
             )
             condition: Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
@@ -340,7 +344,7 @@ class DuckDBLazyFrame(
         if by_left is not None and by_right is not None:
             conditions.extend(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip(by_left, by_right)
+                for left, right in zip_strict(by_left, by_right)
             )
         else:
             by_left = by_right = []
@@ -400,12 +404,12 @@ class DuckDBLazyFrame(
         if nulls_last:
             it = (
                 col(name).nulls_last() if not desc else col(name).desc().nulls_last()
-                for name, desc in zip(by, descending)
+                for name, desc in zip_strict(by, descending)
             )
         else:
             it = (
                 col(name).nulls_first() if not desc else col(name).desc().nulls_first()
-                for name, desc in zip(by, descending)
+                for name, desc in zip_strict(by, descending)
             )
         return self._with_native(self.native.sort(*it))
 
