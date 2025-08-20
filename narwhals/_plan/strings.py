@@ -3,28 +3,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionFlags, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
-class StringFunction(Function, accessor="str"):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
 
 
-class ConcatHorizontal(StringFunction):
+class ConcatHorizontal(StringFunction, options=FunctionOptions.horizontal):
     """`nw.functions.concat_str`."""
 
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return super().function_options.with_flags(FunctionFlags.INPUT_WILDCARD_EXPANSION)
 
 
 class Contains(StringFunction):

@@ -19,7 +19,7 @@ class RangeFunction(Function):
         return RangeExpr(input=inputs, function=self, options=self.function_options)
 
 
-class IntRange(RangeFunction):
+class IntRange(RangeFunction, options=FunctionOptions.row_separable):
     """N-ary (start, end).
 
     Not implemented yet, but might push forward [#2722].
@@ -39,10 +39,6 @@ class IntRange(RangeFunction):
     __slots__ = ("step", "dtype")  # noqa: RUF023
     step: int
     dtype: IntegerType
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.row_separable()
 
     def unwrap_input(self, node: RangeExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         start, end = node.input

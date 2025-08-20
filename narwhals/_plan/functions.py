@@ -21,21 +21,14 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
 
 
-class Abs(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+class Abs(Function, options=FunctionOptions.elementwise): ...
 
 
-class Hist(Function):
+class Hist(Function, options=FunctionOptions.groupwise):
     """Only supported for `Series` so far."""
 
     __slots__ = ("include_breakpoint",)
     include_breakpoint: bool
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.groupwise()
 
     def __repr__(self) -> str:
         return "hist"
@@ -63,61 +56,36 @@ class HistBinCount(Hist):
         object.__setattr__(self, "include_breakpoint", include_breakpoint)
 
 
-class NullCount(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.aggregation()
+class NullCount(Function, options=FunctionOptions.aggregation): ...
 
 
-class Log(Function):
+class Log(Function, options=FunctionOptions.elementwise):
     __slots__ = ("base",)
     base: float
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+
+class Exp(Function, options=FunctionOptions.elementwise): ...
 
 
-class Exp(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
-
-
-class Pow(Function):
+class Pow(Function, options=FunctionOptions.elementwise):
     """N-ary (base, exponent)."""
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         base, exponent = node.input
         return base, exponent
 
 
-class Sqrt(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+class Sqrt(Function, options=FunctionOptions.elementwise): ...
 
 
-class Kurtosis(Function):
+class Kurtosis(Function, options=FunctionOptions.aggregation):
     __slots__ = ("bias", "fisher")
     fisher: bool
     bias: bool
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.aggregation()
 
-
-class FillNull(Function):
+class FillNull(Function, options=FunctionOptions.elementwise):
     """N-ary (expr, value)."""
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
 
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         expr, value = node.input
@@ -145,65 +113,36 @@ class FillNullWithStrategy(Function):
         )
 
 
-class Shift(Function):
+class Shift(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("n",)
     n: int
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.length_preserving()
+
+class DropNulls(Function, options=FunctionOptions.row_separable): ...
 
 
-class DropNulls(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.row_separable()
+class Mode(Function, options=FunctionOptions.groupwise): ...
 
 
-class Mode(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.groupwise()
+class Skew(Function, options=FunctionOptions.aggregation): ...
 
 
-class Skew(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.aggregation()
-
-
-class Rank(Function):
+class Rank(Function, options=FunctionOptions.groupwise):
     __slots__ = ("options",)
     options: RankOptions
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.groupwise()
+
+class Clip(Function, options=FunctionOptions.elementwise): ...
 
 
-class Clip(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
-
-
-class CumAgg(Function):
+class CumAgg(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("reverse",)
     reverse: bool
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.length_preserving()
 
-
-class RollingWindow(Function):
+class RollingWindow(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("options",)
     options: RollingOptionsFixedWindow
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/mod.rs#L1276."""
-        return FunctionOptions.length_preserving()
 
     def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
         from narwhals._plan.expr import RollingExpr
@@ -239,87 +178,45 @@ class RollingVar(RollingWindow): ...
 class RollingStd(RollingWindow): ...
 
 
-class Diff(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.length_preserving()
+class Diff(Function, options=FunctionOptions.length_preserving): ...
 
 
-class Unique(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.groupwise()
+class Unique(Function, options=FunctionOptions.groupwise): ...
 
 
-class Round(Function):
+class Round(Function, options=FunctionOptions.elementwise):
     __slots__ = ("decimals",)
     decimals: int
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+
+class SumHorizontal(Function, options=FunctionOptions.horizontal): ...
 
 
-class SumHorizontal(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise().with_flags(
-            FunctionFlags.INPUT_WILDCARD_EXPANSION
-        )
+class MinHorizontal(Function, options=FunctionOptions.horizontal): ...
 
 
-class MinHorizontal(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise().with_flags(
-            FunctionFlags.INPUT_WILDCARD_EXPANSION
-        )
+class MaxHorizontal(Function, options=FunctionOptions.horizontal): ...
 
 
-class MaxHorizontal(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise().with_flags(
-            FunctionFlags.INPUT_WILDCARD_EXPANSION
-        )
+class MeanHorizontal(Function, options=FunctionOptions.horizontal): ...
 
 
-class MeanHorizontal(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise().with_flags(
-            FunctionFlags.INPUT_WILDCARD_EXPANSION
-        )
-
-
-class EwmMean(Function):
+class EwmMean(Function, options=FunctionOptions.length_preserving):
     __slots__ = ("options",)
     options: EWMOptions
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.length_preserving()
 
-
-class ReplaceStrict(Function):
+class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
     return_dtype: DType | None
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
 
-
-class GatherEvery(Function):
+class GatherEvery(Function, options=FunctionOptions.groupwise):
     __slots__ = ("n", "offset")
     n: int
     offset: int
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.groupwise()
 
 
 class MapBatches(Function):

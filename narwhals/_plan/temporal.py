@@ -19,10 +19,7 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
     return obj in {"ns", "us", "ms"}
 
 
-class TemporalFunction(Function, accessor="dt"):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
+class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
 
 
 class Date(TemporalFunction): ...
