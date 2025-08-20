@@ -700,7 +700,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
         raise ValueError(msg)
 
-    implementation = _ImplDescriptor()
+    implementation: _ImplDescriptor = _ImplDescriptor()
     """Return implementation of native frame.
 
     This can be useful when you need to use special-casing for features outside of
