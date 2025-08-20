@@ -1822,7 +1822,7 @@ def int_range(
     step: int = ...,
     *,
     dtype: IntegerDType = ...,
-    eager: ModuleType | Implementation | str,
+    eager: IntoBackend[EagerAllowed],
 ) -> Series[Any]: ...
 
 
@@ -1833,7 +1833,7 @@ def int_range(
     step: int = 1,
     *,
     dtype: IntegerDType = Int64,
-    eager: ModuleType | Implementation | str | Literal[False] = False,
+    eager: IntoBackend[EagerAllowed] | Literal[False] = False,
 ) -> Expr | Series[Any]:
     """Generate a range of integers.
 
@@ -1901,7 +1901,7 @@ def _int_range_impl(
     step: int,
     *,
     dtype: IntegerDType,
-    eager: ModuleType | Implementation | str | Literal[False],
+    eager: IntoBackend[EagerAllowed] | Literal[False],
 ) -> Expr | Series[Any]:
     from narwhals.exceptions import ComputeError
 

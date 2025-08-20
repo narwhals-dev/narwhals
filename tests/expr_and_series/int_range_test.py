@@ -7,15 +7,13 @@ import pytest
 import narwhals as nw
 from narwhals import Implementation
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType, IntegerType
+    from narwhals.typing import EagerAllowed
 
-EAGER_BACKENDS = (Implementation.PANDAS, Implementation.PYARROW, Implementation.POLARS)
 
-
-@pytest.mark.parametrize("impl", EAGER_BACKENDS)
 @pytest.mark.parametrize(
     ("start", "end", "step", "dtype"),
     [
@@ -32,10 +30,10 @@ def test_int_range_eager(
     end: int | None,
     step: int,
     dtype: type[IntegerType] | IntegerType,
-    impl: nw.Implementation,
+    eager_implementation: EagerAllowed,
 ) -> None:
-    pytest.importorskip(impl.value)
-    series = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=impl)
+    pytest.importorskip(str(eager_implementation))
+    series = nw.int_range(start, end, step, dtype=dtype, eager=eager_implementation)
 
     assert series.dtype == dtype
     if end is None:
@@ -44,14 +42,10 @@ def test_int_range_eager(
     assert_equal_data({"a": series}, {"a": list(range(start, end, step))})
 
 
-def test_int_range_eager_expr_raises(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [0, 2, 3, 6, 5, 1]}
-    df = nw.from_native(constructor_eager(data))
-    impl = df.implementation
-
+def test_int_range_eager_expr_raises(eager_implementation: EagerAllowed) -> None:
     msg = "Expected `start` and `end` to be integer values"
     with pytest.raises(InvalidOperationError, match=msg):
-        nw.int_range(nw.col("a").min(), nw.col("a").max() * 2, eager=impl)
+        nw.int_range(nw.col("a").min(), nw.col("a").max() * 2, eager=eager_implementation)
 
 
 @pytest.mark.parametrize(
@@ -78,8 +72,8 @@ def test_int_range_lazy(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"a": ["foo", "bar", "baz"]}
-    int_range = nw.int_range(start=start, end=end, step=step, dtype=dtype, eager=False)
-    result = nw.from_native(constructor(data)).select(int_range)
+    frame = nw.from_native(constructor(data))
+    result = frame.select(nw.int_range(start, end, step, dtype=dtype))
 
     output_name = "len" if isinstance(start, nw.Expr) and end is not None else "literal"
     assert_equal_data(result, {output_name: expected})
@@ -92,7 +86,7 @@ def test_int_range_lazy(
 def test_int_range_non_int_dtype(dtype: DType) -> None:
     msg = f"non-integer `dtype` passed to `int_range`: {dtype}"
     with pytest.raises(ComputeError, match=msg):
-        nw.int_range(start=0, end=3, dtype=dtype)  # type: ignore[call-overload] # pyright: ignore[reportArgumentType]
+        nw.int_range(start=0, end=3, dtype=dtype)  # type: ignore[call-overload]
 
 
 @pytest.mark.parametrize(
@@ -111,4 +105,4 @@ def test_int_range_multi_named(start: int | nw.Expr, end: int | nw.Expr | None) 
 
 def test_int_range_eager_set_to_lazy_backend() -> None:
     with pytest.raises(ValueError, match="Cannot create a Series from a lazy backend"):
-        nw.int_range(123, eager=Implementation.DUCKDB)
+        nw.int_range(123, eager=Implementation.DUCKDB)  # type: ignore[call-overload]
