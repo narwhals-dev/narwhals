@@ -392,6 +392,12 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
         return self._expr._from_ir(ir)
 
 
+def _function_options_default() -> FunctionOptions:
+    from narwhals._plan.options import FunctionOptions
+
+    return FunctionOptions.default()
+
+
 class Function(Immutable):
     """Shared by expr functions and namespace functions.
 
@@ -403,11 +409,13 @@ class Function(Immutable):
     _accessor: ClassVar[Accessor | None] = None
     """Namespace accessor name, if any."""
 
+    _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
+        _function_options_default
+    )
+
     @property
     def function_options(self) -> FunctionOptions:
-        from narwhals._plan.options import FunctionOptions
-
-        return FunctionOptions.default()
+        return self._function_options()
 
     @property
     def is_scalar(self) -> bool:
@@ -416,19 +424,24 @@ class Function(Immutable):
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         from narwhals._plan.expr import FunctionExpr
 
-        # NOTE: Still need to figure out if using a closure is needed
         options = self.function_options
         # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L442-L450.
         return FunctionExpr(input=inputs, function=self, options=options)
 
     def __init_subclass__(
-        cls, *args: Any, accessor: Accessor | None = None, **kwds: Any
+        cls,
+        *args: Any,
+        accessor: Accessor | None = None,
+        options: Callable[[], FunctionOptions] | None = None,
+        **kwds: Any,
     ) -> None:
         # NOTE: Hook for defining namespaced functions
         # All subclasses will use the prefix in `accessor` for their repr
         super().__init_subclass__(*args, **kwds)
         if accessor:
             cls._accessor = accessor
+        if options:
+            cls._function_options = staticmethod(options)
 
     def __repr__(self) -> str:
         return _function_repr(type(self))
