@@ -158,7 +158,7 @@ class PolarsExpr:
         pl_version = self._backend_version
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version)
-            if return_dtype
+            if return_dtype is not None
             else None
             if pl_version < (1, 32)
             else pl.self_dtype()
