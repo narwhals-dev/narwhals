@@ -9,6 +9,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals._pandas_like.utils import (
+    native_to_narwhals_dtype,
+    object_native_to_narwhals_dtype,
+)
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
@@ -39,6 +43,7 @@ NativeAggregation: TypeAlias = Literal[
     "mean",
     "median",
     "min",
+    "mode",
     "nunique",
     "prod",
     "quantile",
@@ -115,6 +120,29 @@ class AggExpr:
             result = ns._concat_horizontal(
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
+        elif self.is_mode():
+            if (keep := self.kwargs.get("keep")) != "any":  # pragma: no cover
+                msg = f"`keep='{keep}' is not implemented in group by context"
+                raise NotImplementedError(msg)
+
+            select = names[0] if len(names) == 1 else list(names)
+            Series = self.expr.__native_namespace__().Series
+            result = group_by._grouped[list(names)].agg(Series.mode)
+            native_dtypes = result.dtypes
+
+            version = self.expr._version
+            impl = self.expr._implementation
+            nw_dtypes = (
+                native_to_narwhals_dtype(native_dtypes[col], version, impl)  # type: ignore[index, misc]
+                if native_dtypes[col] != "object"  # type: ignore[index, misc]
+                else object_native_to_narwhals_dtype(result[col], version, impl)  # type: ignore[arg-type]
+                for col in result.columns
+            )
+
+            if any(dtype == version.dtypes.Object() for dtype in nw_dtypes):
+                msg = "TODO"
+                raise NotImplementedError(msg)
+
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(group_by._grouped[select])
@@ -126,6 +154,9 @@ class AggExpr:
 
     def is_len(self) -> bool:
         return self.leaf_name == "len"
+
+    def is_mode(self) -> bool:
+        return self.leaf_name == "mode"
 
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
@@ -158,6 +189,7 @@ class PandasLikeGroupBy(
         "median": "median",
         "max": "max",
         "min": "min",
+        "mode": "mode",
         "std": "std",
         "var": "var",
         "len": "size",

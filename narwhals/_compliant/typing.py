@@ -178,6 +178,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "median",
     "max",
     "min",
+    "mode",
     "std",
     "var",
     "len",

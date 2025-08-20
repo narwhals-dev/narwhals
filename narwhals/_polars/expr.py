@@ -282,7 +282,7 @@ class PolarsExpr:
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
-        return self._with_native(result.head(1) if keep == "any" else result)
+        return self._with_native(result.first() if keep == "any" else result)
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:

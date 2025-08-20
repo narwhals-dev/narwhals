@@ -9,6 +9,11 @@ from narwhals.exceptions import ShapeError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+data_group = {
+    "grp": ["g1", "g1", "g1", "g1", "g2", "g2", "g2"],
+    "vals_unimodal": [1, 1, 2, 3, 3, 3, 4],
+    "vals_multimodal": [1, 1, 2, 2, 3, 3, 4],
+}
 
 
 def test_mode_single_expr_keep_all(constructor_eager: ConstructorEager) -> None:
@@ -65,3 +70,45 @@ def test_mode_expr_keep_all_lazy(constructor: Constructor) -> None:
     with context:
         result = df.select(nw.col("a").mode(keep="all").sum())
         assert_equal_data(result, {"a": [3]})
+
+
+def test_mode_group_by_unimodal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(constructor(data_group))
+    impl = df.implementation
+
+    if impl.is_pyarrow() or impl.is_dask():
+        # Tracker:
+        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
+        #   - Dask: TODO(FBruzzesi)
+        request.applymarker(pytest.mark.xfail)
+
+    result = df.group_by("grp").agg(nw.col("vals_unimodal").mode(keep="any")).sort("grp")
+    expected = {"grp": ["g1", "g2"], "vals_unimodal": [1, 3]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_group_by_multimodal(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(constructor(data_group))
+    impl = df.implementation
+
+    if impl.is_pandas_like() or impl.is_pyarrow() or impl.is_dask():
+        # Tracker:
+        #   - Pandas: Multimodal is not supported
+        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
+        #   - Dask: TODO(FBruzzesi)
+
+        request.applymarker(pytest.mark.xfail)
+
+    result = (
+        df.group_by("grp").agg(nw.col("vals_multimodal").mode(keep="any")).sort("grp")
+    )
+    try:
+        expected = {"grp": ["g1", "g2"], "vals_multimodal": [1, 3]}
+        assert_equal_data(result, expected)
+    except AssertionError:
+        expected = {"grp": ["g1", "g2"], "vals_multimodal": [2, 3]}
+        assert_equal_data(result, expected)
