@@ -13,7 +13,12 @@ from narwhals._namespace import (
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Implementation, Version, has_native_namespace
+from narwhals._utils import (
+    Implementation,
+    Version,
+    discover_plugins,
+    has_native_namespace,
+)
 from narwhals.dependencies import (
     get_dask_expr,
     get_numpy,
@@ -349,12 +354,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         raise ValueError(msg)
 
     if sys.version_info >= (3, 10):
-        from importlib.metadata import entry_points
+        discovered_plugins = discover_plugins(group="narwhals.plugins")
 
-        discovered_plugins = entry_points(group="narwhals.plugins")
-
-        for plugin in discovered_plugins:
-            obj = plugin.load()  # pragma: no cover
+        for plugin in discovered_plugins:  # pragma: no cover
+            obj = plugin.load()
             if obj.is_native_object(native_object):
                 native_object = obj.from_native(
                     native_object, eager_only=False, series_only=False

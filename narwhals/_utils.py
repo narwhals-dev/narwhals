@@ -50,6 +50,7 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOper
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
+    from importlib.metadata import EntryPoints
     from types import ModuleType
 
     import pandas as pd
@@ -2037,3 +2038,10 @@ def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
 def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     """Perform a nested attribute lookup on `obj`."""
     return deep_attrgetter(name_1, *nested)(obj)
+
+
+@lru_cache(maxsize=64)
+def discover_plugins(group: str = "narwhals.plugins") -> EntryPoints:
+    from importlib.metadata import entry_points
+
+    return entry_points(group=group)
