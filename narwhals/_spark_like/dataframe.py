@@ -164,9 +164,9 @@ class SparkLikeLazyFrame(
         return pa.schema(schema)
 
     def _collect_to_arrow(self) -> pa.Table:
-        if self._implementation.is_pyspark() and self._backend_version < (4,):
-            import pyarrow as pa  # ignore-banned-import
+        import pyarrow as pa  # ignore-banned-import
 
+        if self._implementation.is_pyspark() and self._backend_version < (4,):
             try:
                 return pa.Table.from_batches(self.native._collect_as_arrow())
             except ValueError as exc:
@@ -178,12 +178,17 @@ class SparkLikeLazyFrame(
                     return pa.Table.from_pydict(data, schema=pa_schema)
                 raise  # pragma: no cover
         elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
-            import pyarrow as pa  # ignore-banned-import
-
             pa_schema = self._to_arrow_schema()
             return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
-            return self.native.toArrow()
+            # NOTE: Returns `pa.RecordBatchReader` since https://github.com/duckdb/duckdb/pull/18642
+            to_arrow: Incomplete = self.native.toArrow
+            pa_native: pa.Table | pa.RecordBatchReader = to_arrow()
+            return (
+                pa_native
+                if isinstance(pa_native, pa.Table)
+                else pa.Table.from_batches(pa_native)
+            )
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
