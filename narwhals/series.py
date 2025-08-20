@@ -29,6 +29,7 @@ from narwhals.typing import IntoSeriesT
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import NoReturn
 
     import pandas as pd
     import polars as pl
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -100,7 +102,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 
@@ -165,7 +167,7 @@ class Series(Generic[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: ModuleType | Implementation | str,
+        backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
         """Construct a Series from an iterable.
 
@@ -250,6 +252,18 @@ class Series(Generic[IntoSeriesT]):
             False
         """
         return self._compliant_series._implementation
+
+    def __bool__(self) -> NoReturn:
+        msg = (
+            "the truth value of a Series is ambiguous"
+            "\n\n"
+            "Here are some things you might want to try:\n"
+            "- instead of `if s`, use `if not s.is_empty()`\n"
+            "- instead of `s1 and s2`, use `s1 & s2`\n"
+            "- instead of `s1 or s2`, use `s1 | s2`\n"
+            "- instead of `s in [y, z]`, use `s.is_in([y, z])`\n"
+        )
+        raise TypeError(msg)
 
     def __array__(self, dtype: Any = None, copy: bool | None = None) -> _1DArray:  # noqa: FBT001
         return self._compliant_series.__array__(dtype=dtype, copy=copy)

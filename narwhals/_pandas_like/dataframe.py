@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -490,7 +491,7 @@ class PandasLikeDataFrame(
 
     # --- convert ---
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None:
             return PandasLikeDataFrame(
@@ -758,7 +759,7 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self, *, backend: Implementation | None = None) -> CompliantLazyFrameAny:
+    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
             return self
