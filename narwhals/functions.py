@@ -1851,9 +1851,6 @@ def int_range(
             If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
             a `Series` is returned.
 
-    Returns:
-        Expr or Series of integer data type `dtype`.
-
     Examples:
         >>> import narwhals as nw
         >>> nw.int_range(0, 5, step=2, eager="pandas")

@@ -1383,9 +1383,6 @@ def int_range(
         eager: If set to `False` (default), then an expression is returned.
             If set to an (eager) implementation ("pandas", "polars" or "pyarrow"), then
             a `Series` is returned.
-
-    Returns:
-        Expr or Series of integer data type `dtype`.
     """
     return _stableify(
         _int_range_impl(start=start, end=end, step=step, dtype=dtype, eager=eager)
