@@ -1573,6 +1573,10 @@ class Expr:
 
         Can return multiple values.
 
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw

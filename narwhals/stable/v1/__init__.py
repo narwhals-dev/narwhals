@@ -380,6 +380,10 @@ class Series(NwSeries[IntoSeriesT]):
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic.
         """
         return super().mode(keep=keep)
 
@@ -474,6 +478,10 @@ class Expr(NwExpr):
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic.
         """
         return super().mode(keep=keep)
 
