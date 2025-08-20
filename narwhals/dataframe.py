@@ -71,8 +71,21 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals._namespace import _NativePandasLikeDataFrame
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
+    from narwhals._typing import (
+        Dask,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        Polars,
+        _ArrowImpl,
+        _EagerAllowedImpl,
+        _PandasImpl,
+        _PandasLikeImpl,
+        _PolarsImpl,
+    )
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -407,6 +420,33 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
 
+class _ImplDescriptor:
+    @overload
+    def __get__(self, instance: DataFrame[pl.DataFrame], owner: Any) -> _PolarsImpl: ...
+    @overload
+    def __get__(self, instance: DataFrame[pd.DataFrame], owner: Any) -> _PandasImpl: ...
+    @overload
+    def __get__(
+        self, instance: DataFrame[_NativePandasLikeDataFrame], owner: Any
+    ) -> _PandasLikeImpl: ...
+    @overload
+    def __get__(self, instance: DataFrame[pa.Table], owner: Any) -> _ArrowImpl: ...
+    @overload
+    def __get__(
+        self, instance: DataFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
+    ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
+    @overload
+    def __get__(
+        self, instance: DataFrame[IntoDataFrame], owner: Any
+    ) -> _EagerAllowedImpl: ...
+    @overload
+    def __get__(self, instance: None, owner: Any) -> Self: ...
+    def __get__(self, instance: Any | None, owner: Any) -> Any:
+        if instance is None:
+            return self
+        return instance._compliant_frame._implementation
+
+
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
 
@@ -660,28 +700,26 @@ class DataFrame(BaseFrame[DataFrameT]):
         )
         raise ValueError(msg)
 
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
+    implementation = _ImplDescriptor()
+    """Return implementation of native frame.
 
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
 
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation
-            <Implementation.PANDAS: 'pandas'>
-            >>> df.implementation.is_pandas()
-            True
-            >>> df.implementation.is_pandas_like()
-            True
-            >>> df.implementation.is_polars()
-            False
-        """
-        return self._compliant_frame._implementation
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+        >>> df = nw.from_native(df_native)
+        >>> df.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> df.implementation.is_pandas()
+        True
+        >>> df.implementation.is_pandas_like()
+        True
+        >>> df.implementation.is_polars()
+        False
+    """
 
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
