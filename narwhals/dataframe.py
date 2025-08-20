@@ -421,6 +421,9 @@ class BaseFrame(Generic[_FrameT]):
 
 
 class _ImplDescriptor:
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self.__name__: str = name
+
     @overload
     def __get__(self, instance: DataFrame[pl.DataFrame], owner: Any) -> _PolarsImpl: ...
     @overload

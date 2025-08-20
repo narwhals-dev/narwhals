@@ -6,7 +6,7 @@ import sys
 
 # ruff: noqa: N806
 from collections import deque
-from inspect import isfunction
+from inspect import isfunction, ismethoddescriptor
 from pathlib import Path
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
@@ -24,13 +24,14 @@ if sys.version_info >= (3, 13):
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            isfunction(obj) or isinstance(obj, (MethodType, property))
+            isfunction(obj)
+            or (isinstance(obj, (MethodType, property)) or ismethoddescriptor(obj))
         ) and obj.__name__.startswith(LOWERCASE)
 else:
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            (isfunction(obj) or isinstance(obj, MethodType))
+            (isfunction(obj) or (isinstance(obj, MethodType) or ismethoddescriptor(obj)))
             and obj.__name__.startswith(LOWERCASE)
         ) or (isinstance(obj, property) and obj.fget.__name__.startswith(LOWERCASE))
 
