@@ -27,7 +27,7 @@ from narwhals._utils import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -163,32 +163,34 @@ class SparkLikeLazyFrame(
                 schema.append((key, native_dtype))
         return pa.schema(schema)
 
+    def _to_arrow_from_batches(self, batches: Iterable[pa.RecordBatch]) -> pa.Table:
+        import pyarrow as pa  # ignore-banned-import
+
+        try:
+            return pa.Table.from_batches(batches)
+        except ValueError as exc:
+            if "at least one RecordBatch" in str(exc):
+                # Empty dataframe
+                data: dict[str, list[Any]] = {k: [] for k in self.columns}
+                return pa.Table.from_pydict(data, schema=self._to_arrow_schema())
+            raise  # pragma: no cover
+
     def _collect_to_arrow(self) -> pa.Table:
         import pyarrow as pa  # ignore-banned-import
 
         if self._implementation.is_pyspark() and self._backend_version < (4,):
-            try:
-                return pa.Table.from_batches(self.native._collect_as_arrow())
-            except ValueError as exc:
-                if "at least one RecordBatch" in str(exc):
-                    # Empty dataframe
-
-                    data: dict[str, list[Any]] = {k: [] for k in self.columns}
-                    pa_schema = self._to_arrow_schema()
-                    return pa.Table.from_pydict(data, schema=pa_schema)
-                raise  # pragma: no cover
-        elif self._implementation.is_pyspark_connect() and self._backend_version < (4,):
+            return self._to_arrow_from_batches(self.native._collect_as_arrow())
+        if self._implementation.is_pyspark_connect() and self._backend_version < (4,):
             pa_schema = self._to_arrow_schema()
             return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
-        else:
-            # NOTE: Returns `pa.RecordBatchReader` since https://github.com/duckdb/duckdb/pull/18642
-            to_arrow: Incomplete = self.native.toArrow
-            pa_native: pa.Table | pa.RecordBatchReader = to_arrow()
-            return (
-                pa_native
-                if isinstance(pa_native, pa.Table)
-                else pa.Table.from_batches(pa_native)
-            )
+        # NOTE: Returns `pa.RecordBatchReader` since https://github.com/duckdb/duckdb/pull/18642
+        to_arrow: Incomplete = self.native.toArrow
+        pa_native: pa.Table | pa.RecordBatchReader = to_arrow()
+        return (
+            pa_native
+            if isinstance(pa_native, pa.Table)
+            else self._to_arrow_from_batches(pa_native)
+        )
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:
