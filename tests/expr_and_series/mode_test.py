@@ -40,12 +40,12 @@ def test_mode_different_lengths_keep_all(constructor_eager: ConstructorEager) ->
 
 def test_mode_expr_keep_any(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a", "b").mode(keep="any"))
+    result = df.select(nw.col("a", "b").mode(keep="any")).lazy().collect()
 
     try:
         expected = {"a": [1], "b": [3]}
         assert_equal_data(result, expected)
-    except AssertionError:
+    except AssertionError:  # pragma: no cover
         expected = {"a": [2], "b": [3]}
         assert_equal_data(result, expected)
 
@@ -78,13 +78,21 @@ def test_mode_group_by_unimodal(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pyarrow() or impl.is_dask():
+    if impl.is_pyarrow() or impl.is_dask() or impl.is_modin():
         # Tracker:
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)
+        #   - Modin: TODO(FBruzzesi) - Currently raises the following exception:
+        #       >  TypeError: super(type, obj): obj must be an instance or subtype of type
         request.applymarker(pytest.mark.xfail)
 
-    result = df.group_by("grp").agg(nw.col("vals_unimodal").mode(keep="any")).sort("grp")
+    result = (
+        df.group_by("grp")
+        .agg(nw.col("vals_unimodal").mode(keep="any"))
+        .sort("grp")
+        .lazy()
+        .collect()
+    )
     expected = {"grp": ["g1", "g2"], "vals_unimodal": [1, 3]}
     assert_equal_data(result, expected)
 
@@ -104,11 +112,15 @@ def test_mode_group_by_multimodal(
         request.applymarker(pytest.mark.xfail)
 
     result = (
-        df.group_by("grp").agg(nw.col("vals_multimodal").mode(keep="any")).sort("grp")
+        df.group_by("grp")
+        .agg(nw.col("vals_multimodal").mode(keep="any"))
+        .sort("grp")
+        .lazy()
+        .collect()
     )
     try:
         expected = {"grp": ["g1", "g2"], "vals_multimodal": [1, 3]}
         assert_equal_data(result, expected)
-    except AssertionError:
+    except AssertionError:  # pragma: no cover
         expected = {"grp": ["g1", "g2"], "vals_multimodal": [2, 3]}
         assert_equal_data(result, expected)

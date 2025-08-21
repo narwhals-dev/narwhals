@@ -82,7 +82,6 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoFrame,
         IntoSeries,
-        ModeKeepStrategy,
         NonNestedLiteral,
         SingleColSelector,
         SingleIndexSelector,
@@ -291,29 +290,8 @@ class Series(NwSeries[IntoSeriesT]):
     # Too unstable to consider including here.
     hist: Any = not_implemented()
 
-    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
-        r"""Compute the most occurring value(s).
 
-        Can return multiple values.
-
-        Arguments:
-            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
-                is not deterministic.
-        """
-        return super().mode(keep=keep)
-
-
-class Expr(NwExpr):
-    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
-        r"""Compute the most occurring value(s).
-
-        Can return multiple values.
-
-        Arguments:
-            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
-                is not deterministic.
-        """
-        return super().mode(keep=keep)
+class Expr(NwExpr): ...
 
 
 class Schema(NwSchema):

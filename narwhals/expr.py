@@ -1568,14 +1568,14 @@ class Expr:
             ),
         )
 
-    def mode(self, *, keep: ModeKeepStrategy = "any") -> Self:
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
 
         Arguments:
             keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
-                is not deterministic.
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd

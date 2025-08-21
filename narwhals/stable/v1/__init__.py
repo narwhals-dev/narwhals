@@ -88,7 +88,6 @@ if TYPE_CHECKING:
         IntoFrame,
         IntoLazyFrameT,
         IntoSeries,
-        ModeKeepStrategy,
         NonNestedLiteral,
         SingleColSelector,
         SingleIndexSelector,
@@ -376,17 +375,6 @@ class Series(NwSeries[IntoSeriesT]):
             )
         )
 
-    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
-        r"""Compute the most occurring value(s).
-
-        Can return multiple values.
-
-        Arguments:
-            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
-                is not deterministic.
-        """
-        return super().mode(keep=keep)
-
 
 class Expr(NwExpr):
     def _l1_norm(self) -> Self:
@@ -473,17 +461,6 @@ class Expr(NwExpr):
                 n, fraction=fraction, with_replacement=with_replacement, seed=seed
             )
         )
-
-    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
-        r"""Compute the most occurring value(s).
-
-        Can return multiple values.
-
-        Arguments:
-            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
-                is not deterministic.
-        """
-        return super().mode(keep=keep)
 
 
 class Schema(NwSchema):

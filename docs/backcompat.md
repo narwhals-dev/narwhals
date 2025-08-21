@@ -117,11 +117,7 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v2` differences
 
-- Since Narwhals 2.x.y:
-
-    - `nw.Expr.mode` and `nw.Series.mode` allow for `keep` keyword. In `narwhals.stable.v1`
-      and `narwhals.stable.v2` its default is `"all"`, however in the main namespace it
-      defaults to `"any"`.
+So far, nothing, everything non-unstable from the main namespace should be available in `narwhals.stable.v2`.
 
 ## `main` vs `stable.v1` differences
 
