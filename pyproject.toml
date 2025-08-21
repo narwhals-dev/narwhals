@@ -74,7 +74,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "sqlframe",
   "polars==1.32.2",
   "uv",
-  "narwhals[ibis,dask]",
+  "narwhals[ibis,dask,modin]",
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
