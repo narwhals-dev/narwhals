@@ -10,6 +10,7 @@ from typing import (
     Literal,
     Protocol,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -37,8 +38,6 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    import pyspark.sql as pyspark_sql
-    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
@@ -112,6 +111,13 @@ if TYPE_CHECKING:
     class _ModinSeries(_BasePandasLikeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
 
+    # NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
+    class _PySparkDataFrame(NativeLazyFrame, Protocol):
+        # Not on sqlframe classes
+        # Insane method name that no other framework would clobber
+        # https://github.com/apache/spark/blob/8530444e25b83971da4314c608aa7d763adeceb3/python/pyspark/sql/dataframe.py#L4875
+        def dropDuplicatesWithinWatermark(self, *arg: Any, **kwargs: Any) -> Any: ...  # noqa: N802
+
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
@@ -124,8 +130,8 @@ if TYPE_CHECKING:
     )
     _NativePandasLike: TypeAlias = "_NativePandasLikeDataFrame |_NativePandasLikeSeries"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
-    _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
-    _NativePySparkConnect: TypeAlias = "PySparkConnectDataFrame"
+    _NativePySpark: TypeAlias = _PySparkDataFrame
+    _NativePySparkConnect: TypeAlias = _PySparkDataFrame
     _NativeSparkLike: TypeAlias = (
         "_NativeSQLFrame | _NativePySpark | _NativePySparkConnect"
     )
@@ -371,8 +377,10 @@ def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
 
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
-is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
-is_native_pyspark_connect: _Guard[_NativePySparkConnect] = is_pyspark_connect_dataframe
+is_native_pyspark = cast("_Guard[_NativePySpark]", is_pyspark_dataframe)
+is_native_pyspark_connect = cast(
+    "_Guard[_NativePySparkConnect]", is_pyspark_connect_dataframe
+)
 
 
 def is_native_pandas(obj: Any) -> TypeIs[_NativePandas]:

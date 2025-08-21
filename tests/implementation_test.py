@@ -77,14 +77,19 @@ if TYPE_CHECKING:
 
         data: dict[str, Any] = {"a": [1, 2, 3]}
         polars_df = nw.from_native(pl.DataFrame(data))
+        polars_ldf = nw.from_native(pl.LazyFrame(data))
         pandas_df = nw.from_native(pd.DataFrame(data))
         arrow_df = nw.from_native(pa.table(data))
 
         polars_impl = polars_df.implementation
+        lazy_polars_impl = polars_ldf.implementation
         pandas_impl = pandas_df.implementation
         arrow_impl = arrow_df.implementation
 
         assert_type(polars_impl, _PolarsImpl)
+        assert_type(lazy_polars_impl, _PolarsImpl)
+        # NOTE: Testing the lazy versions of pandas/pyarrow would require adding overloads to `DataFrame.lazy`
+        # Currently, everything becomes `LazyFrame[Any]`
         assert_type(pandas_impl, _PandasImpl)
         assert_type(arrow_impl, _ArrowImpl)
 

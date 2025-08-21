@@ -87,6 +87,7 @@ if TYPE_CHECKING:
         _ArrowImpl,
         _CudfImpl,
         _EagerAllowedImpl,
+        _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
         _PandasLikeImpl,
@@ -123,9 +124,67 @@ MultiColSelector: TypeAlias = "_MultiColSelector[Series[Any]]"
 MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 
+class _ImplDescriptor:
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self.__name__: str = name
+
+    @overload
+    def __get__(
+        self, instance: DataFrame[pl.DataFrame] | LazyFrame[pl.LazyFrame], owner: Any
+    ) -> _PolarsImpl: ...
+    @overload
+    def __get__(self, instance: BaseFrame[pd.DataFrame], owner: Any) -> _PandasImpl: ...
+    @overload
+    def __get__(self, instance: BaseFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
+
+    @overload  # oof, looks like these two need their names aligned 😅
+    def __get__(self, instance: BaseFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
+    @overload
+    def __get__(
+        self, instance: BaseFrame[_NativePandasLikeDataFrame], owner: Any
+    ) -> _PandasLikeImpl: ...
+    @overload
+    def __get__(self, instance: BaseFrame[pa.Table], owner: Any) -> _ArrowImpl: ...
+    @overload
+    def __get__(
+        self, instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
+    ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
+    @overload
+    def __get__(self, instance: None, owner: Any) -> Self: ...
+    @overload
+    def __get__(self, instance: DataFrame[Any], owner: Any) -> _EagerAllowedImpl: ...
+    @overload
+    def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
+    def __get__(self, instance: Any | None, owner: Any) -> Any:
+        if instance is None:  # pragma: no cover
+            return self
+        return instance._compliant_frame._implementation
+
+
 class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
+
+    implementation: _ImplDescriptor = _ImplDescriptor()
+    """Return implementation of native frame.
+
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+        >>> df = nw.from_native(df_native)
+        >>> df.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> df.implementation.is_pandas()
+        True
+        >>> df.implementation.is_pandas_like()
+        True
+        >>> df.implementation.is_polars()
+        False
+    """
 
     def __native_namespace__(self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
@@ -427,39 +486,6 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
 
-class _ImplDescriptor:
-    def __set_name__(self, owner: type[Any], name: str) -> None:
-        self.__name__: str = name
-
-    @overload
-    def __get__(self, instance: BaseFrame[pl.DataFrame], owner: Any) -> _PolarsImpl: ...
-    @overload
-    def __get__(self, instance: BaseFrame[pd.DataFrame], owner: Any) -> _PandasImpl: ...
-    @overload
-    def __get__(self, instance: BaseFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
-
-    @overload  # oof, looks like these two need their names aligned 😅
-    def __get__(self, instance: BaseFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
-    @overload
-    def __get__(
-        self, instance: BaseFrame[_NativePandasLikeDataFrame], owner: Any
-    ) -> _PandasLikeImpl: ...
-    @overload
-    def __get__(self, instance: BaseFrame[pa.Table], owner: Any) -> _ArrowImpl: ...
-    @overload
-    def __get__(
-        self, instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
-    ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
-    @overload
-    def __get__(self, instance: None, owner: Any) -> Self: ...
-    @overload
-    def __get__(self, instance: DataFrame[Any], owner: Any) -> _EagerAllowedImpl: ...
-    def __get__(self, instance: Any | None, owner: Any) -> Any:
-        if instance is None:  # pragma: no cover
-            return self
-        return instance._compliant_frame._implementation
-
-
 class DataFrame(BaseFrame[DataFrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
 
@@ -711,27 +737,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
         )
         raise ValueError(msg)
-
-    implementation: _ImplDescriptor = _ImplDescriptor()
-    """Return implementation of native frame.
-
-    This can be useful when you need to use special-casing for features outside of
-    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-    Examples:
-        >>> import narwhals as nw
-        >>> import pandas as pd
-        >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-        >>> df = nw.from_native(df_native)
-        >>> df.implementation
-        <Implementation.PANDAS: 'pandas'>
-        >>> df.implementation.is_pandas()
-        True
-        >>> df.implementation.is_pandas_like()
-        True
-        >>> df.implementation.is_polars()
-        False
-    """
 
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
@@ -2344,22 +2349,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
-
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
-
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import dask.dataframe as dd
-            >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
-            >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 'dask'>
-        """
-        return self._compliant_frame._implementation
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
