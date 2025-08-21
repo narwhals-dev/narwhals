@@ -1555,7 +1555,6 @@ class Expr:
                 exprs[1] if lower_bound is not None else None,
                 exprs[2] if upper_bound is not None else None,
             ),
-            self,
             lower_bound,
             upper_bound,
         )
