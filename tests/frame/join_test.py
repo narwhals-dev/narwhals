@@ -722,45 +722,37 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
         df.join_asof(df, right_on="antananarivo", on="antananarivo")
 
 
-def test_joinasof_by_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = from_native_lazy(constructor(data))
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by_right="bob", by="bob")
+ON = "antananarivo"
+BY = "bob"
 
-    with pytest.raises(
-        ValueError,
-        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob")
 
-    with pytest.raises(
-        ValueError,
-        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
-    ):
-        df.join_asof(df, on="antananarivo", by_right="bob")
-
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by="bob")
-
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_right="bob", by="bob")
-
-    with pytest.raises(
-        ValueError, match="`by_left` and `by_right` must have the same length."
-    ):
-        df.join_asof(
-            df,
-            on="antananarivo",
-            by_left=["antananarivo", "bob"],
-            by_right=["antananarivo"],
-        )
+@pytest.mark.parametrize(
+    ("on", "by_left", "by_right", "by", "message"),
+    [
+        (ON, BY, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, BY, None, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, None, BY, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, BY, None, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, None, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, [ON, BY], [ON], None, r"by_left.+by_right.+same.+length"),
+    ],
+)
+def test_joinasof_by_exceptions(
+    constructor: Constructor,
+    on: str | None,
+    by_left: str | list[str] | None,
+    by_right: str | list[str] | None,
+    by: str | list[str] | None,
+    message: str,
+) -> None:
+    data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = nw.from_native(constructor(data))
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(ValueError, match=message):
+            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
+    else:
+        with pytest.raises(ValueError, match=message):
+            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
 
 
 def test_join_duplicate_column_names(
