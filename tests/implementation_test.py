@@ -21,7 +21,7 @@ if TYPE_CHECKING:
         _PolarsImpl,
         _SQLFrameImpl,
     )
-    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoDataFrame, IntoLazyFrame
 
 
 def test_implementation_pandas() -> None:
@@ -75,7 +75,7 @@ def test_implementation_new(member: str, value: str) -> None:
 
 if TYPE_CHECKING:
 
-    def test_implementation_typing() -> None:  # noqa: PLR0914
+    def test_implementation_typing() -> None:  # noqa: PLR0914, PLR0915
         import dask.dataframe as dd
         import modin.pandas as mpd
         import pandas as pd
@@ -97,6 +97,10 @@ if TYPE_CHECKING:
         duckdb_ldf = nw.from_native(duckdb_lazy_constructor(data))
         sqlframe_ldf = nw.from_native(sqlframe_pyspark_lazy_constructor(data))
         ibis_ldf = nw.from_native(ibis_lazy_constructor(data))
+        any_df = cast("nw.DataFrame[Any]", "fake df 1")
+        any_ldf = cast("nw.LazyFrame[Any]", "fake ldf 1")
+        bound_df = cast("nw.DataFrame[IntoDataFrame]", "fake df 2")
+        bound_ldf = cast("nw.LazyFrame[IntoLazyFrame]", "fake ldf 2")
 
         polars_impl = polars_df.implementation
         lazy_polars_impl = polars_ldf.implementation
@@ -148,13 +152,15 @@ if TYPE_CHECKING:
         can_lazyframe_collect_impl = can_lazyframe_collect_dfs[0].implementation
         assert_type(can_lazyframe_collect_impl, _PolarsImpl | _PandasImpl | _ArrowImpl)
 
-        very_lost_df = nw.DataFrame.__new__(nw.DataFrame)
-        very_lost_impl = very_lost_df.implementation
+        any_df_impl = any_df.implementation
+        any_ldf_impl = any_ldf.implementation
         # TODO @dangotbanned: Is this so bad?
-        # - Currently `DataFrame[Any]` matches the first overload (`_PolarsImpl`)
+        # - Currently `DataFrame[Any] | LazyFrame[Any]` matches the first overload (`_PolarsImpl`)
         # - That is accepted **everywhere** that uses `IntoBackend`
-        assert_type(very_lost_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(any_df_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(any_ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
 
-        not_so_lost_df = nw.DataFrame.__new__(nw.DataFrame[IntoDataFrame])
-        not_so_lost_impl = not_so_lost_df.implementation
-        assert_type(not_so_lost_impl, _EagerAllowedImpl)
+        bound_df_impl = bound_df.implementation
+        assert_type(bound_df_impl, _EagerAllowedImpl)
+        bound_ldf_impl = bound_ldf.implementation
+        assert_type(bound_ldf_impl, _LazyAllowedImpl)
