@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._typing import EagerAllowed
-    from narwhals.typing import NativeFrame, NativeLazyFrame
+    from narwhals.typing import NativeDataFrame, NativeLazyFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"
@@ -100,27 +100,27 @@ def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
-def modin_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def modin_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj))
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
-def modin_pyarrow_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def modin_pyarrow_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
-def cudf_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def cudf_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import cudf
 
     df = cudf.DataFrame(obj)
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
 def polars_eager_constructor(obj: Data) -> pl.DataFrame:

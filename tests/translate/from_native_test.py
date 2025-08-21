@@ -301,7 +301,7 @@ def test_interchange_protocol_non_v1() -> None:
     result = nw.from_native(mockdf, pass_through=True)
     assert result is mockdf
     with pytest.raises(TypeError):
-        nw.from_native(mockdf)
+        nw.from_native(mockdf)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_native_series() -> None:
