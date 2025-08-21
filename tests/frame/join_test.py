@@ -798,7 +798,11 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
-    dfn = from_native_lazy(df)
-    with pytest.raises(exception):
-        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).collect()
+    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
+    df = nw.from_native(constructor(data))
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"]).collect()
+    else:
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"])
