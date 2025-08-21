@@ -4,16 +4,19 @@ from __future__ import annotations
 
 from collections import deque
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 import pytest
 
+import narwhals as nw
 import narwhals.stable.v2 as nw_v2
+from narwhals._utils import Implementation
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
+    PYARROW_VERSION,
     Constructor,
     assert_equal_data,
     assert_equal_series,
@@ -26,7 +29,7 @@ if TYPE_CHECKING:
 
     from narwhals._typing import EagerAllowed
     from narwhals.stable.v2.typing import IntoDataFrameT
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, _1DArray, _2DArray
 
 
 def test_toplevel() -> None:
@@ -343,6 +346,93 @@ def test_imports() -> None:
     from narwhals.stable.v2.dtypes import Enum  # noqa: F401
     from narwhals.stable.v2.selectors import datetime  # noqa: F401
     from narwhals.stable.v2.typing import IntoDataFrame  # noqa: F401
+
+
+def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v2.Int16(), "d": nw_v2.Float32()}
+    result = nw_v2.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    is_pyarrow = eager_backend in {Implementation.PYARROW, "pyarrow"}
+    data: dict[str, Any] = {"ab": [1, 2, 3], "ba": ["four", "five", None]}
+    table = pa.table(data)
+    supports_arrow_c_stream = nw_v2.DataFrame.from_arrow(table, backend=eager_backend)
+    assert_equal_data(supports_arrow_c_stream, data)
+    assert isinstance(supports_arrow_c_stream, nw_v2.DataFrame)
+    assert supports_arrow_c_stream._version is Version.V2
+    if is_pyarrow:
+        assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    else:
+        assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
+    if PYARROW_VERSION < (14,):  # pragma: no cover
+        ...
+    else:
+        result = nw_v2.DataFrame.from_arrow(
+            supports_arrow_c_stream, backend=eager_backend
+        )
+        assert_equal_data(result, data)
+        assert result._version is Version.V2
+        assert isinstance(result, nw_v2.DataFrame)
+        if is_pyarrow:
+            assert isinstance(result.to_native(), pa.Table)
+        else:
+            assert not isinstance(result.to_native(), pa.Table)
+
+
+def test_dataframe_from_numpy(eager_backend: EagerAllowed) -> None:
+    arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
+    schema = {
+        "c": nw_v2.Int16(),
+        "d": nw_v2.Float32(),
+        "e": nw_v2.Int16(),
+        "f": nw_v2.Float64(),
+    }
+    expected = {"c": [5, 1, 1], "d": [2, 4, 2], "e": [0, 7, 3], "f": [1, 8, 9]}
+    result = nw_v2.DataFrame.from_numpy(arr, backend=eager_backend, schema=schema)
+    result_schema = result.collect_schema()
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.DataFrame)
+    assert result_schema == schema
+    assert_equal_data(result, expected)
+
+    # NOTE: Existing bug, `schema` and `collect_schema` should be redefined for `v2`
+    with pytest.raises(AssertionError):
+        assert isinstance(result_schema, nw_v2.Schema)
+
+    assert isinstance(result_schema, nw.Schema)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (None, [5, 2, 0, 1]),
+        (nw_v2.Int64, [5, 2, 0, 1]),
+        (nw_v2.Int16(), [5, 2, 0, 1]),
+        (nw_v2.Float64, [5.0, 2.0, 0.0, 1.0]),
+        (nw_v2.Float32(), [5.0, 2.0, 0.0, 1.0]),
+    ],
+    ids=str,
+)
+def test_series_from_numpy(
+    eager_backend: EagerAllowed, dtype: IntoDType | None, expected: Sequence[Any]
+) -> None:
+    arr: _1DArray = cast("_1DArray", np.array([5, 2, 0, 1]))
+    name = "abc"
+    result = nw_v2.Series.from_numpy(name, arr, backend=eager_backend, dtype=dtype)
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.Series)
+    if dtype:
+        assert result.dtype == dtype
+    assert_equal_data(result.to_frame(), {name: expected})
 
 
 @pytest.mark.parametrize(
