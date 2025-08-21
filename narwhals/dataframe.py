@@ -446,7 +446,7 @@ class _ImplDescriptor:
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     def __get__(self, instance: Any | None, owner: Any) -> Any:
-        if instance is None:
+        if instance is None:  # pragma: no cover
             return self
         return instance._compliant_frame._implementation
 
