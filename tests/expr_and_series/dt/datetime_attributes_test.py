@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    import dask.dataframe as dd
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
@@ -119,7 +123,9 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
         request.applymarker(pytest.mark.xfail)
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):
-        df = nw.from_native(constructor(dates).astype({"a": "timestamp[ns][pyarrow]"}))  # type: ignore[union-attr]
+        df_dask = cast("dd.DataFrame", constructor(dates))
+        df_dask = cast("dd.DataFrame", df_dask.astype({"a": "timestamp[ns][pyarrow]"}))
+        df = nw.from_native(df_dask)
     else:
         df = nw.from_native(constructor(dates))
     result = df.select(nw.col("a").dt.date())
