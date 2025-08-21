@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
+        _1DArray,
     )
 
     PS = ParamSpec("PS")
@@ -84,6 +85,24 @@ class Expr:
     def _with_orderable_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(
             to_compliant_expr, self._metadata.with_orderable_filtration()
+        )
+
+    def _with_nary(
+        self,
+        to_compliant_expr: Callable[..., Any],
+        *args: IntoExpr | NonNestedLiteral | _1DArray,
+    ) -> Self:
+        return self.__class__(
+            lambda plx: apply_n_ary_operation(
+                plx, to_compliant_expr, self, *args, str_as_lit=False
+            ),
+            combine_metadata(
+                self,
+                *args,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
     def __repr__(self) -> str:
@@ -943,24 +962,10 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
-        metadata = combine_metadata(
-            self,
+        return self._with_nary(
+            lambda expr, lb, ub: expr.is_between(lb, ub, closed=closed),
             lower_bound,
             upper_bound,
-            str_as_lit=False,
-            allow_multi_output=False,
-            to_single_output=False,
-        )
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda slf, lb, ub: slf.is_between(lb, ub, closed=closed),
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-            ),
-            metadata,
         )
 
     def is_in(self, other: Any) -> Self:
@@ -1545,26 +1550,14 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *exprs: exprs[0].clip(
-                    exprs[1] if lower_bound is not None else None,
-                    exprs[2] if upper_bound is not None else None,
-                ),
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
+        return self._with_nary(
+            lambda *exprs: exprs[0].clip(
+                exprs[1] if lower_bound is not None else None,
+                exprs[2] if upper_bound is not None else None,
             ),
-            combine_metadata(
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+            self,
+            lower_bound,
+            upper_bound,
         )
 
     def mode(self) -> Self:
