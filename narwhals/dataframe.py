@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         IntoDataFrame,
         IntoExpr,
         IntoFrame,
+        IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -96,7 +97,7 @@ if TYPE_CHECKING:
     PS = ParamSpec("PS")
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
-FrameT = TypeVar("FrameT", bound="IntoFrame")
+LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
 
@@ -470,8 +471,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        # NOTE: Interchange support (`DataFrameLike`) is the source of the error
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]  # type: ignore[type-var]
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -2286,7 +2286,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().explode(columns, *more_columns)
 
 
-class LazyFrame(BaseFrame[FrameT]):
+class LazyFrame(BaseFrame[LazyFrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
     Warning:
@@ -2352,7 +2352,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
-        self._compliant_frame: CompliantLazyFrame[Any, FrameT, Self]  # type: ignore[type-var]
+        self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
@@ -2451,7 +2451,7 @@ class LazyFrame(BaseFrame[FrameT]):
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
         raise ValueError(msg)
 
-    def to_native(self) -> FrameT:
+    def to_native(self) -> LazyFrameT:
         """Convert Narwhals LazyFrame to native one.
 
         Examples:
