@@ -90,7 +90,7 @@ if TYPE_CHECKING:
     class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
         def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
 
-    class _NativeDask(Protocol):
+    class _NativeDask(NativeLazyFrame, Protocol):
         _partition_type: type[pd.DataFrame]
 
     class _CuDFDataFrame(_BasePandasLikeFrame, Protocol):

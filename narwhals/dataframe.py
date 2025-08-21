@@ -74,6 +74,7 @@ if TYPE_CHECKING:
     from narwhals._namespace import (
         _CuDFDataFrame,
         _ModinDataFrame,
+        _NativeDask,
         _NativePandasLikeDataFrame,
     )
     from narwhals._translate import IntoArrowTable
@@ -86,6 +87,7 @@ if TYPE_CHECKING:
         Polars,
         _ArrowImpl,
         _CudfImpl,
+        _DaskImpl,
         _EagerAllowedImpl,
         _LazyAllowedImpl,
         _ModinImpl,
@@ -149,6 +151,8 @@ class _ImplDescriptor:
     def __get__(
         self, instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
+    @overload
+    def __get__(self, instance: LazyFrame[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     @overload

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+# Using pyright's assert type instead
+# mypy: disable-error-code="assert-type"
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -9,7 +11,9 @@ import narwhals as nw
 if TYPE_CHECKING:
     from narwhals._typing import (
         _ArrowImpl,
+        _DaskImpl,
         _EagerAllowedImpl,
+        _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
         _PolarsImpl,
@@ -69,6 +73,7 @@ def test_implementation_new(member: str, value: str) -> None:
 if TYPE_CHECKING:
 
     def test_implementation_typing() -> None:  # noqa: PLR0914
+        import dask.dataframe as dd
         import modin.pandas as mpd
         import pandas as pd
         import polars as pl
@@ -100,7 +105,18 @@ if TYPE_CHECKING:
         # - `mypy` won't ever work, treats as `Any`
         # - `pyright` can resolve `modin_df: narwhals.dataframe.DataFrame[modin.pandas.dataframe.DataFrame]`
         #   - But we run into variance issues if trying to widen the concrete type again
-        assert_type(modin_impl, _ModinImpl)  # type: ignore[assert-type]
+        assert_type(modin_impl, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
+        # If ^^^ can be fixed, the next one should be removed
+        assert_type(modin_impl, _EagerAllowedImpl)
+
+        # NOTE: Constructor returns `Unknown`
+        dask_native = cast("dd.DataFrame", dd.DataFrame.from_dict(data))
+        dask_ldf = nw.from_native(dask_native)
+        dask_impl = dask_ldf.implementation
+        # NOTE: Same issue as modin
+        assert_type(dask_impl, _DaskImpl)  # pyright: ignore[reportAssertTypeFailure]
+        # If ^^^ can be fixed, the next one should be removed
+        assert_type(dask_impl, _LazyAllowedImpl)
 
         can_lazyframe_collect_dfs: list[
             nw.DataFrame[pl.DataFrame]
@@ -115,7 +131,7 @@ if TYPE_CHECKING:
         # TODO @dangotbanned: Is this so bad?
         # - Currently `DataFrame[Any]` matches the first overload (`_PolarsImpl`)
         # - That is accepted **everywhere** that uses `IntoBackend`
-        assert_type(very_lost_impl, _EagerAllowedImpl)  # type: ignore[assert-type]
+        assert_type(very_lost_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
 
         not_so_lost_df = nw.DataFrame.__new__(nw.DataFrame[IntoDataFrame])
         not_so_lost_impl = not_so_lost_df.implementation
