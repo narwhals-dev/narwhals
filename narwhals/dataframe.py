@@ -75,7 +75,9 @@ if TYPE_CHECKING:
         _CuDFDataFrame,
         _ModinDataFrame,
         _NativeDask,
+        _NativeDuckDB,
         _NativePandasLikeDataFrame,
+        _NativeSQLFrame,
     )
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
@@ -88,12 +90,14 @@ if TYPE_CHECKING:
         _ArrowImpl,
         _CudfImpl,
         _DaskImpl,
+        _DuckDBImpl,
         _EagerAllowedImpl,
         _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
         _PandasLikeImpl,
         _PolarsImpl,
+        _SQLFrameImpl,
     )
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
@@ -151,6 +155,12 @@ class _ImplDescriptor:
     def __get__(
         self, instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
+    @overload
+    def __get__(self, instance: LazyFrame[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
+    @overload
+    def __get__(
+        self, instance: LazyFrame[_NativeSQLFrame], owner: Any
+    ) -> _SQLFrameImpl: ...
     @overload
     def __get__(self, instance: LazyFrame[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload

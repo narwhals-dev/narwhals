@@ -12,11 +12,13 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         _ArrowImpl,
         _DaskImpl,
+        _DuckDBImpl,
         _EagerAllowedImpl,
         _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
         _PolarsImpl,
+        _SQLFrameImpl,
     )
     from narwhals.typing import IntoDataFrame
 
@@ -80,16 +82,25 @@ if TYPE_CHECKING:
         import pyarrow as pa
         from typing_extensions import assert_type
 
+        from tests.conftest import (
+            duckdb_lazy_constructor,
+            sqlframe_pyspark_lazy_constructor,
+        )
+
         data: dict[str, Any] = {"a": [1, 2, 3]}
         polars_df = nw.from_native(pl.DataFrame(data))
         polars_ldf = nw.from_native(pl.LazyFrame(data))
         pandas_df = nw.from_native(pd.DataFrame(data))
         arrow_df = nw.from_native(pa.table(data))
+        duckdb_ldf = nw.from_native(duckdb_lazy_constructor(data))
+        sqlframe_ldf = nw.from_native(sqlframe_pyspark_lazy_constructor(data))
 
         polars_impl = polars_df.implementation
         lazy_polars_impl = polars_ldf.implementation
         pandas_impl = pandas_df.implementation
         arrow_impl = arrow_df.implementation
+        duckdb_impl = duckdb_ldf.implementation
+        sqlframe_impl = sqlframe_ldf.implementation
 
         assert_type(polars_impl, _PolarsImpl)
         assert_type(lazy_polars_impl, _PolarsImpl)
@@ -97,6 +108,8 @@ if TYPE_CHECKING:
         # Currently, everything becomes `LazyFrame[Any]`
         assert_type(pandas_impl, _PandasImpl)
         assert_type(arrow_impl, _ArrowImpl)
+        assert_type(duckdb_impl, _DuckDBImpl)
+        assert_type(sqlframe_impl, _SQLFrameImpl)
 
         modin_native = mpd.DataFrame.from_dict(data)
         modin_df = nw.from_native(modin_native)
