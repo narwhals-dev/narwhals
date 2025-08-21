@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
 from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
-from narwhals._plan.typing import NativeFrameT, NativeSeriesT, Seq
+from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
 
@@ -691,8 +691,8 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
 
 class CompliantDataFrame(
-    CompliantBaseFrame[SeriesT, NativeFrameT],
-    Protocol[SeriesT, NativeFrameT, NativeSeriesT],
+    CompliantBaseFrame[SeriesT, NativeDataFrameT],
+    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
     @classmethod
     def from_dict(
@@ -703,7 +703,7 @@ class CompliantDataFrame(
         schema: Mapping[str, DType] | Schema | None = None,
     ) -> Self: ...
 
-    def to_narwhals(self) -> DataFrame[NativeFrameT, NativeSeriesT]: ...
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
@@ -723,8 +723,8 @@ class CompliantDataFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[SeriesT, NativeFrameT, NativeSeriesT],
-    Protocol[SeriesT, NativeFrameT, NativeSeriesT],
+    CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
+    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     def select(self, irs: Seq[NamedIR]) -> Self:

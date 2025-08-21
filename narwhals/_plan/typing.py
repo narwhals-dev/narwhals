@@ -14,6 +14,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.functions import RollingWindow
     from narwhals._plan.ranges import RangeFunction
     from narwhals.typing import (
+        NativeDataFrame,
         NativeFrame,
         NativeSeries,
         NonNestedDType,
@@ -75,6 +76,9 @@ NonNestedLiteralT = TypeVar(
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame", default="NativeFrame")
+NativeDataFrameT = TypeVar(
+    "NativeDataFrameT", bound="NativeDataFrame", default="NativeDataFrame"
+)
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
 MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""

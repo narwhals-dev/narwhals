@@ -26,7 +26,7 @@ from narwhals._plan.options import (
     SortOptions,
 )
 from narwhals._plan.selectors import by_name
-from narwhals._plan.typing import NativeFrameT, NativeSeriesT
+from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
 from narwhals._plan.window import Over
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
@@ -890,8 +890,8 @@ class BaseFrame(Generic[NativeFrameT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
-class DataFrame(BaseFrame[NativeFrameT], Generic[NativeFrameT, NativeSeriesT]):
-    _compliant: CompliantDataFrame[t.Any, NativeFrameT, NativeSeriesT]
+class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
+    _compliant: CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
 
     @property
     def _series(self) -> type[Series[NativeSeriesT]]:
