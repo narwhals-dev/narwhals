@@ -14,6 +14,7 @@ if TYPE_CHECKING:
         _DaskImpl,
         _DuckDBImpl,
         _EagerAllowedImpl,
+        _IbisImpl,
         _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
@@ -84,6 +85,7 @@ if TYPE_CHECKING:
 
         from tests.conftest import (
             duckdb_lazy_constructor,
+            ibis_lazy_constructor,
             sqlframe_pyspark_lazy_constructor,
         )
 
@@ -94,6 +96,7 @@ if TYPE_CHECKING:
         arrow_df = nw.from_native(pa.table(data))
         duckdb_ldf = nw.from_native(duckdb_lazy_constructor(data))
         sqlframe_ldf = nw.from_native(sqlframe_pyspark_lazy_constructor(data))
+        ibis_ldf = nw.from_native(ibis_lazy_constructor(data))
 
         polars_impl = polars_df.implementation
         lazy_polars_impl = polars_ldf.implementation
@@ -101,6 +104,7 @@ if TYPE_CHECKING:
         arrow_impl = arrow_df.implementation
         duckdb_impl = duckdb_ldf.implementation
         sqlframe_impl = sqlframe_ldf.implementation
+        ibis_impl = ibis_ldf.implementation
 
         assert_type(polars_impl, _PolarsImpl)
         assert_type(lazy_polars_impl, _PolarsImpl)
@@ -129,6 +133,11 @@ if TYPE_CHECKING:
         # NOTE: Same issue as modin
         assert_type(dask_impl, _DaskImpl)  # pyright: ignore[reportAssertTypeFailure]
         # If ^^^ can be fixed, the next one should be removed
+        assert_type(dask_impl, _LazyAllowedImpl)
+
+        # NOTE: Also same issue 🤔
+        # TODO @dangotbanned: try something else instead
+        assert_type(ibis_impl, _IbisImpl)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(dask_impl, _LazyAllowedImpl)
 
         can_lazyframe_collect_dfs: list[

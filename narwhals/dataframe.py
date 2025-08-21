@@ -76,6 +76,7 @@ if TYPE_CHECKING:
         _ModinDataFrame,
         _NativeDask,
         _NativeDuckDB,
+        _NativeIbis,
         _NativePandasLikeDataFrame,
         _NativeSQLFrame,
     )
@@ -92,6 +93,7 @@ if TYPE_CHECKING:
         _DaskImpl,
         _DuckDBImpl,
         _EagerAllowedImpl,
+        _IbisImpl,
         _LazyAllowedImpl,
         _ModinImpl,
         _PandasImpl,
@@ -163,6 +165,8 @@ class _ImplDescriptor:
     ) -> _SQLFrameImpl: ...
     @overload
     def __get__(self, instance: LazyFrame[_NativeDask], owner: Any) -> _DaskImpl: ...
+    @overload
+    def __get__(self, instance: LazyFrame[_NativeIbis], owner: Any) -> _IbisImpl: ...
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     @overload
