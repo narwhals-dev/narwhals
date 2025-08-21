@@ -164,3 +164,26 @@ if TYPE_CHECKING:
         assert_type(bound_df_impl, _EagerAllowedImpl)
         bound_ldf_impl = bound_ldf.implementation
         assert_type(bound_ldf_impl, _LazyAllowedImpl)
+
+        # NOTE: `DataFrame.lazy`
+        # [True Positive]
+        any_df.lazy(polars_ldf.implementation)
+        any_df.lazy(polars_df.implementation)
+        any_df.lazy(duckdb_ldf.implementation)
+
+        # [True Negative]
+        any_df.lazy(pandas_df.implementation)  # type: ignore[arg-type]
+        any_df.lazy(arrow_df.implementation)  # type: ignore[arg-type]
+        any_df.lazy(modin_df.implementation)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(sqlframe_ldf.implementation)  # type: ignore[arg-type]
+        any_df.lazy(bound_ldf.implementation)  # type: ignore[arg-type]
+        any_df.lazy(bound_df.implementation)  # type: ignore[arg-type]
+        any_df.lazy(can_lazyframe_collect_dfs[0].implementation)  # type: ignore[arg-type]
+
+        # [False Positive]
+        any_df.lazy(any_ldf.implementation)
+        any_df.lazy(any_df.implementation)
+
+        # [False Negative]
+        any_df.lazy(ibis_ldf.implementation)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(dask_ldf.implementation)  # pyright: ignore[reportArgumentType]
