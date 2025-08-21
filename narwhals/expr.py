@@ -2177,21 +2177,8 @@ class Expr:
             raise ComputeError(msg)
 
         kwargs = {"abs_tol": abs_tol, "rel_tol": rel_tol, "nans_equal": nans_equal}
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *exprs: exprs[0].is_close(exprs[1], **kwargs),
-                self,
-                other,
-                str_as_lit=False,
-            ),
-            combine_metadata(
-                self,
-                other,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+        return self._with_nary(
+            lambda *exprs: exprs[0].is_close(exprs[1], **kwargs), other
         )
 
     @property
