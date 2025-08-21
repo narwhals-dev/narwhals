@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 
 import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals._typing import (
+        _ArrowImpl,
+        _EagerAllowedImpl,
+        _ModinImpl,
+        _PandasImpl,
+        _PolarsImpl,
+    )
+    from narwhals.typing import IntoDataFrame
 
 
 def test_implementation_pandas() -> None:
@@ -52,3 +64,54 @@ def test_implementation_polars() -> None:
 )
 def test_implementation_new(member: str, value: str) -> None:
     assert nw.Implementation(value) is getattr(nw.Implementation, member)
+
+
+if TYPE_CHECKING:
+
+    def test_implementation_typing() -> None:  # noqa: PLR0914
+        import modin.pandas as mpd
+        import pandas as pd
+        import polars as pl
+        import pyarrow as pa
+        from typing_extensions import assert_type
+
+        data: dict[str, Any] = {"a": [1, 2, 3]}
+        polars_df = nw.from_native(pl.DataFrame(data))
+        pandas_df = nw.from_native(pd.DataFrame(data))
+        arrow_df = nw.from_native(pa.table(data))
+
+        polars_impl = polars_df.implementation
+        pandas_impl = pandas_df.implementation
+        arrow_impl = arrow_df.implementation
+
+        assert_type(polars_impl, _PolarsImpl)
+        assert_type(pandas_impl, _PandasImpl)
+        assert_type(arrow_impl, _ArrowImpl)
+
+        modin_native = mpd.DataFrame.from_dict(data)
+        modin_df = nw.from_native(modin_native)
+        modin_impl = modin_df.implementation
+        # TODO @dangotbanned: Is this even possible?
+        # - `mypy` won't ever work, treats as `Any`
+        # - `pyright` can resolve `modin_df: narwhals.dataframe.DataFrame[modin.pandas.dataframe.DataFrame]`
+        #   - But we run into variance issues if trying to widen the concrete type again
+        assert_type(modin_impl, _ModinImpl)  # type: ignore[assert-type]
+
+        can_lazyframe_collect_dfs: list[
+            nw.DataFrame[pl.DataFrame]
+            | nw.DataFrame[pd.DataFrame]
+            | nw.DataFrame[pa.Table]
+        ] = [polars_df, pandas_df, arrow_df]
+        can_lazyframe_collect_impl = can_lazyframe_collect_dfs[0].implementation
+        assert_type(can_lazyframe_collect_impl, _PolarsImpl | _PandasImpl | _ArrowImpl)
+
+        very_lost_df = nw.DataFrame.__new__(nw.DataFrame)
+        very_lost_impl = very_lost_df.implementation
+        # TODO @dangotbanned: Is this so bad?
+        # - Currently `DataFrame[Any]` matches the first overload (`_PolarsImpl`)
+        # - That is accepted **everywhere** that uses `IntoBackend`
+        assert_type(very_lost_impl, _EagerAllowedImpl)  # type: ignore[assert-type]
+
+        not_so_lost_df = nw.DataFrame.__new__(nw.DataFrame[IntoDataFrame])
+        not_so_lost_impl = not_so_lost_df.implementation
+        assert_type(not_so_lost_impl, _EagerAllowedImpl)

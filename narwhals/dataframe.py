@@ -71,7 +71,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
-    from narwhals._namespace import _NativePandasLikeDataFrame
+    from narwhals._namespace import (
+        _CuDFDataFrame,
+        _ModinDataFrame,
+        _NativePandasLikeDataFrame,
+    )
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
         Dask,
@@ -81,7 +85,9 @@ if TYPE_CHECKING:
         IntoBackend,
         Polars,
         _ArrowImpl,
+        _CudfImpl,
         _EagerAllowedImpl,
+        _ModinImpl,
         _PandasImpl,
         _PandasLikeImpl,
         _PolarsImpl,
@@ -430,6 +436,11 @@ class _ImplDescriptor:
     @overload
     def __get__(self, instance: DataFrame[pd.DataFrame], owner: Any) -> _PandasImpl: ...
     @overload
+    def __get__(self, instance: DataFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
+
+    @overload  # oof, looks like these two need their names aligned 😅
+    def __get__(self, instance: DataFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
+    @overload
     def __get__(
         self, instance: DataFrame[_NativePandasLikeDataFrame], owner: Any
     ) -> _PandasLikeImpl: ...
@@ -440,11 +451,9 @@ class _ImplDescriptor:
         self, instance: DataFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
-    def __get__(
-        self, instance: DataFrame[IntoDataFrame], owner: Any
-    ) -> _EagerAllowedImpl: ...
-    @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
+    @overload
+    def __get__(self, instance: DataFrame[Any], owner: Any) -> _EagerAllowedImpl: ...
     def __get__(self, instance: Any | None, owner: Any) -> Any:
         if instance is None:  # pragma: no cover
             return self
