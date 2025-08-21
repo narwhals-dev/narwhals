@@ -136,6 +136,12 @@ class FunctionOptions(Immutable):
     def aggregation() -> FunctionOptions:
         return FunctionOptions.groupwise().with_flags(FunctionFlags.RETURNS_SCALAR)
 
+    @staticmethod
+    def horizontal() -> FunctionOptions:
+        return FunctionOptions.elementwise().with_flags(
+            FunctionFlags.INPUT_WILDCARD_EXPANSION
+        )
+
 
 class SortOptions(Immutable):
     __slots__ = ("descending", "nulls_last")

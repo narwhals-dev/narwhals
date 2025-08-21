@@ -3,34 +3,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionFlags, FunctionOptions
+from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
-class StringFunction(Function):
-    @property
-    def function_options(self) -> FunctionOptions:
-        return FunctionOptions.elementwise()
-
-    def __repr__(self) -> str:
-        return "StringFunction"
+class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
 
 
-class ConcatHorizontal(StringFunction):
+class ConcatHorizontal(StringFunction, options=FunctionOptions.horizontal):
     """`nw.functions.concat_str`."""
 
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        return super().function_options.with_flags(FunctionFlags.INPUT_WILDCARD_EXPANSION)
-
-    def __repr__(self) -> str:
-        return "str.concat_horizontal"
 
 
 class Contains(StringFunction):
@@ -38,21 +25,13 @@ class Contains(StringFunction):
     pattern: str
     literal: bool
 
-    def __repr__(self) -> str:
-        return "str.contains"
-
 
 class EndsWith(StringFunction):
     __slots__ = ("suffix",)
     suffix: str
 
-    def __repr__(self) -> str:
-        return "str.ends_with"
 
-
-class LenChars(StringFunction):
-    def __repr__(self) -> str:
-        return "str.len_chars"
+class LenChars(StringFunction): ...
 
 
 class Replace(StringFunction):
@@ -61,9 +40,6 @@ class Replace(StringFunction):
     value: str
     literal: bool
     n: int
-
-    def __repr__(self) -> str:
-        return "str.replace"
 
 
 class ReplaceAll(StringFunction):
@@ -77,9 +53,6 @@ class ReplaceAll(StringFunction):
     value: str
     literal: bool
 
-    def __repr__(self) -> str:
-        return "str.replace_all"
-
 
 class Slice(StringFunction):
     """We're using for `Head`, `Tail` as well.
@@ -91,32 +64,20 @@ class Slice(StringFunction):
     offset: int
     length: int | None
 
-    def __repr__(self) -> str:
-        return "str.slice"
-
 
 class Split(StringFunction):
     __slots__ = ("by",)
     by: str
-
-    def __repr__(self) -> str:
-        return "str.split"
 
 
 class StartsWith(StringFunction):
     __slots__ = ("prefix",)
     prefix: str
 
-    def __repr__(self) -> str:
-        return "str.starts_with"
-
 
 class StripChars(StringFunction):
     __slots__ = ("characters",)
     characters: str | None
-
-    def __repr__(self) -> str:
-        return "str.strip_chars"
 
 
 class ToDatetime(StringFunction):
@@ -130,18 +91,11 @@ class ToDatetime(StringFunction):
     __slots__ = ("format",)
     format: str | None
 
-    def __repr__(self) -> str:
-        return "str.to_datetime"
+
+class ToLowercase(StringFunction): ...
 
 
-class ToLowercase(StringFunction):
-    def __repr__(self) -> str:
-        return "str.to_lowercase"
-
-
-class ToUppercase(StringFunction):
-    def __repr__(self) -> str:
-        return "str.to_uppercase"
+class ToUppercase(StringFunction): ...
 
 
 class IRStringNamespace(IRNamespace):

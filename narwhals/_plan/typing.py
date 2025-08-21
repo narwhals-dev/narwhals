@@ -62,6 +62,10 @@ SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
 IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")
+Accessor: TypeAlias = t.Literal[
+    "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
+]
+"""Namespace accessor property name."""
 
 DTypeT = TypeVar("DTypeT", bound="dtypes.DType")
 NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
