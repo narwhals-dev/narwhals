@@ -353,8 +353,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
         raise ValueError(msg)
 
-    if sys.version_info >= (3, 10):
-        discovered_plugins = discover_plugins(group="narwhals.plugins")
+    if sys.version_info >= (3, 10):  # pragma: no cover
+        discovered_plugins = discover_plugins()
 
         for plugin in discovered_plugins:  # pragma: no cover
             obj = plugin.load()

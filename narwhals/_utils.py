@@ -2040,8 +2040,8 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
-@lru_cache(maxsize=64)
-def discover_plugins(group: str = "narwhals.plugins") -> EntryPoints:
+@lru_cache(maxsize=8)
+def discover_plugins() -> EntryPoints:
     from importlib.metadata import entry_points
 
-    return entry_points(group=group)
+    return entry_points(group="narwhals.plugins")
