@@ -84,7 +84,7 @@ def sqlframe_session() -> DuckDBSession:
     return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
 
 
-def pyspark_session() -> SparkSession:
+def pyspark_session() -> SparkSession:  # pragma: no cover
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
         from pyspark.sql.connect.session import SparkSession
     else:
