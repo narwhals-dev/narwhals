@@ -15,6 +15,8 @@ DictFrame: TypeAlias = dict[str, list[Any]]
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals import LazyFrame  # noqa: F401
+
 
 class DictLazyFrame(
     CompliantLazyFrame[Any, "DictFrame", "LazyFrame[DictFrame]"],  # type: ignore[type-var]
