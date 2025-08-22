@@ -1590,6 +1590,10 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
 
         def compliant_expr(plx: Any) -> Any:
             return self._to_compliant_expr(plx).mode(keep=keep)

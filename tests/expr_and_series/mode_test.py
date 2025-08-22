@@ -89,7 +89,7 @@ def test_mode_group_by_unimodal(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pyarrow() or impl.is_dask():
+    if impl.is_pyarrow():
         # Tracker:
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)
@@ -123,7 +123,7 @@ def test_mode_group_by_multimodal(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pyarrow() or impl.is_dask():
+    if impl.is_pyarrow():
         # Tracker:
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)
@@ -163,7 +163,7 @@ def test_mode_group_by_multiple_cols(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pyarrow() or impl.is_dask():
+    if impl.is_pyarrow():
         # Tracker:
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)

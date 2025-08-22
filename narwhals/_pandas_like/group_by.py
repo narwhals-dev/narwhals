@@ -205,7 +205,7 @@ class PandasLikeGroupBy(
     _output_key_names: list[str]
     """Stores the **original** version of group keys."""
 
-    _kwargs: dict[str, bool]
+    _kwargs: Mapping[str, bool]
     """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
 
     @property

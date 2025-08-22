@@ -2098,6 +2098,11 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
         result = self._with_compliant(self._compliant_series.mode(keep=keep))
         return result.item(0) if keep == "any" else result
 
