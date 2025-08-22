@@ -78,7 +78,8 @@ def mode(keep: ModeKeepStrategy) -> dd.Aggregation:
     """Mode aggregation for Dask DataFrame grouped operations."""
     if keep != "any":  # pragma: no cover
         msg = (
-            f"`keep='{keep}'` is not implemented for backend {Implementation.DASK}\n\n"
+            f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
+            f"backend {Implementation.DASK}\n\n"
             "Hint: Use `nw.col(...).mode(keep='any')` instead."
         )
         raise NotImplementedError(msg)

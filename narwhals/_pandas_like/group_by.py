@@ -117,17 +117,22 @@ class AggExpr:
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
         elif self.is_mode():
+            compliant = group_by.compliant
             if (keep := self.kwargs.get("keep")) != "any":  # pragma: no cover
-                msg = f"`keep='{keep}' is not implemented in group by context"
+                msg = (
+                    f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
+                    f"backend {compliant._implementation}\n\n"
+                    "Hint: Use `nw.col(...).mode(keep='any')` instead."
+                )
                 raise NotImplementedError(msg)
 
             cols = list(names)
-            native = group_by.compliant.native
+            native = compliant.native
             keys, kwargs = group_by._keys, group_by._kwargs
 
             # Implementation based on the following suggestion:
             # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
-            ns = group_by.compliant.__narwhals_namespace__()
+            ns = compliant.__narwhals_namespace__()
             result = ns._concat_horizontal(
                 [
                     native.groupby([*keys, col], **kwargs)

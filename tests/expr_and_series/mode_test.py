@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import nullcontext as does_not_raise
 from typing import Any
 
@@ -71,7 +72,7 @@ def test_mode_expr_keep_all_lazy(constructor: Constructor) -> None:
         nw.Implementation.PYSPARK_CONNECT,
         nw.Implementation.SQLFRAME,
     }
-    msg = "`keep='all'` is not implemented for backend"
+    msg = re.escape("`Expr.mode(keep='all')` is not implemented for backend")
     context = (
         pytest.raises(NotImplementedError, match=msg)
         if impl in not_implemented
@@ -90,9 +91,7 @@ def test_mode_group_by_unimodal(
     impl = df.implementation
 
     if impl.is_pyarrow():
-        # Tracker:
-        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
-        #   - Dask: TODO(FBruzzesi)
+        # https://github.com/apache/arrow/issues/20359
         request.applymarker(pytest.mark.xfail)
 
     result = (
@@ -124,10 +123,7 @@ def test_mode_group_by_multimodal(
     impl = df.implementation
 
     if impl.is_pyarrow():
-        # Tracker:
-        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
-        #   - Dask: TODO(FBruzzesi)
-
+        # https://github.com/apache/arrow/issues/20359
         request.applymarker(pytest.mark.xfail)
 
     result = (
@@ -164,10 +160,7 @@ def test_mode_group_by_multiple_cols(
     impl = df.implementation
 
     if impl.is_pyarrow():
-        # Tracker:
-        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
-        #   - Dask: TODO(FBruzzesi)
-
+        # https://github.com/apache/arrow/issues/20359
         request.applymarker(pytest.mark.xfail)
 
     result = df.group_by("grp").agg(mode_expr).sort("grp").lazy().collect()

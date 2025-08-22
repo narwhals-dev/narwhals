@@ -749,7 +749,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         if keep != "any":
             msg = (
-                f"`keep='{keep}'` is not implemented for backend {self._implementation}\n\n"
+                f"`Expr.mode(keep='{keep}')` is not implemented for backend {self._implementation}\n\n"
                 "Hint: Use `nw.col(...).mode(keep='any')` instead."
             )
             raise NotImplementedError(msg)
