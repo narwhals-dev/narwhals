@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-import daft
-import daft.exceptions
-import daft.functions
-
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
@@ -33,10 +29,10 @@ class DictLazyFrame(
         self._version = version
 
     @staticmethod
-    def _is_native(obj: daft.DataFrame | Any) -> TypeIs[daft.DataFrame]:
-        return isinstance(obj, daft.DataFrame)
+    def _is_native(obj: DictFrame | Any) -> TypeIs[DictFrame]:
+        return isinstance(obj, dict)
 
-    def to_narwhals(self) -> LazyFrame[daft.DataFrame]:
+    def to_narwhals(self) -> LazyFrame[DictFrame]:  # pyright: ignore[reportInvalidTypeArguments]
         return self._version.lazyframe(self, level="lazy")
 
     def __narwhals_lazyframe__(self) -> Self:
