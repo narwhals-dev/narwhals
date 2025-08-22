@@ -56,7 +56,33 @@ class DictLazyFrame(
     def columns(self) -> list[str]:
         return list(self._native_frame.keys())
 
-    group_by = not_implemented()
-    join_asof = not_implemented()
+    # Dunders
+    __narwhals_namespace__ = not_implemented()
+
+    # Properties
+    schema = not_implemented()  # type: ignore[assignment]
+
+    # Helpers
+    _iter_columns = not_implemented()
+
+    # Functions
+    aggregate = not_implemented()
+    collect = not_implemented()
+    collect_schema = not_implemented()
+    drop = not_implemented()
+    drop_nulls = not_implemented()
     explode = not_implemented()
+    filter = not_implemented()
+    group_by = not_implemented()
+    head = not_implemented()
+    join = not_implemented()
+    join_asof = not_implemented()
+    rename = not_implemented()
+    select = not_implemented()
+    simple_select = not_implemented()
     sink_parquet = not_implemented()
+    sort = not_implemented()
+    unique = not_implemented()
+    unpivot = not_implemented()
+    with_columns = not_implemented()
+    with_row_index = not_implemented()
