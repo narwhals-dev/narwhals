@@ -42,8 +42,10 @@ class DictLazyFrame(
     # Properties
     schema = not_implemented()  # type: ignore[assignment]
 
+    # Static
+    _is_native = not_implemented()  # type: ignore[assignment]
+
     # Helpers
-    _is_native = not_implemented()
     _iter_columns = not_implemented()
 
     # Functions

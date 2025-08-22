@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from typing_extensions import TypeIs
 
 if TYPE_CHECKING:
-    from test_plugin.dataframe import (  # type: ignore[import-not-found]
+    from test_plugin.dataframe import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
         DictFrame,
         DictLazyFrame,
     )
