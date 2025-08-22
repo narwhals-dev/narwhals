@@ -19,9 +19,7 @@ DictFrame: TypeAlias = dict[str, list[Any]]
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeIs
 
-    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
-    from narwhals.dtypes import DType
 
 
 class DictLazyFrame(
@@ -32,16 +30,10 @@ class DictLazyFrame(
     def __init__(self, native_dataframe: DictFrame, *, version: Version) -> None:
         self._native_frame: DictFrame = native_dataframe
         self._version = version
-        self._cached_schema: dict[str, DType] | None = None
-        self._cached_columns: list[str] | None = None
 
     @staticmethod
     def _is_native(obj: daft.DataFrame | Any) -> TypeIs[daft.DataFrame]:
         return isinstance(obj, daft.DataFrame)
-
-    @classmethod
-    def from_native(cls, data: daft.DataFrame, /, *, context: _LimitedContext) -> Self:
-        return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[daft.DataFrame]:
         return self._version.lazyframe(self, level="lazy")
@@ -73,6 +65,7 @@ class DictLazyFrame(
     drop_nulls = not_implemented()
     explode = not_implemented()
     filter = not_implemented()
+    from_native = not_implemented()
     group_by = not_implemented()
     head = not_implemented()
     join = not_implemented()
