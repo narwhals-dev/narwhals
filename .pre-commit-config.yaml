@@ -94,7 +94,10 @@ repos:
   rev: v5.0.0
   hooks:
   -   id: name-tests-test
-      exclude: ^tests/utils\.py
+      exclude: |
+        (?x)
+          ^(tests/utils\.py)
+          |^(tests/test-plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$

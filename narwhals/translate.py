@@ -361,9 +361,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         for plugin in discovered_plugins:  # pragma: no cover
             obj = plugin.load()
             if obj.is_native_object(native_object):
-                native_object = obj.from_native(
-                    native_object, eager_only=False, series_only=False
-                )
+                native_object = obj.from_native(native_object)
                 break
 
     # Extensions
