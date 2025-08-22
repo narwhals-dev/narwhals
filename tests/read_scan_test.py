@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("polars")
 import polars as pl
@@ -106,10 +106,8 @@ def test_scan_csv_kwargs(csv_path: str) -> None:
 
 
 @skipif_pandas_lt_1_5
-def test_read_parquet(parquet_path: str, constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
-    backend = nw.get_native_namespace(df)
-    result = nw.read_parquet(parquet_path, backend=backend)
+def test_read_parquet(parquet_path: str, eager_backend: EagerAllowed) -> None:
+    result = nw.read_parquet(parquet_path, backend=eager_backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
