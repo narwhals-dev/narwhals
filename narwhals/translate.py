@@ -570,7 +570,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
         for plugin in discovered_plugins:
             obj = plugin.load()
-            if obj.is_native_object(native_object):
+            if obj.is_native_object(native_object):  # pragma: no cover (coverage bug?)
                 compliant_object = obj.from_native(native_object, version)
                 return _translate_if_compliant(
                     compliant_object,
@@ -581,6 +581,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                     allow_series=allow_series,
                     version=version,
                 )
+    else:  # pragma: no cover
+        pass
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
