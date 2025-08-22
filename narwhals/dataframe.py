@@ -176,7 +176,7 @@ class _ImplDescriptor:
     def __get__(self, instance: Any | None, owner: Any) -> Any:
         if instance is None:  # pragma: no cover
             return self
-        return instance._compliant_frame._implementation
+        return instance._compliant._implementation
 
 
 class BaseFrame(Generic[_FrameT]):
@@ -203,6 +203,10 @@ class BaseFrame(Generic[_FrameT]):
         >>> df.implementation.is_polars()
         False
     """
+
+    @property
+    @abstractmethod
+    def _compliant(self) -> Any: ...
 
     def __native_namespace__(self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
@@ -530,6 +534,10 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+
+    @property
+    def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
+        return self._compliant_frame
 
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
@@ -2304,6 +2312,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         narwhals.from_native(native_lazyframe)
         ```
     """
+
+    @property
+    def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
+        return self._compliant_frame
 
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr

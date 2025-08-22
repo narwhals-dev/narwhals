@@ -78,6 +78,10 @@ class Series(Generic[IntoSeriesT]):
     _version: ClassVar[Version] = Version.MAIN
 
     @property
+    def _compliant(self) -> CompliantSeries[IntoSeriesT]:
+        return self._compliant_series
+
+    @property
     def _dataframe(self) -> type[DataFrame[Any]]:
         from narwhals.dataframe import DataFrame
 
