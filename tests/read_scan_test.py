@@ -15,9 +15,15 @@ import polars as pl
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals._typing import EagerAllowed, _LazyOnly
+    from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+
+skipif_pandas_lt_1_5 = pytest.mark.skipif(
+    PANDAS_VERSION < (1, 5), reason="too old for pyarrow"
+)
+lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
+spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
 
 
 @pytest.fixture(scope="module")
@@ -42,13 +48,13 @@ def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
     assert isinstance(result, nw.DataFrame)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: str) -> None:
     result = nw.read_csv(csv_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
-@pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
+@lazy_core_backend
 def test_read_csv_raise_with_lazy(csv_path: str, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
@@ -93,13 +99,13 @@ def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
     assert isinstance(result, nw.LazyFrame)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_scan_csv_kwargs(csv_path: str) -> None:
     result = nw.scan_csv(csv_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_read_parquet(parquet_path: str, constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
@@ -108,20 +114,20 @@ def test_read_parquet(parquet_path: str, constructor_eager: ConstructorEager) ->
     assert isinstance(result, nw.DataFrame)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_read_parquet_kwargs(parquet_path: str) -> None:
     result = nw.read_parquet(parquet_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
-@pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
+@lazy_core_backend
 def test_read_parquet_raise_with_lazy(parquet_path: str, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
         nw.read_parquet(parquet_path, backend=backend)  # type: ignore[arg-type]
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
@@ -159,23 +165,23 @@ def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     assert isinstance(result, nw.LazyFrame)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@skipif_pandas_lt_1_5
 def test_scan_parquet_kwargs(parquet_path: str) -> None:
     result = nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
-@pytest.mark.parametrize("spark_like_backend", ["pyspark", "sqlframe"])
+@spark_like_backend
 @pytest.mark.parametrize("scan_method", ["scan_csv", "scan_parquet"])
 def test_scan_fail_spark_like_without_session(
     parquet_path: str,
-    spark_like_backend: str,
+    backend: _SparkLike,
     scan_method: Literal["scan_csv", "scan_parquet"],
 ) -> None:
-    _ = pytest.importorskip(spark_like_backend)
+    _ = pytest.importorskip(backend)
 
     with pytest.raises(
         ValueError,
         match="Spark like backends require a session object to be passed in `kwargs`.",
     ):
-        getattr(nw, scan_method)(parquet_path, backend=spark_like_backend)
+        getattr(nw, scan_method)(parquet_path, backend=backend)
