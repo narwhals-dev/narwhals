@@ -21,7 +21,7 @@ if TYPE_CHECKING:
         _PolarsImpl,
         _SQLFrameImpl,
     )
-    from narwhals.typing import IntoDataFrame, IntoLazyFrame
+    from narwhals.typing import IntoDataFrame, IntoLazyFrame, IntoSeries
 
 
 def test_implementation_pandas() -> None:
@@ -92,30 +92,43 @@ if TYPE_CHECKING:
         data: dict[str, Any] = {"a": [1, 2, 3]}
         polars_df = nw.from_native(pl.DataFrame(data))
         polars_ldf = nw.from_native(pl.LazyFrame(data))
+        polars_ser = nw.from_native(pl.Series(data["a"]), series_only=True)
         pandas_df = nw.from_native(pd.DataFrame(data))
+        pandas_ser = nw.from_native(pd.Series(data["a"]), series_only=True)
         arrow_df = nw.from_native(pa.table(data))
+        # NOTE: The overloads are too complicated, simplifying to `Any`
+        arrow_ser_native = cast("pa.ChunkedArray[Any]", pa.chunked_array([data["a"]]))  # type: ignore[redundant-cast]
+        arrow_ser = nw.from_native(arrow_ser_native, series_only=True)
         duckdb_ldf = nw.from_native(duckdb_lazy_constructor(data))
         sqlframe_ldf = nw.from_native(sqlframe_pyspark_lazy_constructor(data))
         ibis_ldf = nw.from_native(ibis_lazy_constructor(data))
         any_df = cast("nw.DataFrame[Any]", "fake df 1")
         any_ldf = cast("nw.LazyFrame[Any]", "fake ldf 1")
+        any_ser = cast("nw.Series[Any]", "fake ser 1")
         bound_df = cast("nw.DataFrame[IntoDataFrame]", "fake df 2")
         bound_ldf = cast("nw.LazyFrame[IntoLazyFrame]", "fake ldf 2")
+        bound_ser = cast("nw.Series[IntoSeries]", "fake ser 2")
 
-        polars_impl = polars_df.implementation
-        lazy_polars_impl = polars_ldf.implementation
-        pandas_impl = pandas_df.implementation
-        arrow_impl = arrow_df.implementation
+        polars_df_impl = polars_df.implementation
+        polars_ldf_impl = polars_ldf.implementation
+        polars_ser_impl = polars_ser.implementation
+        pandas_df_impl = pandas_df.implementation
+        pandas_ser_impl = pandas_ser.implementation
+        arrow_df_impl = arrow_df.implementation
+        arrow_ser_impl = arrow_ser.implementation
         duckdb_impl = duckdb_ldf.implementation
         sqlframe_impl = sqlframe_ldf.implementation
         ibis_impl = ibis_ldf.implementation
 
-        assert_type(polars_impl, _PolarsImpl)
-        assert_type(lazy_polars_impl, _PolarsImpl)
+        assert_type(polars_df_impl, _PolarsImpl)
+        assert_type(polars_ldf_impl, _PolarsImpl)
+        assert_type(polars_ser_impl, _PolarsImpl)
         # NOTE: Testing the lazy versions of pandas/pyarrow would require adding overloads to `DataFrame.lazy`
         # Currently, everything becomes `LazyFrame[Any]`
-        assert_type(pandas_impl, _PandasImpl)
-        assert_type(arrow_impl, _ArrowImpl)
+        assert_type(pandas_df_impl, _PandasImpl)
+        assert_type(pandas_ser_impl, _PandasImpl)
+        assert_type(arrow_df_impl, _ArrowImpl)
+        assert_type(arrow_ser_impl, _ArrowImpl)
         assert_type(duckdb_impl, _DuckDBImpl)
         assert_type(sqlframe_impl, _SQLFrameImpl)
 
@@ -144,26 +157,43 @@ if TYPE_CHECKING:
         assert_type(ibis_impl, _IbisImpl)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(dask_impl, _LazyAllowedImpl)
 
+        # NOTE: Any combination of eager objects that **does not** include `cuDF`, `modin` should
+        # preserve that detail
         can_lazyframe_collect_dfs: list[
             nw.DataFrame[pl.DataFrame]
             | nw.DataFrame[pd.DataFrame]
             | nw.DataFrame[pa.Table]
         ] = [polars_df, pandas_df, arrow_df]
-        can_lazyframe_collect_impl = can_lazyframe_collect_dfs[0].implementation
-        assert_type(can_lazyframe_collect_impl, _PolarsImpl | _PandasImpl | _ArrowImpl)
+        can_lazyframe_collect_dfs_impl = can_lazyframe_collect_dfs[0].implementation
+        assert_type(
+            can_lazyframe_collect_dfs_impl, _PolarsImpl | _PandasImpl | _ArrowImpl
+        )
+        can_lazyframe_collect_sers: list[
+            nw.Series[pl.Series]
+            | nw.Series[pd.Series[Any]]
+            | nw.Series[pa.ChunkedArray[Any]]
+        ] = [polars_ser, pandas_ser, arrow_ser]
+        can_lazyframe_collect_sers_impl = can_lazyframe_collect_sers[0].implementation
+        assert_type(
+            can_lazyframe_collect_sers_impl, _PolarsImpl | _PandasImpl | _ArrowImpl
+        )
 
         any_df_impl = any_df.implementation
         any_ldf_impl = any_ldf.implementation
+        any_ser_impl = any_ser.implementation
         # TODO @dangotbanned: Is this so bad?
-        # - Currently `DataFrame[Any] | LazyFrame[Any]` matches the first overload (`_PolarsImpl`)
+        # - Currently `DataFrame[Any] | LazyFrame[Any] | Series[Any]` matches the first overload (`_PolarsImpl`)
         # - That is accepted **everywhere** that uses `IntoBackend`
         assert_type(any_df_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(any_ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(any_ser_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
 
         bound_df_impl = bound_df.implementation
-        assert_type(bound_df_impl, _EagerAllowedImpl)
         bound_ldf_impl = bound_ldf.implementation
+        bound_ser_impl = bound_ser.implementation
+        assert_type(bound_df_impl, _EagerAllowedImpl)
         assert_type(bound_ldf_impl, _LazyAllowedImpl)
+        assert_type(bound_ser_impl, _EagerAllowedImpl)
 
         # NOTE: `DataFrame.lazy`
         # [True Positive]
@@ -178,11 +208,13 @@ if TYPE_CHECKING:
         any_df.lazy(sqlframe_ldf.implementation)  # type: ignore[arg-type]
         any_df.lazy(bound_ldf.implementation)  # type: ignore[arg-type]
         any_df.lazy(bound_df.implementation)  # type: ignore[arg-type]
+        any_df.lazy(bound_ser.implementation)  # type: ignore[arg-type]
         any_df.lazy(can_lazyframe_collect_dfs[0].implementation)  # type: ignore[arg-type]
 
         # [False Positive]
         any_df.lazy(any_ldf.implementation)
         any_df.lazy(any_df.implementation)
+        any_df.lazy(any_ser.implementation)
 
         # [False Negative]
         any_df.lazy(ibis_ldf.implementation)  # pyright: ignore[reportArgumentType]
