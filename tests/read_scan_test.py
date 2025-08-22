@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from types import ModuleType
 
+    from pyspark.sql import SparkSession
+    from sqlframe.duckdb import DuckDBSession
+
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
@@ -75,34 +78,39 @@ def test_read_csv_raise_with_lazy(csv_path: str, backend: _LazyOnly) -> None:
         nw.read_csv(csv_path, backend=backend)  # type: ignore[arg-type]
 
 
+def sqlframe_session() -> DuckDBSession:
+    from sqlframe.duckdb import DuckDBSession
+
+    # NOTE: `__new__` override inferred by `pyright` only
+    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
+    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
+
+
+def pyspark_session() -> SparkSession:
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
+    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+    builder = (
+        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+        if is_spark_connect
+        else builder.master("local[1]").config("spark.ui.enabled", "false")
+    )
+    return (
+        builder.config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+
+
 def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
-        from sqlframe.duckdb import DuckDBSession
-
-        kwargs = {"session": DuckDBSession(), "inferSchema": True, "header": True}
+        kwargs = {"session": sqlframe_session(), "inferSchema": True, "header": True}
     elif "pyspark" in str(constructor):
-        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-            from pyspark.sql.connect.session import SparkSession
-        else:
-            from pyspark.sql import SparkSession
-
-        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-        session = (
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
-
-        kwargs = {"session": session, "inferSchema": True, "header": True}
-
+        kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
     else:
         kwargs = {}
     result = nw.scan_csv(csv_path, backend=native_namespace(constructor), **kwargs)
@@ -138,31 +146,9 @@ def test_read_parquet_raise_with_lazy(parquet_path: str, backend: _LazyOnly) -> 
 def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
-        from sqlframe.duckdb import DuckDBSession
-
-        kwargs = {"session": DuckDBSession(), "inferSchema": True}
-
+        kwargs = {"session": sqlframe_session(), "inferSchema": True}
     elif "pyspark" in str(constructor):
-        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-            from pyspark.sql.connect.session import SparkSession
-        else:
-            from pyspark.sql import SparkSession
-
-        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-        session = (
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
-
-        kwargs = {"session": session, "inferSchema": True, "header": True}
+        kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
     else:
         kwargs = {}
     backend = native_namespace(constructor)
