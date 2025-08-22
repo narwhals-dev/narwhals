@@ -40,9 +40,9 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import (
         DataFrameT,
+        Frame,
         IntoDataFrameT,
         IntoFrame,
-        IntoFrameT,
         IntoLazyFrameT,
         IntoSeries,
         IntoSeriesT,
@@ -62,8 +62,8 @@ def to_native(
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoFrameT], *, pass_through: Literal[False] = ...
-) -> IntoFrameT: ...
+    narwhals_object: LazyFrame[IntoLazyFrameT], *, pass_through: Literal[False] = ...
+) -> IntoLazyFrameT: ...
 @overload
 def to_native(
     narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
@@ -74,11 +74,11 @@ def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
 
 def to_native(
     narwhals_object: DataFrame[IntoDataFrameT]
-    | LazyFrame[IntoFrameT]
+    | LazyFrame[IntoLazyFrameT]
     | Series[IntoSeriesT],
     *,
     pass_through: bool = False,
-) -> IntoDataFrameT | IntoFrameT | IntoSeriesT | Any:
+) -> IntoDataFrameT | IntoLazyFrameT | IntoSeriesT | Any:
     """Convert Narwhals object to native one.
 
     Arguments:
@@ -174,13 +174,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoFrameT | IntoLazyFrameT | IntoSeriesT,
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
     *,
     pass_through: Literal[True],
     eager_only: Literal[False] = ...,
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
-) -> DataFrame[IntoFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -194,11 +194,8 @@ def from_native(
 ) -> Series[IntoSeriesT]: ...
 
 
-# NOTE: Seems like `mypy` is giving a false positive
-# Following this advice will introduce overlapping overloads?
-# > note: Flipping the order of overloads will fix this error
 @overload
-def from_native(  # type: ignore[overload-overlap]
+def from_native(
     native_object: IntoLazyFrameT,
     *,
     pass_through: Literal[False] = ...,
@@ -265,14 +262,19 @@ def from_native(
 
 
 def from_native(  # noqa: D417
-    native_object: IntoLazyFrameT | IntoFrameT | IntoSeriesT | IntoFrame | IntoSeries | T,
+    native_object: IntoLazyFrameT
+    | IntoDataFrameT
+    | IntoSeriesT
+    | IntoFrame
+    | IntoSeries
+    | T,
     *,
     pass_through: bool = False,
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
     **kwds: Any,
-) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoFrameT] | Series[IntoSeriesT] | T:
+) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
@@ -329,8 +331,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     allow_series: bool | None = None,
     version: Version,
 ) -> Any:
+    from narwhals._interchange.dataframe import supports_dataframe_interchange
     from narwhals._utils import (
-        _supports_dataframe_interchange,
         is_compliant_dataframe,
         is_compliant_lazyframe,
         is_compliant_series,
@@ -525,7 +527,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
-    if _supports_dataframe_interchange(native_object):
+    if supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
@@ -555,9 +557,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     return native_object
 
 
-def get_native_namespace(
-    *obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
-) -> Any:
+def get_native_namespace(*obj: Frame | Series[Any] | IntoFrame | IntoSeries) -> Any:
     """Get native namespace from object.
 
     Arguments:
@@ -590,7 +590,7 @@ def get_native_namespace(
 
 
 def _get_native_namespace_single_obj(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series[Any] | IntoFrame | IntoSeries,
+    obj: Frame | Series[Any] | IntoFrame | IntoSeries,
 ) -> Any:
     if has_native_namespace(obj):
         return obj.__native_namespace__()

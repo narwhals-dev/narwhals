@@ -1,20 +1,54 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
+
+if TYPE_CHECKING:
+    from narwhals.dtypes import DType
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
 
-def test_map_batches_expr(constructor_eager: ConstructorEager) -> None:
+def test_map_batches_expr_compliant(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1))
-    assert_equal_data(expected, {"a": [2, 3, 4], "b": [5, 6, 7]})
+    expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1).name.suffix("1"))
+    assert_equal_data(expected, {"a1": [2, 3, 4], "b1": [5, 6, 7]})
 
 
-def test_map_batches_expr_numpy(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("value", "dtype"),
+    [(1, nw.Int64()), ("foo", nw.String()), ([1, 2], nw.List(nw.Int64()))],
+)
+def test_map_batches_expr_scalar(
+    constructor_eager: ConstructorEager, value: Any, dtype: DType
+) -> None:
+    df = nw.from_native(constructor_eager(data))
+    if (
+        dtype.is_nested()
+        and df.implementation.is_pandas_like()
+        and PANDAS_VERSION < (2, 2)
+    ):  # pragma: no cover
+        reason = "pandas is too old for nested types"
+        pytest.skip(reason=reason)
+
+    expected = df.select(
+        nw.col("a", "b").map_batches(
+            lambda _: value, returns_scalar=True, return_dtype=dtype
+        )
+    )
+    assert_equal_data(expected, {"a": [value], "b": [value]})
+
+
+def test_map_batches_expr_numpy_array(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = df.select(
         nw.col("a")
@@ -22,6 +56,10 @@ def test_map_batches_expr_numpy(constructor_eager: ConstructorEager) -> None:
         .sum()
     )
     assert_equal_data(expected, {"a": [9.0]})
+
+
+def test_map_batches_expr_numpy_scalar(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
 
     expected = df.select(
         nw.all().map_batches(lambda s: s.to_numpy().argmax(), returns_scalar=True)
