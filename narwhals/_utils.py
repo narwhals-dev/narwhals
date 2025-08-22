@@ -2035,7 +2035,7 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
-@lru_cache(maxsize=8)
+@cache
 def discover_plugins() -> EntryPoints:
     from importlib.metadata import entry_points
 
