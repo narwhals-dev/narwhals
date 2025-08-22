@@ -568,7 +568,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         for plugin in discovered_plugins:
             obj = plugin.load()
             if obj.is_native_object(native_object):
-                compliant_object = obj.from_native(native_object)
+                compliant_object = obj.from_native(native_object, version)
                 return _translate_if_compliant(
                     compliant_object,
                     pass_through=pass_through,
