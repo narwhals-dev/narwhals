@@ -1,3 +1,4 @@
+# ruff: noqa: ERA001
 from __future__ import annotations
 
 import warnings
@@ -9,10 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import (
-    native_to_narwhals_dtype,
-    object_native_to_narwhals_dtype,
-)
 from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
@@ -125,24 +122,37 @@ class AggExpr:
                 msg = f"`keep='{keep}' is not implemented in group by context"
                 raise NotImplementedError(msg)
 
-            select = names[0] if len(names) == 1 else list(names)
-            Series = self.expr.__native_namespace__().Series
-            result = group_by._grouped[list(names)].agg(Series.mode)
-            native_dtypes = result.dtypes
+            cols = list(names)
+            native = group_by.compliant.native
+            group_by_kwargs = {
+                "sort": False,
+                "as_index": True,
+                "dropna": group_by._drop_null_keys,
+                "observed": True,
+            }
 
-            version = self.expr._version
-            impl = self.expr._implementation
-            nw_dtypes = (
-                native_to_narwhals_dtype(native_dtypes[col], version, impl)  # type: ignore[index, misc]
-                if native_dtypes[col] != "object"  # type: ignore[index, misc]
-                else object_native_to_narwhals_dtype(result[col], version, impl)  # type: ignore[arg-type]
-                for col in result.columns
+            # Implementation based on the following suggestion:
+            # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
+            # Once pandas min supported version is 1.4.0, we can rewrite it as:
+            # ```py
+            # result = (
+            #     group_by._grouped.value_counts()
+            #     .sort_values(ascending=False)
+            #     .reset_index(cols)
+            #     .groupby(group_by._keys, **group_by_kwargs)[cols]
+            #     .head(1)
+            #     .sort_index()
+            # )
+            # ```
+            result = (
+                native.groupby([*group_by._keys, *cols], **group_by_kwargs)
+                .size()
+                .sort_values(ascending=False)
+                .reset_index(cols)
+                .groupby(group_by._keys, **group_by_kwargs)[cols]
+                .head(1)
+                .sort_index()
             )
-
-            if any(dtype == version.dtypes.Object() for dtype in nw_dtypes):
-                msg = "TODO"
-                raise NotImplementedError(msg)
-
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(group_by._grouped[select])

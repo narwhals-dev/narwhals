@@ -78,12 +78,10 @@ def test_mode_group_by_unimodal(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pyarrow() or impl.is_dask() or impl.is_modin():
+    if impl.is_pyarrow() or impl.is_dask():
         # Tracker:
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)
-        #   - Modin: TODO(FBruzzesi) - Currently raises the following exception:
-        #       >  TypeError: super(type, obj): obj must be an instance or subtype of type
         request.applymarker(pytest.mark.xfail)
 
     result = (
@@ -103,9 +101,8 @@ def test_mode_group_by_multimodal(
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
 
-    if impl.is_pandas_like() or impl.is_pyarrow() or impl.is_dask():
+    if impl.is_pyarrow() or impl.is_dask():
         # Tracker:
-        #   - Pandas: Multimodal is not supported
         #   - Pyarrow: https://github.com/apache/arrow/issues/20359
         #   - Dask: TODO(FBruzzesi)
 
