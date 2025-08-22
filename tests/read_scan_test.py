@@ -182,8 +182,7 @@ def test_scan_fail_spark_like_without_session(
     backend: _SparkLike,
     scan_method: Literal["scan_csv", "scan_parquet"],
 ) -> None:
-    _ = pytest.importorskip(backend)
-
+    pytest.importorskip(backend)
     with pytest.raises(
         ValueError,
         match="Spark like backends require a session object to be passed in `kwargs`.",
