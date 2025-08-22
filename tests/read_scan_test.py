@@ -42,16 +42,25 @@ def parquet_path(tmp_path_factory: pytest.TempPathFactory) -> str:
     return filepath
 
 
-def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
-    result = nw.read_csv(csv_path, backend=eager_backend)
+def assert_equal_eager(result: nw.DataFrame[Any]) -> None:
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
+
+
+def assert_equal_lazy(result: nw.LazyFrame[Any]) -> None:
+    assert_equal_data(result, data)
+    assert isinstance(result, nw.LazyFrame)
+
+
+def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
+    result = nw.read_csv(csv_path, backend=eager_backend)
+    assert_equal_eager(result)
 
 
 @skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: str) -> None:
     result = nw.read_csv(csv_path, backend=pd, engine="pyarrow")
-    assert_equal_data(result, data)
+    assert_equal_eager(result)
 
 
 @lazy_core_backend
@@ -95,8 +104,7 @@ def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     backend = nw.get_native_namespace(df)
     result = nw.scan_csv(csv_path, backend=backend, **kwargs)
-    assert_equal_data(result, data)
-    assert isinstance(result, nw.LazyFrame)
+    assert_equal_lazy(result)
 
 
 @skipif_pandas_lt_1_5
@@ -108,14 +116,13 @@ def test_scan_csv_kwargs(csv_path: str) -> None:
 @skipif_pandas_lt_1_5
 def test_read_parquet(parquet_path: str, eager_backend: EagerAllowed) -> None:
     result = nw.read_parquet(parquet_path, backend=eager_backend)
-    assert_equal_data(result, data)
-    assert isinstance(result, nw.DataFrame)
+    assert_equal_eager(result)
 
 
 @skipif_pandas_lt_1_5
 def test_read_parquet_kwargs(parquet_path: str) -> None:
     result = nw.read_parquet(parquet_path, backend=pd, engine="pyarrow")
-    assert_equal_data(result, data)
+    assert_equal_eager(result)
 
 
 @lazy_core_backend
@@ -159,14 +166,13 @@ def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     backend = nw.get_native_namespace(df)
     result = nw.scan_parquet(parquet_path, backend=backend, **kwargs)
-    assert_equal_data(result, data)
-    assert isinstance(result, nw.LazyFrame)
+    assert_equal_lazy(result)
 
 
 @skipif_pandas_lt_1_5
 def test_scan_parquet_kwargs(parquet_path: str) -> None:
     result = nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow")
-    assert_equal_data(result, data)
+    assert_equal_lazy(result)
 
 
 @spark_like_backend
