@@ -1646,15 +1646,6 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_compliant_object(obj: Any) -> bool:
-    return (
-        is_compliant_dataframe(obj)
-        or is_compliant_lazyframe(obj)
-        or is_compliant_series(obj)
-        or is_compliant_expr(obj)
-    )
-
-
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     """Return True if `impl` allows eager operations."""
     return impl in {
