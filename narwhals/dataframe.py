@@ -26,6 +26,7 @@ from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollec
 from narwhals._utils import (
     Implementation,
     Version,
+    _ImplDescriptor,
     can_dataframe_lazy,
     can_lazyframe_collect,
     check_columns_exist,
@@ -71,37 +72,8 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
-    from narwhals._namespace import (
-        _CuDFDataFrame,
-        _ModinDataFrame,
-        _NativeDask,
-        _NativeDuckDB,
-        _NativeIbis,
-        _NativePandasLikeDataFrame,
-        _NativePandasLikeSeries,
-        _NativeSQLFrame,
-    )
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import (
-        Dask,
-        DuckDB,
-        EagerAllowed,
-        Ibis,
-        IntoBackend,
-        Polars,
-        _ArrowImpl,
-        _CudfImpl,
-        _DaskImpl,
-        _DuckDBImpl,
-        _EagerAllowedImpl,
-        _IbisImpl,
-        _LazyAllowedImpl,
-        _ModinImpl,
-        _PandasImpl,
-        _PandasLikeImpl,
-        _PolarsImpl,
-        _SQLFrameImpl,
-    )
+    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -131,70 +103,6 @@ R = TypeVar("R")
 
 MultiColSelector: TypeAlias = "_MultiColSelector[Series[Any]]"
 MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
-
-
-class _ImplDescriptor:
-    def __set_name__(self, owner: type[Any], name: str) -> None:
-        self.__name__: str = name
-
-    @overload
-    def __get__(
-        self,
-        instance: DataFrame[pl.DataFrame] | LazyFrame[pl.LazyFrame] | Series[pl.Series],
-        owner: Any,
-    ) -> _PolarsImpl: ...
-    @overload
-    def __get__(
-        self, instance: BaseFrame[pd.DataFrame] | Series[pd.DataFrame], owner: Any
-    ) -> _PandasImpl: ...
-    @overload
-    def __get__(self, instance: BaseFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
-
-    @overload  # oof, looks like these two need their names aligned 😅
-    def __get__(self, instance: BaseFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
-    @overload
-    def __get__(
-        self,
-        instance: BaseFrame[_NativePandasLikeDataFrame] | Series[_NativePandasLikeSeries],
-        owner: Any,
-    ) -> _PandasLikeImpl: ...
-    @overload
-    def __get__(
-        self, instance: BaseFrame[pa.Table] | Series[pa.ChunkedArray[Any]], owner: Any
-    ) -> _ArrowImpl: ...
-    @overload
-    def __get__(
-        self,
-        instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table]
-        | Series[pl.Series | pd.Series[Any] | pa.ChunkedArray[Any]],
-        owner: Any,
-    ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
-    @overload
-    def __get__(self, instance: LazyFrame[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
-    @overload
-    def __get__(
-        self, instance: LazyFrame[_NativeSQLFrame], owner: Any
-    ) -> _SQLFrameImpl: ...
-    @overload
-    def __get__(self, instance: LazyFrame[_NativeDask], owner: Any) -> _DaskImpl: ...
-    @overload
-    def __get__(self, instance: LazyFrame[_NativeIbis], owner: Any) -> _IbisImpl: ...
-    @overload
-    def __get__(self, instance: None, owner: Any) -> Self: ...
-    @overload
-    def __get__(
-        self, instance: DataFrame[Any] | Series[Any], owner: Any
-    ) -> _EagerAllowedImpl: ...
-    @overload
-    def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
-    def __get__(
-        self,
-        instance: DataFrame[Any] | LazyFrame[Any] | BaseFrame[Any] | Series[Any] | None,
-        owner: Any,
-    ) -> Any:
-        if instance is None:  # pragma: no cover
-            return self
-        return instance._compliant._implementation
 
 
 class BaseFrame(Generic[_FrameT]):
