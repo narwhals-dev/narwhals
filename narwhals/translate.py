@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
-import contextlib
 
 from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._namespace import (
