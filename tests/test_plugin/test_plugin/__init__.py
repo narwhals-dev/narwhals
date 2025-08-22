@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, Any
 from typing_extensions import TypeIs
 
 if TYPE_CHECKING:
-    from test_plugin.dataframe import DictFrame, DictLazyFrame
+    from test_plugin.dataframe import (  # type: ignore[import-not-found]
+        DictFrame,
+        DictLazyFrame,
+    )
 
     from narwhals.utils import Version
 

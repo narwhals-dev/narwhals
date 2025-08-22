@@ -13,13 +13,11 @@ from narwhals.typing import CompliantLazyFrame
 DictFrame: TypeAlias = dict[str, list[Any]]
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeIs
-
-    from narwhals.dataframe import LazyFrame
+    from typing_extensions import Self
 
 
 class DictLazyFrame(
-    CompliantLazyFrame[Any, "DictFrame", "LazyFrame[DictFrame]"],  # pyright: ignore[reportInvalidTypeArguments]
+    CompliantLazyFrame[Any, "DictFrame", "LazyFrame[DictFrame]"],  # type: ignore[type-var]
     ValidateBackendVersion,
 ):
     _implementation = Implementation.UNKNOWN
@@ -27,13 +25,6 @@ class DictLazyFrame(
     def __init__(self, native_dataframe: DictFrame, *, version: Version) -> None:
         self._native_frame: DictFrame = native_dataframe
         self._version = version
-
-    @staticmethod
-    def _is_native(obj: DictFrame | Any) -> TypeIs[DictFrame]:
-        return isinstance(obj, dict)
-
-    def to_narwhals(self) -> LazyFrame[DictFrame]:  # pyright: ignore[reportInvalidTypeArguments]
-        return self._version.lazyframe(self, level="lazy")
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
@@ -52,6 +43,7 @@ class DictLazyFrame(
     schema = not_implemented()  # type: ignore[assignment]
 
     # Helpers
+    _is_native = not_implemented()
     _iter_columns = not_implemented()
 
     # Functions
@@ -72,6 +64,7 @@ class DictLazyFrame(
     simple_select = not_implemented()
     sink_parquet = not_implemented()
     sort = not_implemented()
+    to_narwhals = not_implemented()
     unique = not_implemented()
     unpivot = not_implemented()
     with_columns = not_implemented()
