@@ -89,12 +89,12 @@ class Expr:
 
     def _with_nary(
         self,
-        nary_function: Callable[..., Any],
+        n_ary_function: Callable[..., Any],
         *args: IntoExpr | NonNestedLiteral | _1DArray,
     ) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, nary_function, self, *args, str_as_lit=False
+                plx, n_ary_function, self, *args, str_as_lit=False
             ),
             combine_metadata(
                 self,

@@ -608,7 +608,7 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
 
 def apply_n_ary_operation(
     plx: CompliantNamespaceAny,
-    nary_function: Callable[..., CompliantExprAny],
+    n_ary_function: Callable[..., CompliantExprAny],
     *comparands: IntoExpr | NonNestedLiteral | _1DArray,
     str_as_lit: bool,
 ) -> CompliantExprAny:
@@ -628,4 +628,4 @@ def apply_n_ary_operation(
         else compliant_expr
         for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
     )
-    return nary_function(*compliant_exprs)
+    return n_ary_function(*compliant_exprs)
