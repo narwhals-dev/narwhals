@@ -85,7 +85,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
       - name: install-test-plugin
-        run: uv pip install -e tests/test-plugin --system
+        run: uv pip install -e tests/test_plugin --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
