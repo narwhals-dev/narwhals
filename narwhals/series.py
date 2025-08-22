@@ -2070,10 +2070,20 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.to_arrow()
 
-    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
+    @overload
+    def mode(self, *, keep: Literal["all"]) -> Self: ...
+
+    @overload
+    def mode(self, *, keep: Literal["any"]) -> NonNestedLiteral: ...
+
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self | NonNestedLiteral:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Note:
+            For `keep="any"` a scalar is returned, while for `keep="all"` a Series in
+            returned even in the case of unimodal values.
 
         Arguments:
             keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
@@ -2088,7 +2098,8 @@ class Series(Generic[IntoSeriesT]):
             1    2
             dtype: int64
         """
-        return self._with_compliant(self._compliant_series.mode(keep=keep))
+        result = self._with_compliant(self._compliant_series.mode(keep=keep))
+        return result.item(0) if keep == "any" else result
 
     def is_finite(self) -> Self:
         """Returns a boolean Series indicating which values are finite.

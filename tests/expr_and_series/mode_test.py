@@ -32,6 +32,15 @@ def test_mode_series_keep_all(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result}, expected)
 
 
+def test_mode_series_keep_any(constructor_eager: ConstructorEager) -> None:
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    result_a = frame["a"].mode(keep="any")
+    assert result_a in {1, 2}
+
+    result_b = frame["b"].mode(keep="any")
+    assert result_b == 3
+
+
 def test_mode_different_lengths_keep_all(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
         pytest.skip()
