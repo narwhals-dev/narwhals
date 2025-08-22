@@ -36,5 +36,5 @@ def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     r2 = nw.to_native(df.sample(n=n, seed=123))
     r3 = nw.to_native(df.sample(n=n, seed=42))
 
-    assert r1.equals(r2)  # type: ignore[union-attr]
-    assert not r1.equals(r3)  # type: ignore[union-attr]
+    assert r1.equals(r2)  # type: ignore[attr-defined]
+    assert not r1.equals(r3)  # type: ignore[attr-defined]

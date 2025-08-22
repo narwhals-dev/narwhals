@@ -51,7 +51,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        NativeFrame,
+        NativeDataFrame,
         NativeLazyFrame,
         NativeSeries,
         NonNestedLiteral,
@@ -301,7 +301,9 @@ def from_dict(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_dict` function in the top-level namespace.
-            native_frame: NativeFrame = _native_namespace.from_dict(data, schema=schema)
+            native_frame: NativeDataFrame = _native_namespace.from_dict(
+                data, schema=schema
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_dict` function."
             raise AttributeError(msg) from e
@@ -397,7 +399,9 @@ def from_numpy(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `from_numpy` function in the top-level namespace.
-            native_frame: NativeFrame = _native_namespace.from_numpy(data, schema=schema)
+            native_frame: NativeDataFrame = _native_namespace.from_numpy(
+                data, schema=schema
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `from_numpy` function."
             raise AttributeError(msg) from e
@@ -470,7 +474,7 @@ def from_arrow(
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement PyCapsule support
-            native: NativeFrame = _native_namespace.DataFrame(native_frame)
+            native: NativeDataFrame = _native_namespace.DataFrame(native_frame)
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
             raise AttributeError(msg) from e
@@ -623,7 +627,7 @@ def read_csv(
     """
     impl = Implementation.from_backend(backend)
     native_namespace = impl.to_native_namespace()
-    native_frame: NativeFrame
+    native_frame: NativeDataFrame
     if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
         validate_separator(separator, "sep", **kwargs)
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
@@ -699,7 +703,7 @@ def scan_csv(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
     elif implementation in {
@@ -786,7 +790,7 @@ def read_parquet(
     """
     impl = Implementation.from_backend(backend)
     native_namespace = impl.to_native_namespace()
-    native_frame: NativeFrame
+    native_frame: NativeDataFrame
     if impl in {
         Implementation.POLARS,
         Implementation.PANDAS,
@@ -889,7 +893,7 @@ def scan_parquet(
     """
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
-    native_frame: NativeFrame | NativeLazyFrame
+    native_frame: NativeDataFrame | NativeLazyFrame
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {
