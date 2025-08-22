@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 
 
 class DictLazyFrame(
-    CompliantLazyFrame[Any, "DictFrame", "LazyFrame[DictFrame]"], ValidateBackendVersion
+    CompliantLazyFrame[Any, "DictFrame", "LazyFrame[DictFrame]"],
+    ValidateBackendVersion,  # pyright: ignore[reportInvalidTypeArguments]
 ):
     _implementation = Implementation.UNKNOWN
 
