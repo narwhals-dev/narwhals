@@ -14,6 +14,7 @@ import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from types import ModuleType
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
 
@@ -50,6 +51,10 @@ def assert_equal_eager(result: nw.DataFrame[Any]) -> None:
 def assert_equal_lazy(result: nw.LazyFrame[Any]) -> None:
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
+
+
+def native_namespace(cb: Constructor, /) -> ModuleType:
+    return nw.get_native_namespace(nw.from_native(cb(data)))  # type: ignore[no-any-return]
 
 
 def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
@@ -100,10 +105,7 @@ def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
 
     else:
         kwargs = {}
-
-    df = nw.from_native(constructor(data))
-    backend = nw.get_native_namespace(df)
-    result = nw.scan_csv(csv_path, backend=backend, **kwargs)
+    result = nw.scan_csv(csv_path, backend=native_namespace(constructor), **kwargs)
     assert_equal_lazy(result)
 
 
@@ -163,8 +165,7 @@ def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
         kwargs = {"session": session, "inferSchema": True, "header": True}
     else:
         kwargs = {}
-    df = nw.from_native(constructor(data))
-    backend = nw.get_native_namespace(df)
+    backend = native_namespace(constructor)
     result = nw.scan_parquet(parquet_path, backend=backend, **kwargs)
     assert_equal_lazy(result)
 
