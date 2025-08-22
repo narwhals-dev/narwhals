@@ -76,7 +76,7 @@ def std(ddof: int) -> _AggFn:
 
 def mode(keep: ModeKeepStrategy) -> dd.Aggregation:
     """Mode aggregation for Dask DataFrame grouped operations."""
-    if keep != "any":
+    if keep != "any":  # pragma: no cover
         msg = (
             f"`keep='{keep}'` is not implemented for backend {Implementation.DASK}\n\n"
             "Hint: Use `nw.col(...).mode(keep='any')` instead."
