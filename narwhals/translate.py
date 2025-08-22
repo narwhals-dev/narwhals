@@ -329,9 +329,9 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
     pass_through: bool = False,
     eager_only: bool = False,
     # Interchange-level was removed after v1
-    eager_or_interchange_only: bool = False,
-    series_only: bool = False,
-    allow_series: bool | None = None,
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
     version: Version,
 ) -> Any:
     if is_compliant_dataframe(compliant_object):
@@ -376,9 +376,9 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     pass_through: bool = False,
     eager_only: bool = False,
     # Interchange-level was removed after v1
-    eager_or_interchange_only: bool = False,
-    series_only: bool = False,
-    allow_series: bool | None = None,
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
     version: Version,
 ) -> Any:
     from narwhals._interchange.dataframe import supports_dataframe_interchange
@@ -401,14 +401,17 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         raise ValueError(msg)
 
     # Extensions
-    if translated := _translate_if_compliant(
-        native_object,
-        pass_through=pass_through,
-        eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
-        series_only=series_only,
-        version=version,
-    ):
+    if (
+        translated := _translate_if_compliant(
+            native_object,
+            pass_through=pass_through,
+            eager_only=eager_only,
+            eager_or_interchange_only=eager_or_interchange_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            version=version,
+        )
+    ) is not None:
         return translated
 
     # Polars
@@ -575,6 +578,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                     eager_only=eager_only,
                     eager_or_interchange_only=eager_or_interchange_only,
                     series_only=series_only,
+                    allow_series=allow_series,
                     version=version,
                 )
 
