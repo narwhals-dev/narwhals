@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 import pytest
@@ -166,9 +166,7 @@ def test_scan_parquet_kwargs(parquet_path: str) -> None:
 @spark_like_backend
 @pytest.mark.parametrize("scan_method", ["scan_csv", "scan_parquet"])
 def test_scan_fail_spark_like_without_session(
-    parquet_path: str,
-    backend: _SparkLike,
-    scan_method: Literal["scan_csv", "scan_parquet"],
+    parquet_path: str, backend: _SparkLike, scan_method: str
 ) -> None:
     pytest.importorskip(backend)
     pattern = re.compile(r"spark.+backend.+require.+session", re.IGNORECASE)
