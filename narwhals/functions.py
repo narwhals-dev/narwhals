@@ -1733,9 +1733,7 @@ def concat_str(
             *flat_exprs,
             str_as_lit=False,
         ),
-        combine_metadata(
-            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-        ),
+        ExprMetadata.from_horizontal_op(*flat_exprs),
     )
 
 
