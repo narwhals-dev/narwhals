@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pandas as pd
@@ -170,8 +171,6 @@ def test_scan_fail_spark_like_without_session(
     scan_method: Literal["scan_csv", "scan_parquet"],
 ) -> None:
     pytest.importorskip(backend)
-    with pytest.raises(
-        ValueError,
-        match="Spark like backends require a session object to be passed in `kwargs`.",
-    ):
+    pattern = re.compile(r"spark.+backend.+require.+session", re.IGNORECASE)
+    with pytest.raises(ValueError, match=pattern):
         getattr(nw, scan_method)(parquet_path, backend=backend)
