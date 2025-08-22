@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
-
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
     PANDAS_VERSION < (1, 5), reason="too old for pyarrow"
 )
@@ -62,14 +61,12 @@ def native_namespace(cb: Constructor, /) -> ModuleType:
 
 
 def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
-    result = nw.read_csv(csv_path, backend=eager_backend)
-    assert_equal_eager(result)
+    assert_equal_eager(nw.read_csv(csv_path, backend=eager_backend))
 
 
 @skipif_pandas_lt_1_5
 def test_read_csv_kwargs(csv_path: str) -> None:
-    result = nw.read_csv(csv_path, backend=pd, engine="pyarrow")
-    assert_equal_eager(result)
+    assert_equal_eager(nw.read_csv(csv_path, backend=pd, engine="pyarrow"))
 
 
 @lazy_core_backend
@@ -114,26 +111,23 @@ def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
         kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
     else:
         kwargs = {}
-    result = nw.scan_csv(csv_path, backend=native_namespace(constructor), **kwargs)
-    assert_equal_lazy(result)
+    backend = native_namespace(constructor)
+    assert_equal_lazy(nw.scan_csv(csv_path, backend=backend, **kwargs))
 
 
 @skipif_pandas_lt_1_5
 def test_scan_csv_kwargs(csv_path: str) -> None:
-    result = nw.scan_csv(csv_path, backend=pd, engine="pyarrow")
-    assert_equal_data(result, data)
+    assert_equal_data(nw.scan_csv(csv_path, backend=pd, engine="pyarrow"), data)
 
 
 @skipif_pandas_lt_1_5
 def test_read_parquet(parquet_path: str, eager_backend: EagerAllowed) -> None:
-    result = nw.read_parquet(parquet_path, backend=eager_backend)
-    assert_equal_eager(result)
+    assert_equal_eager(nw.read_parquet(parquet_path, backend=eager_backend))
 
 
 @skipif_pandas_lt_1_5
 def test_read_parquet_kwargs(parquet_path: str) -> None:
-    result = nw.read_parquet(parquet_path, backend=pd, engine="pyarrow")
-    assert_equal_eager(result)
+    assert_equal_eager(nw.read_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
 @lazy_core_backend
@@ -153,14 +147,12 @@ def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     else:
         kwargs = {}
     backend = native_namespace(constructor)
-    result = nw.scan_parquet(parquet_path, backend=backend, **kwargs)
-    assert_equal_lazy(result)
+    assert_equal_lazy(nw.scan_parquet(parquet_path, backend=backend, **kwargs))
 
 
 @skipif_pandas_lt_1_5
 def test_scan_parquet_kwargs(parquet_path: str) -> None:
-    result = nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow")
-    assert_equal_lazy(result)
+    assert_equal_lazy(nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
 @spark_like_backend
