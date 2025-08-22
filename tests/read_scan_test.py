@@ -14,43 +14,48 @@ import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from pathlib import Path
 
     from narwhals._typing import EagerAllowed, _LazyOnly
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
-def test_read_csv(tmp_path: Path, eager_backend: EagerAllowed) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.csv")
-    df_pl.write_csv(filepath)
-    result = nw.read_csv(filepath, backend=eager_backend)
+@pytest.fixture(scope="module")
+def csv_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+    fp = tmp_path_factory.mktemp("data") / "file.csv"
+    filepath = str(fp)
+    pl.DataFrame(data).write_csv(filepath)
+    return filepath
+
+
+@pytest.fixture(scope="module")
+def parquet_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+    fp = tmp_path_factory.mktemp("data") / "file.parquet"
+    filepath = str(fp)
+    pl.DataFrame(data).write_parquet(filepath)
+    return filepath
+
+
+def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
+    result = nw.read_csv(csv_path, backend=eager_backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_read_csv_kwargs(tmp_path: Path) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.csv")
-    df_pl.write_csv(filepath)
-    result = nw.read_csv(filepath, backend=pd, engine="pyarrow")
+def test_read_csv_kwargs(csv_path: str) -> None:
+    result = nw.read_csv(csv_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
 @pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
-def test_read_csv_raise_with_lazy(tmp_path: Path, backend: _LazyOnly) -> None:
+def test_read_csv_raise_with_lazy(csv_path: str, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.csv")
-    df_pl.write_csv(filepath)
-
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_csv(filepath, backend=backend)  # type: ignore[arg-type]
+        nw.read_csv(csv_path, backend=backend)  # type: ignore[arg-type]
 
 
-def test_scan_csv(tmp_path: Path, constructor: Constructor) -> None:
+def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
@@ -81,59 +86,43 @@ def test_scan_csv(tmp_path: Path, constructor: Constructor) -> None:
     else:
         kwargs = {}
 
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.csv")
-    df_pl.write_csv(filepath)
     df = nw.from_native(constructor(data))
     backend = nw.get_native_namespace(df)
-    result = nw.scan_csv(filepath, backend=backend, **kwargs)
+    result = nw.scan_csv(csv_path, backend=backend, **kwargs)
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_scan_csv_kwargs(tmp_path: Path) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.csv")
-    df_pl.write_csv(filepath)
-    result = nw.scan_csv(filepath, backend=pd, engine="pyarrow")
+def test_scan_csv_kwargs(csv_path: str) -> None:
+    result = nw.scan_csv(csv_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_read_parquet(tmp_path: Path, constructor_eager: ConstructorEager) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
+def test_read_parquet(parquet_path: str, constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
-    result = nw.read_parquet(filepath, backend=backend)
+    result = nw.read_parquet(parquet_path, backend=backend)
     assert_equal_data(result, data)
     assert isinstance(result, nw.DataFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_read_parquet_kwargs(tmp_path: Path) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
-    result = nw.read_parquet(filepath, backend=pd, engine="pyarrow")
+def test_read_parquet_kwargs(parquet_path: str) -> None:
+    result = nw.read_parquet(parquet_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
 @pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
-def test_read_parquet_raise_with_lazy(tmp_path: Path, backend: _LazyOnly) -> None:
+def test_read_parquet_raise_with_lazy(parquet_path: str, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
-
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_parquet(filepath, backend=backend)  # type: ignore[arg-type]
+        nw.read_parquet(parquet_path, backend=backend)  # type: ignore[arg-type]
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_scan_parquet(tmp_path: Path, constructor: Constructor) -> None:
+def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         from sqlframe.duckdb import DuckDBSession
@@ -163,40 +152,30 @@ def test_scan_parquet(tmp_path: Path, constructor: Constructor) -> None:
         kwargs = {"session": session, "inferSchema": True, "header": True}
     else:
         kwargs = {}
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
     df = nw.from_native(constructor(data))
     backend = nw.get_native_namespace(df)
-    result = nw.scan_parquet(filepath, backend=backend, **kwargs)
+    result = nw.scan_parquet(parquet_path, backend=backend, **kwargs)
     assert_equal_data(result, data)
     assert isinstance(result, nw.LazyFrame)
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_scan_parquet_kwargs(tmp_path: Path) -> None:
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
-    result = nw.scan_parquet(filepath, backend=pd, engine="pyarrow")
+def test_scan_parquet_kwargs(parquet_path: str) -> None:
+    result = nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow")
     assert_equal_data(result, data)
 
 
 @pytest.mark.parametrize("spark_like_backend", ["pyspark", "sqlframe"])
 @pytest.mark.parametrize("scan_method", ["scan_csv", "scan_parquet"])
 def test_scan_fail_spark_like_without_session(
-    tmp_path: Path,
+    parquet_path: str,
     spark_like_backend: str,
     scan_method: Literal["scan_csv", "scan_parquet"],
 ) -> None:
     _ = pytest.importorskip(spark_like_backend)
 
-    df_pl = pl.DataFrame(data)
-    filepath = str(tmp_path / "file.parquet")
-    df_pl.write_parquet(filepath)
-
     with pytest.raises(
         ValueError,
         match="Spark like backends require a session object to be passed in `kwargs`.",
     ):
-        getattr(nw, scan_method)("file.parquet", backend=spark_like_backend)
+        getattr(nw, scan_method)(parquet_path, backend=spark_like_backend)
