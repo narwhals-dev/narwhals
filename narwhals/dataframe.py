@@ -78,6 +78,7 @@ if TYPE_CHECKING:
         _NativeDuckDB,
         _NativeIbis,
         _NativePandasLikeDataFrame,
+        _NativePandasLikeSeries,
         _NativeSQLFrame,
     )
     from narwhals._translate import IntoArrowTable
@@ -138,10 +139,14 @@ class _ImplDescriptor:
 
     @overload
     def __get__(
-        self, instance: DataFrame[pl.DataFrame] | LazyFrame[pl.LazyFrame], owner: Any
+        self,
+        instance: DataFrame[pl.DataFrame] | LazyFrame[pl.LazyFrame] | Series[pl.Series],
+        owner: Any,
     ) -> _PolarsImpl: ...
     @overload
-    def __get__(self, instance: BaseFrame[pd.DataFrame], owner: Any) -> _PandasImpl: ...
+    def __get__(
+        self, instance: BaseFrame[pd.DataFrame] | Series[pd.DataFrame], owner: Any
+    ) -> _PandasImpl: ...
     @overload
     def __get__(self, instance: BaseFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
 
@@ -149,13 +154,20 @@ class _ImplDescriptor:
     def __get__(self, instance: BaseFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
     @overload
     def __get__(
-        self, instance: BaseFrame[_NativePandasLikeDataFrame], owner: Any
+        self,
+        instance: BaseFrame[_NativePandasLikeDataFrame] | Series[_NativePandasLikeSeries],
+        owner: Any,
     ) -> _PandasLikeImpl: ...
     @overload
-    def __get__(self, instance: BaseFrame[pa.Table], owner: Any) -> _ArrowImpl: ...
+    def __get__(
+        self, instance: BaseFrame[pa.Table] | Series[pa.ChunkedArray[Any]], owner: Any
+    ) -> _ArrowImpl: ...
     @overload
     def __get__(
-        self, instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table], owner: Any
+        self,
+        instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table]
+        | Series[pl.Series | pd.Series[Any] | pa.ChunkedArray[Any]],
+        owner: Any,
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
     def __get__(self, instance: LazyFrame[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
@@ -170,10 +182,16 @@ class _ImplDescriptor:
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     @overload
-    def __get__(self, instance: DataFrame[Any], owner: Any) -> _EagerAllowedImpl: ...
+    def __get__(
+        self, instance: DataFrame[Any] | Series[Any], owner: Any
+    ) -> _EagerAllowedImpl: ...
     @overload
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
-    def __get__(self, instance: Any | None, owner: Any) -> Any:
+    def __get__(
+        self,
+        instance: DataFrame[Any] | LazyFrame[Any] | BaseFrame[Any] | Series[Any] | None,
+        owner: Any,
+    ) -> Any:
         if instance is None:  # pragma: no cover
             return self
         return instance._compliant._implementation
