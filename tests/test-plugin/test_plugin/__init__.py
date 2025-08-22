@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING, Any
 from typing_extensions import TypeIs
 
 if TYPE_CHECKING:
-    from narwhals.utils import Version
     from test_plugin.dataframe import DictFrame, DictLazyFrame
+
+    from narwhals.utils import Version
 
 
 def from_native(native_object: DictFrame, version: Version) -> DictLazyFrame:
