@@ -10,7 +10,6 @@ from narwhals._utils import generate_temporary_column_name
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from types import ModuleType
 
     from typing_extensions import Self
 
@@ -134,13 +133,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
         return PandasLikeNamespace(self._implementation, version=self._version)
-
-    def __native_namespace__(self) -> ModuleType:
-        if self._implementation.is_pandas_like():
-            return self._implementation.to_native_namespace()
-
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
-        raise AssertionError(msg)
 
     def __narwhals_expr__(self) -> None: ...
 

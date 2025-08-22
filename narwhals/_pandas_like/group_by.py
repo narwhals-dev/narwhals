@@ -1,4 +1,3 @@
-# ruff: noqa: ERA001
 from __future__ import annotations
 
 import warnings
@@ -124,34 +123,22 @@ class AggExpr:
 
             cols = list(names)
             native = group_by.compliant.native
-            group_by_kwargs = {
-                "sort": False,
-                "as_index": True,
-                "dropna": group_by._drop_null_keys,
-                "observed": True,
-            }
+            keys, kwargs = group_by._keys, group_by._kwargs
 
             # Implementation based on the following suggestion:
             # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
-            # Once pandas min supported version is 1.4.0, we can rewrite it as:
-            # ```py
-            # result = (
-            #     group_by._grouped.value_counts()
-            #     .sort_values(ascending=False)
-            #     .reset_index(cols)
-            #     .groupby(group_by._keys, **group_by_kwargs)[cols]
-            #     .head(1)
-            #     .sort_index()
-            # )
-            # ```
-            result = (
-                native.groupby([*group_by._keys, *cols], **group_by_kwargs)
-                .size()
-                .sort_values(ascending=False)
-                .reset_index(cols)
-                .groupby(group_by._keys, **group_by_kwargs)[cols]
-                .head(1)
-                .sort_index()
+            ns = group_by.compliant.__narwhals_namespace__()
+            result = ns._concat_horizontal(
+                [
+                    native.groupby([*keys, col], **kwargs)
+                    .size()
+                    .sort_values(ascending=False)
+                    .reset_index(col)
+                    .groupby(keys, **kwargs)[col]
+                    .head(1)
+                    .sort_index()
+                    for col in cols
+                ]
             )
         else:
             select = names[0] if len(names) == 1 else list(names)
@@ -218,6 +205,9 @@ class PandasLikeGroupBy(
     _output_key_names: list[str]
     """Stores the **original** version of group keys."""
 
+    _kwargs: dict[str, bool]
+    """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
+
     @property
     def exclude(self) -> tuple[str, ...]:
         """Group keys to ignore when expanding multi-output aggregations."""
@@ -242,13 +232,14 @@ class PandasLikeGroupBy(
         native = self.compliant.native
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
-        self._grouped: NativeGroupBy = native.groupby(
-            self._keys.copy(),
-            sort=False,
-            as_index=True,
-            dropna=drop_null_keys,
-            observed=True,
-        )
+
+        self._kwargs = {
+            "sort": False,
+            "as_index": True,
+            "dropna": drop_null_keys,
+            "observed": True,
+        }
+        self._grouped: NativeGroupBy = native.groupby(self._keys.copy(), **self._kwargs)
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True

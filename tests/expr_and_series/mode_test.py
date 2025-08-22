@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from typing import Any
 
 import pytest
 
@@ -11,8 +12,9 @@ from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_eq
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 data_group = {
     "grp": ["g1", "g1", "g1", "g1", "g2", "g2", "g2"],
-    "vals_unimodal": [1, 1, 2, 3, 3, 3, 4],
-    "vals_multimodal": [1, 1, 2, 2, 3, 3, 4],
+    "vals_unimodal": [2, 1, 1, 3, 3, 3, 4],
+    "vals_multimodal_num": [1, 1, 2, 2, 3, 3, 4],
+    "vals_multimodal_str": ["foo", "foo", "bar", "bar", "baz", "baz", "foo"],
 }
 
 
@@ -95,8 +97,19 @@ def test_mode_group_by_unimodal(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("mode_col", "expected_opt_1", "expected_opt_2"),
+    [
+        ("vals_multimodal_num", [1, 3], [2, 3]),
+        ("vals_multimodal_str", ["foo", "baz"], ["bar", "baz"]),
+    ],
+)
 def test_mode_group_by_multimodal(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    mode_col: str,
+    expected_opt_1: list[Any],
+    expected_opt_2: list[Any],
 ) -> None:
     df = nw.from_native(constructor(data_group))
     impl = df.implementation
@@ -110,14 +123,57 @@ def test_mode_group_by_multimodal(
 
     result = (
         df.group_by("grp")
-        .agg(nw.col("vals_multimodal").mode(keep="any"))
+        .agg(nw.col(mode_col).mode(keep="any"))
         .sort("grp")
         .lazy()
         .collect()
     )
     try:
-        expected = {"grp": ["g1", "g2"], "vals_multimodal": [1, 3]}
+        expected = {"grp": ["g1", "g2"], mode_col: expected_opt_1}
         assert_equal_data(result, expected)
     except AssertionError:  # pragma: no cover
-        expected = {"grp": ["g1", "g2"], "vals_multimodal": [2, 3]}
+        expected = {"grp": ["g1", "g2"], mode_col: expected_opt_2}
+        assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "mode_expr",
+    [
+        nw.col("vals_unimodal", "vals_multimodal_num").mode(keep="any"),
+        [
+            nw.col("vals_unimodal").mode(keep="any"),
+            nw.col("vals_multimodal_num").mode(keep="any"),
+        ],
+    ],
+)
+def test_mode_group_by_multiple_cols(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    mode_expr: nw.Expr | list[nw.Expr],
+) -> None:
+    df = nw.from_native(constructor(data_group))
+    impl = df.implementation
+
+    if impl.is_pyarrow() or impl.is_dask():
+        # Tracker:
+        #   - Pyarrow: https://github.com/apache/arrow/issues/20359
+        #   - Dask: TODO(FBruzzesi)
+
+        request.applymarker(pytest.mark.xfail)
+
+    result = df.group_by("grp").agg(mode_expr).sort("grp").lazy().collect()
+
+    try:
+        expected = {
+            "grp": ["g1", "g2"],
+            "vals_unimodal": [1, 3],
+            "vals_multimodal_num": [1, 3],
+        }
+        assert_equal_data(result, expected)
+    except AssertionError:  # pragma: no cover
+        expected = {
+            "grp": ["g1", "g2"],
+            "vals_unimodal": [1, 3],
+            "vals_multimodal_num": [2, 3],
+        }
         assert_equal_data(result, expected)
