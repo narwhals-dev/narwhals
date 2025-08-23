@@ -825,17 +825,13 @@ class PandasLikeDataFrame(
 
         if backend.is_spark_like():
             from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-            from narwhals.schema import Schema
 
             if session is None:
                 msg = "Spark like backends require `session` to be not None."
                 raise ValueError(msg)
 
-            spark_like_schema = Schema(self.schema)._to_spark_like(
-                backend=backend, session=session
-            )
             return SparkLikeLazyFrame(
-                session.createDataFrame(pandas_df, schema=spark_like_schema),
+                session.createDataFrame(pandas_df),
                 version=self._version,
                 implementation=backend,
                 validate_backend_version=True,

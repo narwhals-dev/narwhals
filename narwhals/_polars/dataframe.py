@@ -499,7 +499,6 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             from importlib.util import find_spec
 
             from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-            from narwhals.schema import Schema
 
             if session is None:
                 msg = "Spark like backends require `session` to be not None."
@@ -511,19 +510,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 Implementation.PYSPARK_CONNECT,
             } and backend._backend_version() >= (4, 0, 0)
 
-            data: Any
-            if can_create_from_arrow:
-                data = self.to_arrow()
-            elif find_spec("pandas") is not None:
-                data = self.to_pandas()
-            else:
-                data = self.iter_rows(named=True)
+            is_pandas_installed = find_spec("pandas") is not None
 
-            spark_like_schema = Schema(self.schema)._to_spark_like(
-                backend=backend, session=session
+            data: Any = (
+                self.to_arrow()
+                if can_create_from_arrow
+                else self.to_pandas()
+                if is_pandas_installed
+                else tuple(self.iter_rows(named=True))
             )
+
             return SparkLikeLazyFrame(
-                session.createDataFrame(data, schema=spark_like_schema),
+                session.createDataFrame(data),
                 version=self._version,
                 implementation=backend,
                 validate_backend_version=True,
