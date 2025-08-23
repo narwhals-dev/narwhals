@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-import os
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    assert_equal_data,
+    pyspark_session,
+    sqlframe_session,
+)
 
 pytest.importorskip("polars")
 import polars as pl
@@ -16,9 +21,6 @@ import polars as pl
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from types import ModuleType
-
-    from pyspark.sql import SparkSession
-    from sqlframe.duckdb import DuckDBSession
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
 
@@ -74,33 +76,6 @@ def test_read_csv_raise_with_lazy(csv_path: str, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
         nw.read_csv(csv_path, backend=backend)  # type: ignore[arg-type]
-
-
-def sqlframe_session() -> DuckDBSession:
-    from sqlframe.duckdb import DuckDBSession
-
-    # NOTE: `__new__` override inferred by `pyright` only
-    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
-    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
-
-
-def pyspark_session() -> SparkSession:  # pragma: no cover
-    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-    builder = (
-        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-        if is_spark_connect
-        else builder.master("local[1]").config("spark.ui.enabled", "false")
-    )
-    return (
-        builder.config("spark.default.parallelism", "1")
-        .config("spark.sql.shuffle.partitions", "2")
-        .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
-    )
 
 
 def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
