@@ -85,6 +85,8 @@ if TYPE_CHECKING:
         _NativePandas,
         _NativePandasLike,
         _NativePolars,
+        _NativePySpark,
+        _NativePySparkConnect,
         _NativeSQLFrame,
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
@@ -104,6 +106,8 @@ if TYPE_CHECKING:
         _PandasImpl,
         _PandasLikeImpl,
         _PolarsImpl,
+        _PySparkConnectImpl,
+        _PySparkImpl,
         _SQLFrameImpl,
     )
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -2112,6 +2116,11 @@ class _ImplDescriptor:
     def __get__(self, instance: NarwhalsObj[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
     def __get__(self, instance: NarwhalsObj[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    # NOTE: pyspark isn't installed for typing ci
+    @overload
+    def __get__(
+        self, instance: NarwhalsObj[_NativePySpark | _NativePySparkConnect], owner: Any
+    ) -> _PySparkImpl | _PySparkConnectImpl: ...
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     @overload
