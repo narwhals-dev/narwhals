@@ -7,7 +7,6 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Literal,
     Protocol,
     TypeVar,
     cast,
@@ -68,6 +67,8 @@ if TYPE_CHECKING:
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
 
+    Incomplete: TypeAlias = Any
+
     class _BasePandasLike(Sized, Protocol):
         index: Any
         """`mypy` doesn't like the asymmetric `property` setter in `pandas`."""
@@ -81,9 +82,13 @@ if TYPE_CHECKING:
         def shape(self) -> tuple[int, ...]: ...
         def set_axis(self, labels: Any, *, axis: Any = ..., copy: bool = ...) -> Self: ...
         def copy(self, deep: bool = ...) -> Self: ...  # noqa: FBT001
-        def rename(self, *args: Any, inplace: Literal[False], **kwds: Any) -> Self:
-            """`inplace=False` is required to avoid (incorrect?) default overloads."""
-            ...
+        def rename(self, *args: Any, **kwds: Any) -> Self | Incomplete:
+            """`mypy` & `pyright` disagree on overloads.
+
+            `Incomplete` used to fix [more important issue].
+
+            [issue]: https://github.com/narwhals-dev/narwhals/pull/3016#discussion_r2296139744
+            """
 
     class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 

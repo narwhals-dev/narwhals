@@ -9,7 +9,6 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals._namespace import _ModinDataFrame
     from narwhals._typing import (
         _ArrowImpl,
         _DaskImpl,
@@ -219,13 +218,7 @@ if TYPE_CHECKING:
         any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType]
         any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(df.implementation, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
-        # Fallback, remove if the above starts passing
-        assert_type(df.implementation, _EagerAllowedImpl)
-
-        # TODO @dangotbanned: Fix incompatible `_BasePandasLike.rename` signature
-        # When this ignore isn't needed - the overload to `_ModinImpl` will work
-        oops: _ModinDataFrame = native  # pyright: ignore[reportAssignmentType]  # noqa: F841
+        assert_type(df.implementation, _ModinImpl)
 
     def test_any_typing() -> None:
         df_impl = any_df.implementation

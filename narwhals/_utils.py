@@ -76,12 +76,12 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import EvalNames, NativeLazyFrameT
     from narwhals._namespace import (
         Namespace,
-        _CuDFDataFrame,
-        _ModinDataFrame,
         _NativeArrow,
+        _NativeCuDF,
         _NativeDask,
         _NativeDuckDB,
         _NativeIbis,
+        _NativeModin,
         _NativePandas,
         _NativePandasLike,
         _NativePolars,
@@ -2084,12 +2084,10 @@ class _ImplDescriptor:
         self, instance: NarwhalsObj[_NativePandas], owner: Any
     ) -> _PandasImpl: ...
     @overload
-    def __get__(
-        self, instance: NarwhalsObj[_ModinDataFrame], owner: Any
-    ) -> _ModinImpl: ...
+    def __get__(self, instance: NarwhalsObj[_NativeModin], owner: Any) -> _ModinImpl: ...
 
     @overload  # oof, looks like these two need their names aligned 😅
-    def __get__(self, instance: NarwhalsObj[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
+    def __get__(self, instance: NarwhalsObj[_NativeCuDF], owner: Any) -> _CudfImpl: ...
     @overload
     def __get__(
         self, instance: NarwhalsObj[_NativePandasLike], owner: Any
