@@ -25,7 +25,7 @@ def test_is_nan(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
     assert result.lazy().collect()["a"].null_count() == 1
     result = df.fill_nan(3.0)
-    if "pandas" in str(constructor):
+    if any(x in str(constructor) for x in ("pandas", "dask")):
         # pandas doesn't distinguish nan vs null
         expected = {
             "a": [1.0, 2.0, 3.0],

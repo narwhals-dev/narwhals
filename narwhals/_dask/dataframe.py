@@ -164,6 +164,9 @@ class DaskLazyFrame(
             )
         return self._cached_columns
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._with_native(self.native.fillna(value))
+
     def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = predicate(self)[0]
