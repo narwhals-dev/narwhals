@@ -34,11 +34,13 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         IntoExpr,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
+        _1DArray,
     )
 
     PS = ParamSpec("PS")
@@ -84,6 +86,24 @@ class Expr:
     def _with_orderable_filtration(self, to_compliant_expr: Callable[[Any], Any]) -> Self:
         return self.__class__(
             to_compliant_expr, self._metadata.with_orderable_filtration()
+        )
+
+    def _with_nary(
+        self,
+        n_ary_function: Callable[..., Any],
+        *args: IntoExpr | NonNestedLiteral | _1DArray,
+    ) -> Self:
+        return self.__class__(
+            lambda plx: apply_n_ary_operation(
+                plx, n_ary_function, self, *args, str_as_lit=False
+            ),
+            combine_metadata(
+                self,
+                *args,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
         )
 
     def __repr__(self) -> str:
@@ -943,24 +963,10 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
-        metadata = combine_metadata(
-            self,
+        return self._with_nary(
+            lambda expr, lb, ub: expr.is_between(lb, ub, closed=closed),
             lower_bound,
             upper_bound,
-            str_as_lit=False,
-            allow_multi_output=False,
-            to_single_output=False,
-        )
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda slf, lb, ub: slf.is_between(lb, ub, closed=closed),
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-            ),
-            metadata,
         )
 
     def is_in(self, other: Any) -> Self:
@@ -1545,32 +1551,23 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *exprs: exprs[0].clip(
-                    exprs[1] if lower_bound is not None else None,
-                    exprs[2] if upper_bound is not None else None,
-                ),
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
+        return self._with_nary(
+            lambda *exprs: exprs[0].clip(
+                exprs[1] if lower_bound is not None else None,
+                exprs[2] if upper_bound is not None else None,
             ),
-            combine_metadata(
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+            lower_bound,
+            upper_bound,
         )
 
-    def mode(self) -> Self:
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd
@@ -1585,7 +1582,17 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).mode(keep=keep)
+
+        if keep == "any":
+            return self._with_aggregation(compliant_expr)
+        return self._with_filtration(compliant_expr)
 
     def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
@@ -2185,21 +2192,8 @@ class Expr:
             raise ComputeError(msg)
 
         kwargs = {"abs_tol": abs_tol, "rel_tol": rel_tol, "nans_equal": nans_equal}
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *exprs: exprs[0].is_close(exprs[1], **kwargs),
-                self,
-                other,
-                str_as_lit=False,
-            ),
-            combine_metadata(
-                self,
-                other,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+        return self._with_nary(
+            lambda *exprs: exprs[0].is_close(exprs[1], **kwargs), other
         )
 
     @property
