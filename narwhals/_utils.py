@@ -2061,6 +2061,7 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
+# TODO @dangotbanned: Rename and give a better doc
 class NarwhalsObj(Protocol[NativeT_co]):
     """Minimal `BaseFrame`, `Series` protocol.
 
@@ -2073,15 +2074,14 @@ class NarwhalsObj(Protocol[NativeT_co]):
     def _compliant(self) -> _StoresImplementation: ...
 
 
+# TODO @dangotbanned: Rename
 class _ImplDescriptor:
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self.__name__: str = name
 
     @overload
     def __get__(
-        self,
-        instance: DataFrame[pl.DataFrame] | LazyFrame[pl.LazyFrame] | Series[pl.Series],
-        owner: Any,
+        self, instance: NarwhalsObj[_NativePolars], owner: Any
     ) -> _PolarsImpl: ...
     @overload
     def __get__(
@@ -2090,7 +2090,7 @@ class _ImplDescriptor:
     @overload
     def __get__(self, instance: NarwhalsObj[_NativeModin], owner: Any) -> _ModinImpl: ...
 
-    @overload  # oof, looks like these two need their names aligned 😅
+    @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
     def __get__(self, instance: NarwhalsObj[_NativeCuDF], owner: Any) -> _CudfImpl: ...
     @overload
     def __get__(
@@ -2134,6 +2134,4 @@ class _ImplDescriptor:
         instance: DataFrame[Any] | LazyFrame[Any] | Series[Any] | NarwhalsObj[Any] | None,
         owner: Any,
     ) -> Any:
-        if instance is None:  # pragma: no cover
-            return self
-        return instance._compliant._implementation
+        return self if instance is None else instance._compliant._implementation
