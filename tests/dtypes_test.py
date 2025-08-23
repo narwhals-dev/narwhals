@@ -11,7 +11,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -505,15 +505,9 @@ def test_datetime_w_tz_duckdb() -> None:
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
 
 
-def test_datetime_w_tz_pyspark(constructor: Constructor) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
-        pytest.skip()
+def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
     pytest.importorskip("pyspark")
-    from pyspark.sql import SparkSession
-
-    session = SparkSession.builder.config(
-        "spark.sql.session.timeZone", "UTC"
-    ).getOrCreate()
+    session = pyspark_session()
 
     df = nw.from_native(
         session.createDataFrame([(datetime(2020, 1, 1, tzinfo=timezone.utc),)], ["a"])
