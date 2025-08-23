@@ -413,9 +413,21 @@ class PandasLikeDataFrame(
         return self.filter(mask)
 
     def fill_nan(self, value: float | None) -> Self:
-        return self._with_native(
-            self.native.fillna(value=value), validate_column_names=False
-        )
+        value_nullable = self.__native_namespace__().NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+        namespace = self.__narwhals_namespace__()
+        cols = []
+        for col in self._iter_columns():
+            col_native = col.native
+            if col.dtype.is_float():
+                if get_dtype_backend(col_native.dtype, self._implementation):
+                    cols.append(col_native.fillna(value_nullable))
+                else:
+                    cols.append(col_native.fillna(value_numpy))
+            else:
+                cols.append(col_native)
+        df = namespace._concat_horizontal(cols)
+        return self._with_native(df, validate_column_names=False)
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
