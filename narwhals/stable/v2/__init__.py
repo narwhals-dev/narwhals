@@ -1138,7 +1138,11 @@ def from_numpy(
 
 
 def read_csv(
-    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: str,
+    *,
+    backend: IntoBackend[EagerAllowed],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1151,6 +1155,7 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -1158,11 +1163,13 @@ def read_csv(
     Returns:
         DataFrame.
     """
-    return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
+    return _stableify(
+        nw_f.read_csv(source, backend=backend, separator=separator, **kwargs)
+    )
 
 
 def scan_csv(
-    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: str, *, backend: IntoBackend[Backend], separator: str = ",", **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1178,6 +1185,7 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -1185,7 +1193,9 @@ def scan_csv(
     Returns:
         LazyFrame.
     """
-    return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
+    return _stableify(
+        nw_f.scan_csv(source, backend=backend, separator=separator, **kwargs)
+    )
 
 
 def read_parquet(
