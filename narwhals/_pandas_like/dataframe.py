@@ -412,6 +412,9 @@ class PandasLikeDataFrame(
         mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._with_native(self.native.fillna(value), validate_column_names=False)
+
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)

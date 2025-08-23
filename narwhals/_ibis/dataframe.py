@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import ibis
 import ibis.expr.types as ir
 
-from narwhals._ibis.utils import evaluate_exprs, native_to_narwhals_dtype
+from narwhals._ibis.utils import evaluate_exprs, lit, native_to_narwhals_dtype
 from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
@@ -178,6 +178,19 @@ class IbisLazyFrame(
     def with_columns(self, *exprs: IbisExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))
+
+    def fill_nan(self, value: float | None) -> Self:
+        t = self.native
+        exprs = [
+            ibis.cases(
+                (cast("ir.FloatingValue", t[col_name]).isnan(), lit(value)),
+                else_=t[col_name],
+            ).name(col_name)
+            if dtype.is_float()
+            else col_name
+            for col_name, dtype in self.schema.items()
+        ]
+        return self._with_native(self.native.select(*exprs))
 
     def filter(self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column

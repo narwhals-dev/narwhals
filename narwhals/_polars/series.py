@@ -90,6 +90,7 @@ INHERITED_METHODS = frozenset(
         "diff",
         "drop_nulls",
         "exp",
+        "fill_nan",
         "fill_null",
         "filter",
         "gather_every",
@@ -686,6 +687,7 @@ class PolarsSeries:
     diff: Method[Self]
     drop_nulls: Method[Self]
     exp: Method[Self]
+    fill_nan: Method[Self]
     fill_null: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]

@@ -163,6 +163,9 @@ class BaseFrame(Generic[_FrameT]):
         subset = [subset] if isinstance(subset, str) else subset
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._with_compliant(self._compliant_frame.fill_nan(value))
+
     @property
     def columns(self) -> list[str]:
         return self._compliant_frame.columns  # type: ignore[no-any-return]
@@ -1210,6 +1213,35 @@ class DataFrame(BaseFrame[DataFrameT]):
             ba: [[1]]
         """
         return super().drop_nulls(subset=subset)
+
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with the specified value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            A NaN value is not the same as a null value.
+            To fill null values, use [`fill_null`](./#drop_nulls).
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1.5, 2.0, float("nan"), 4.0]})
+            >>> df = nw.from_native(df_native)
+            >>> df.fill_nan(0)
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 1.5 │
+            │ 2.0 │
+            │ 0.0 │
+            │ 4.0 │
+            └─────┘
+        """
+        return super().fill_nan(value)
 
     def with_row_index(
         self, name: str = "index", *, order_by: str | Sequence[str] | None = None
@@ -2507,6 +2539,35 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └──────────────────┘
         """
         return super().drop_nulls(subset=subset)
+
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with the specified value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            A NaN value is not the same as a null value.
+            To fill null values, use [`fill_null`](./#drop_nulls).
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> lf_native = pl.LazyFrame({"a": [1.5, 2.0, float("nan"), 4.0]})
+            >>> lf = nw.from_native(lf_native)
+            >>> lf.fill_nan(0).collect()
+            ┌─────┐
+            │ a   │
+            │ --- │
+            │ f64 │
+            ╞═════╡
+            │ 1.5 │
+            │ 2.0 │
+            │ 0.0 │
+            │ 4.0 │
+            └─────┘
+        """
+        return super().fill_nan(value)
 
     def with_row_index(
         self, name: str = "index", *, order_by: str | Sequence[str]

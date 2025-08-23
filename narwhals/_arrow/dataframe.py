@@ -426,6 +426,17 @@ class ArrowDataFrame(
         mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
+    def fill_nan(self, value: float | None) -> Self:
+        schema = self.native.schema
+        new_columns = [
+            pc.if_else(pc.is_nan(col.native), value, col.native)
+            if col.dtype.is_float()
+            else col.native
+            for col in self._iter_columns()
+        ]
+        new_table = pa.table(new_columns, schema=schema)
+        return self._with_native(new_table, validate_column_names=False)
+
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
             order: Order = "descending" if descending else "ascending"
