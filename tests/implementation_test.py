@@ -211,7 +211,7 @@ if TYPE_CHECKING:
 
     def test_modin_typing(native: mpd.DataFrame) -> None:
         df = nw.from_native(native)
-        # NOTE: Aribitrary method that returns a `Series`
+        # NOTE: Arbitrary method that returns a `Series`
         ser = nw.from_native(native.duplicated(), series_only=True)
 
         df_impl = df.implementation
