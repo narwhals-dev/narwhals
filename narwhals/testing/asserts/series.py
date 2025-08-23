@@ -155,7 +155,7 @@ def _check_exact_values(
         )
         _check_list_like(left, right, l_dtype, r_dtype, check_fn=check_fn)
         # If `_check_list_like` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
     elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
         check_fn = partial(
             assert_series_equal,
@@ -169,7 +169,7 @@ def _check_exact_values(
         )
         _check_struct(left, right, l_dtype, r_dtype, check_fn=check_fn)
         # If `_check_struct` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
     else:
         is_not_equal_mask = left != right
 
