@@ -291,9 +291,8 @@ def object_native_to_narwhals_dtype(
         return dtypes.String()
     infer = pd.api.types.infer_dtype
     # Arbitrary limit of 100 elements to use to sniff dtype.
-    inferred_dtype = (
-        "empty" if isinstance(series, tuple) else infer(series.head(100), skipna=True)
-    )
+    elements = series if isinstance(series, tuple) else series.head(100)
+    inferred_dtype = infer(elements, skipna=True)
     if inferred_dtype == "string":
         return dtypes.String()
     if inferred_dtype == "empty" and version is not Version.V1:
