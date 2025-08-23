@@ -413,7 +413,9 @@ class PandasLikeDataFrame(
         return self.filter(mask)
 
     def fill_nan(self, value: float | None) -> Self:
-        return self._with_native(self.native.fillna(value), validate_column_names=False)
+        return self._with_native(
+            self.native.fillna(value=value), validate_column_names=False
+        )
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
