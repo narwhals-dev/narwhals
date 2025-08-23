@@ -1223,6 +1223,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         Notes:
             A NaN value is not the same as a null value.
             To fill null values, use [`fill_null`](./#drop_nulls).
+            Also note that pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
@@ -2549,6 +2551,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         Notes:
             A NaN value is not the same as a null value.
             To fill null values, use [`fill_null`](./#drop_nulls).
+            Also note that pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
