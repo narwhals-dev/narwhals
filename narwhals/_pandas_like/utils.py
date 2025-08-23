@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from pandas._typing import Dtype as PandasDtype
+    from pandas.api.typing import NAType
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
     from typing_extensions import TypeAlias, TypeIs
 
@@ -656,6 +657,21 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
         return cp
     msg = f"Expected pandas/modin/cudf, got: {implementation}"  # pragma: no cover
     raise AssertionError(msg)
+
+
+def fill_nan(
+    series_native: pd.Series[Any],
+    dtype_nw: DType,
+    dtype_native: Any,
+    implementation: Implementation,
+    value_nullable: float | NAType,
+    value_numpy: float,
+) -> pd.Series[Any]:
+    if dtype_nw.is_float():
+        if get_dtype_backend(dtype_native, implementation):
+            return series_native.fillna(value_nullable)
+        return series_native.fillna(value_numpy)
+    return series_native
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...

@@ -10,6 +10,7 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    fill_nan,
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
@@ -416,16 +417,17 @@ class PandasLikeDataFrame(
         value_nullable = self.__native_namespace__().NA if value is None else value
         value_numpy = float("nan") if value is None else value
         namespace = self.__narwhals_namespace__()
-        cols = []
-        for col in self._iter_columns():
-            col_native = col.native
-            if col.dtype.is_float():
-                if get_dtype_backend(col_native.dtype, self._implementation):
-                    cols.append(col_native.fillna(value_nullable))
-                else:
-                    cols.append(col_native.fillna(value_numpy))
-            else:
-                cols.append(col_native)
+        cols = [
+            fill_nan(
+                col.native,
+                col.dtype,
+                col.native.dtype,
+                self._implementation,
+                value_nullable,
+                value_numpy,
+            )
+            for col in self._iter_columns()
+        ]
         df = namespace._concat_horizontal(cols)
         return self._with_native(df, validate_column_names=False)
 
