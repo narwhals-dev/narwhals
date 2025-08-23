@@ -30,6 +30,7 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - ConcatMethod
         - FillNullStrategy
         - JoinStrategy
+        - ModeKeepStrategy
         - PivotAgg
         - RankMethod
         - RollingInterpolationMethod
