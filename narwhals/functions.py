@@ -4,7 +4,7 @@ import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -1270,6 +1270,24 @@ def max(*columns: str) -> Expr:
     return col(*columns).max()
 
 
+def _expr_with_n_ary_op(
+    func_name: str,
+    operation_factory: Callable[
+        [CompliantNamespace[Any, Any]], Callable[..., CompliantExpr[Any, Any]]
+    ],
+    *exprs: IntoExpr,
+) -> Expr:
+    if not exprs:
+        msg = f"At least one expression must be passed to `{func_name}`"
+        raise ValueError(msg)
+    return Expr(
+        lambda plx: apply_n_ary_operation(
+            plx, operation_factory(plx), *exprs, str_as_lit=False
+        ),
+        ExprMetadata.from_horizontal_op(*exprs),
+    )
+
+
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
@@ -1304,15 +1322,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴─────┘|
         └────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `sum_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.sum_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "sum_horizontal", lambda plx: plx.sum_horizontal, *flatten(exprs)
     )
 
 
@@ -1348,15 +1359,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | h_min: [[1,5,3]] |
         └──────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `min_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.min_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "min_horizontal", lambda plx: plx.min_horizontal, *flatten(exprs)
     )
 
 
@@ -1394,15 +1398,8 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴───────┘|
         └──────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `max_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.max_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "max_horizontal", lambda plx: plx.max_horizontal, *flatten(exprs)
     )
 
 
@@ -1554,18 +1551,10 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         └─────────────────────────────────────────┘
 
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `all_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
-            *flat_exprs,
-            str_as_lit=False,
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "all_horizontal",
+        lambda plx: partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
+        *flatten(exprs),
     )
 
 
@@ -1654,18 +1643,10 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |└───────┴───────┴───────┘|
         └─────────────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `any_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
-            *flat_exprs,
-            str_as_lit=False,
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "any_horizontal",
+        lambda plx: partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
+        *flatten(exprs),
     )
 
 
@@ -1699,15 +1680,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | a: [[2.5,6.5,3]] |
         └──────────────────┘
     """
-    if not exprs:
-        msg = "At least one expression must be passed to `mean_horizontal`"
-        raise ValueError(msg)
-    flat_exprs = flatten(exprs)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, plx.mean_horizontal, *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
+    return _expr_with_n_ary_op(
+        "mean_horizontal", lambda plx: plx.mean_horizontal, *flatten(exprs)
     )
 
 
@@ -1760,18 +1734,12 @@ def concat_str(
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx,
-            lambda *args: plx.concat_str(
-                *args, separator=separator, ignore_nulls=ignore_nulls
-            ),
-            *flat_exprs,
-            str_as_lit=False,
+    return _expr_with_n_ary_op(
+        "concat_str",
+        lambda plx: lambda *args: plx.concat_str(
+            *args, separator=separator, ignore_nulls=ignore_nulls
         ),
-        combine_metadata(
-            *flat_exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-        ),
+        *flat_exprs,
     )
 
 
