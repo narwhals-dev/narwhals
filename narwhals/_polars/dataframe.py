@@ -469,10 +469,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            # NOTE: (F841) is a false positive
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
         if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
@@ -496,35 +495,17 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             )
 
         if backend.is_spark_like():
-            from importlib.util import find_spec
-
             from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
             if session is None:
                 msg = "Spark like backends require `session` to be not None."
                 raise ValueError(msg)
 
-            # pyspark.sql requires pyarrow to be installed from v4.0.0
-            can_create_from_arrow = backend in {
-                Implementation.PYSPARK,
-                Implementation.PYSPARK_CONNECT,
-            } and backend._backend_version() >= (4, 0, 0)
-
-            is_pandas_installed = find_spec("pandas") is not None
-
-            data: Any = (
-                self.to_arrow()
-                if can_create_from_arrow
-                else self.to_pandas()
-                if is_pandas_installed
-                else tuple(self.iter_rows(named=True))
-            )
-
-            return SparkLikeLazyFrame(
-                session.createDataFrame(data),
-                version=self._version,
+            return SparkLikeLazyFrame._from_compliant_dataframe(
+                self,  # pyright: ignore[reportArgumentType]
+                session=session,
                 implementation=backend,
-                validate_backend_version=True,
+                version=self._version,
             )
 
         raise AssertionError  # pragma: no cover

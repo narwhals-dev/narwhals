@@ -577,34 +577,14 @@ class ArrowDataFrame(
             )
 
         if backend.is_spark_like():
-            from importlib.util import find_spec
-
             from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 
             if session is None:
                 msg = "Spark like backends require `session` to be not None."
                 raise ValueError(msg)
 
-            # pyspark.sql requires pyarrow to be installed from v4.0.0
-            can_create_from_arrow = backend in {
-                Implementation.PYSPARK,
-                Implementation.PYSPARK_CONNECT,
-            } and backend._backend_version() >= (4, 0, 0)
-            is_pandas_installed = find_spec("pandas") is not None
-
-            data: Any = (
-                self.native
-                if can_create_from_arrow
-                else self.to_pandas()
-                if is_pandas_installed
-                else tuple(self.iter_rows(named=True, buffer_size=512))
-            )
-
-            return SparkLikeLazyFrame(
-                session.createDataFrame(data),
-                version=self._version,
-                implementation=backend,
-                validate_backend_version=True,
+            return SparkLikeLazyFrame._from_compliant_dataframe(
+                self, session=session, implementation=backend, version=self._version
             )
 
         raise AssertionError  # pragma: no cover
