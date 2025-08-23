@@ -18,7 +18,10 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
+    import sqlframe.base.types as sqlframe_types
 
+    from narwhals._spark_like.utils import SparkSession
+    from narwhals._typing import _SparkLikeImpl
     from narwhals.dtypes import DType
     from narwhals.typing import DTypeBackend
 
@@ -170,4 +173,41 @@ class Schema(OrderedDict[str, "DType"]):
             pl.Schema(schema)
             if pl_version >= (1, 0, 0)
             else cast("pl.Schema", dict(schema))
+        )
+
+    def to_pyspark(self, *, session: SparkSession) -> sqlframe_types.StructType:
+        return self._to_spark_like(backend=Implementation.PYSPARK, session=session)
+
+    def to_pyspark_connect(self, *, session: SparkSession) -> sqlframe_types.StructType:
+        return self._to_spark_like(
+            backend=Implementation.PYSPARK_CONNECT, session=session
+        )
+
+    def to_sqlframe(self, *, session: SparkSession) -> sqlframe_types.StructType:
+        return self._to_spark_like(backend=Implementation.SQLFRAME, session=session)
+
+    def _to_spark_like(
+        self, *, backend: _SparkLikeImpl, session: SparkSession
+    ) -> sqlframe_types.StructType:
+        from narwhals._spark_like.utils import (
+            import_native_dtypes,
+            narwhals_to_native_dtype as narwhals_to_spark_like_dtype,
+        )
+
+        version = self._version
+        spark_dtypes = import_native_dtypes(backend)
+        StructType = spark_dtypes.StructType  # noqa: N806
+        StructField = spark_dtypes.StructField  # noqa: N806
+
+        _narwhals_to_spark_like_dtype = partial(
+            narwhals_to_spark_like_dtype,
+            version=version,
+            spark_types=spark_dtypes,
+            session=session,
+        )
+        return StructType(  # type: ignore[no-any-return]
+            [
+                StructField(name, _narwhals_to_spark_like_dtype(nw_dtype), True)
+                for name, nw_dtype in self.items()
+            ]
         )

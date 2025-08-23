@@ -1,19 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import os
+import re
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._typing import Dask, DuckDB, Ibis, Polars
     from tests.utils import ConstructorEager
 
 
-data = {"a": [1, 2, 3]}
+data = {"a": [1, 2, 3], "b": ["x", "y", "z"]}
 
 
 def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
@@ -60,20 +64,83 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         "ibis",
     ],
 )
-def test_lazy_backend(
+def test_lazy_backend_non_spark_like(
     constructor_eager: ConstructorEager, backend: Polars | DuckDB | Ibis | Dask
 ) -> None:
-    implementation = Implementation.from_backend(backend)
-    pytest.importorskip(implementation.name.lower())
+    impl = Implementation.from_backend(backend)
+    pytest.importorskip(impl.name.lower())
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy(backend=backend)
     assert isinstance(result, nw.LazyFrame)
-    assert result.implementation == implementation
+    assert result.implementation == impl
+    if (
+        impl.is_duckdb()
+        and df.implementation.is_pandas()
+        and df.implementation._backend_version() >= (3, 0, 0)
+    ):
+        # Reason: https://github.com/duckdb/duckdb/issues/18297
+        # > duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized
+        return
+
+    assert_equal_data(df.sort("a"), data)
+
+
+@pytest.mark.parametrize(
+    "backend",
+    [
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+        Implementation.SQLFRAME,
+        "pyspark",
+        "pyspark[connect]",
+        "sqlframe",
+    ],
+)
+def test_lazy_backend_spark_like(
+    constructor_eager: ConstructorEager, backend: Polars | DuckDB | Ibis | Dask
+) -> None:
+    impl = Implementation.from_backend(backend)
+    pytest.importorskip(impl.name.lower())
+
+    session: SparkSession
+    if impl.is_sqlframe():
+        from sqlframe.duckdb import DuckDBSession
+
+        session = DuckDBSession()
+    else:
+        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+            from pyspark.sql.connect.session import SparkSession as PySparkSession
+        else:
+            from pyspark.sql import SparkSession as PySparkSession
+
+        builder = cast("PySparkSession.Builder", PySparkSession.builder).appName(
+            "unit-tests"
+        )
+        session = (  # pyright: ignore[reportAssignmentType]
+            (
+                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+                if is_spark_connect
+                else builder.master("local[1]").config("spark.ui.enabled", "false")
+            )
+            .config("spark.default.parallelism", "1")
+            .config("spark.sql.shuffle.partitions", "2")
+            # common timezone for all tests environments
+            .config("spark.sql.session.timeZone", "UTC")
+            .getOrCreate()
+        )
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.lazy(backend=backend, session=session)
+    assert isinstance(result, nw.LazyFrame)
+    assert result.implementation == impl
+    assert_equal_data(df.sort("a"), data)
+
+    err_msg = re.escape("Spark like backends require `session` to be not None.")
+    with pytest.raises(ValueError, match=err_msg):
+        result = df.lazy(backend=backend, session=None)
 
 
 def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(ValueError, match="Not-supported backend"):
         df.lazy(backend=Implementation.PANDAS)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="Not-supported backend"):
-        df.lazy(backend="pyspark")  # type: ignore[arg-type]

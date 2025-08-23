@@ -9,6 +9,7 @@
         - all
         - any
         - cast
+        - clip
         - count
         - cum_count
         - cum_max
@@ -21,7 +22,6 @@
         - exp
         - fill_null
         - filter
-        - clip
         - is_between
         - is_close
         - is_duplicated
@@ -41,8 +41,8 @@
         - median
         - min
         - mode
-        - null_count
         - n_unique
+        - null_count
         - over
         - pipe
         - quantile
