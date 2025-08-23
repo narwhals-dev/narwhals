@@ -492,6 +492,18 @@ class PandasLikeDataFrame(
             validate_column_names=False,
         )
 
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        df = self.native
+        schema = self.schema
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
+            if reverse:
+                return self._with_native(df.nsmallest(k, by))
+            return self._with_native(df.nlargest(k, by))
+        return self._with_native(
+            df.sort_values(list(by), ascending=reverse).head(k),
+            validate_column_names=False,
+        )
+
     # --- convert ---
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
