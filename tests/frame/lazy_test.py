@@ -13,7 +13,7 @@ from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
-    from narwhals._typing import Dask, DuckDB, Ibis, Polars
+    from narwhals._typing import LazyAllowed
     from tests.utils import ConstructorEager
 
 
@@ -58,21 +58,26 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         Implementation.DUCKDB,
         Implementation.DASK,
         Implementation.IBIS,
+        Implementation.PYSPARK,
+        Implementation.SQLFRAME,
         "polars",
         "duckdb",
         "dask",
         "ibis",
+        "pyspark",
+        "sqlframe",
     ],
 )
-def test_lazy_backend_non_spark_like(
-    constructor_eager: ConstructorEager, backend: Polars | DuckDB | Ibis | Dask
-) -> None:
+def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
+
+    if (
+        is_spark_connect := os.environ.get("SPARK_CONNECT", None)
+    ) is not None and impl.is_pyspark():
+        impl = Implementation.PYSPARK_CONNECT
+
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df.lazy(backend=backend)
-    assert isinstance(result, nw.LazyFrame)
-    assert result.implementation == impl
     if (
         impl.is_duckdb()
         and df.implementation.is_pandas()
@@ -82,33 +87,13 @@ def test_lazy_backend_non_spark_like(
         # > duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized
         return
 
-    assert_equal_data(df.sort("a"), data)
-
-
-@pytest.mark.parametrize(
-    "backend",
-    [
-        Implementation.PYSPARK,
-        Implementation.PYSPARK_CONNECT,
-        Implementation.SQLFRAME,
-        "pyspark",
-        "pyspark[connect]",
-        "sqlframe",
-    ],
-)
-def test_lazy_backend_spark_like(
-    constructor_eager: ConstructorEager, backend: Polars | DuckDB | Ibis | Dask
-) -> None:
-    impl = Implementation.from_backend(backend)
-    pytest.importorskip(impl.name.lower())
-
-    session: SparkSession
-    if impl.is_sqlframe():
+    session: SparkSession | None
+    if impl is Implementation.SQLFRAME:
         from sqlframe.duckdb import DuckDBSession
 
         session = DuckDBSession()
-    else:
-        if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+    elif impl in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
+        if is_spark_connect:
             from pyspark.sql.connect.session import SparkSession as PySparkSession
         else:
             from pyspark.sql import SparkSession as PySparkSession
@@ -128,16 +113,27 @@ def test_lazy_backend_spark_like(
             .config("spark.sql.session.timeZone", "UTC")
             .getOrCreate()
         )
+    else:
+        session = None
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.lazy(backend=backend, session=session)
     assert isinstance(result, nw.LazyFrame)
     assert result.implementation == impl
     assert_equal_data(df.sort("a"), data)
 
+
+@pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
+def test_lazy_spark_like_requires_session(
+    constructor_eager: ConstructorEager, backend: LazyAllowed
+) -> None:
+    impl = Implementation.from_backend(backend)
+    pytest.importorskip(impl.name.lower())
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+
     err_msg = re.escape("Spark like backends require `session` to be not None.")
     with pytest.raises(ValueError, match=err_msg):
-        result = df.lazy(backend=backend, session=None)
+        df.lazy(backend=backend, session=None)
 
 
 def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:
