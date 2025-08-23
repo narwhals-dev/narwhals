@@ -7,7 +7,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation, zip_strict
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.expr import DaskExpr
-    from narwhals.typing import ModeKeepStrategy, NonNestedLiteral
 
     PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
@@ -74,40 +73,6 @@ def std(ddof: int) -> _AggFn:
     return partial(_DaskGroupBy.std, ddof=ddof)
 
 
-def mode(keep: ModeKeepStrategy) -> dd.Aggregation:
-    """Mode aggregation for Dask DataFrame grouped operations."""
-    if keep != "any":  # pragma: no cover
-        msg = (
-            f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
-            f"backend {Implementation.DASK}\n\n"
-            "Hint: Use `nw.col(...).mode(keep='any')` instead."
-        )
-        raise NotImplementedError(msg)
-
-    def chunk(s: PandasSeriesGroupBy) -> pd.Series[Any]:
-        return s.value_counts()
-
-    def agg(s0: PandasSeriesGroupBy) -> pd.Series[Any]:
-        # s0._selected_obj holds the concatenated counts Series
-        return s0._selected_obj.groupby(
-            level=list(range(s0._selected_obj.index.nlevels))
-        ).sum()
-
-    def finalize(s1: PandasSeriesGroupBy) -> pd.Series[Any]:
-        # s1 is a Series indexed by (group_key, value)
-        # First identify max counts per group
-        levels = list(range(s1.index.nlevels - 1))  # group levels
-
-        def choose_mode(x: pd.Series[Any]) -> NonNestedLiteral:
-            modes = x[x == x.max()]
-            # multilevel index, take the value in last position
-            return modes.idxmax()[-1]  # pyright: ignore[reportIndexIssue]
-
-        return s1.groupby(level=levels).apply(choose_mode)
-
-    return dd.Aggregation(name="mode", chunk=chunk, agg=agg, finalize=finalize)
-
-
 class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):
     _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
@@ -115,7 +80,6 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         "median": "median",
         "max": "max",
         "min": "min",
-        "mode": mode,
         "std": std,
         "var": var,
         "len": "size",
