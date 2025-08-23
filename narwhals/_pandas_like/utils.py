@@ -683,12 +683,9 @@ class PandasLikeToPandas(
         if self._implementation is Implementation.PANDAS:
             nd_frame = self.native
         elif self._implementation is Implementation.CUDF:
-            native = self.native
-            return (
-                native.to_pandas(arrow_type=True) if use_pyarrow else native.to_pandas()
-            )
+            to_pandas = self.native.to_pandas
+            return to_pandas(arrow_type=True) if use_pyarrow else to_pandas()
         else:
-            assert self._implementation is Implementation.MODIN  # noqa: S101
             nd_frame = self.native._to_pandas()
         return (
             nd_frame.convert_dtypes(dtype_backend="pyarrow") if use_pyarrow else nd_frame

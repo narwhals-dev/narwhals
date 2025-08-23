@@ -279,7 +279,7 @@ class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
         )
         if use_pyarrow_extension_array and kwds:
             if types_mapper := kwds.get("types_mapper"):  # pragma: no cover
-                msg = f"`use_pyarrow_extension_array` and `types_mapper` are mutually exclusive, got:\n{use_pyarrow_extension_array!r}\n{types_mapper!r}"
+                msg = f"`use_pyarrow_extension_array` and `types_mapper` are mutually exclusive, got:\n{use_pyarrow_extension_array=}\n{types_mapper=}"
                 raise InvalidOperationError(msg)
             for kwd in always_true:
                 user_defined = kwds.pop(kwd, True)

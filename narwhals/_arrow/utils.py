@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -237,13 +237,11 @@ class ArrowToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
 
         if use_pyarrow_extension_array:
             pd_version = Implementation.PANDAS._backend_version()
+            kwd: Literal["types_mapper"] = "types_mapper"
             if pd_version < (1, 5):  # pragma: no cover
-                found = requires._unparse_version(pd_version)
-                msg = f"`to_pandas(use_pyarrow_extension_array=True)` is only available in 'pandas>=1.5.0', found version {found!r}."
+                msg = f"`to_pandas({use_pyarrow_extension_array=})` is only available in 'pandas>=1.5.0', found version {requires._unparse_version(pd_version)!r}."
                 raise NotImplementedError(msg)
-            kwds["types_mapper"] = kwds.pop(
-                "types_mapper", lambda pa_dtype: pd.ArrowDtype(pa_dtype)
-            )
+            kwds[kwd] = kwds.pop(kwd, lambda pa_dtype: pd.ArrowDtype(pa_dtype))
         return self.native.to_pandas(**kwds)
 
 

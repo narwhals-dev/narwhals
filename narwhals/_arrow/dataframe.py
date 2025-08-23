@@ -486,10 +486,9 @@ class ArrowDataFrame(
 
     def to_struct(self, name: str = "") -> ArrowSeries:
         if self._backend_version < (15, 0):
-            arrays = self.native.columns
-            # NOTE: Stubs say always returns `StructArray`, but it depends on input types
-            # This case is always `ChunkedArray[StructScalar]`
-            struct: Incomplete = pc.make_struct(*arrays, field_names=self.columns)
+            # NOTE: Stubs say always returns `StructArray`, missing `ChunkedArray[StructScalar]` overload
+            make_struct: Incomplete = pc.make_struct
+            struct = make_struct(*self.native.columns, field_names=self.columns)
         else:
             struct = self.native.to_struct_array()
         return ArrowSeries.from_native(struct, context=self, name=name)
