@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -702,8 +703,8 @@ class EagerExpr(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._reuse_series("gather_every", n=n, offset=offset)
 
-    def mode(self) -> Self:
-        return self._reuse_series("mode")
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        return self._reuse_series("mode", scalar_kwargs={"keep": keep})
 
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
