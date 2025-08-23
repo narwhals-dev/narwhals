@@ -39,6 +39,7 @@ UnorderedAggregation: TypeAlias = Literal[
     "mean",
     "median",
     "min",
+    "mode",
     "nunique",
     "prod",
     "quantile",
@@ -189,6 +190,35 @@ class AggExpr:
             result = ns._concat_horizontal(
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
+        elif self.is_mode():
+            compliant = group_by.compliant
+            if (keep := self.kwargs.get("keep")) != "any":  # pragma: no cover
+                msg = (
+                    f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
+                    f"backend {compliant._implementation}\n\n"
+                    "Hint: Use `nw.col(...).mode(keep='any')` instead."
+                )
+                raise NotImplementedError(msg)
+
+            cols = list(names)
+            native = compliant.native
+            keys, kwargs = group_by._keys, group_by._kwargs
+
+            # Implementation based on the following suggestion:
+            # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
+            ns = compliant.__narwhals_namespace__()
+            result = ns._concat_horizontal(
+                [
+                    native.groupby([*keys, col], **kwargs)
+                    .size()
+                    .sort_values(ascending=False)
+                    .reset_index(col)
+                    .groupby(keys, **kwargs)[col]
+                    .head(1)
+                    .sort_index()
+                    for col in cols
+                ]
+            )
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg(group_by)(group_by._grouped[select])
@@ -200,6 +230,9 @@ class AggExpr:
 
     def is_len(self) -> bool:
         return self.leaf_name == "len"
+
+    def is_mode(self) -> bool:
+        return self.leaf_name == "mode"
 
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
@@ -244,6 +277,7 @@ class PandasLikeGroupBy(
         "median": "median",
         "max": "max",
         "min": "min",
+        "mode": "mode",
         "std": "std",
         "var": "var",
         "len": "size",
@@ -263,6 +297,9 @@ class PandasLikeGroupBy(
 
     _output_key_names: list[str]
     """Stores the **original** version of group keys."""
+
+    _kwargs: Mapping[str, bool]
+    """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
 
     @property
     def exclude(self) -> tuple[str, ...]:
@@ -288,13 +325,14 @@ class PandasLikeGroupBy(
         native = self.compliant.native
         if set(native.index.names).intersection(self.compliant.columns):
             native = native.reset_index(drop=True)
-        self._grouped: NativeGroupBy = native.groupby(
-            self._keys.copy(),
-            sort=False,
-            as_index=True,
-            dropna=drop_null_keys,
-            observed=True,
-        )
+
+        self._kwargs = {
+            "sort": False,
+            "as_index": True,
+            "dropna": drop_null_keys,
+            "observed": True,
+        }
+        self._grouped: NativeGroupBy = native.groupby(self._keys.copy(), **self._kwargs)
 
     def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
