@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
-from tests.utils import assert_equal_data
+from tests.utils import assert_equal_data, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
@@ -74,6 +74,8 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
 
     is_spark_connect = os.environ.get("SPARK_CONNECT", None)
     if is_spark_connect is not None and impl.is_pyspark():  # pragma: no cover
+        # Workaround for impl.name.lower() being "pyspark[connect]" for
+        # Implementation.PYSPARK_CONNECT, which is never installed.
         impl = Implementation.PYSPARK_CONNECT
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -87,34 +89,10 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
         return
 
     session: SparkSession | None
-    if impl is Implementation.SQLFRAME:
-        from sqlframe.duckdb import DuckDBSession
-
-        session = DuckDBSession()
-    elif impl in {
-        Implementation.PYSPARK,
-        Implementation.PYSPARK_CONNECT,
-    }:  # pragma: no cover
-        if is_spark_connect:
-            from pyspark.sql.connect.session import SparkSession as PySparkSession
-        else:
-            from pyspark.sql import SparkSession as PySparkSession
-
-        builder = cast("PySparkSession.Builder", PySparkSession.builder).appName(
-            "unit-tests"
-        )
-        session = (  # pyright: ignore[reportAssignmentType]
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
+    if impl.is_sqlframe():
+        session = sqlframe_session()
+    elif impl.is_pyspark() or impl.is_pyspark_connect():  # pragma: no cover
+        session = pyspark_session()  # pyright: ignore[reportAssignmentType]
     else:
         session = None
 

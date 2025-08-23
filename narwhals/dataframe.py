@@ -71,7 +71,6 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
@@ -728,7 +727,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self,
         backend: IntoBackend[LazyAllowed] | None = None,
         *,
-        session: SparkSession | None = None,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -741,7 +740,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         the possibility of running entirely lazily.
 
         Note:
-            Spark like backends require a session object to be passed.
+            If `backend` is spark-like, then a valid `session` is required.
 
             For instance:
 
@@ -764,7 +763,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                     `IBIS` or `POLARS`.
                 - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
                 - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
-            session: Spark-like session to be used if backend is spark-like.
+            session: Session to be used if backend is spark-like.
 
         Examples:
             >>> import polars as pl
