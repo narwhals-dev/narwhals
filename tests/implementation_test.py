@@ -211,14 +211,23 @@ if TYPE_CHECKING:
 
     def test_modin_typing(native: mpd.DataFrame) -> None:
         df = nw.from_native(native)
+        # NOTE: Aribitrary method that returns a `Series`
+        ser = nw.from_native(native.duplicated(), series_only=True)
 
         df_impl = df.implementation
+        ser_impl = ser.implementation
 
         # [True Negative]
         any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]
         any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(df.implementation, _ModinImpl)
+        assert_type(df_impl, _ModinImpl)
+        # TODO @dangotbanned: Investigate where the match fails
+        assert_type(ser_impl, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
+        # Fallback, matches eager allowed
+        assert_type(ser_impl, _EagerAllowedImpl)
 
     def test_any_typing() -> None:
         df_impl = any_df.implementation
