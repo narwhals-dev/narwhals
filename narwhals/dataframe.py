@@ -1231,7 +1231,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [1.5, 2.0, float("nan"), 4.0]})
             >>> df = nw.from_native(df_native)
-            >>> df.fill_nan(0)
+            >>> df.fill_nan(0).to_native()
+            shape: (4, 1)
             ┌─────┐
             │ a   │
             │ --- │
@@ -2559,7 +2560,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> import narwhals as nw
             >>> lf_native = pl.LazyFrame({"a": [1.5, 2.0, float("nan"), 4.0]})
             >>> lf = nw.from_native(lf_native)
-            >>> lf.fill_nan(0).collect()
+            >>> lf.fill_nan(0).collect().to_native()
+            shape: (4, 1)
             ┌─────┐
             │ a   │
             │ --- │
