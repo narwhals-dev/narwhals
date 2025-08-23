@@ -9,6 +9,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
+    from narwhals._namespace import _ModinDataFrame
     from narwhals._typing import (
         _ArrowImpl,
         _DaskImpl,
@@ -190,41 +191,41 @@ if TYPE_CHECKING:
 
         ldf_impl = ldf.implementation
 
-        # [False Negative]
-        any_df.lazy(ldf_impl)  # pyright: ignore[reportArgumentType]
+        # [True Positive]
+        any_df.lazy(ldf_impl)
         # [True Negative]
         any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(ldf.implementation, _IbisImpl)  # pyright: ignore[reportAssertTypeFailure]
-        # Fallback, remove if the above starts passing
-        assert_type(ldf.implementation, _LazyAllowedImpl)
+        assert_type(ldf.implementation, _IbisImpl)
 
     def test_dask_typing(native: dd.DataFrame) -> None:
         ldf = nw.from_native(native)
 
         ldf_impl = ldf.implementation
 
-        # [False Negative]
-        any_df.lazy(ldf_impl)  # pyright: ignore[reportArgumentType]
+        # [True Positive]
+        any_df.lazy(ldf_impl)
         # [True Negative]
         any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(ldf.implementation, _DaskImpl)  # pyright: ignore[reportAssertTypeFailure]
-        # Fallback, remove if the above starts passing
-        assert_type(ldf.implementation, _LazyAllowedImpl)
+        assert_type(ldf.implementation, _DaskImpl)
 
     def test_modin_typing(native: mpd.DataFrame) -> None:
-        ldf = nw.from_native(native)
+        df = nw.from_native(native)
 
-        ldf_impl = ldf.implementation
+        df_impl = df.implementation
 
         # [True Negative]
-        any_df.lazy(ldf_impl)  # pyright: ignore[reportArgumentType]
-        any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(ldf.implementation, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(df.implementation, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
         # Fallback, remove if the above starts passing
-        assert_type(ldf.implementation, _EagerAllowedImpl)
+        assert_type(df.implementation, _EagerAllowedImpl)
+
+        # TODO @dangotbanned: Fix incompatible `_BasePandasLike.rename` signature
+        # When this ignore isn't needed - the overload to `_ModinImpl` will work
+        oops: _ModinDataFrame = native  # pyright: ignore[reportAssignmentType]  # noqa: F841
 
     def test_any_typing() -> None:
         df_impl = any_df.implementation

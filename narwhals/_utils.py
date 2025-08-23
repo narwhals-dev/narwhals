@@ -78,11 +78,13 @@ if TYPE_CHECKING:
         Namespace,
         _CuDFDataFrame,
         _ModinDataFrame,
+        _NativeArrow,
         _NativeDask,
         _NativeDuckDB,
         _NativeIbis,
-        _NativePandasLikeDataFrame,
-        _NativePandasLikeSeries,
+        _NativePandas,
+        _NativePandasLike,
+        _NativePolars,
         _NativeSQLFrame,
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
@@ -104,7 +106,7 @@ if TYPE_CHECKING:
         _PolarsImpl,
         _SQLFrameImpl,
     )
-    from narwhals.dataframe import BaseFrame, DataFrame, LazyFrame
+    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
@@ -2055,6 +2057,18 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
+class NarwhalsObj(Protocol[NativeT_co]):
+    """Minimal `BaseFrame`, `Series` protocol.
+
+    - `to_native` scopes a covariant type parameter
+    - `_compliant` describes the route to `Implementation`
+    """
+
+    def to_native(self) -> NativeT_co: ...
+    @property
+    def _compliant(self) -> _StoresImplementation: ...
+
+
 class _ImplDescriptor:
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self.__name__: str = name
@@ -2067,40 +2081,39 @@ class _ImplDescriptor:
     ) -> _PolarsImpl: ...
     @overload
     def __get__(
-        self, instance: BaseFrame[pd.DataFrame] | Series[pd.Series[Any]], owner: Any
+        self, instance: NarwhalsObj[_NativePandas], owner: Any
     ) -> _PandasImpl: ...
     @overload
-    def __get__(self, instance: BaseFrame[_ModinDataFrame], owner: Any) -> _ModinImpl: ...
+    def __get__(
+        self, instance: NarwhalsObj[_ModinDataFrame], owner: Any
+    ) -> _ModinImpl: ...
 
     @overload  # oof, looks like these two need their names aligned 😅
-    def __get__(self, instance: BaseFrame[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
+    def __get__(self, instance: NarwhalsObj[_CuDFDataFrame], owner: Any) -> _CudfImpl: ...
     @overload
     def __get__(
-        self,
-        instance: BaseFrame[_NativePandasLikeDataFrame] | Series[_NativePandasLikeSeries],
-        owner: Any,
+        self, instance: NarwhalsObj[_NativePandasLike], owner: Any
     ) -> _PandasLikeImpl: ...
     @overload
-    def __get__(
-        self, instance: BaseFrame[pa.Table] | Series[pa.ChunkedArray[Any]], owner: Any
-    ) -> _ArrowImpl: ...
+    def __get__(self, instance: NarwhalsObj[_NativeArrow], owner: Any) -> _ArrowImpl: ...
     @overload
     def __get__(
         self,
-        instance: BaseFrame[pl.DataFrame | pd.DataFrame | pa.Table]
-        | Series[pl.Series | pd.Series[Any] | pa.ChunkedArray[Any]],
+        instance: NarwhalsObj[_NativePolars | _NativeArrow | _NativePandas],
         owner: Any,
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
-    def __get__(self, instance: LazyFrame[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
+    def __get__(
+        self, instance: NarwhalsObj[_NativeDuckDB], owner: Any
+    ) -> _DuckDBImpl: ...
     @overload
     def __get__(
-        self, instance: LazyFrame[_NativeSQLFrame], owner: Any
+        self, instance: NarwhalsObj[_NativeSQLFrame], owner: Any
     ) -> _SQLFrameImpl: ...
     @overload
-    def __get__(self, instance: LazyFrame[_NativeDask], owner: Any) -> _DaskImpl: ...
+    def __get__(self, instance: NarwhalsObj[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
-    def __get__(self, instance: LazyFrame[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    def __get__(self, instance: NarwhalsObj[_NativeIbis], owner: Any) -> _IbisImpl: ...
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
     @overload
@@ -2111,7 +2124,7 @@ class _ImplDescriptor:
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
     def __get__(
         self,
-        instance: DataFrame[Any] | LazyFrame[Any] | BaseFrame[Any] | Series[Any] | None,
+        instance: DataFrame[Any] | LazyFrame[Any] | Series[Any] | NarwhalsObj[Any] | None,
         owner: Any,
     ) -> Any:
         if instance is None:  # pragma: no cover
