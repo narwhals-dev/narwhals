@@ -224,10 +224,7 @@ if TYPE_CHECKING:
         any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType]
 
         assert_type(df_impl, _ModinImpl)
-        # TODO @dangotbanned: Investigate where the match fails
-        assert_type(ser_impl, _ModinImpl)  # pyright: ignore[reportAssertTypeFailure]
-        # Fallback, matches eager allowed
-        assert_type(ser_impl, _EagerAllowedImpl)
+        assert_type(ser_impl, _ModinImpl)
 
     def test_any_typing() -> None:
         df_impl = any_df.implementation
