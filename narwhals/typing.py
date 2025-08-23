@@ -346,6 +346,12 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 - *"none"*: Don't keep duplicate rows.
 """
 
+ModeKeepStrategy: TypeAlias = Literal["any", "all"]
+"""Which of the mode's to keep.
+
+- *"any"*: Does not give any guarantee of which mode is kept.
+- *"all"*: Keeps all the mode's.
+"""
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
