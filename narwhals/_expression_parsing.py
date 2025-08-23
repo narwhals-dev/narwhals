@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum, auto
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
@@ -608,7 +608,7 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
 
 def apply_n_ary_operation(
     plx: CompliantNamespaceAny,
-    function: Any,
+    n_ary_function: Callable[..., CompliantExprAny],
     *comparands: IntoExpr | NonNestedLiteral | _1DArray,
     str_as_lit: bool,
 ) -> CompliantExprAny:
@@ -628,4 +628,4 @@ def apply_n_ary_operation(
         else compliant_expr
         for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
     )
-    return function(*compliant_exprs)
+    return n_ary_function(*compliant_exprs)
