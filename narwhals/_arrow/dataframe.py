@@ -601,7 +601,7 @@ class ArrowDataFrame(
             )
 
             return SparkLikeLazyFrame(
-                session.createDataFrame(data),  # type: ignore[arg-type]
+                session.createDataFrame(data),
                 version=self._version,
                 implementation=backend,
                 validate_backend_version=True,

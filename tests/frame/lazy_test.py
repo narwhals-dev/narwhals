@@ -72,9 +72,8 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
 
-    if (
-        is_spark_connect := os.environ.get("SPARK_CONNECT", None)
-    ) is not None and impl.is_pyspark():
+    is_spark_connect = os.environ.get("SPARK_CONNECT", None)
+    if is_spark_connect is not None and impl.is_pyspark():  # pragma: no cover
         impl = Implementation.PYSPARK_CONNECT
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -82,7 +81,7 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
         impl.is_duckdb()
         and df.implementation.is_pandas()
         and df.implementation._backend_version() >= (3, 0, 0)
-    ):
+    ):  # pragma: no cover
         # Reason: https://github.com/duckdb/duckdb/issues/18297
         # > duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized
         return
@@ -92,7 +91,10 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
         from sqlframe.duckdb import DuckDBSession
 
         session = DuckDBSession()
-    elif impl in {Implementation.PYSPARK, Implementation.PYSPARK_CONNECT}:
+    elif impl in {
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+    }:  # pragma: no cover
         if is_spark_connect:
             from pyspark.sql.connect.session import SparkSession as PySparkSession
         else:
