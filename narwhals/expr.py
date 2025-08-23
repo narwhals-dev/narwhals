@@ -1563,9 +1563,6 @@ class Expr:
     def first(self) -> Self:
         """Get the first value.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1595,9 +1592,6 @@ class Expr:
 
     def last(self) -> Self:
         """Get the last value.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pyarrow as pa
