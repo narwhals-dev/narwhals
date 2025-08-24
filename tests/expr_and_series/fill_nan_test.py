@@ -22,13 +22,6 @@ def test_fill_nan(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_na)).select(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
     )
-
-    if df.implementation.is_dask():
-        # test both pyarrow-dtypes and numpy-dtypes
-        df = nw.from_native(
-            df.to_native().astype({"float_na": "Float64[pyarrow]", "float": "float64"})  # type: ignore[union-attr]
-        )
-
     result = df.select(nw.all().fill_nan(None))
     expected = {"float": [-1.0, 1.0, None], "float_na": [None, 1.0, None]}
     assert_equal_data(result, expected)

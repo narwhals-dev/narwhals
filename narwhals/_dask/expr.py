@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import pandas as pd
 
@@ -441,9 +441,14 @@ class DaskExpr(
 
         def func(expr: dx.Series) -> dx.Series:
             # If/when pandas exposes an API which distinguishes NaN vs null, use that.
-            if get_dtype_backend(expr.dtype, self._implementation):
-                return expr.fillna(value_nullable)
-            return expr.fillna(value_numpy)
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = (
+                value_nullable
+                if get_dtype_backend(expr.dtype, self._implementation)
+                else value_numpy
+            )
+            return expr.mask(mask, fill)
 
         return self._with_callable(func, "fill_nan")
 
