@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import pytest
 
 from narwhals._utils import Implementation, Version, generate_temporary_column_name
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -169,35 +169,13 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
     import warnings
     from atexit import register
 
-    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
-
-    if TYPE_CHECKING:
-        from pyspark.sql import SparkSession
-    elif is_spark_connect:
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
         # Polars is imported in the tests, but not used in the spark operations
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-
-        session = (
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
+        session = pyspark_session()
 
         register(session.stop)
 
@@ -217,9 +195,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
-    from sqlframe.duckdb import DuckDBSession
-
-    session = DuckDBSession()
+    session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
