@@ -589,17 +589,12 @@ class PandasLikeSeries(EagerSeries[Any]):
                 )
         return res_ser
 
-    @property
-    def _NA(self) -> Any:  # noqa: N802
-        nullable = get_dtype_backend(self.native.dtype, self._implementation)
-        return self.__native_namespace__().NA if nullable else float("nan")
-
     def fill_nan(self, value: float | None) -> Self:
         if not self.dtype.is_numeric():  # pragma: no cover
             msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
-        fill = self._NA if value is None else value
         s = self.native
+        fill = s.array.dtype.na_value if value is None else value
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
         mask = s != s  # noqa: PLR0124
         # Carefully use `inplace`, as `mask` isn't provided by the user.
