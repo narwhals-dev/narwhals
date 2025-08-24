@@ -602,7 +602,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         s = self.native
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
         mask = s != s  # noqa: PLR0124
-        mask = mask.fillna(False)
+        # Carefully use `inplace`, as `mask` isn't provided by the user.
+        mask.fillna(False, inplace=True)  # noqa: PD002
         return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
