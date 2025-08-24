@@ -68,6 +68,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -861,16 +862,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
 
-    def mode(self) -> ArrowSeries:
+    def mode(self, *, keep: ModeKeepStrategy) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
         )
-        return counts.filter(
+        result = counts.filter(
             plx.col(col_token)
             == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
         ).get_column(self.name)
+        return result.head(1) if keep == "any" else result
 
     def is_finite(self) -> Self:
         return self._with_native(pc.is_finite(self.native))

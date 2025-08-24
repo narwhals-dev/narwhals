@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals._namespace import _NativeIbis
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
@@ -29,14 +30,13 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
+
     class NativeLazyFrame(NativeFrame, Protocol):
         def explain(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class NativeSeries(Sized, Iterable[Any], Protocol):
         def filter(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class DataFrameLike(Protocol):
-        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class SupportsNativeNamespace(Protocol):
         def __native_namespace__(self) -> ModuleType: ...
@@ -110,7 +110,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrameLike"]
+IntoDataFrame: TypeAlias = "NativeDataFrame"
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -123,7 +123,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame"
+IntoLazyFrame: TypeAlias = Union["NativeLazyFrame", "_NativeIbis"]
 
 IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
@@ -342,6 +342,12 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 - *"none"*: Don't keep duplicate rows.
 """
 
+ModeKeepStrategy: TypeAlias = Literal["any", "all"]
+"""Which of the mode's to keep.
+
+- *"any"*: Does not give any guarantee of which mode is kept.
+- *"all"*: Keeps all the mode's.
+"""
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"

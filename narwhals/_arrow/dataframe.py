@@ -27,6 +27,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -439,6 +440,20 @@ class ArrowDataFrame(
 
         return self._with_native(
             self.native.sort_by(sorting, null_placement=null_placement),
+            validate_column_names=False,
+        )
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        if isinstance(reverse, bool):
+            order: Order = "ascending" if reverse else "descending"
+            sorting: list[tuple[str, Order]] = [(key, order) for key in by]
+        else:
+            sorting = [
+                (key, "ascending" if is_ascending else "descending")
+                for key, is_ascending in zip_strict(by, reverse)
+            ]
+        return self._with_native(
+            self.native.take(pc.select_k_unstable(self.native, k, sorting)),  # type: ignore[call-overload]
             validate_column_names=False,
         )
 

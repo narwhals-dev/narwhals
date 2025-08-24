@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -702,8 +703,8 @@ class EagerExpr(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._reuse_series("gather_every", n=n, offset=offset)
 
-    def mode(self) -> Self:
-        return self._reuse_series("mode")
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        return self._reuse_series("mode", scalar_kwargs={"keep": keep})
 
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
@@ -765,19 +766,21 @@ class EagerExpr(
             udf_series_in = self(df)
             output_names = (input_series.name for input_series in udf_series_in)
             udf_series_out = tuple(function(series) for series in udf_series_in)
+            _first_in, _first_out = udf_series_in[0], udf_series_out[0]
+
             result: Sequence[EagerSeriesT]
-            if is_numpy_array(udf_series_out[0]) or is_numpy_scalar(udf_series_out[0]):
-                from_numpy = partial(
-                    self.__narwhals_namespace__()._series.from_numpy, context=self
-                )
-                result = tuple(
-                    from_numpy(array).alias(output_name)
-                    for array, output_name in zip_strict(udf_series_out, output_names)
-                )
-            else:
-                result = udf_series_out
+            it = zip_strict(udf_series_out, output_names)
+            if is_numpy_array(_first_out) or is_numpy_scalar(_first_out):
+                from_numpy = partial(_first_in.from_numpy, context=self)
+                result = tuple(from_numpy(arr).alias(out_name) for arr, out_name in it)
+            elif isinstance(_first_out, _first_in.__class__):  # compliant series
+                result = tuple(series.alias(out_name) for series, out_name in it)
+            else:  # If everything else fails, assume scalar case
+                from_scalar = _first_in._from_scalar
+                result = tuple(from_scalar(val).alias(out_name) for val, out_name in it)
+
             if return_dtype is not None:
-                result = [series.cast(return_dtype) for series in result]
+                result = tuple(series.cast(return_dtype) for series in result)
 
             is_scalar_result = tuple(len(r) == 1 for r in result)
             if (not returns_scalar) and any(is_scalar_result) and (len(df) > 1):

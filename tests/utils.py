@@ -6,7 +6,7 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
 import pyarrow as pa
@@ -18,9 +18,11 @@ from narwhals.translate import from_native
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from pyspark.sql import SparkSession
+    from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike, Frame, NativeFrame, NativeLazyFrame
+    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -40,8 +42,8 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 
 
@@ -143,6 +145,33 @@ def assert_equal_series(
     result: nw.Series[Any], expected: Sequence[Any], name: str
 ) -> None:
     assert_equal_data(result.to_frame(), {name: expected})
+
+
+def sqlframe_session() -> DuckDBSession:
+    from sqlframe.duckdb import DuckDBSession
+
+    # NOTE: `__new__` override inferred by `pyright` only
+    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
+    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
+
+
+def pyspark_session() -> SparkSession:  # pragma: no cover
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
+    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+    builder = (
+        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+        if is_spark_connect
+        else builder.master("local[1]").config("spark.ui.enabled", "false")
+    )
+    return (
+        builder.config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:

@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         IntoDataFrame,
         IntoExpr,
         IntoFrame,
+        IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
         LazyUniqueKeepStrategy,
@@ -95,7 +96,7 @@ if TYPE_CHECKING:
     PS = ParamSpec("PS")
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
-FrameT = TypeVar("FrameT", bound="IntoFrame")
+LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
 
@@ -243,6 +244,14 @@ class BaseFrame(Generic[_FrameT]):
         by = flatten([*flatten([by]), *more_by])
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
+        )
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        flatten_by = flatten([by])
+        return self._with_compliant(
+            self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )
 
     def join(
@@ -469,8 +478,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        # NOTE: Interchange support (`DataFrameLike`) is the source of the error
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]  # type: ignore[type-var]
+        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -1747,6 +1755,43 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
 
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        r"""Return the `k` largest rows.
+
+        Non-null elements are always preferred over null elements,
+        regardless of the value of reverse. The output is not guaranteed
+        to be in any particular order, sort the outputs afterwards if you wish the output to be sorted.
+
+        Arguments:
+            k: Number of rows to return.
+            by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
+            reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
+                This can be specified per column by passing a sequence of booleans.
+
+        Returns:
+            The dataframe with the `k` largest rows.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame(
+            ...     {"a": ["a", "b", "a", "b", None, "c"], "b": [2, 1, 1, 3, 2, 1]}
+            ... )
+            >>> nw.from_native(df_native).top_k(4, by=["b", "a"])
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |          a  b    |
+            |    3     b  3    |
+            |    0     a  2    |
+            |    4  None  2    |
+            |    5     c  1    |
+            └──────────────────┘
+        """
+        return super().top_k(k, by=by, reverse=reverse)
+
     def join(
         self,
         other: Self,
@@ -2219,7 +2264,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().explode(columns, *more_columns)
 
 
-class LazyFrame(BaseFrame[FrameT]):
+class LazyFrame(BaseFrame[LazyFrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
     Warning:
@@ -2285,7 +2330,7 @@ class LazyFrame(BaseFrame[FrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
-        self._compliant_frame: CompliantLazyFrame[Any, FrameT, Self]  # type: ignore[type-var]
+        self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
@@ -2384,7 +2429,7 @@ class LazyFrame(BaseFrame[FrameT]):
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
         raise ValueError(msg)
 
-    def to_native(self) -> FrameT:
+    def to_native(self) -> LazyFrameT:
         """Convert Narwhals LazyFrame to native one.
 
         Examples:
@@ -2982,6 +3027,48 @@ class LazyFrame(BaseFrame[FrameT]):
             └──────────────────────────────────┘
         """
         return super().sort(by, *more_by, descending=descending, nulls_last=nulls_last)
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
+    ) -> Self:
+        r"""Return the `k` largest rows.
+
+        Non-null elements are always preferred over null elements,
+        regardless of the value of reverse. The output is not guaranteed
+        to be in any particular order, sort the outputs afterwards if you wish the output to be sorted.
+
+        Arguments:
+            k: Number of rows to return.
+            by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
+            reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
+                This can be specified per column by passing a sequence of booleans.
+
+        Returns:
+            The LazyFrame with the `k` largest rows.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES ('a', 2), ('b', 1), ('a', 1), ('b', 3), (NULL, 2), ('c', 1) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.top_k(4, by=["b", "a"])
+            ┌───────────────────┐
+            |Narwhals LazyFrame |
+            |-------------------|
+            |┌─────────┬───────┐|
+            |│    a    │   b   │|
+            |│ varchar │ int32 │|
+            |├─────────┼───────┤|
+            |│ b       │     3 │|
+            |│ a       │     2 │|
+            |│ NULL    │     2 │|
+            |│ c       │     1 │|
+            |└─────────┴───────┘|
+            └───────────────────┘
+        """
+        return super().top_k(k, by=by, reverse=reverse)
 
     def join(
         self,

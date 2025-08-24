@@ -73,7 +73,7 @@ if TYPE_CHECKING:
         NativeFrameT_co,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames
+    from narwhals._compliant.typing import EvalNames, NativeLazyFrameT
     from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
@@ -90,7 +90,6 @@ if TYPE_CHECKING:
         CompliantDataFrame,
         CompliantLazyFrame,
         CompliantSeries,
-        DataFrameLike,
         DTypes,
         IntoSeriesT,
         MultiIndexSelector,
@@ -1623,8 +1622,8 @@ def is_compliant_dataframe(
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeLazyFrameT, ToNarwhalsT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeLazyFrameT, ToNarwhalsT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
@@ -1674,10 +1673,6 @@ def can_dataframe_lazy(impl: Implementation, /) -> TypeIs[_DataFrameLazyImpl]:
 
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
     return _hasattr_static(obj, "__native_namespace__")
-
-
-def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return hasattr(obj, "__dataframe__")
 
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:

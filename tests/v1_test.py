@@ -13,7 +13,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -34,6 +34,7 @@ from narwhals.stable.v1.dependencies import (
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -475,8 +476,8 @@ def test_renamed_taxicab_norm_dataframe() -> None:
     result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]}))._l1_norm()
     expected = {"a": [15]}
     assert_equal_data(result, expected)
-    result = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
-    assert_equal_data(result, expected)
+    result_lazy = nw_v1.from_native(pa.table({"a": [1, 2, 3, -4, 5]})).lazy()._l1_norm()
+    assert_equal_data(result_lazy, expected)
 
 
 def test_renamed_taxicab_norm_dataframe_narwhalify() -> None:
@@ -579,16 +580,11 @@ def test_dataframe_recursive_v1() -> None:
 
     if TYPE_CHECKING:
         assert_type(pl_frame, pl.DataFrame)
-        assert_type(
-            nw_frame, "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]"
-        )
+        assert_type(nw_frame, "nw_v1.DataFrame[pl.DataFrame]")
         nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
         assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
-        assert_type(
-            nw_frame_early_return,
-            "nw_v1.DataFrame[pl.DataFrame] | nw_v1.LazyFrame[pl.DataFrame]",
-        )
+        assert_type(nw_frame_early_return, "nw_v1.DataFrame[pl.DataFrame]")
 
 
 def test_lazyframe_recursive_v1() -> None:
@@ -1078,6 +1074,30 @@ def test_series_from_iterable(
     if dtype:
         assert result.dtype == dtype
     assert_equal_series(result, expected, name)
+
+
+def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    df = nw_v1.from_native(constructor_eager(data))
+    result = df.select(nw_v1.col("a").mode()).sort("a")
+    expected = {"a": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_mode_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = series.mode().sort()
+    expected = {"a": [1, 2]}
+    assert_equal_data({"a": result}, expected)
+
+
+def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    with pytest.raises(ShapeError):
+        df.select(nw_v1.col("a", "b").mode())
 
 
 def test_int_range() -> None:
