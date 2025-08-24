@@ -589,20 +589,21 @@ class PandasLikeSeries(EagerSeries[Any]):
                 )
         return res_ser
 
+    @property
+    def _NA(self) -> Any:  # noqa: N802
+        nullable = get_dtype_backend(self.native.dtype, self._implementation)
+        return self.__native_namespace__().NA if nullable else float("nan")
+
     def fill_nan(self, value: float | None) -> Self:
         if not self.dtype.is_numeric():  # pragma: no cover
-            msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
+            msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
-        value_nullable = self.__native_namespace__().NA if value is None else value
-        value_numpy = float("nan") if value is None else value
+        fill = self._NA if value is None else value
         s = self.native
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
-        if get_dtype_backend(self.native.dtype, self._implementation):
-            return self._with_native(
-                s.mask((s != s).fillna(False), value_nullable),  # noqa: PLR0124
-                preserve_broadcast=True,
-            )
-        return self._with_native(s.mask(s != s, value_numpy), preserve_broadcast=True)  # noqa: PLR0124
+        mask = s != s  # noqa: PLR0124
+        mask = mask.fillna(False)
+        return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())

@@ -652,10 +652,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.take(mask))
 
     def fill_nan(self, value: float | None) -> Self:
-        return self._with_native(
-            pc.if_else(pc.is_nan(self.native), value, self.native),
-            preserve_broadcast=True,
-        )
+        result = pc.if_else(pc.is_nan(self.native), value, self.native)
+        return self._with_native(result, preserve_broadcast=True)
 
     def fill_null(
         self,
