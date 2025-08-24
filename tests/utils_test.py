@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     from narwhals._utils import _SupportsVersion
     from narwhals.series import Series
-    from narwhals.typing import IntoSeries
 
 
 @dataclass
@@ -126,7 +125,7 @@ def test_maybe_set_index_polars_column_names(
     ],
 )
 def test_maybe_set_index_pandas_direct_index(
-    narwhals_index: Series[IntoSeries] | list[Series[IntoSeries]],
+    narwhals_index: Series[pd.Series[Any]] | list[Series[pd.Series[Any]]],
     pandas_index: pd.Series[Any] | list[pd.Series[Any]],
     native_df_or_series: pd.DataFrame | pd.Series[Any],
 ) -> None:
@@ -151,7 +150,7 @@ def test_maybe_set_index_pandas_direct_index(
     ],
 )
 def test_maybe_set_index_polars_direct_index(
-    index: Series[IntoSeries] | list[Series[IntoSeries]] | None,
+    index: Series[pd.Series[Any]] | list[Series[pd.Series[Any]]] | None,
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
