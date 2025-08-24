@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ from narwhals._dask.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import fill_nan, native_to_narwhals_dtype
+from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -440,16 +440,9 @@ class DaskExpr(
         value_numpy = float("nan") if value is None else value
 
         def func(expr: dx.Series) -> dx.Series:
-            dtype_native = expr.dtype
-            result = fill_nan(
-                # Slight lie about type to reuse pandas implementation.
-                cast("pd.Series[Any]", expr),
-                dtype_native,
-                self._implementation,
-                value_nullable,
-                value_numpy,
-            )
-            return cast("dx.Series", result)
+            if get_dtype_backend(expr.dtype, self._implementation):
+                return expr.fillna(value_nullable)
+            return expr.fillna(value_numpy)
 
         return self._with_callable(func, "fill_nan")
 

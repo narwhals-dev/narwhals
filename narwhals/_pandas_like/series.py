@@ -13,7 +13,6 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
-    fill_nan,
     get_dtype_backend,
     import_array_module,
     narwhals_to_native_dtype,
@@ -592,15 +591,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def fill_nan(self, value: float | None) -> Self:
         value_nullable = self.__native_namespace__().NA if value is None else value
         value_numpy = float("nan") if value is None else value
-        return self._with_native(
-            fill_nan(
-                self.native,
-                self.native.dtype,
-                self._implementation,
-                value_nullable,
-                value_numpy,
-            )
-        )
+        if get_dtype_backend(self.native.dtype, self._implementation):
+            return self._with_native(self.native.fillna(value_nullable))
+        return self._with_native(self.native.fillna(value_numpy))
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())
