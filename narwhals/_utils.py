@@ -2061,8 +2061,8 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
-# TODO @dangotbanned: Rename and give a better doc
-class NarwhalsObj(Protocol[NativeT_co]):
+# TODO @dangotbanned: give a better doc
+class Narwhals(Protocol[NativeT_co]):
     """Minimal `BaseFrame`, `Series` protocol.
 
     - `to_native` scopes a covariant type parameter
@@ -2084,46 +2084,38 @@ class _Implementation:
         self.__name__: str = name
 
     @overload
-    def __get__(
-        self, instance: NarwhalsObj[_NativePolars], owner: Any
-    ) -> _PolarsImpl: ...
+    def __get__(self, instance: Narwhals[_NativePolars], owner: Any) -> _PolarsImpl: ...
     @overload
-    def __get__(
-        self, instance: NarwhalsObj[_NativePandas], owner: Any
-    ) -> _PandasImpl: ...
+    def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
-    def __get__(self, instance: NarwhalsObj[_NativeModin], owner: Any) -> _ModinImpl: ...
+    def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
 
     @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
-    def __get__(self, instance: NarwhalsObj[_NativeCuDF], owner: Any) -> _CudfImpl: ...
+    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CudfImpl: ...
     @overload
     def __get__(
-        self, instance: NarwhalsObj[_NativePandasLike], owner: Any
+        self, instance: Narwhals[_NativePandasLike], owner: Any
     ) -> _PandasLikeImpl: ...
     @overload
-    def __get__(self, instance: NarwhalsObj[_NativeArrow], owner: Any) -> _ArrowImpl: ...
+    def __get__(self, instance: Narwhals[_NativeArrow], owner: Any) -> _ArrowImpl: ...
     @overload
     def __get__(
-        self,
-        instance: NarwhalsObj[_NativePolars | _NativeArrow | _NativePandas],
-        owner: Any,
+        self, instance: Narwhals[_NativePolars | _NativeArrow | _NativePandas], owner: Any
     ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
     @overload
-    def __get__(
-        self, instance: NarwhalsObj[_NativeDuckDB], owner: Any
-    ) -> _DuckDBImpl: ...
+    def __get__(self, instance: Narwhals[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
     @overload
     def __get__(
-        self, instance: NarwhalsObj[_NativeSQLFrame], owner: Any
+        self, instance: Narwhals[_NativeSQLFrame], owner: Any
     ) -> _SQLFrameImpl: ...
     @overload
-    def __get__(self, instance: NarwhalsObj[_NativeDask], owner: Any) -> _DaskImpl: ...
+    def __get__(self, instance: Narwhals[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
-    def __get__(self, instance: NarwhalsObj[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    def __get__(self, instance: Narwhals[_NativeIbis], owner: Any) -> _IbisImpl: ...
     # NOTE: pyspark isn't installed for typing ci
     @overload
     def __get__(
-        self, instance: NarwhalsObj[_NativePySpark | _NativePySparkConnect], owner: Any
+        self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
     @overload
     def __get__(self, instance: None, owner: Any) -> Self: ...
@@ -2135,7 +2127,7 @@ class _Implementation:
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
     def __get__(
         self,
-        instance: DataFrame[Any] | LazyFrame[Any] | Series[Any] | NarwhalsObj[Any] | None,
+        instance: DataFrame[Any] | LazyFrame[Any] | Series[Any] | Narwhals[Any] | None,
         owner: Any,
     ) -> Any:
         return self if instance is None else instance._compliant._implementation
