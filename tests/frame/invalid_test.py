@@ -9,10 +9,6 @@ import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
 
-if TYPE_CHECKING:
-    from narwhals.typing import Frame
-
-
 T = TypeVar("T")
 
 
@@ -21,14 +17,14 @@ T = TypeVar("T")
 )
 def test_all_vs_all(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
-    df: Frame = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data))
     with pytest.raises(MultiOutputExpressionError):
         df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 
 
 def test_invalid() -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df: Frame = nw.from_native(pd.DataFrame(data))
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(ValueError, match="Multi-output"):
         df.select(nw.all() + nw.all())
 
@@ -37,7 +33,7 @@ def test_invalid_pyarrow() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    df: Frame = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
+    df = nw.from_native(pa.table({"a": [1, 2], "b": [3, 4]}))
     with pytest.raises(MultiOutputExpressionError):
         df.select(nw.all() + nw.all())
 
@@ -47,7 +43,7 @@ def test_invalid_polars() -> None:
     import polars as pl
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df: Frame = nw.from_native(pd.DataFrame(data))
+    df = nw.from_native(pd.DataFrame(data))
     with pytest.raises(TypeError, match="Perhaps you"):
         df.select([pl.col("a")])  # type: ignore[list-item]
     with pytest.raises(TypeError, match="Expected Narwhals dtype"):
