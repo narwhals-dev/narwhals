@@ -232,7 +232,7 @@ class Series(Generic[IntoSeriesT]):
         raise ValueError(msg)
 
     implementation: _Implementation = _Implementation()
-    """Return implementation of native Series.
+    """Return [`narwhals.Implementation`][] of native Series.
 
     This can be useful when you need to use special-casing for features outside of
     Narwhals' scope - for example, when dealing with pandas' Period Dtype.
