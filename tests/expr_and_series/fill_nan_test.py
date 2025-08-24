@@ -12,8 +12,8 @@ def test_is_nan(constructor: Constructor) -> None:
     if df.implementation.is_dask():
         # test both pyarrow-dtypes and numpy-dtypes
         df = nw.from_native(
-            df.to_native().astype({"a": "Float64[pyarrow]", "b": "float64"})
-        )  # type: ignore[attr-defined]
+            df.to_native().astype({"a": "Float64[pyarrow]", "b": "float64"})  # type: ignore[attr-defined]
+        )
 
     result = df.select(nw.all().fill_nan(None))
     expected = {"a": [1.1, 2.0, None], "b": [3.1, 4.0, None]}
