@@ -440,6 +440,7 @@ class DaskExpr(
         value_numpy = float("nan") if value is None else value
 
         def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
             if get_dtype_backend(expr.dtype, self._implementation):
                 return expr.fillna(value_nullable)
             return expr.fillna(value_numpy)
