@@ -281,18 +281,6 @@ class SparkLikeLazyFrame(
 
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
-    def fill_nan(self, value: float | None) -> Self:
-        F = self._F
-        exprs = [
-            F.when(F.isnan(F.col(col_name)), F.lit(value))
-            .otherwise(F.col(col_name))
-            .alias(col_name)
-            if dtype.is_float()
-            else col_name
-            for col_name, dtype in self.schema.items()
-        ]
-        return self._with_native(self.native.select(*exprs))
-
     def filter(self, predicate: SparkLikeExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         condition = predicate._call(self)[0]

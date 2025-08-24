@@ -14,7 +14,6 @@
         - estimated_size
         - explode
         - filter
-        - fill_nan
         - from_arrow
         - from_dict
         - from_numpy

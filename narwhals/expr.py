@@ -1050,8 +1050,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1082,8 +1081,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1205,14 +1203,51 @@ class Expr:
             else self._metadata,
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (5.::DOUBLE, 50.::DOUBLE), ('NaN', null) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.col("a", "b").fill_nan(0).name.suffix("_nans_filled"))
+            ┌───────────────────────────────────────────────────┐
+            |                Narwhals LazyFrame                 |
+            |---------------------------------------------------|
+            |┌────────┬────────┬───────────────┬───────────────┐|
+            |│   a    │   b    │ a_nans_filled │ b_nans_filled │|
+            |│ double │ double │    double     │    double     │|
+            |├────────┼────────┼───────────────┼───────────────┤|
+            |│    5.0 │   50.0 │           5.0 │          50.0 │|
+            |│    nan │   NULL │           0.0 │          NULL │|
+            |└────────┴────────┴───────────────┴───────────────┘|
+            └───────────────────────────────────────────────────┘
+        """
+        return self.__class__(
+            lambda plx: self._to_compliant_expr(plx).fill_nan(
+                value=extract_compliant(plx, value, str_as_lit=True)
+            ),
+            self._metadata,
+        )
+
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
         """Drop null values.
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1353,8 +1388,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1599,8 +1633,7 @@ class Expr:
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
             nullable backends null values are kept as such.

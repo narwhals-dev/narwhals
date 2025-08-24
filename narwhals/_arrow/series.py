@@ -651,6 +651,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._with_native(pc.if_else(pc.is_nan(self.native), value, self.native))
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

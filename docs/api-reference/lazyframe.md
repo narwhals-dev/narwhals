@@ -11,7 +11,6 @@
         - drop_nulls
         - explode
         - filter
-        - fill_nan
         - gather_every
         - group_by
         - head

@@ -71,7 +71,6 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "estimated_size",
         "explode",
-        "fill_nan",
         "filter",
         "gather_every",
         "head",
@@ -102,7 +101,6 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
     drop_nulls: Method[Self]
     explode: Method[Self]
-    fill_nan: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]

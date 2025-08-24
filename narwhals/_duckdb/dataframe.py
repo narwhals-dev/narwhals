@@ -15,7 +15,6 @@ from narwhals._duckdb.utils import (
     evaluate_exprs,
     lit,
     native_to_narwhals_dtype,
-    when,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -439,17 +438,6 @@ class DuckDBLazyFrame(
         subset_ = subset if subset is not None else self.columns
         keep_condition = reduce(and_, (col(name).isnotnull() for name in subset_))
         return self._with_native(self.native.filter(keep_condition))
-
-    def fill_nan(self, value: float | None) -> Self:
-        exprs = [
-            when(F("isnan", col(col_name)), lit(value))
-            .otherwise(col(col_name))
-            .alias(col_name)
-            if dtype.is_float()
-            else col_name
-            for col_name, dtype in self.schema.items()
-        ]
-        return self._with_native(self.native.select(*exprs))
 
     def explode(self, columns: Sequence[str]) -> Self:
         dtypes = self._version.dtypes

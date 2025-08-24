@@ -3,15 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
-import pandas as pd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._expression_parsing import ExprKind
-from narwhals._pandas_like.utils import (
-    fill_nan,
-    native_to_narwhals_dtype,
-    select_columns_by_name,
-)
+from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     Implementation,
@@ -168,24 +163,6 @@ class DaskLazyFrame(
                 else self.native.columns.tolist()
             )
         return self._cached_columns
-
-    def fill_nan(self, value: float | None) -> Self:
-        schema_nw = self.schema
-        schema_native = self.native.dtypes
-        value_nullable = pd.NA if value is None else value
-        value_numpy = float("nan") if value is None else value
-        new_cols = {
-            col_name: fill_nan(
-                self.native[col_name],
-                schema_nw[col_name],
-                schema_native[col_name],
-                self._implementation,
-                value_nullable,
-                value_numpy,
-            )
-            for col_name in self.columns
-        }
-        return self._with_native(self.native.assign(**new_cols))
 
     def filter(self, predicate: DaskExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
