@@ -441,13 +441,9 @@ class DaskExpr(
 
         def func(expr: dx.Series) -> dx.Series:
             dtype_native = expr.dtype
-            dtype_nw = native_to_narwhals_dtype(
-                dtype_native, self._version, self._implementation
-            )
             result = fill_nan(
                 # Slight lie about type to reuse pandas implementation.
                 cast("pd.Series[Any]", expr),
-                dtype_nw,
                 dtype_native,
                 self._implementation,
                 value_nullable,

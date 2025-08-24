@@ -37,7 +37,6 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "rank": "rank",
     "diff": "diff",
     "fill_null": "fillna",
-    "fill_nan": "fill_nan",  # Custom implementation, not direct pandas method
     "quantile": "quantile",
     "ewm_mean": "mean",
 }
@@ -77,9 +76,6 @@ def window_kwargs_to_pandas_equivalent(
         assert "strategy" in kwargs  # noqa: S101
         assert "limit" in kwargs  # noqa: S101
         pandas_kwargs = {"strategy": kwargs["strategy"], "limit": kwargs["limit"]}
-    elif function_name == "fill_nan":
-        # fill_nan doesn't use pandas kwargs directly, handled in series method
-        pandas_kwargs = {}
     elif function_name == "quantile":
         assert "quantile" in kwargs  # noqa: S101
         assert "interpolation" in kwargs  # noqa: S101

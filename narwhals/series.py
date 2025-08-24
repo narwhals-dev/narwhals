@@ -1410,9 +1410,8 @@ class Series(Generic[IntoSeriesT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> s_native = pl.Series([1.0, 2.0, float("nan"), None])
-            >>> nw.from_native(s_native, series_only=True).fill_nan(
-            ...     0
-            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> result = nw.from_native(s_native, series_only=True).fill_nan(0)
+            >>> result.to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (4,)
             Series: '' [f64]
             [

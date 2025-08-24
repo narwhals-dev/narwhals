@@ -595,7 +595,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(
             fill_nan(
                 self.native,
-                self.dtype,
                 self.native.dtype,
                 self._implementation,
                 value_nullable,

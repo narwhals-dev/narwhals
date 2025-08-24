@@ -661,17 +661,14 @@ def import_array_module(implementation: Implementation, /) -> ModuleType:
 
 def fill_nan(
     series_native: pd.Series[Any],
-    dtype_nw: DType,
     dtype_native: Any,
     implementation: Implementation,
     value_nullable: float | NAType,
     value_numpy: float,
 ) -> pd.Series[Any]:
-    if dtype_nw.is_float():
-        if get_dtype_backend(dtype_native, implementation):
-            return series_native.fillna(value_nullable)
-        return series_native.fillna(value_numpy)
-    return series_native
+    if get_dtype_backend(dtype_native, implementation):
+        return series_native.fillna(value_nullable)
+    return series_native.fillna(value_numpy)
 
 
 class PandasLikeSeriesNamespace(EagerSeriesNamespace["PandasLikeSeries", Any]): ...
