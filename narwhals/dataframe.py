@@ -26,7 +26,7 @@ from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollec
 from narwhals._utils import (
     Implementation,
     Version,
-    _ImplDescriptor,
+    _Implementation,
     can_dataframe_lazy,
     can_lazyframe_collect,
     check_columns_exist,
@@ -109,7 +109,7 @@ class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
 
-    implementation: _ImplDescriptor = _ImplDescriptor()
+    implementation: _Implementation = _Implementation()
     """Return implementation of native frame.
 
     This can be useful when you need to use special-casing for features outside of

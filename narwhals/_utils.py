@@ -2074,8 +2074,12 @@ class NarwhalsObj(Protocol[NativeT_co]):
     def _compliant(self) -> _StoresImplementation: ...
 
 
-# TODO @dangotbanned: Rename
-class _ImplDescriptor:
+class _Implementation:
+    """Descriptor for matching an opaque `Implementation` on a generic class.
+
+    Based on [pyright comment](https://github.com/microsoft/pyright/issues/3071#issuecomment-1043978070)
+    """
+
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self.__name__: str = name
 

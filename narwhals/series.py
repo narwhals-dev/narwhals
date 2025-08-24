@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, ove
 from narwhals._utils import (
     Implementation,
     Version,
-    _ImplDescriptor,
+    _Implementation,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -231,7 +231,7 @@ class Series(Generic[IntoSeriesT]):
         )
         raise ValueError(msg)
 
-    implementation: _ImplDescriptor = _ImplDescriptor()
+    implementation: _Implementation = _Implementation()
     """Return implementation of native Series.
 
     This can be useful when you need to use special-casing for features outside of
