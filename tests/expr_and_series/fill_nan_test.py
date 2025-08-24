@@ -1,34 +1,47 @@
 from __future__ import annotations
 
 import narwhals as nw
+from tests.conftest import (
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+    pandas_constructor,
+)
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
+
+NON_NULLABLE_CONSTRUCTORS = [
+    pandas_constructor,
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+]
 
 
 def test_fill_nan(constructor: Constructor) -> None:
-    df = nw.from_native(
-        constructor({"a": [1.1, 2.0, float("nan")], "b": [3.1, 4.0, None]})
+    data_na = {"int": [-1, 1, None]}
+    df = nw.from_native(constructor(data_na)).select(
+        float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
     )
 
     if df.implementation.is_dask():
         # test both pyarrow-dtypes and numpy-dtypes
         df = nw.from_native(
-            df.to_native().astype({"a": "Float64[pyarrow]", "b": "float64"})  # type: ignore[union-attr]
+            df.to_native().astype({"float_na": "Float64[pyarrow]", "float": "float64"})  # type: ignore[union-attr]
         )
 
     result = df.select(nw.all().fill_nan(None))
-    expected = {"a": [1.1, 2.0, None], "b": [3.1, 4.0, None]}
+    expected = {"float": [-1.0, 1.0, None], "float_na": [None, 1.0, None]}
     assert_equal_data(result, expected)
-    assert result.lazy().collect()["a"].null_count() == 1
+    assert result.lazy().collect()["float_na"].null_count() == 2
     result = df.select(nw.all().fill_nan(3.0))
-    if any(x in str(constructor) for x in ("pandas", "dask", "cudf", "modin")):
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
         # pandas doesn't distinguish nan vs null
-        expected = {"a": [1.1, 2.0, 3.0], "b": [3.1, 4.0, 3.0]}
-        assert int(result.lazy().collect()["b"].null_count()) == 0
+        expected = {"float": [-1.0, 1.0, 3.0], "float_na": [3.0, 1.0, 3.0]}
+        assert result.lazy().collect()["float_na"].null_count() == 0
     else:
-        expected = {"a": [1.1, 2.0, 3.0], "b": [3.1, 4.0, None]}
-        assert result.lazy().collect()["b"].null_count() == 1
+        expected = {"float": [-1.0, 1.0, None], "float_na": [3.0, 1.0, None]}
+        assert result.lazy().collect()["float_na"].null_count() == 1
     assert_equal_data(result, expected)
-    assert result.lazy().collect()["a"].null_count() == 0
 
 
 def test_fill_nan_series(constructor_eager: ConstructorEager) -> None:

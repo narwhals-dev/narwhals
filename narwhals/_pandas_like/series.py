@@ -595,12 +595,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             raise InvalidOperationError(msg)
         value_nullable = self.__native_namespace__().NA if value is None else value
         value_numpy = float("nan") if value is None else value
+        s = self.native
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
         if get_dtype_backend(self.native.dtype, self._implementation):
             return self._with_native(
-                self.native.fillna(value_nullable), preserve_broadcast=True
+                s.mask((s != s).fillna(False), value_nullable),  # noqa: PLR0124
+                preserve_broadcast=True,
             )
-        return self._with_native(self.native.fillna(value_numpy), preserve_broadcast=True)
+        return self._with_native(s.mask(s != s, value_numpy), preserve_broadcast=True)  # noqa: PLR0124
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())
