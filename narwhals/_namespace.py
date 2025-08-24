@@ -66,7 +66,6 @@ if TYPE_CHECKING:
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
-
     Incomplete: TypeAlias = Any
 
     class _BasePandasLike(Sized, Protocol):
@@ -85,9 +84,7 @@ if TYPE_CHECKING:
         def rename(self, *args: Any, **kwds: Any) -> Self | Incomplete:
             """`mypy` & `pyright` disagree on overloads.
 
-            `Incomplete` used to fix [more important issue].
-
-            [issue]: https://github.com/narwhals-dev/narwhals/pull/3016#discussion_r2296139744
+            `Incomplete` used to fix [more important issue](https://github.com/narwhals-dev/narwhals/pull/3016#discussion_r2296139744).
             """
 
     class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
@@ -118,8 +115,7 @@ if TYPE_CHECKING:
 
     # NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
     class _PySparkDataFrame(NativeLazyFrame, Protocol):
-        # Not on sqlframe classes
-        # Insane method name that no other framework would clobber
+        # Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
         # https://github.com/apache/spark/blob/8530444e25b83971da4314c608aa7d763adeceb3/python/pyspark/sql/dataframe.py#L4875
         def dropDuplicatesWithinWatermark(self, *arg: Any, **kwargs: Any) -> Any: ...  # noqa: N802
 

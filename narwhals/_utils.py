@@ -2110,7 +2110,6 @@ class _Implementation:
     def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
     def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
-
     @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
     def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CudfImpl: ...
     @overload
@@ -2133,7 +2132,6 @@ class _Implementation:
     def __get__(self, instance: Narwhals[_NativeDask], owner: Any) -> _DaskImpl: ...
     @overload
     def __get__(self, instance: Narwhals[_NativeIbis], owner: Any) -> _IbisImpl: ...
-    # NOTE: pyspark isn't installed for typing ci
     @overload
     def __get__(
         self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
@@ -2146,9 +2144,5 @@ class _Implementation:
     ) -> _EagerAllowedImpl: ...
     @overload
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
-    def __get__(
-        self,
-        instance: DataFrame[Any] | LazyFrame[Any] | Series[Any] | Narwhals[Any] | None,
-        owner: Any,
-    ) -> Any:
+    def __get__(self, instance: Narwhals[Any] | None, owner: Any) -> Any:
         return self if instance is None else instance._compliant._implementation
