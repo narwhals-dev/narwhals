@@ -169,7 +169,7 @@ _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
-class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
+class _StoresNative(Protocol[NativeT_co]):
     """Provides access to a native object.
 
     Native objects have types like:
@@ -2061,17 +2061,14 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
-# TODO @dangotbanned: give a better doc
+class Compliant(
+    _StoresNative[NativeT_co], _StoresImplementation, Protocol[NativeT_co]
+): ...
+
+
 class Narwhals(Protocol[NativeT_co]):
-    """Minimal `BaseFrame`, `Series` protocol.
-
-    - `to_native` scopes a covariant type parameter
-    - `_compliant` describes the route to `Implementation`
-    """
-
-    def to_native(self) -> NativeT_co: ...
     @property
-    def _compliant(self) -> _StoresImplementation: ...
+    def _compliant(self) -> Compliant[NativeT_co]: ...
 
 
 class _Implementation:
