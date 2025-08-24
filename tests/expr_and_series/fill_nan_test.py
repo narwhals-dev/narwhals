@@ -4,7 +4,7 @@ import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
-def test_is_nan(constructor: Constructor) -> None:
+def test_fill_nan(constructor: Constructor) -> None:
     df = nw.from_native(
         constructor({"a": [1.1, 2.0, float("nan")], "b": [3.1, 4.0, None]})
     )
@@ -31,7 +31,7 @@ def test_is_nan(constructor: Constructor) -> None:
     assert result.lazy().collect()["a"].null_count() == 0
 
 
-def test_is_nan_series(constructor_eager: ConstructorEager) -> None:
+def test_fill_nan_series(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(
         constructor_eager({"a": [1.1, 2.0, float("nan")]}), eager_only=True
     )["a"]
