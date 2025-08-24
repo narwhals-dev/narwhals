@@ -2067,6 +2067,30 @@ class Compliant(
 
 
 class Narwhals(Protocol[NativeT_co]):
+    """Minimal *Narwhals-level* protocol.
+
+    Provides access to a compliant object:
+
+        obj: Narwhals[NativeT_co]]
+        compliant: Compliant[NativeT_co] = obj._compliant
+
+    Which itself exposes:
+
+        implementation: Implementation = compliant.implementation
+        native: NativeT_co = compliant.native
+
+    This interface is used for revealing which `Implementation` member is associated with **either**:
+    - One or more [nominal] native type(s)
+    - One or more [structural] type(s)
+      - where the true native type(s) are [assignable to] *at least* one of them
+
+    These relationships are defined in the `@overload`s of `_Implementation.__get__(...)`.
+
+    [nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
+    [structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
+    [assignable to]: https://typing.python.org/en/latest/spec/glossary.html#term-assignable
+    """
+
     @property
     def _compliant(self) -> Compliant[NativeT_co]: ...
 
