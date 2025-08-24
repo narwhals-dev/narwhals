@@ -1235,10 +1235,7 @@ class Expr:
             └───────────────────────────────────────────────────┘
         """
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).fill_nan(
-                value=extract_compliant(plx, value, str_as_lit=True)
-            ),
-            self._metadata,
+            lambda plx: self._to_compliant_expr(plx).fill_nan(value), self._metadata
         )
 
     # --- partial reduction ---

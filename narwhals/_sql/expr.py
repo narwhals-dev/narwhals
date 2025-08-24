@@ -445,8 +445,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def fill_nan(self, value: float | None) -> Self:
         def _fill_nan(expr: NativeExprT) -> NativeExprT:
-            if value is None:
-                return self._when(~self._function("isnan", expr), expr)
             return self._when(self._function("isnan", expr), self._lit(value), expr)
 
         return self._with_elementwise(_fill_nan)
