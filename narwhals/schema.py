@@ -370,7 +370,10 @@ class Schema(OrderedDict[str, "DType"]):
             native_to_narwhals_dtype, implementation=impl, version=cls._version
         )
         object_dtype = partial(
-            object_native_to_narwhals_dtype, (), implementation=impl, version=cls._version
+            object_native_to_narwhals_dtype,
+            (),  # type: ignore[arg-type]
+            implementation=impl,
+            version=cls._version,
         )
         return cls(
             (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
