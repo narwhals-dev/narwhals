@@ -109,7 +109,7 @@ class Expr:
         return self._version
 
     def alias(self, name: str) -> Self:
-        return self._from_ir(expr.Alias(expr=self._ir, name=name))
+        return self._from_ir(self._ir.alias(name))
 
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(into_dtype(dtype)))

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr, Selector, Series
     from narwhals._plan.expr import (
         AggExpr,
+        Alias,
         BinaryExpr,
         Cast,
         Column,
@@ -273,6 +274,11 @@ class ExprIR(Immutable):
         from narwhals._plan.expr import Cast
 
         return Cast(expr=self, dtype=dtype)
+
+    def alias(self, name: str) -> Alias:
+        from narwhals._plan.expr import Alias
+
+        return Alias(expr=self, name=name)
 
     def _repr_html_(self) -> str:
         return self.__repr__()
