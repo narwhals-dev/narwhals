@@ -22,6 +22,8 @@
         - fill_nan
         - fill_null
         - filter
+        - first
+        - last
         - clip
         - is_between
         - is_close
