@@ -27,4 +27,4 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
         return IRListNamespace
 
     def len(self) -> Expr:
-        return self._to_narwhals(self._ir.len().to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.len())

@@ -391,6 +391,9 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
     def _to_narwhals(self, ir: ExprIR, /) -> Expr:
         return self._expr._from_ir(ir)
 
+    def _with_unary(self, function: Function, /) -> Expr:
+        return self._expr._with_unary(function)
+
 
 def _function_options_default() -> FunctionOptions:
     from narwhals._plan.options import FunctionOptions

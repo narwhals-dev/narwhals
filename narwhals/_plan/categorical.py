@@ -27,6 +27,4 @@ class ExprCatNamespace(ExprNamespace[IRCatNamespace]):
         return IRCatNamespace
 
     def get_categories(self) -> Expr:
-        return self._to_narwhals(
-            self._ir.get_categories().to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.get_categories())

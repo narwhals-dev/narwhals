@@ -152,65 +152,45 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
         return IRStringNamespace
 
     def len_chars(self) -> Expr:
-        return self._to_narwhals(self._ir.len_chars().to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.len_chars())
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
     ) -> Expr:
-        return self._to_narwhals(
-            self._ir.replace(pattern, value, literal=literal, n=n).to_function_expr(
-                self._expr._ir
-            )
-        )
+        return self._with_unary(self._ir.replace(pattern, value, literal=literal, n=n))
 
     def replace_all(self, pattern: str, value: str, *, literal: bool = False) -> Expr:
-        return self._to_narwhals(
-            self._ir.replace_all(pattern, value, literal=literal).to_function_expr(
-                self._expr._ir
-            )
-        )
+        return self._with_unary(self._ir.replace_all(pattern, value, literal=literal))
 
     def strip_chars(self, characters: str | None = None) -> Expr:
-        return self._to_narwhals(
-            self._ir.strip_chars(characters).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.strip_chars(characters))
 
     def starts_with(self, prefix: str) -> Expr:
-        return self._to_narwhals(
-            self._ir.starts_with(prefix).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.starts_with(prefix))
 
     def ends_with(self, suffix: str) -> Expr:
-        return self._to_narwhals(
-            self._ir.ends_with(suffix).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.ends_with(suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
-        return self._to_narwhals(
-            self._ir.contains(pattern, literal=literal).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.contains(pattern, literal=literal))
 
     def slice(self, offset: int, length: int | None = None) -> Expr:
-        return self._to_narwhals(
-            self._ir.slice(offset, length).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.slice(offset, length))
 
     def head(self, n: int = 5) -> Expr:
-        return self._to_narwhals(self._ir.head(n).to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.head(n))
 
     def tail(self, n: int = 5) -> Expr:
-        return self._to_narwhals(self._ir.tail(n).to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.tail(n))
 
     def split(self, by: str) -> Expr:
-        return self._to_narwhals(self._ir.split(by).to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.split(by))
 
     def to_datetime(self, format: str | None = None) -> Expr:
-        return self._to_narwhals(
-            self._ir.to_datetime(format).to_function_expr(self._expr._ir)
-        )
+        return self._with_unary(self._ir.to_datetime(format))
 
     def to_lowercase(self) -> Expr:
-        return self._to_narwhals(self._ir.to_lowercase().to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.to_lowercase())
 
     def to_uppercase(self) -> Expr:
-        return self._to_narwhals(self._ir.to_uppercase().to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.to_uppercase())
