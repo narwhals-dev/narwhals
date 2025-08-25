@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
@@ -12,7 +14,12 @@ from narwhals._namespace import (
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Implementation, Version, has_native_namespace
+from narwhals._utils import (
+    Implementation,
+    Version,
+    discover_plugins,
+    has_native_namespace,
+)
 from narwhals.dependencies import (
     get_dask_expr,
     get_numpy,
@@ -348,6 +355,15 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     if eager_only and eager_or_interchange_only:
         msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
         raise ValueError(msg)
+
+    if sys.version_info >= (3, 10):
+        discovered_plugins = discover_plugins(group="narwhals.plugins")
+
+        for plugin in discovered_plugins:  # pragma: no cover
+            obj = plugin.load()
+            with contextlib.suppress(TypeError):
+                native_object = obj.from_native(native_object)
+                break
 
     # Extensions
     if is_compliant_dataframe(native_object):
