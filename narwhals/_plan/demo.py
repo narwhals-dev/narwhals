@@ -3,53 +3,36 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import (
-    aggregation as agg,
-    boolean,
-    expr_parsing as parse,
-    functions as F,
-)
+from narwhals._plan import boolean, expr, expr_parsing as parse, functions as F
 from narwhals._plan.common import (
     into_dtype,
     is_non_nested_literal,
     is_series,
     py_to_narwhals_dtype,
 )
-from narwhals._plan.expr import All, Column, Columns, IndexColumns, Len, Nth
+from narwhals._plan.expr import All, Len
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange
 from narwhals._plan.strings import ConcatHorizontal
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
-from narwhals.exceptions import InvalidOperationError as OrderDependentExprError
 
 if t.TYPE_CHECKING:
-    from typing_extensions import TypeIs
-
     from narwhals._plan.dummy import Expr, Series
-    from narwhals._plan.expr import SortBy
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral
 
 
 def col(*names: str | t.Iterable[str]) -> Expr:
-    flat_names = tuple(flatten(names))
-    node = (
-        Column(name=flat_names[0])
-        if builtins.len(flat_names) == 1
-        else Columns(names=flat_names)
-    )
+    flat = tuple(flatten(names))
+    node = expr.col(flat[0]) if builtins.len(flat) == 1 else expr.cols(*flat)
     return node.to_narwhals()
 
 
 def nth(*indices: int | t.Sequence[int]) -> Expr:
-    flat_indices = tuple(flatten(indices))
-    node = (
-        Nth(index=flat_indices[0])
-        if builtins.len(flat_indices) == 1
-        else IndexColumns(indices=flat_indices)
-    )
+    flat = tuple(flatten(indices))
+    node = expr.nth(flat[0]) if builtins.len(flat) == 1 else expr.index_columns(*flat)
     return node.to_narwhals()
 
 

@@ -66,6 +66,7 @@ from narwhals._plan.expr import (
     RenameAlias,
     _ColumnSelection,
     col,
+    cols,
 )
 from narwhals._plan.schema import (
     FrozenColumns,
@@ -313,8 +314,8 @@ def selector_matches_column(selector: SelectorIR, name: str, dtype: DType, /) ->
 @lru_cache(maxsize=100)
 def expand_selector(selector: SelectorIR, *, schema: FrozenSchema) -> Columns:
     """Expand `selector` into `Columns`, within the context of `schema`."""
-    cols = (k for k, v in schema.items() if selector_matches_column(selector, k, v))
-    return Columns(names=tuple(cols))
+    matches = selector_matches_column
+    return cols(*(k for k, v in schema.items() if matches(selector, k, v)))
 
 
 def rewrite_projections(
