@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+
+import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
@@ -12,7 +14,7 @@ from narwhals._dask.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -433,6 +435,23 @@ class DaskExpr(
             "any",
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        value_nullable = pd.NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+
+        def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = (
+                value_nullable
+                if get_dtype_backend(expr.dtype, self._implementation)
+                else value_numpy
+            )
+            return expr.mask(mask, fill)
+
+        return self._with_callable(func, "fill_nan")
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -450,7 +469,7 @@ class DaskExpr(
                 )
             return res_ser
 
-        return self._with_callable(func, "fillna")
+        return self._with_callable(func, "fill_null")
 
     def clip(
         self,

@@ -210,11 +210,9 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
 
 
 def maybe_collect(df: Frame) -> Frame:
-    """Collect the DataFrame if it is a LazyFrame.
+    """Collect to DataFrame if it is a LazyFrame.
 
     Use this function to test specific behaviors during collection.
     For example, Polars only errors when we call `collect` in the lazy case.
     """
-    if isinstance(df, nw.LazyFrame):
-        return df.collect()
-    return df  # pragma: no cover
+    return df.collect() if isinstance(df, nw.LazyFrame) else df
