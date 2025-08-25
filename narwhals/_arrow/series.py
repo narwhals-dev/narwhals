@@ -15,6 +15,7 @@ from narwhals._arrow.utils import (
     chunked_array,
     extract_native,
     floordiv_compat,
+    int_range,
     is_array_or_scalar,
     lit,
     narwhals_to_native_dtype,
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
+    from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
@@ -172,6 +174,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if hasattr(value, "as_py"):
             value = value.as_py()
         return super()._from_scalar(value)
+
+    def _to_expr(self) -> ArrowExpr:
+        return cast("ArrowExpr", super()._to_expr())
 
     @staticmethod
     def _is_native(obj: ChunkedArrayAny | Any) -> TypeIs[ChunkedArrayAny]:
@@ -632,6 +637,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         cond = mask.native.combine_chunks()
         return self._with_native(pc.if_else(cond, self.native, other.native))
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def sample(
         self,
         n: int | None,
@@ -670,7 +677,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # then it calculates the distance of each new index and the original index
             # if the distance is equal to or less than the limit and the original value is null, it is replaced
             valid_mask = pc.is_valid(arr)
-            indices = pa.array(np.arange(len(arr)), type=pa.int64())
+            indices = int_range(0, len(arr))
             if direction == "forward":
                 valid_index = np.maximum.accumulate(np.where(valid_mask, indices, -1))
                 distance = indices - valid_index
@@ -717,9 +724,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.to_frame().is_unique().alias(self.name)
 
     def is_first_distinct(self) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        row_number = pa.array(np.arange(len(self)))
+        row_number = int_range(0, len(self))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])
@@ -732,9 +737,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.is_in(row_number, first_distinct_index))
 
     def is_last_distinct(self) -> Self:
-        import numpy as np  # ignore-banned-import
-
-        row_number = pa.array(np.arange(len(self)))
+        row_number = int_range(0, len(self))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
             pa.Table.from_arrays([self.native], names=[self.name])
@@ -790,6 +793,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         return self._with_native(self.native.take(sorted_indices))
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def to_dummies(self, *, separator: str, drop_first: bool) -> ArrowDataFrame:
         import numpy as np  # ignore-banned-import
 
@@ -1156,6 +1161,8 @@ class _ArrowHist(
             upper += 0.5
         return self._linear_space(lower, upper, bin_count + 1)
 
+    # TODO @dangotbanned: Replace `np.arange` w/ `utils.int_range`
+    # https://github.com/narwhals-dev/narwhals/issues/2722#issuecomment-3097350688
     def _calculate_hist(self, bins: list[float] | _1DArray) -> ArrowHistData:
         ser = self.native
         # NOTE: `mypy` refuses to resolve `ndarray.__getitem__`
