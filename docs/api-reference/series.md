@@ -27,6 +27,7 @@
         - dtype
         - ewm_mean
         - exp
+        - fill_nan
         - fill_null
         - filter
         - from_iterable
