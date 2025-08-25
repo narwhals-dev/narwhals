@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan.common import ExprIR
+from narwhals._plan.common import ExprIR, _pascal_to_snake_case
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
@@ -23,12 +23,7 @@ class AggExpr(ExprIR):
         return True
 
     def __repr__(self) -> str:
-        tp = type(self)
-        if tp in {AggExpr, OrderableAggExpr}:
-            return tp.__name__
-        m = {ArgMin: "arg_min", ArgMax: "arg_max", NUnique: "n_unique"}
-        name = m.get(tp, tp.__name__.lower())
-        return f"{self.expr!r}.{name}()"
+        return f"{self.expr!r}.{_pascal_to_snake_case(type(self).__name__)}()"
 
     def iter_left(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_left()
