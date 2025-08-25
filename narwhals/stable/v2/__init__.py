@@ -63,15 +63,14 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self
 
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
         Arrow,
         Backend,
-        Dask,
-        DuckDB,
         EagerAllowed,
-        Ibis,
         IntoBackend,
+        LazyAllowed,
         Pandas,
         Polars,
     )
@@ -187,9 +186,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: SparkSession | None = None,
     ) -> LazyFrame[Any]:
-        return _stableify(super().lazy(backend=backend))
+        return _stableify(super().lazy(backend=backend, session=session))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...

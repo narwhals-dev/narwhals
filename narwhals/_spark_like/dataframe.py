@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
@@ -560,6 +561,41 @@ class SparkLikeLazyFrame(
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.write.parquet(file)
+
+    @classmethod
+    def _from_compliant_dataframe(
+        cls,
+        compliant_frame: CompliantDataFrameAny,
+        /,
+        *,
+        session: SparkSession,
+        implementation: Implementation,
+        version: Version,
+    ) -> SparkLikeLazyFrame:
+        from importlib.util import find_spec
+
+        # pyspark.sql requires pyarrow to be installed from v4.0.0
+        can_create_from_arrow = implementation in {
+            Implementation.PYSPARK,
+            Implementation.PYSPARK_CONNECT,
+        } and implementation._backend_version() >= (4, 0, 0)
+
+        is_pandas_installed = find_spec("pandas") is not None
+
+        data: Any = (
+            compliant_frame.to_arrow()
+            if can_create_from_arrow
+            else compliant_frame.to_pandas()
+            if is_pandas_installed
+            else tuple(compliant_frame.iter_rows(named=True, buffer_size=512))
+        )
+
+        return cls(
+            session.createDataFrame(data),
+            version=version,
+            implementation=implementation,
+            validate_backend_version=True,
+        )
 
     gather_every = not_implemented.deprecated(
         "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
