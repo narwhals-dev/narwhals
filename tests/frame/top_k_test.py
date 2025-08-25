@@ -22,6 +22,9 @@ def test_top_k(constructor: Constructor) -> None:
 
 
 def test_top_k_by_multiple(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 22):
+        # bug in old version
+        pytest.skip()
     data = {
         "a": ["a", "f", "a", "d", "b", "c"],
         "b": [2, 2, 2, 3, 1, 1],

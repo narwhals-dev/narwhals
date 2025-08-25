@@ -7,8 +7,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.typing import Frame
-    from tests.utils import Constructor
+    from tests.utils import Constructor, ConstructorEager
 
 
 data = {"a": [1, 2, 3]}
@@ -62,18 +61,18 @@ def test_native_namespace_frame(constructor: Constructor) -> None:
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df: Frame = nw.from_native(constructor(data))
+    df = nw.from_native(constructor(data))
     assert nw.get_native_namespace(df) is expected_namespace
     assert nw.get_native_namespace(df.to_native()) is expected_namespace
     assert nw.get_native_namespace(df.lazy().to_native()) is expected_namespace
 
 
-def test_native_namespace_series(constructor_eager: Constructor) -> None:
+def test_native_namespace_series(constructor_eager: ConstructorEager) -> None:
     constructor_name = constructor_eager.__name__
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df: Frame = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     assert nw.get_native_namespace(df["a"].to_native()) is expected_namespace
     assert nw.get_native_namespace(df, df["a"].to_native()) is expected_namespace

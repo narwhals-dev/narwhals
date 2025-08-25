@@ -443,6 +443,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def median(self) -> Self:
         return self._with_callable(lambda expr: self._function("median", expr))
 
+    def fill_nan(self, value: float | None) -> Self:
+        def _fill_nan(expr: NativeExprT) -> NativeExprT:
+            return self._when(self._function("isnan", expr), self._lit(value), expr)
+
+        return self._with_elementwise(_fill_nan)
+
     def min(self) -> Self:
         return self._with_callable(lambda expr: self._function("min", expr))
 
