@@ -448,7 +448,7 @@ class DaskExpr(
                 if get_dtype_backend(expr.dtype, self._implementation)
                 else value_numpy
             )
-            return expr.mask(mask, fill)
+            return expr.mask(mask, fill)  # pyright: ignore[reportArgumentType]
 
         return self._with_callable(func, "fill_nan")
 
