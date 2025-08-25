@@ -872,7 +872,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             However, we can keep our code *mostly* dataframe-agnostic with:
 
-            >>> kwds: dict[nw.Implementation, dict[str, Any]] = {
+            >>> kwds = {
             ...     nw.Implementation.POLARS: {"zero_copy_only": True},
             ...     nw.Implementation.PYARROW: {
             ...         "zero_copy_only": True,
