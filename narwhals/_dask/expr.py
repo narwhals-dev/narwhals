@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+
+import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
@@ -12,7 +14,7 @@ from narwhals._dask.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -432,6 +435,23 @@ class DaskExpr(
             "any",
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        value_nullable = pd.NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+
+        def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = (
+                value_nullable
+                if get_dtype_backend(expr.dtype, self._implementation)
+                else value_numpy
+            )
+            return expr.mask(mask, fill)  # pyright: ignore[reportArgumentType]
+
+        return self._with_callable(func, "fill_nan")
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -449,7 +469,7 @@ class DaskExpr(
                 )
             return res_ser
 
-        return self._with_callable(func, "fillna")
+        return self._with_callable(func, "fill_null")
 
     def clip(
         self,
@@ -648,6 +668,14 @@ class DaskExpr(
 
         return self._with_callable(da.sqrt, "sqrt")
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            result = expr.to_frame().mode()[_name]
+            return result.head(1) if keep == "any" else result
+
+        return self._with_callable(func, "mode", scalar_kwargs={"keep": keep})
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -663,7 +691,6 @@ class DaskExpr(
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     rank: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()

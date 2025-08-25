@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import IntoDType, NumericLiteral
+    from narwhals.typing import IntoDType, ModeKeepStrategy, NumericLiteral
 
 
 class PolarsExpr:
@@ -280,6 +280,10 @@ class PolarsExpr:
             )
         return self._with_native(result)
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        result = self.native.mode()
+        return self._with_native(result.first() if keep == "any" else result)
+
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)
@@ -349,6 +353,7 @@ class PolarsExpr:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
@@ -366,7 +371,6 @@ class PolarsExpr:
     mean: Method[Self]
     median: Method[Self]
     min: Method[Self]
-    mode: Method[Self]
     n_unique: Method[Self]
     null_count: Method[Self]
     quantile: Method[Self]

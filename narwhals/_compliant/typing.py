@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoLazyFrame,
+        ModeKeepStrategy,
         NativeDataFrame,
         NativeFrame,
         NativeSeries,
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
         half_life: float | None
         ignore_nulls: bool
         interpolation: RollingInterpolationMethod
+        keep: ModeKeepStrategy
         limit: int | None
         method: RankMethod
         min_samples: int
@@ -180,6 +182,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "median",
     "max",
     "min",
+    "mode",
     "std",
     "var",
     "len",

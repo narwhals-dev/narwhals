@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -650,6 +651,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 
+    def fill_nan(self, value: float | None) -> Self:
+        result = pc.if_else(pc.is_nan(self.native), value, self.native)
+        return self._with_native(result, preserve_broadcast=True)
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -856,16 +861,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
 
-    def mode(self) -> ArrowSeries:
+    def mode(self, *, keep: ModeKeepStrategy) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
         )
-        return counts.filter(
+        result = counts.filter(
             plx.col(col_token)
             == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
         ).get_column(self.name)
+        return result.head(1) if keep == "any" else result
 
     def is_finite(self) -> Self:
         return self._with_native(pc.is_finite(self.native))

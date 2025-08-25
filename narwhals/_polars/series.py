@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
@@ -90,6 +91,7 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "exp",
         "fill_null",
+        "fill_nan",
         "filter",
         "gather_every",
         "head",
@@ -518,6 +520,10 @@ class PolarsSeries:
         )
         return self._with_native(result)
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        result = self.native.mode()
+        return self._with_native(result.head(1) if keep == "any" else result)
+
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
@@ -682,6 +688,7 @@ class PolarsSeries:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
@@ -702,7 +709,6 @@ class PolarsSeries:
     max: Method[Any]
     mean: Method[float]
     min: Method[Any]
-    mode: Method[Self]
     n_unique: Method[int]
     null_count: Method[int]
     quantile: Method[float]
