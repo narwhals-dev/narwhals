@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Callable, Iterable, Mapping, Sequence, Sized
+    from collections.abc import Iterable, Mapping, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
 
     import numpy as np
-    import pyarrow as pa
-    from pandas.api.extensions import ExtensionDtype as PandasDType
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
@@ -450,19 +448,6 @@ MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
 MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
-
-
-class ToPandasArrowKwds(TypedDict, total=False):
-    """Keyword arguments to be passed to [`pyarrow.Table.to_pandas`](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.to_pandas)."""
-
-    types_mapper: Callable[[pa.DataType], PandasDType | None] | None
-    zero_copy_only: bool
-    self_destruct: bool
-    split_blocks: bool
-    safe: bool
-    memory_pool: pa.MemoryPool
-    maps_as_pydicts: Literal["None", "lossy", "strict"]
-    date_as_object: bool
 
 
 __all__ = [

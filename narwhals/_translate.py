@@ -71,9 +71,7 @@ from narwhals._utils import _StoresNative
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs, Unpack
-
-    from narwhals.typing import ToPandasArrowKwds
+    from typing_extensions import Self, TypeAlias, TypeIs
 
 
 class ArrowStreamExportable(Protocol):
@@ -197,10 +195,7 @@ ToPandasToT_co = TypeVar(
 
 class ToPandas(Protocol[ToPandasToT_co]):
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> ToPandasToT_co:
         """Convert into `pandas` representation, optionally using `pyarrow`."""
         ...

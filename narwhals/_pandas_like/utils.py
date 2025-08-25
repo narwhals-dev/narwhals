@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs, Unpack
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -45,13 +45,7 @@ if TYPE_CHECKING:
         NativeSeriesT,
     )
     from narwhals.dtypes import DType
-    from narwhals.typing import (
-        DTypeBackend,
-        IntoDType,
-        TimeUnit,
-        ToPandasArrowKwds,
-        _1DArray,
-    )
+    from narwhals.typing import DTypeBackend, IntoDType, TimeUnit, _1DArray
 
     ExprT = TypeVar("ExprT", bound=PandasLikeExpr)
     UnitCurrent: TypeAlias = TimeUnit
@@ -671,10 +665,7 @@ class PandasLikeToPandas(
     _StoresNative[Any], _StoresImplementation, ToPandas[ToPandasToT_co]
 ):
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> ToPandasToT_co:
         if kwds:
             msg = "Only `to_pandas(use_pyarrow_extension_array=...)` is supported for pandas-like objects."

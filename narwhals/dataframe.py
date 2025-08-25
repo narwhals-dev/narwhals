@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias, Unpack
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
@@ -89,7 +89,6 @@ if TYPE_CHECKING:
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
-        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _2DArray,
     )
@@ -812,10 +811,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame._native_frame
 
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> pd.DataFrame:
         """Convert this DataFrame to a pandas DataFrame.
 
@@ -876,9 +872,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
             However, we can keep our code *mostly* dataframe-agnostic with:
 
-            >>> from narwhals.typing import ToPandasArrowKwds
-            >>>
-            >>> kwds: dict[nw.Implementation, ToPandasArrowKwds] = {
+            >>> kwds: dict[nw.Implementation, dict[str, Any]] = {
             ...     nw.Implementation.POLARS: {"zero_copy_only": True},
             ...     nw.Implementation.PYARROW: {
             ...         "zero_copy_only": True,

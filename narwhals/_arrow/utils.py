@@ -13,7 +13,7 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass, r
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeAlias, TypeIs, Unpack
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral, ToPandasArrowKwds
+    from narwhals.typing import IntoDType, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -228,10 +228,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
 
 class ArrowToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> ToPandasToT_co:
         import pandas as pd  # ignore-banned-import
 

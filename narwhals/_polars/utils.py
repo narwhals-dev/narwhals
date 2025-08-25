@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Final,
-    Literal,
-    Protocol,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
 
 import polars as pl
 
@@ -38,14 +29,14 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-    from typing_extensions import TypeIs, Unpack
+    from typing_extensions import TypeIs
 
     from narwhals._polars.dataframe import Method
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, ToPandasArrowKwds
+    from narwhals.typing import IntoDType
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -268,15 +259,9 @@ def catch_polars_exception(exception: Exception) -> NarwhalsError | Exception:
 
 class PolarsToPandas(CompliantToPandas[ToPandasFromT_co, ToPandasToT_co]):
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> ToPandasToT_co:
-        always_true: tuple[Literal["self_destruct", "split_blocks"], ...] = (
-            "self_destruct",
-            "split_blocks",
-        )
+        always_true = ("self_destruct", "split_blocks")
         if use_pyarrow_extension_array and kwds:
             if types_mapper := kwds.get("types_mapper"):  # pragma: no cover
                 msg = f"`use_pyarrow_extension_array` and `types_mapper` are mutually exclusive, got:\n{use_pyarrow_extension_array=}\n{types_mapper=}"

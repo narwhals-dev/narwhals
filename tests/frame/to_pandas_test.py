@@ -9,7 +9,6 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from narwhals.typing import ToPandasArrowKwds
 from tests.utils import (
     PANDAS_LT_1_5,
     PANDAS_LT_2,
@@ -95,7 +94,7 @@ def test_pyarrow_to_pandas_use_pyarrow(
 
 
 @pytest.mark.skipif(PANDAS_LT_1_5, reason="too old for pyarrow")
-@pytest.mark.parametrize("kwds", [{}, ToPandasArrowKwds(self_destruct=True)])
+@pytest.mark.parametrize("kwds", [{}, {"self_destruct": True}])
 @pytest.mark.parametrize(
     ("data", "pandas_dtypes"),
     [
@@ -138,7 +137,7 @@ def test_to_pandas_use_pyarrow(
     constructor_eager: ConstructorEager,
     data: dict[str, list[Any]],
     pandas_dtypes: dict[str, Sequence[str]],
-    kwds: ToPandasArrowKwds,
+    kwds: dict[str, Any],
     request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("pyarrow")

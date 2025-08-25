@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, Unpack
+    from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
     from narwhals._typing import EagerAllowed, IntoBackend
@@ -51,7 +51,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         SingleIndexSelector,
         TemporalLiteral,
-        ToPandasArrowKwds,
         _1DArray,
     )
 
@@ -1496,10 +1495,7 @@ class Series(Generic[IntoSeriesT]):
         return self._compliant_series.to_numpy(None, copy=None)
 
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> pd.Series[Any]:
         """Convert this Series to a pandas Series.
 

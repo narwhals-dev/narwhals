@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, Unpack
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
@@ -68,7 +68,6 @@ if TYPE_CHECKING:
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
-        ToPandasArrowKwds,
         UniqueKeepStrategy,
         _2DArray,
         _SliceIndex,
@@ -231,10 +230,7 @@ class CompliantDataFrame(
     def tail(self, n: int) -> Self: ...
     def to_arrow(self) -> pa.Table: ...
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...
     @overload

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import NotRequired, Self, TypedDict, Unpack
+    from typing_extensions import NotRequired, Self, TypedDict
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.expr import CompliantExpr, EagerExpr
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        ToPandasArrowKwds,
         _1DArray,
         _SliceIndex,
     )
@@ -171,10 +170,7 @@ class CompliantSeries(
     def to_frame(self) -> CompliantDataFrame[Self, Any, Any, Any]: ...
     def to_list(self) -> list[Any]: ...
     def to_pandas(
-        self,
-        *,
-        use_pyarrow_extension_array: bool = False,
-        **kwds: Unpack[ToPandasArrowKwds],
+        self, *, use_pyarrow_extension_array: bool = False, **kwds: Any
     ) -> pd.Series[Any]: ...
     def to_polars(self) -> pl.Series: ...
     def unique(self, *, maintain_order: bool = False) -> Self: ...
