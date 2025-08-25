@@ -194,36 +194,3 @@ def int_range(
         .to_function_expr(*parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )
-
-
-def _is_order_enforcing_previous(obj: t.Any) -> TypeIs[SortBy]:
-    """In theory, we could add other nodes to this check."""
-    from narwhals._plan.expr import SortBy
-
-    allowed = (SortBy,)
-    return isinstance(obj, allowed)
-
-
-def _order_dependent_error(node: agg.OrderableAggExpr) -> OrderDependentExprError:
-    previous = node.expr
-    method = repr(node).removeprefix(f"{previous!r}.")
-    msg = (
-        f"{method} is order-dependent and requires an ordering operation for lazy backends.\n"
-        f"Hint:\nInstead of:\n"
-        f"    {node!r}\n\n"
-        "If you want to aggregate to a single value, try:\n"
-        f"    {previous!r}.sort_by(...).{method}\n\n"
-        "Otherwise, try:\n"
-        f"    {node!r}.over(order_by=...)"
-    )
-    return OrderDependentExprError(msg)
-
-
-def ensure_orderable_rules(*exprs: Expr) -> tuple[Expr, ...]:
-    for expr in exprs:
-        node = expr._ir
-        if isinstance(node, agg.OrderableAggExpr):
-            previous = node.expr
-            if not _is_order_enforcing_previous(previous):
-                raise _order_dependent_error(node)
-    return exprs
