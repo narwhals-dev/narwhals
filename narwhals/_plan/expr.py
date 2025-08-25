@@ -72,8 +72,19 @@ __all__ = [
 
 
 def col(name: str, /) -> Column:
-    """Sugar for a **single** column selection node."""
     return Column(name=name)
+
+
+def cols(*names: str) -> Columns:
+    return Columns(names=names)
+
+
+def nth(index: int, /) -> Nth:
+    return Nth(index=index)
+
+
+def index_columns(*indices: int) -> IndexColumns:
+    return IndexColumns(indices=indices)
 
 
 class Alias(ExprIR):

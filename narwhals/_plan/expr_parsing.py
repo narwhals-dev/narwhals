@@ -154,10 +154,8 @@ def _parse_positional_inputs(inputs: Iterable[IntoExpr], /) -> Iterator[ExprIR]:
 
 
 def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    from narwhals._plan.expr import Alias
-
     for name, input in named_inputs.items():
-        yield Alias(expr=parse_into_expr_ir(input), name=name)
+        yield parse_into_expr_ir(input).alias(name)
 
 
 def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:

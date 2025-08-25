@@ -66,6 +66,7 @@ from narwhals._plan.expr import (
     RenameAlias,
     _ColumnSelection,
     col,
+    cols,
 )
 from narwhals._plan.schema import (
     FrozenColumns,
@@ -313,8 +314,8 @@ def selector_matches_column(selector: SelectorIR, name: str, dtype: DType, /) ->
 @lru_cache(maxsize=100)
 def expand_selector(selector: SelectorIR, *, schema: FrozenSchema) -> Columns:
     """Expand `selector` into `Columns`, within the context of `schema`."""
-    cols = (k for k, v in schema.items() if selector_matches_column(selector, k, v))
-    return Columns(names=tuple(cols))
+    matches = selector_matches_column
+    return cols(*(k for k, v in schema.items() if matches(selector, k, v)))
 
 
 def rewrite_projections(
@@ -467,16 +468,13 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
     if meta.has_expr_ir(origin, KeepName, RenameAlias):
         if isinstance(origin, KeepName):
             parent = origin.expr
-            roots = parent.meta.root_names()
-            alias = next(iter(roots))
-            return Alias(expr=parent, name=alias)
+            return parent.alias(next(iter(parent.meta.root_names())))
         if isinstance(origin, RenameAlias):
             parent = origin.expr
             leaf_name_or_err = meta.get_single_leaf_name(parent)
             if not isinstance(leaf_name_or_err, str):
                 raise leaf_name_or_err
-            alias = origin.function(leaf_name_or_err)
-            return Alias(expr=parent, name=alias)
+            return parent.alias(origin.function(leaf_name_or_err))
         msg = "`keep`, `suffix`, `prefix` should be last expression"
         raise InvalidOperationError(msg)
     return origin

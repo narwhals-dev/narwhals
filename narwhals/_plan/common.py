@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr, Selector, Series
     from narwhals._plan.expr import (
         AggExpr,
+        Alias,
         BinaryExpr,
         Cast,
         Column,
@@ -274,6 +275,11 @@ class ExprIR(Immutable):
 
         return Cast(expr=self, dtype=dtype)
 
+    def alias(self, name: str) -> Alias:
+        from narwhals._plan.expr import Alias
+
+        return Alias(expr=self, name=name)
+
     def _repr_html_(self) -> str:
         return self.__repr__()
 
@@ -390,6 +396,9 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
 
     def _to_narwhals(self, ir: ExprIR, /) -> Expr:
         return self._expr._from_ir(ir)
+
+    def _with_unary(self, function: Function, /) -> Expr:
+        return self._expr._with_unary(function)
 
 
 def _function_options_default() -> FunctionOptions:

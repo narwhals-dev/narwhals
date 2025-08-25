@@ -33,4 +33,4 @@ class ExprStructNamespace(ExprNamespace[IRStructNamespace]):
         return IRStructNamespace
 
     def field(self, name: str) -> Expr:
-        return self._to_narwhals(self._ir.field(name).to_function_expr(self._expr._ir))
+        return self._with_unary(self._ir.field(name))

@@ -20,10 +20,9 @@ from narwhals._plan.contexts import ExprContext
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
-    RollingOptionsFixedWindow,
-    RollingVarParams,
     SortMultipleOptions,
     SortOptions,
+    rolling_options,
 )
 from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
     from narwhals._plan.categorical import ExprCatNamespace
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.common import ExprIR, Function
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
@@ -110,7 +109,7 @@ class Expr:
         return self._version
 
     def alias(self, name: str) -> Self:
-        return self._from_ir(expr.Alias(expr=self._ir, name=name))
+        return self._from_ir(self._ir.alias(name))
 
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(into_dtype(dtype)))
@@ -210,8 +209,11 @@ class Expr:
         by = parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(expr.Filter(expr=self._ir, by=by))
 
+    def _with_unary(self, function: Function, /) -> Self:
+        return self._from_ir(function.to_function_expr(self._ir))
+
     def abs(self) -> Self:
-        return self._from_ir(F.Abs().to_function_expr(self._ir))
+        return self._with_unary(F.Abs())
 
     def hist(
         self,
@@ -232,24 +234,22 @@ class Expr:
             )
         else:
             node = F.HistBinCount(include_breakpoint=include_breakpoint)
-        return self._from_ir(node.to_function_expr(self._ir))
+        return self._with_unary(node)
 
     def log(self, base: float = math.e) -> Self:
-        return self._from_ir(F.Log(base=base).to_function_expr(self._ir))
+        return self._with_unary(F.Log(base=base))
 
     def exp(self) -> Self:
-        return self._from_ir(F.Exp().to_function_expr(self._ir))
+        return self._with_unary(F.Exp())
 
     def sqrt(self) -> Self:
-        return self._from_ir(F.Sqrt().to_function_expr(self._ir))
+        return self._with_unary(F.Sqrt())
 
     def kurtosis(self, *, fisher: bool = True, bias: bool = True) -> Self:
-        return self._from_ir(
-            F.Kurtosis(fisher=fisher, bias=bias).to_function_expr(self._ir)
-        )
+        return self._with_unary(F.Kurtosis(fisher=fisher, bias=bias))
 
     def null_count(self) -> Self:
-        return self._from_ir(F.NullCount().to_function_expr(self._ir))
+        return self._with_unary(F.NullCount())
 
     def fill_null(
         self,
@@ -260,24 +260,23 @@ class Expr:
         if strategy is None:
             ir = parse.parse_into_expr_ir(value, str_as_lit=True)
             return self._from_ir(F.FillNull().to_function_expr(self._ir, ir))
-        fill = F.FillNullWithStrategy(strategy=strategy, limit=limit)
-        return self._from_ir(fill.to_function_expr(self._ir))
+        return self._with_unary(F.FillNullWithStrategy(strategy=strategy, limit=limit))
 
     def shift(self, n: int) -> Self:
-        return self._from_ir(F.Shift(n=n).to_function_expr(self._ir))
+        return self._with_unary(F.Shift(n=n))
 
     def drop_nulls(self) -> Self:
-        return self._from_ir(F.DropNulls().to_function_expr(self._ir))
+        return self._with_unary(F.DropNulls())
 
     def mode(self) -> Self:
-        return self._from_ir(F.Mode().to_function_expr(self._ir))
+        return self._with_unary(F.Mode())
 
     def skew(self) -> Self:
-        return self._from_ir(F.Skew().to_function_expr(self._ir))
+        return self._with_unary(F.Skew())
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:
         options = RankOptions(method=method, descending=descending)
-        return self._from_ir(F.Rank(options=options).to_function_expr(self._ir))
+        return self._with_unary(F.Rank(options=options))
 
     def clip(
         self,
@@ -291,47 +290,31 @@ class Expr:
         )
 
     def cum_count(self, *, reverse: bool = False) -> Self:
-        return self._from_ir(F.CumCount(reverse=reverse).to_function_expr(self._ir))
+        return self._with_unary(F.CumCount(reverse=reverse))
 
     def cum_min(self, *, reverse: bool = False) -> Self:
-        return self._from_ir(F.CumMin(reverse=reverse).to_function_expr(self._ir))
+        return self._with_unary(F.CumMin(reverse=reverse))
 
     def cum_max(self, *, reverse: bool = False) -> Self:
-        return self._from_ir(F.CumMax(reverse=reverse).to_function_expr(self._ir))
+        return self._with_unary(F.CumMax(reverse=reverse))
 
     def cum_prod(self, *, reverse: bool = False) -> Self:
-        return self._from_ir(F.CumProd(reverse=reverse).to_function_expr(self._ir))
+        return self._with_unary(F.CumProd(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
-        return self._from_ir(F.CumSum(reverse=reverse).to_function_expr(self._ir))
+        return self._with_unary(F.CumSum(reverse=reverse))
 
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = None
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
-        function = F.RollingSum(options=options)
-        return self._from_ir(function.to_function_expr(self._ir))
+        options = rolling_options(window_size, min_samples, center=center)
+        return self._with_unary(F.RollingSum(options=options))
 
     def rolling_mean(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = None
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
-        function = F.RollingMean(options=options)
-        return self._from_ir(function.to_function_expr(self._ir))
+        options = rolling_options(window_size, min_samples, center=center)
+        return self._with_unary(F.RollingMean(options=options))
 
     def rolling_var(
         self,
@@ -341,16 +324,8 @@ class Expr:
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = RollingVarParams(ddof=ddof)
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
-        function = F.RollingVar(options=options)
-        return self._from_ir(function.to_function_expr(self._ir))
+        options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
+        return self._with_unary(F.RollingVar(options=options))
 
     def rolling_std(
         self,
@@ -360,25 +335,17 @@ class Expr:
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = RollingVarParams(ddof=ddof)
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
-        function = F.RollingStd(options=options)
-        return self._from_ir(function.to_function_expr(self._ir))
+        options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
+        return self._with_unary(F.RollingStd(options=options))
 
     def diff(self) -> Self:
-        return self._from_ir(F.Diff().to_function_expr(self._ir))
+        return self._with_unary(F.Diff())
 
     def unique(self) -> Self:
-        return self._from_ir(F.Unique().to_function_expr(self._ir))
+        return self._with_unary(F.Unique())
 
     def round(self, decimals: int = 0) -> Self:
-        return self._from_ir(F.Round(decimals=decimals).to_function_expr(self._ir))
+        return self._with_unary(F.Round(decimals=decimals))
 
     def ewm_mean(
         self,
@@ -400,7 +367,7 @@ class Expr:
             min_samples=min_samples,
             ignore_nulls=ignore_nulls,
         )
-        return self._from_ir(F.EwmMean(options=options).to_function_expr(self._ir))
+        return self._with_unary(F.EwmMean(options=options))
 
     def replace_strict(
         self,
@@ -429,10 +396,10 @@ class Expr:
         if return_dtype is not None:
             return_dtype = into_dtype(return_dtype)
         function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
-        return self._from_ir(function.to_function_expr(self._ir))
+        return self._with_unary(function)
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
-        return self._from_ir(F.GatherEvery(n=n, offset=offset).to_function_expr(self._ir))
+        return self._with_unary(F.GatherEvery(n=n, offset=offset))
 
     def map_batches(
         self,
@@ -444,41 +411,41 @@ class Expr:
     ) -> Self:
         if return_dtype is not None:
             return_dtype = into_dtype(return_dtype)
-        return self._from_ir(
+        return self._with_unary(
             F.MapBatches(
                 function=function,
                 return_dtype=return_dtype,
                 is_elementwise=is_elementwise,
                 returns_scalar=returns_scalar,
-            ).to_function_expr(self._ir)
+            )
         )
 
     def any(self) -> Self:
-        return self._from_ir(boolean.Any().to_function_expr(self._ir))
+        return self._with_unary(boolean.Any())
 
     def all(self) -> Self:
-        return self._from_ir(boolean.All().to_function_expr(self._ir))
+        return self._with_unary(boolean.All())
 
     def is_duplicated(self) -> Self:
-        return self._from_ir(boolean.IsDuplicated().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsDuplicated())
 
     def is_finite(self) -> Self:
-        return self._from_ir(boolean.IsFinite().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsFinite())
 
     def is_nan(self) -> Self:
-        return self._from_ir(boolean.IsNan().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsNan())
 
     def is_null(self) -> Self:
-        return self._from_ir(boolean.IsNull().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsNull())
 
     def is_first_distinct(self) -> Self:
-        return self._from_ir(boolean.IsFirstDistinct().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsFirstDistinct())
 
     def is_last_distinct(self) -> Self:
-        return self._from_ir(boolean.IsLastDistinct().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsLastDistinct())
 
     def is_unique(self) -> Self:
-        return self._from_ir(boolean.IsUnique().to_function_expr(self._ir))
+        return self._with_unary(boolean.IsUnique())
 
     def is_between(
         self,
@@ -492,137 +459,98 @@ class Expr:
         )
 
     def is_in(self, other: t.Iterable[t.Any]) -> Self:
-        node: boolean.IsIn[t.Any]
         if is_series(other):
-            node = boolean.IsInSeries.from_series(other)
-        elif isinstance(other, t.Iterable):
-            node = boolean.IsInSeq.from_iterable(other)
-        elif is_expr(other):
-            node = boolean.IsInExpr(other=other._ir)
-        else:
-            msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
-            raise TypeError(msg)
-        return self._from_ir(node.to_function_expr(self._ir))
+            return self._with_unary(boolean.IsInSeries.from_series(other))
+        if isinstance(other, t.Iterable):
+            return self._with_unary(boolean.IsInSeq.from_iterable(other))
+        if is_expr(other):
+            return self._with_unary(boolean.IsInExpr(other=other._ir))
+        msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
+        raise TypeError(msg)
+
+    def _with_binary(
+        self,
+        op: type[ops.Operator],
+        other: IntoExpr,
+        *,
+        str_as_lit: bool = False,
+        reflect: bool = False,
+    ) -> Self:
+        other_ir = parse.parse_into_expr_ir(other, str_as_lit=str_as_lit)
+        args = (self._ir, other_ir) if not reflect else (other_ir, self._ir)
+        return self._from_ir(op().to_binary_expr(*args))
 
     def __eq__(self, other: IntoExpr) -> Self:  # type: ignore[override]
-        op = ops.Eq()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Eq, other, str_as_lit=True)
 
     def __ne__(self, other: IntoExpr) -> Self:  # type: ignore[override]
-        op = ops.NotEq()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.NotEq, other, str_as_lit=True)
 
     def __lt__(self, other: IntoExpr) -> Self:
-        op = ops.Lt()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Lt, other, str_as_lit=True)
 
     def __le__(self, other: IntoExpr) -> Self:
-        op = ops.LtEq()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.LtEq, other, str_as_lit=True)
 
     def __gt__(self, other: IntoExpr) -> Self:
-        op = ops.Gt()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Gt, other, str_as_lit=True)
 
     def __ge__(self, other: IntoExpr) -> Self:
-        op = ops.GtEq()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.GtEq, other, str_as_lit=True)
 
     def __add__(self, other: IntoExpr) -> Self:
-        op = ops.Add()
-        rhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Add, other, str_as_lit=True)
 
     def __radd__(self, other: IntoExpr) -> Self:
-        op = ops.Add()
-        lhs = parse.parse_into_expr_ir(other, str_as_lit=True)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.Add, other, str_as_lit=True, reflect=True)
 
     def __sub__(self, other: IntoExpr) -> Self:
-        op = ops.Sub()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Sub, other)
 
     def __rsub__(self, other: IntoExpr) -> Self:
-        op = ops.Sub()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.Sub, other, reflect=True)
 
     def __mul__(self, other: IntoExpr) -> Self:
-        op = ops.Multiply()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Multiply, other)
 
     def __rmul__(self, other: IntoExpr) -> Self:
-        op = ops.Multiply()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.Multiply, other, reflect=True)
 
     def __truediv__(self, other: IntoExpr) -> Self:
-        op = ops.TrueDivide()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.TrueDivide, other)
 
     def __rtruediv__(self, other: IntoExpr) -> Self:
-        op = ops.TrueDivide()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.TrueDivide, other, reflect=True)
 
     def __floordiv__(self, other: IntoExpr) -> Self:
-        op = ops.FloorDivide()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.FloorDivide, other)
 
     def __rfloordiv__(self, other: IntoExpr) -> Self:
-        op = ops.FloorDivide()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.FloorDivide, other, reflect=True)
 
     def __mod__(self, other: IntoExpr) -> Self:
-        op = ops.Modulus()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Modulus, other)
 
     def __rmod__(self, other: IntoExpr) -> Self:
-        op = ops.Modulus()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.Modulus, other, reflect=True)
 
     def __and__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.And()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.And, other)
 
     def __rand__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.And()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.And, other, reflect=True)
 
     def __or__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.Or()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.Or, other)
 
     def __ror__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.Or()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.Or, other, reflect=True)
 
     def __xor__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.ExclusiveOr()
-        rhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(self._ir, rhs))
+        return self._with_binary(ops.ExclusiveOr, other)
 
     def __rxor__(self, other: IntoExprColumn | int | bool) -> Self:
-        op = ops.ExclusiveOr()
-        lhs = parse.parse_into_expr_ir(other)
-        return self._from_ir(op.to_binary_expr(lhs, self._ir))
+        return self._with_binary(ops.ExclusiveOr, other, reflect=True)
 
     def __pow__(self, exponent: IntoExprColumn | float) -> Self:
         exp = parse.parse_into_expr_ir(exponent)
@@ -633,7 +561,7 @@ class Expr:
         return self._from_ir(F.Pow().to_function_expr(base_, self._ir))
 
     def __invert__(self) -> Self:
-        return self._from_ir(boolean.Not().to_function_expr(self._ir))
+        return self._with_unary(boolean.Not())
 
     @property
     def meta(self) -> IRMetaNamespace:
