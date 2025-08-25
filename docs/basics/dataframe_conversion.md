@@ -59,26 +59,7 @@ def df_to_polars(df_native: Any) -> pl.DataFrame:
     raise TypeError(msg)
 
 
-print(df_to_polars(df_duckdb))  # You can only execute this line of code once.
+print(df_to_polars(df_duckdb))
 ```
 
 It works to pass Polars to `backend` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
-
-Note that the PyCapsule Interface makes no guarantee that you can call it repeatedly, so the approach above only works if you
-only expect to perform the conversion a single time on each input object.
-
-### Via PyArrow
-
-If you need to ingest the same dataframe multiple times, then you may want to go via PyArrow instead.
-This may be less efficient than the PyCapsule approach above (and always requires PyArrow!), but is more forgiving:
-
-```python exec="1" source="above" session="conversion" result="python"
-def df_to_polars(df_native: IntoDataFrame) -> pl.DataFrame:
-    df = nw.from_native(df_native).lazy().collect()
-    return pl.DataFrame(nw.from_native(df, eager_only=True).to_arrow())
-
-
-df_duckdb = duckdb.sql("SELECT * FROM df_polars")
-print(df_to_polars(df_duckdb))  # We can execute this...
-print(df_to_polars(df_duckdb))  # ...as many times as we like!
-```
