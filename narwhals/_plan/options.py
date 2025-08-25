@@ -253,6 +253,16 @@ class RollingOptionsFixedWindow(Immutable):
     __slots__ = ("center", "fn_params", "min_samples", "window_size")
     window_size: int
     min_samples: int
-    """Renamed from `min_periods`, reuses `window_size` if null."""
     center: bool
     fn_params: RollingVarParams | None
+
+
+def rolling_options(
+    window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
+) -> RollingOptionsFixedWindow:
+    return RollingOptionsFixedWindow(
+        window_size=window_size,
+        min_samples=window_size if min_samples is None else min_samples,
+        center=center,
+        fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
+    )

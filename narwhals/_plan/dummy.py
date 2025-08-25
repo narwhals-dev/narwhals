@@ -20,10 +20,9 @@ from narwhals._plan.contexts import ExprContext
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
-    RollingOptionsFixedWindow,
-    RollingVarParams,
     SortMultipleOptions,
     SortOptions,
+    rolling_options,
 )
 from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
@@ -308,27 +307,13 @@ class Expr:
     def rolling_sum(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = None
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
+        options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingSum(options=options))
 
     def rolling_mean(
         self, window_size: int, *, min_samples: int | None = None, center: bool = False
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = None
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
+        options = rolling_options(window_size, min_samples, center=center)
         return self._with_unary(F.RollingMean(options=options))
 
     def rolling_var(
@@ -339,14 +324,7 @@ class Expr:
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = RollingVarParams(ddof=ddof)
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
+        options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingVar(options=options))
 
     def rolling_std(
@@ -357,14 +335,7 @@ class Expr:
         center: bool = False,
         ddof: int = 1,
     ) -> Self:
-        min_samples = window_size if min_samples is None else min_samples
-        fn_params = RollingVarParams(ddof=ddof)
-        options = RollingOptionsFixedWindow(
-            window_size=window_size,
-            min_samples=min_samples,
-            center=center,
-            fn_params=fn_params,
-        )
+        options = rolling_options(window_size, min_samples, center=center, ddof=ddof)
         return self._with_unary(F.RollingStd(options=options))
 
     def diff(self) -> Self:
