@@ -9,6 +9,7 @@ import numpy as np
 from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
+    PandasLikeToPandas,
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
@@ -96,7 +97,8 @@ CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
 
 
 class PandasLikeDataFrame(
-    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"]
+    PandasLikeToPandas["pd.DataFrame"],
+    EagerDataFrame["PandasLikeSeries", "PandasLikeExpr", "Any", "pd.Series[Any]"],
 ):
     def __init__(
         self,
@@ -876,16 +878,6 @@ class PandasLikeDataFrame(
                 )
                 return arr
         return df.to_numpy(copy=copy)
-
-    def to_pandas(self) -> pd.DataFrame:
-        if self._implementation is Implementation.PANDAS:
-            return self.native
-        if self._implementation is Implementation.CUDF:
-            return self.native.to_pandas()
-        if self._implementation is Implementation.MODIN:
-            return self.native._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
 
     def to_polars(self) -> pl.DataFrame:
         import polars as pl  # ignore-banned-import
