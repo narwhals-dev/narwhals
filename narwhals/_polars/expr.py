@@ -353,6 +353,7 @@ class PolarsExpr:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     first: Method[Self]
     last: Method[Self]
     gather_every: Method[Self]

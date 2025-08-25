@@ -598,6 +598,9 @@ class EagerExpr(
     def is_nan(self) -> Self:
         return self._reuse_series("is_nan")
 
+    def fill_nan(self, value: float | None) -> Self:
+        return self._reuse_series("fill_nan", value=value)
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,

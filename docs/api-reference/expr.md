@@ -19,6 +19,7 @@
         - drop_nulls
         - ewm_mean
         - exp
+        - fill_nan
         - fill_null
         - filter
         - first

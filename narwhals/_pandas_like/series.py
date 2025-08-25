@@ -559,10 +559,11 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def is_nan(self) -> Self:
         ser = self.native
-        if self.dtype.is_numeric():
-            return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
-        msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
-        raise InvalidOperationError(msg)
+        if not self.dtype.is_numeric():
+            msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
 
     def fill_null(
         self,
@@ -594,6 +595,18 @@ class PandasLikeSeries(EagerSeries[Any]):
                     preserve_broadcast=True,
                 )
         return res_ser
+
+    def fill_nan(self, value: float | None) -> Self:
+        if not self.dtype.is_numeric():  # pragma: no cover
+            msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
+            raise InvalidOperationError(msg)
+        s = self.native
+        fill = s.array.dtype.na_value if value is None else value
+        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        mask = s != s  # noqa: PLR0124
+        # Carefully use `inplace`, as `mask` isn't provided by the user.
+        mask.fillna(False, inplace=True)  # noqa: PD002
+        return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())

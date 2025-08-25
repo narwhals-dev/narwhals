@@ -982,8 +982,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1337,8 +1336,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1364,8 +1362,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1435,6 +1432,36 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.fill_null(
                 value=self._extract_native(value), strategy=strategy, limit=limit
             )
+        )
+
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([1.0, 2.0, float("nan"), None])
+            >>> result = nw.from_native(s_native, series_only=True).fill_nan(0)
+            >>> result.to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (4,)
+            Series: '' [f64]
+            [
+               1.0
+               2.0
+               0.0
+               null
+            ]
+        """
+        return self._with_compliant(
+            self._compliant_series.fill_nan(value=self._extract_native(value))
         )
 
     def is_between(
@@ -1749,8 +1776,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pyarrow as pa
