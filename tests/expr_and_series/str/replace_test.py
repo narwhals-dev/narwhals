@@ -145,7 +145,7 @@ def test_str_replace_expr_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis"]):
+    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis", "cudf", "cudf"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
@@ -191,7 +191,9 @@ def test_str_replace_series_multivalue(
     request: pytest.FixtureRequest,
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
+    if any(
+        x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
+    ):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor_eager} does not support multivalue replacement",
@@ -217,7 +219,9 @@ def test_str_replace_all_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin"]):
+    if any(
+        x in str(constructor_eager) for x in ["pyarrow_table", "pandas", "modin", "cudf"]
+    ):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor_eager} only supports `replace_all`.",
@@ -245,14 +249,17 @@ def test_str_replace_expr_multivalue(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis"]):
+    if any(x in str(constructor) for x in ["pyspark", "duckdb", "ibis", "cudf"]):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
                 raises=NotImplementedError,
             )
         )
-    elif any(x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]):
+    elif any(
+        x in str(constructor)
+        for x in ["pyarrow_table", "dask", "pandas", "modin", "cudf"]
+    ):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} does not support multivalue replacement",
@@ -281,7 +288,10 @@ def test_str_replace_all_expr_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ["pyarrow_table", "dask", "pandas", "modin"]):
+    if any(
+        x in str(constructor)
+        for x in ["pyarrow_table", "dask", "pandas", "modin", "cudf"]
+    ):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} does not support multivalue replacement",
