@@ -16,6 +16,7 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._exceptions import issue_warning
 from narwhals._utils import (
     Implementation,
     Version,
@@ -488,6 +489,13 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
+            if (not dtype._defaulted_time_unit) and dtype.time_unit != "ns":
+                msg = (
+                    "A time unit other than 'ns' has been specified but is unsupported "
+                    "in Pandas versions preceding 2.0. To avoid an error, Narwhal's has "
+                    "fallen back to a time unit of 'ns'."
+                )
+                issue_warning(msg, UserWarning)
             dt_time_unit = "ns"
         else:
             dt_time_unit = dtype.time_unit
