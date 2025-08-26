@@ -49,6 +49,34 @@ def assert_series_equal(
         abs_tol: Absolute tolerance for inexact checking.
         categorical_as_str: Cast categorical columns to string before comparing.
             Enabling this helps compare columns that do not share the same string cache.
+
+    Examples:
+        >>> import pandas as pd
+        >>> from narwhals.testing import assert_series_equal
+        >>> s1 = pd.Series([1, 2, 3])
+        >>> s2 = pd.Series([1, 5, 3])
+        >>> assert_series_equal(s1, s2)  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        AssertionError: Series are different (exact value mismatch)
+        [left]:
+        ┌───────────────┐
+        |Narwhals Series|
+        |---------------|
+        | 0    1        |
+        | 1    2        |
+        | 2    3        |
+        | dtype: int64  |
+        └───────────────┘
+        [right]:
+        ┌───────────────┐
+        |Narwhals Series|
+        |---------------|
+        | 0    1        |
+        | 1    5        |
+        | 2    3        |
+        | dtype: int64  |
+        └───────────────┘
     """
     __tracebackhide__ = True
 
@@ -61,12 +89,12 @@ def assert_series_equal(
         left_, right_, categorical_as_str=categorical_as_str, check_order=check_order
     )
 
-    l_vals, r_vals = _check_null_values(left_, right_)
+    left_vals, right_vals = _check_null_values(left_, right_)
 
     if check_exact or not left_.dtype.is_float():
         _check_exact_values(
-            l_vals,
-            r_vals,
+            left_vals,
+            right_vals,
             check_dtypes=check_dtypes,
             check_exact=check_exact,
             rel_tol=rel_tol,
@@ -74,38 +102,42 @@ def assert_series_equal(
             categorical_as_str=categorical_as_str,
         )
     else:
-        _check_approximate_values(l_vals, r_vals, rel_tol=rel_tol, abs_tol=abs_tol)
+        _check_approximate_values(left_vals, right_vals, rel_tol=rel_tol, abs_tol=abs_tol)
 
 
 def _check_metadata(
     left: SeriesT, right: SeriesT, *, check_dtypes: bool, check_names: bool
 ) -> None:
     """Check metadata information: implementation, length, dtype, and names."""
-    if (l_impl := left.implementation) != (r_impl := right.implementation):
-        raise_assertion_error("Series", "implementation mismatch", l_impl, r_impl)
+    left_impl, right_impl = left.implementation, right.implementation
+    if left_impl != right_impl:
+        raise_assertion_error("Series", "implementation mismatch", left_impl, right_impl)
 
-    if (l_len := len(left)) != (r_len := len(right)):
-        raise_assertion_error("Series", "length mismatch", l_len, r_len)
+    left_len, right_len = len(left), len(right)
+    if left_len != right_len:
+        raise_assertion_error("Series", "length mismatch", left_len, right_len)
 
-    if check_dtypes and (l_dtype := left.dtype) != (r_dtype := right.dtype):
-        raise_assertion_error("Series", "dtype mismatch", l_dtype, r_dtype)
+    left_dtype, right_dtype = left.dtype, right.dtype
+    if check_dtypes and left_dtype != right_dtype:
+        raise_assertion_error("Series", "dtype mismatch", left_dtype, right_dtype)
 
-    if check_names and (l_name := left.name) != (r_name := right.name):
-        raise_assertion_error("Series", "name mismatch", l_name, r_name)
+    left_name, right_name = left.name, right.name
+    if check_names and left_name != right_name:
+        raise_assertion_error("Series", "name mismatch", left_name, right_name)
 
 
 def _maybe_apply_preprocessing(
     left: SeriesT, right: SeriesT, *, categorical_as_str: bool, check_order: bool
 ) -> tuple[SeriesT, SeriesT]:
     """Apply preprocessing transformations: categorical casting and sorting."""
-    l_dtype = left.dtype
+    left_dtype = left.dtype
 
     # TODO(FBruzzesi): Add coverage
-    if isinstance(l_dtype, Categorical) and categorical_as_str:  # pragma: no cover
+    if isinstance(left_dtype, Categorical) and categorical_as_str:  # pragma: no cover
         left, right = left.cast(String()), right.cast(String())
 
     if not check_order:
-        if l_dtype.is_nested():
+        if left_dtype.is_nested():
             msg = "`check_order=False` is not supported (yet) with nested data type."
             raise NotImplementedError(msg)
         left, right = left.sort(), right.sort()
@@ -115,12 +147,15 @@ def _maybe_apply_preprocessing(
 
 def _check_null_values(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
     """Check null value consistency and return non-null values."""
-    if (l_null_count := left.null_count()) != (r_null_count := right.null_count()) or (
-        (l_null_mask := left.is_null()) != (r_null_mask := right.is_null())
-    ).any():
-        raise_assertion_error("Series", "null value mismatch", l_null_count, r_null_count)
+    left_null_count, right_null_count = left.null_count(), right.null_count()
+    left_null_mask, right_null_mask = left.is_null(), right.is_null()
 
-    return left.filter(~l_null_mask), right.filter(~r_null_mask)
+    if left_null_count != right_null_count or (left_null_mask != right_null_mask).any():
+        raise_assertion_error(
+            "Series", "null value mismatch", left_null_count, right_null_count
+        )
+
+    return left.filter(~left_null_mask), right.filter(~right_null_mask)
 
 
 def _check_exact_values(
@@ -134,15 +169,17 @@ def _check_exact_values(
     categorical_as_str: bool,
 ) -> None:
     """Check exact value equality for various data types."""
-    l_impl = left.implementation
-    l_dtype, r_dtype = left.dtype, right.dtype
+    left_impl = left.implementation
+    left_dtype, right_dtype = left.dtype, right.dtype
 
     is_not_equal_mask: Series[Any]
-    if l_dtype.is_numeric():
+    if left_dtype.is_numeric():
         # For _all_ numeric dtypes, we can use `is_close` with 0-tolerances to handle
         # inf and nan values out of the box.
         is_not_equal_mask = ~left.is_close(right, rel_tol=0, abs_tol=0, nans_equal=True)
-    elif isinstance(l_dtype, (Array, List)) and isinstance(r_dtype, (Array, List)):
+    elif (
+        isinstance(left_dtype, (Array, List)) and isinstance(right_dtype, (Array, List))
+    ) and left_dtype == right_dtype:
         check_fn = partial(
             assert_series_equal,
             check_dtypes=check_dtypes,
@@ -153,10 +190,10 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
-        _check_list_like(left, right, l_dtype, r_dtype, check_fn=check_fn)
+        _check_list_like(left, right, left_dtype, right_dtype, check_fn=check_fn)
         # If `_check_list_like` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
-    elif isinstance(l_dtype, Struct) and isinstance(r_dtype, Struct):
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
+    elif isinstance(left_dtype, Struct) and isinstance(right_dtype, Struct):
         check_fn = partial(
             assert_series_equal,
             check_dtypes=True,
@@ -167,9 +204,9 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
-        _check_struct(left, right, l_dtype, r_dtype, check_fn=check_fn)
+        _check_struct(left, right, left_dtype, right_dtype, check_fn=check_fn)
         # If `_check_struct` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=l_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
     else:
         is_not_equal_mask = left != right
 
@@ -195,31 +232,31 @@ def _check_approximate_values(
 
 
 def _check_list_like(
-    l_vals: SeriesT,
-    r_vals: SeriesT,
-    l_dtype: List | Array,
-    r_dtype: List | Array,
+    left_vals: SeriesT,
+    right_vals: SeriesT,
+    left_dtype: List | Array,
+    right_dtype: List | Array,
     check_fn: CheckFn[SeriesT],
 ) -> None:
     # Check row by row after transforming each array/list into a new series.
     # Notice that order within the array/list must be the same, regardless of
     # `check_order` value at the top level.
-    impl = l_vals.implementation
+    impl = left_vals.implementation
     try:
-        for l_val, r_val in zip_strict(l_vals, r_vals):
+        for left_val, right_val in zip_strict(left_vals, right_vals):
             check_fn(
-                new_series(name="", values=l_val, dtype=l_dtype.inner, backend=impl),  # type: ignore[arg-type]
-                new_series(name="", values=r_val, dtype=r_dtype.inner, backend=impl),  # type: ignore[arg-type]
+                new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),  # type: ignore[arg-type]
+                new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),  # type: ignore[arg-type]
             )
     except AssertionError:
-        raise_assertion_error("Series", "nested value mismatch", l_vals, r_vals)
+        raise_assertion_error("Series", "nested value mismatch", left_vals, right_vals)
 
 
 def _check_struct(
-    l_vals: SeriesT,
-    r_vals: SeriesT,
-    l_dtype: Struct,
-    r_dtype: Struct,
+    left_vals: SeriesT,
+    right_vals: SeriesT,
+    left_dtype: Struct,
+    right_dtype: Struct,
     check_fn: CheckFn[SeriesT],
 ) -> None:
     # Check field by field as a separate column.
@@ -228,7 +265,10 @@ def _check_struct(
     #   * dtype differs, regardless of `check_dtypes=False`
     #   * order applies only at top level
     try:
-        for l_field, r_field in zip_strict(l_dtype.fields, r_dtype.fields):
-            check_fn(l_vals.struct.field(l_field.name), r_vals.struct.field(r_field.name))
+        for left_field, right_field in zip_strict(left_dtype.fields, right_dtype.fields):
+            check_fn(
+                left_vals.struct.field(left_field.name),
+                right_vals.struct.field(right_field.name),
+            )
     except AssertionError:
-        raise_assertion_error("Series", "exact value mismatch", l_vals, r_vals)
+        raise_assertion_error("Series", "exact value mismatch", left_vals, right_vals)
