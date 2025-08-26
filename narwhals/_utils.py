@@ -2136,8 +2136,9 @@ class _Implementation:
     def __get__(
         self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
+    # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
     @overload
-    def __get__(self, instance: None, owner: Any) -> Self: ...
+    def __get__(self, instance: None, owner: type[Narwhals[Any]]) -> Self: ...
     @overload
     def __get__(
         self, instance: DataFrame[Any] | Series[Any], owner: Any
