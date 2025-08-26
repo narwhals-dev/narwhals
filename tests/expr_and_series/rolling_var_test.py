@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import hypothesis.strategies as st
 import pytest
@@ -16,9 +16,6 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
-
-if TYPE_CHECKING:
-    from narwhals.typing import Frame
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -125,7 +122,7 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
         .to_frame("a")
     )
 
-    result: Frame = nw.from_native(pa.Table.from_pandas(df)).select(
+    result = nw.from_native(pa.Table.from_pandas(df)).select(
         nw.col("a").rolling_var(
             window_size, center=center, min_samples=min_samples, ddof=ddof
         )
