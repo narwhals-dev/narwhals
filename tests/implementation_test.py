@@ -73,6 +73,41 @@ def test_implementation_new(member: str, value: str) -> None:
     assert nw.Implementation(value) is getattr(nw.Implementation, member)
 
 
+_TYPING_ONLY_TESTS = "_"
+"""Exhaustive checks for overload matching native -> implementation.
+
+## Arrange
+Each test defines a function accepting a `native` frame.
+
+Important:
+    We *must* use the concrete types and therefore the type checker *needs* the package installed.
+
+Next, wrap `native` as a `nw.{Data,Lazy}Frame`.
+
+Note:
+    If we support multiple native types, use `native` to generate `nw.{LazyFrame,Series}` as well.
+
+Finally, look-up `.implementation` on all wrapped objects.
+
+## Act
+Try passing every result (`*_impl`) to functions that *only* accept a **subset** of `Implementation`.
+
+This step *may require* a `# (type|pyright): ignore` directive, which defines the `# [... Negative]` result.
+Otherwise, results are labelled with `# [... Positive]`.
+
+If this *static* label matches *runtime* we use `# [True ...]`, otherwise `# [False ...]`.
+
+Tip:
+    `# [False Negative]`s are the most frustrating for users.
+    Always try to minimize warning on safe code.
+
+## Assert
+The action determined whether or not our typing warns on an `@overload` match.
+
+We still need to use [`assert_type`] to verify which `Implementation`(s) were returned as a result.
+
+[`assert_type`]: https://typing-extensions.readthedocs.io/en/latest/#typing_extensions.assert_type
+"""
 if TYPE_CHECKING:
     import dask.dataframe as dd
     import duckdb
