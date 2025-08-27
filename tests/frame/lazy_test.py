@@ -13,7 +13,7 @@ from tests.utils import assert_equal_data, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
-    from narwhals._typing import LazyAllowed
+    from narwhals._typing import LazyAllowed, SparkLike
     from tests.utils import ConstructorEager
 
 
@@ -68,7 +68,11 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         "sqlframe",
     ],
 )
-def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None:
+def test_lazy(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    backend: LazyAllowed,
+) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
 
@@ -84,9 +88,11 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
         and df.implementation.is_pandas()
         and df.implementation._backend_version() >= (3, 0, 0)
     ):  # pragma: no cover
-        # Reason: https://github.com/duckdb/duckdb/issues/18297
-        # > duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized
-        return
+        reason = (
+            "https://github.com/duckdb/duckdb/issues/18297\n"
+            "> duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     session: SparkSession | None
     if impl.is_sqlframe():
@@ -104,7 +110,7 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
 
 @pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
 def test_lazy_spark_like_requires_session(
-    constructor_eager: ConstructorEager, backend: LazyAllowed
+    constructor_eager: ConstructorEager, backend: SparkLike
 ) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())

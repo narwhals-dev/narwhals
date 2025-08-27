@@ -565,7 +565,7 @@ class SparkLikeLazyFrame(
     @classmethod
     def _from_compliant_dataframe(
         cls,
-        compliant_frame: CompliantDataFrameAny,
+        frame: CompliantDataFrameAny,
         /,
         *,
         session: SparkSession,
@@ -574,21 +574,16 @@ class SparkLikeLazyFrame(
     ) -> SparkLikeLazyFrame:
         from importlib.util import find_spec
 
-        # pyspark.sql requires pyarrow to be installed from v4.0.0
-        can_create_from_arrow = implementation in {
-            Implementation.PYSPARK,
-            Implementation.PYSPARK_CONNECT,
-        } and implementation._backend_version() >= (4, 0, 0)
-
-        is_pandas_installed = find_spec("pandas") is not None
-
-        data: Any = (
-            compliant_frame.to_arrow()
-            if can_create_from_arrow
-            else compliant_frame.to_pandas()
-            if is_pandas_installed
-            else tuple(compliant_frame.iter_rows(named=True, buffer_size=512))
-        )
+        impl = implementation
+        is_spark_v4 = (not impl.is_sqlframe()) and impl._backend_version() >= (4, 0, 0)
+        if is_spark_v4:  # pragma: no cover
+            # pyspark.sql requires pyarrow to be installed from v4.0.0
+            # and since v4.0.0 the input to `createDataFrame` can be a PyArrow Table.
+            data: Any = frame.to_arrow()
+        elif find_spec("pandas"):
+            data = frame.to_pandas()
+        else:  # pragma: no cover
+            data = tuple(frame.iter_rows(named=True, buffer_size=512))
 
         return cls(
             session.createDataFrame(data),

@@ -26,7 +26,6 @@ from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectI
 from narwhals._utils import (
     Implementation,
     Version,
-    can_dataframe_lazy,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -35,6 +34,7 @@ from narwhals._utils import (
     is_compliant_lazyframe,
     is_eager_allowed,
     is_index_selector,
+    is_lazy_allowed,
     is_list_of,
     is_sequence_like,
     is_slice_none,
@@ -801,7 +801,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if backend is None:
             return self._lazyframe(lazy(None, session=session), level="lazy")
         lazy_backend = Implementation.from_backend(backend)
-        if can_dataframe_lazy(lazy_backend):
+        if is_lazy_allowed(lazy_backend):
             return self._lazyframe(lazy(lazy_backend, session=session), level="lazy")
         msg = f"Not-supported backend.\n\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)

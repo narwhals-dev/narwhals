@@ -1661,7 +1661,7 @@ def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectIm
     return impl in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
 
 
-def can_dataframe_lazy(impl: Implementation, /) -> TypeIs[_LazyAllowedImpl]:
+def is_lazy_allowed(impl: Implementation, /) -> TypeIs[_LazyAllowedImpl]:
     """Return True if `DataFrame.lazy(impl)` is allowed."""
     return impl in {
         Implementation.DASK,
