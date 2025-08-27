@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Union
 
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation
@@ -154,3 +154,7 @@ Examples:
 IntoBackendAny: TypeAlias = IntoBackend[Backend]
 IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
+
+
+class SparkLikeSession(Protocol):
+    def createDataFrame(self, *args: Any, **kwds: Any) -> Any: ...  # noqa: N802

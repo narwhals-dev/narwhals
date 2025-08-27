@@ -103,10 +103,10 @@ def test_lazy_spark_like_requires_session(
 
     err_msg = re.escape("Spark like backends require `session` to be not None.")
     with pytest.raises(ValueError, match=err_msg):
-        df.lazy(backend=backend, session=None)
+        df.lazy(backend=backend, session=None)  # type: ignore[call-overload]
 
 
 def test_lazy_backend_invalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(ValueError, match="Not-supported backend"):
-        df.lazy(backend=Implementation.PANDAS)  # type: ignore[arg-type]
+        df.lazy(backend=Implementation.PANDAS)  # type: ignore[call-overload]

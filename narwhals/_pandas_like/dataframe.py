@@ -47,9 +47,8 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import SparkLikeSession, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -777,7 +776,7 @@ class PandasLikeDataFrame(
         self,
         backend: _LazyAllowedImpl | None = None,
         *,
-        session: SparkSession | None = None,
+        session: SparkLikeSession | None = None,
     ) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:

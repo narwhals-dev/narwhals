@@ -22,7 +22,13 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
+from narwhals._typing import (
+    Arrow,
+    Pandas,
+    SparkLikeSession,
+    _LazyAllowedImpl,
+    _LazyFrameCollectImpl,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -72,7 +78,16 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
+    from narwhals._typing import (
+        Dask,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        LazyAllowed,
+        Polars,
+        SparkLike,
+    )
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -723,11 +738,24 @@ class DataFrame(BaseFrame[DataFrameT]):
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
+    @overload
+    def lazy(
+        self,
+        backend: IntoBackend[Polars | Dask | DuckDB | Ibis] | None = None,
+        *,
+        session: None = None,
+    ) -> LazyFrame[Any]: ...
+
+    @overload
+    def lazy(
+        self, backend: IntoBackend[SparkLike], *, session: SparkLikeSession
+    ) -> LazyFrame[Any]: ...
+
     def lazy(
         self,
         backend: IntoBackend[LazyAllowed] | None = None,
         *,
-        session: Any | None = None,
+        session: SparkLikeSession | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 

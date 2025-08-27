@@ -72,11 +72,16 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Arrow,
         Backend,
+        Dask,
+        DuckDB,
         EagerAllowed,
+        Ibis,
         IntoBackend,
         LazyAllowed,
         Pandas,
         Polars,
+        SparkLike,
+        SparkLikeSession,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
@@ -190,11 +195,24 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         # However the return type actually is `nw.v1.stable.Series`, check `tests/v1_test.py`.
         return super().get_column(name)  # type: ignore[return-value]
 
+    @overload
+    def lazy(
+        self,
+        backend: IntoBackend[Polars | Dask | DuckDB | Ibis] | None = None,
+        *,
+        session: None = None,
+    ) -> LazyFrame[Any]: ...
+
+    @overload
+    def lazy(
+        self, backend: IntoBackend[SparkLike], *, session: SparkLikeSession
+    ) -> LazyFrame[Any]: ...
+
     def lazy(
         self,
         backend: IntoBackend[LazyAllowed] | None = None,
         *,
-        session: Any | None = None,
+        session: SparkLikeSession | None = None,
     ) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend, session=session))
 

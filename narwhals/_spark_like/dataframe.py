@@ -42,8 +42,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals._spark_like.group_by import SparkLikeLazyGroupBy
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals._spark_like.utils import SparkSession
-    from narwhals._typing import _EagerAllowedImpl
+    from narwhals._typing import SparkLikeSession, _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -568,7 +567,7 @@ class SparkLikeLazyFrame(
         frame: CompliantDataFrameAny,
         /,
         *,
-        session: SparkSession,
+        session: SparkLikeSession,
         implementation: Implementation,
         version: Version,
     ) -> SparkLikeLazyFrame:

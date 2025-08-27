@@ -40,9 +40,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import SparkLikeSession, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
@@ -460,7 +459,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         self,
         backend: _LazyAllowedImpl | None = None,
         *,
-        session: SparkSession | None = None,
+        session: SparkLikeSession | None = None,
     ) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)

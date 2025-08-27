@@ -45,9 +45,8 @@ if TYPE_CHECKING:
         Order,
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import SparkLikeSession, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -532,7 +531,7 @@ class ArrowDataFrame(
         self,
         backend: _LazyAllowedImpl | None = None,
         *,
-        session: SparkSession | None = None,
+        session: SparkLikeSession | None = None,
     ) -> CompliantLazyFrameAny:
         if backend is None:
             return self

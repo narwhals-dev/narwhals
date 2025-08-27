@@ -50,9 +50,8 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import SparkLikeSession, _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, _LimitedContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
@@ -198,7 +197,7 @@ class CompliantDataFrame(
         suffix: str,
     ) -> Self: ...
     def lazy(
-        self, backend: _LazyAllowedImpl | None, *, session: SparkSession | None
+        self, backend: _LazyAllowedImpl | None, *, session: SparkLikeSession | None
     ) -> CompliantLazyFrameAny: ...
     def pivot(
         self,
