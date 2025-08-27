@@ -140,18 +140,23 @@ class CompliantExpr(
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
-    def _evaluate_aliases(
-        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
-    ) -> Sequence[str]:
-        names = self._evaluate_output_names(frame)
-        return alias(names) if (alias := self._alias_output_names) else names
-
     @property
     def name(self) -> NameNamespace[Self]: ...
 
 
-class DepthTrackingExpr(
+class ImplExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    def _evaluate_aliases(
+        self: ImplExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
+    ) -> Sequence[str]:
+        names = self._evaluate_output_names(frame)
+        return alias(names) if (alias := self._alias_output_names) else names
+
+
+class DepthTrackingExpr(
+    ImplExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
     _depth: int
@@ -874,8 +879,7 @@ class EagerExpr(
 
 # mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
 class LazyExpr(  # type: ignore[misc]
-    CompliantExpr[CompliantLazyFrameT, NativeExprT],
-    Protocol[CompliantLazyFrameT, NativeExprT],
+    ImplExpr[CompliantLazyFrameT, NativeExprT], Protocol[CompliantLazyFrameT, NativeExprT]
 ):
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
