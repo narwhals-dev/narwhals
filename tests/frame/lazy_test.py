@@ -12,7 +12,6 @@ from narwhals.dependencies import get_cudf, get_modin
 from tests.utils import assert_equal_data, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._typing import LazyAllowed, SparkLike
     from tests.utils import ConstructorEager
 
@@ -79,11 +78,11 @@ def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None
         impl = Implementation.PYSPARK_CONNECT
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    session: SparkSession | None
+    session: Any
     if impl.is_sqlframe():
         session = sqlframe_session()
     elif impl.is_pyspark() or impl.is_pyspark_connect():  # pragma: no cover
-        session = pyspark_session()  # pyright: ignore[reportAssignmentType]
+        session = pyspark_session()
     else:
         session = None
 
