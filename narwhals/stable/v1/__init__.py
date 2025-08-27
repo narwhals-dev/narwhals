@@ -68,7 +68,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import ParamSpec, Self
 
-    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import (
         Arrow,
@@ -195,7 +194,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         self,
         backend: IntoBackend[LazyAllowed] | None = None,
         *,
-        session: SparkSession | None = None,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
         return _stableify(super().lazy(backend=backend, session=session))
 
