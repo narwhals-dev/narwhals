@@ -51,9 +51,14 @@ __all__ = [
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _version: Version
 
+    @property
+    def _expr(self) -> type[CompliantExprT]: ...
+
+    # NOTE: `polars`
     def all(self) -> CompliantExprT:
         return self._expr.from_column_names(get_column_names, context=self)
 
@@ -93,8 +98,6 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
-    @property
-    def _expr(self) -> type[CompliantExprT]: ...
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
 
 

@@ -81,6 +81,7 @@ class NativeExpr(Protocol):
 class CompliantExpr(
     CompliantColumn, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 ):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
@@ -92,6 +93,10 @@ class CompliantExpr(
     def __narwhals_expr__(self) -> None: ...
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
     @classmethod
+    def from_column_indices(
+        cls, *column_indices: int, context: _LimitedContext
+    ) -> Self: ...
+    @classmethod
     def from_column_names(
         cls,
         evaluate_column_names: EvalNames[CompliantFrameT],
@@ -99,9 +104,8 @@ class CompliantExpr(
         *,
         context: _LimitedContext,
     ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls, *column_indices: int, context: _LimitedContext
+    def broadcast(
+        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
     @staticmethod
     def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
@@ -111,6 +115,7 @@ class CompliantExpr(
 
         return fn
 
+    # NOTE: `polars`
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def count(self) -> Self: ...
@@ -136,9 +141,6 @@ class CompliantExpr(
         return_dtype: IntoDType | None,
         *,
         returns_scalar: bool,
-    ) -> Self: ...
-    def broadcast(
-        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
     @property
     def name(self) -> NameNamespace[Self]: ...

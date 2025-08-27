@@ -93,12 +93,36 @@ class CompliantDataFrame(
     Sized,
     Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
 ):
+    # NOTE: `narwhals`
     _native_frame: NativeFrameT
     _implementation: Implementation
     _version: Version
 
+    @property
+    def native(self) -> NativeFrameT:
+        return self._native_frame
+
     def __narwhals_dataframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
+    @classmethod
+    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
+        """`select` where all args are aggregations or literals.
+
+        (so, no broadcasting is necessary).
+        """
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "CompliantExprT_contra@CompliantDataFrame" cannot be assigned to parameter "exprs" of type "CompliantExprT_contra@CompliantDataFrame" in function "select"
+        #  Type "CompliantExprT_contra@CompliantDataFrame" is not assignable to type "CompliantExprT_contra@CompliantDataFrame"
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
+
+    def simple_select(self, *column_names: str) -> Self:
+        """`select` where all args are column names."""
+        ...
+
+    def _with_version(self, version: Version) -> Self: ...
+
+    # NOTE: `polars`
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
@@ -111,8 +135,6 @@ class CompliantDataFrame(
         schema: IntoSchema | None,
     ) -> Self: ...
     @classmethod
-    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
-    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
@@ -121,7 +143,6 @@ class CompliantDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | Sequence[str] | None,
     ) -> Self: ...
-
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(
         self,
@@ -130,26 +151,6 @@ class CompliantDataFrame(
             MultiColSelector[CompliantSeriesT],
         ],
     ) -> Self: ...
-    def simple_select(self, *column_names: str) -> Self:
-        """`select` where all args are column names."""
-        ...
-
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        # NOTE: Ignore intermittent [False Negative]
-        # Argument of type "CompliantExprT_contra@CompliantDataFrame" cannot be assigned to parameter "exprs" of type "CompliantExprT_contra@CompliantDataFrame" in function "select"
-        #  Type "CompliantExprT_contra@CompliantDataFrame" is not assignable to type "CompliantExprT_contra@CompliantDataFrame"
-        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
-
-    def _with_version(self, version: Version) -> Self: ...
-
-    @property
-    def native(self) -> NativeFrameT:
-        return self._native_frame
-
     @property
     def columns(self) -> Sequence[str]: ...
     @property
@@ -267,22 +268,21 @@ class CompliantLazyFrame(
     ToNarwhals[ToNarwhalsT_co],
     Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
 ):
+    # NOTE: `narwhals`
     _native_frame: NativeLazyFrameT
     _implementation: Implementation
     _version: Version
 
+    @property
+    def native(self) -> NativeLazyFrameT:
+        return self._native_frame
+
     def __narwhals_lazyframe__(self) -> Self: ...
     def __narwhals_namespace__(self) -> Any: ...
-
     @classmethod
     def from_native(
         cls, data: NativeLazyFrameT, /, *, context: _LimitedContext
     ) -> Self: ...
-
-    def simple_select(self, *column_names: str) -> Self:
-        """`select` where all args are column names."""
-        ...
-
     def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
         """`select` where all args are aggregations or literals.
 
@@ -290,17 +290,19 @@ class CompliantLazyFrame(
         """
         ...
 
+    def simple_select(self, *column_names: str) -> Self:
+        """`select` where all args are column names."""
+        ...
+
+    # `LazySelectorNamespace._iter_columns` depends
+    def _iter_columns(self) -> Iterator[Any]: ...
     def _with_version(self, version: Version) -> Self: ...
 
-    @property
-    def native(self) -> NativeLazyFrameT:
-        return self._native_frame
-
+    # NOTE: `polars`
     @property
     def columns(self) -> Sequence[str]: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
-    def _iter_columns(self) -> Iterator[Any]: ...
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
