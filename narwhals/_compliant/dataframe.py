@@ -106,16 +106,6 @@ class CompliantDataFrame(
     def __narwhals_namespace__(self) -> Any: ...
     @classmethod
     def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        # NOTE: Ignore intermittent [False Negative]
-        # Argument of type "CompliantExprT_contra@CompliantDataFrame" cannot be assigned to parameter "exprs" of type "CompliantExprT_contra@CompliantDataFrame" in function "select"
-        #  Type "CompliantExprT_contra@CompliantDataFrame" is not assignable to type "CompliantExprT_contra@CompliantDataFrame"
-        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
-
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
         ...
@@ -378,6 +368,12 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def aggregate(self, *exprs: EagerExprT) -> Self:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "exprs" of type "EagerExprT@EagerDataFrame" in function "select"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     def _with_native(
         self, df: NativeDataFrameT, *, validate_column_names: bool = True
