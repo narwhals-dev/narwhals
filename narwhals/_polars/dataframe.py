@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
@@ -456,7 +457,12 @@ class PolarsDataFrame(
         for series in self.native.iter_columns():
             yield PolarsSeries.from_native(series, context=self)
 
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         if backend is Implementation.DUCKDB:
@@ -464,10 +470,9 @@ class PolarsDataFrame(
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            # NOTE: (F841) is a false positive
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
         if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
@@ -479,7 +484,7 @@ class PolarsDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_ibis():
+        if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -487,6 +492,20 @@ class PolarsDataFrame(
             return IbisLazyFrame(
                 ibis.memtable(self.native, columns=self.columns),
                 validate_backend_version=True,
+                version=self._version,
+            )
+
+        if backend.is_spark_like():
+            from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+            if session is None:
+                msg = "Spark like backends require `session` to be not None."
+                raise ValueError(msg)
+
+            return SparkLikeLazyFrame._from_compliant_dataframe(
+                self,  # pyright: ignore[reportArgumentType]
+                session=session,
+                implementation=backend,
                 version=self._version,
             )
 
