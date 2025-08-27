@@ -72,11 +72,9 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Arrow,
         Backend,
-        Dask,
-        DuckDB,
         EagerAllowed,
-        Ibis,
         IntoBackend,
+        LazyAllowed,
         Pandas,
         Polars,
     )
@@ -193,9 +191,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
-        return _stableify(super().lazy(backend=backend))
+        return _stableify(super().lazy(backend=backend, session=session))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
