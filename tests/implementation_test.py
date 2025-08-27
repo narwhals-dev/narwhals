@@ -214,8 +214,9 @@ if TYPE_CHECKING:
 
         ldf_impl = ldf.implementation
 
+        # [True Positive]
+        any_df.lazy(ldf_impl)
         # [True Negative]
-        any_df.lazy(ldf_impl)  # pyright: ignore[reportArgumentType]
         any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
 
         assert_type(ldf.implementation, _SQLFrameImpl)
@@ -289,7 +290,9 @@ if TYPE_CHECKING:
 
         # [True Negative]
         any_df.lazy(df_impl)  # type: ignore[arg-type]
-        any_df.lazy(ldf_impl)  # type: ignore[arg-type]
+        # [True Positive]
+        any_df.lazy(ldf_impl)
+        # [True Negative]
         any_df.lazy(ser_impl)  # type: ignore[arg-type]
         any_ldf.collect(df_impl)  # type: ignore[arg-type]
         any_ldf.collect(ldf_impl)  # type: ignore[arg-type]
