@@ -68,11 +68,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         "sqlframe",
     ],
 )
-def test_lazy(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-    backend: LazyAllowed,
-) -> None:
+def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
 
@@ -83,17 +79,6 @@ def test_lazy(
         impl = Implementation.PYSPARK_CONNECT
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    if (
-        impl.is_duckdb()
-        and df.implementation.is_pandas()
-        and df.implementation._backend_version() >= (3, 0, 0)
-    ):  # pragma: no cover
-        reason = (
-            "https://github.com/duckdb/duckdb/issues/18297\n"
-            "> duckdb.duckdb.NotImplementedException: Not implemented Error: Data type 'str' not recognized"
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
     session: SparkSession | None
     if impl.is_sqlframe():
         session = sqlframe_session()
