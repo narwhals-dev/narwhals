@@ -31,12 +31,42 @@ if TYPE_CHECKING:
 
 
 class PolarsExpr:
+    # CompliantExpr
     _implementation = Implementation.POLARS
+    _metadata: ExprMetadata | None = None
+    _evaluate_output_names: Any
+    _alias_output_names: Any
+    __call__: Any
+
+    # CompliantExpr + builtin descriptor
+    # TODO @dangotbanned: Remove in #2713
+    @classmethod
+    def from_column_names(
+        cls,
+        evaluate_column_names: EvalNames[PolarsDataFrame],
+        /,
+        *,
+        context: _LimitedContext,
+    ) -> Self:
+        raise NotImplementedError
+
+    @classmethod
+    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
+        raise NotImplementedError
+
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
+        raise NotImplementedError
+
+    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(version=self._version)
 
     def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
         self._version = version
-        self._metadata: ExprMetadata | None = None
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -234,12 +264,6 @@ class PolarsExpr:
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
-    def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
-        from narwhals._polars.namespace import PolarsNamespace
-
-        return PolarsNamespace(version=self._version)
-
     def is_close(
         self,
         other: Self | NumericLiteral,
@@ -307,33 +331,6 @@ class PolarsExpr:
     @property
     def struct(self) -> PolarsExprStructNamespace:
         return PolarsExprStructNamespace(self)
-
-    # CompliantExpr
-    _alias_output_names: Any
-    _evaluate_aliases: Any
-    _evaluate_output_names: Any
-    _is_multi_output_unnamed: Any
-    __call__: Any
-
-    # CompliantExpr + builtin descriptor
-    # TODO @dangotbanned: Remove in #2713
-    @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: EvalNames[PolarsDataFrame],
-        /,
-        *,
-        context: _LimitedContext,
-    ) -> Self:
-        raise NotImplementedError
-
-    @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
-        raise NotImplementedError
-
-    @staticmethod
-    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
-        raise NotImplementedError
 
     # Polars
     abs: Method[Self]
