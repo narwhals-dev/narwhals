@@ -139,7 +139,9 @@ class CompliantDataFrame(
 
         (so, no broadcasting is necessary).
         """
-        # NOTE: Ignore is to avoid an intermittent false positive
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "CompliantExprT_contra@CompliantDataFrame" cannot be assigned to parameter "exprs" of type "CompliantExprT_contra@CompliantDataFrame" in function "select"
+        #  Type "CompliantExprT_contra@CompliantDataFrame" is not assignable to type "CompliantExprT_contra@CompliantDataFrame"
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     def _with_version(self, version: Version) -> Self: ...
@@ -389,7 +391,9 @@ class EagerDataFrame(
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
-        # NOTE: Ignore is to avoid an intermittent false positive
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
     def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:

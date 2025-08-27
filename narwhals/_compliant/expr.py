@@ -148,10 +148,11 @@ class ImplExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
-    def _evaluate_aliases(
-        self: ImplExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
-    ) -> Sequence[str]:
-        names = self._evaluate_output_names(frame)
+    def _evaluate_aliases(self, frame: CompliantFrameT, /) -> Sequence[str]:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "CompliantFrameT@ImplExpr" cannot be assigned to parameter of type "CompliantFrameT@ImplExpr"
+        #  Type "CompliantFrameT@ImplExpr" is not assignable to type "CompliantFrameT@ImplExpr"
+        names = self._evaluate_output_names(frame)  # pyright: ignore[reportArgumentType]
         return alias(names) if (alias := self._alias_output_names) else names
 
 
