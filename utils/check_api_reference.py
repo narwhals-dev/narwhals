@@ -220,6 +220,18 @@ if extra := set(documented).difference(dtypes):
     print(extra)  # noqa: T201
     ret = 1
 
+# Schema
+schema_methods = list(iter_api_reference_names(nw.Schema))
+documented = read_documented_members(DIR_API_REF / "schema.md")
+if missing := set(schema_methods).difference(documented):
+    print("Schema: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(schema_methods):
+    print("Schema: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
 # Check Expr vs Series
 if missing := set(expr_methods).difference(series_methods).difference(EXPR_ONLY_METHODS):
     print("In Expr but not in Series")  # noqa: T201

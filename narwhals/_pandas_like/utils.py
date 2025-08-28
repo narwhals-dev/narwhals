@@ -364,7 +364,7 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
-    if allow_object:  # pragma: no cover
+    if allow_object:
         return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
