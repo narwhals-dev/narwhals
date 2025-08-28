@@ -5,7 +5,7 @@ import string
 import sys
 
 # ruff: noqa: N806
-from collections import deque
+from collections import OrderedDict, deque
 from inspect import isfunction, ismethoddescriptor
 from pathlib import Path
 from types import MethodType, ModuleType
@@ -223,7 +223,11 @@ if extra := set(documented).difference(dtypes):
 # Schema
 schema_methods = list(iter_api_reference_names(nw.Schema))
 documented = read_documented_members(DIR_API_REF / "schema.md")
-if missing := set(schema_methods).difference(documented):
+if (
+    missing := set(schema_methods)
+    .difference(documented)
+    .difference(iter_api_reference_names(OrderedDict))
+):
     print("Schema: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
