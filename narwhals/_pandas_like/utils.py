@@ -282,7 +282,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
 
 
 def object_native_to_narwhals_dtype(
-    values: PandasLikeSeries | tuple[()], version: Version, implementation: Implementation
+    series: PandasLikeSeries | None, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
     if implementation is Implementation.CUDF:
@@ -292,8 +292,7 @@ def object_native_to_narwhals_dtype(
 
     infer = pd.api.types.infer_dtype
     # Arbitrary limit of 100 elements to use to sniff dtype.
-    elements = values if isinstance(values, tuple) else values.head(100)
-    inferred_dtype = infer(elements, skipna=True)
+    inferred_dtype = "empty" if series is None else infer(series.head(100), skipna=True)
     if inferred_dtype == "string":
         return dtypes.String()
     if inferred_dtype == "empty" and version is not Version.V1:
