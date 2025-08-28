@@ -341,14 +341,11 @@ class Schema(OrderedDict[str, "DType"]):
         first_item = next(iter(native.items()))
         first_key, first_dtype = first_item
         if is_polars_data_type(first_dtype):
-            native_polars = cast("IntoPolarsSchema", native)
-            return cls.from_polars(native_polars)
+            return cls.from_polars(cast("IntoPolarsSchema", native))
         if is_pandas_like_dtype(first_dtype):
-            native_pandas = cast("IntoPandasSchema", native)
-            return cls.from_pandas_like(native_pandas)
+            return cls.from_pandas_like(cast("IntoPandasSchema", native))
         if is_pyarrow_data_type(first_dtype):
-            native_arrow = cast("IntoArrowSchema", native)
-            return cls.from_arrow(native_arrow)
+            return cls.from_arrow(cast("IntoArrowSchema", native))
         msg = (
             f"Expected an arrow, polars, or pandas dtype, but found "
             f"`{first_key}: {qualified_type_name(first_dtype)}`\n\n{native!r}"
