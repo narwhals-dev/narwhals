@@ -20,21 +20,7 @@ class RangeFunction(Function):
 
 
 class IntRange(RangeFunction, options=FunctionOptions.row_separable):
-    """N-ary (start, end).
-
-    Not implemented yet, but might push forward [#2722].
-
-    See [`rust` entrypoint], which is roughly:
-
-        Expr::Function { [start, end], FunctionExpr::Range(RangeFunction::IntRange { step, dtype }) }
-
-    `narwhals` equivalent:
-
-        FunctionExpr(input=(start, end), function=IntRange(step=step, dtype=dtype))
-
-    [#2722]: https://github.com/narwhals-dev/narwhals/issues/2722
-    [`rust` entrypoint]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/dsl/functions/range.rs#L14-L23
-    """
+    """N-ary (start, end)."""
 
     __slots__ = ("step", "dtype")  # noqa: RUF023
     step: int

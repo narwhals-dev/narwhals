@@ -277,17 +277,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
 
 
 class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
-    """Everything common to `Expr`/`Series` and `Scalar` literal values.
-
-    Early notes:
-    - Separating series/scalar makes a lot of sense
-    - Handling the recursive case *without* intermediate (non-pyarrow) objects seems unachievable
-      - Everywhere would need to first check if it a scalar, which isn't ergonomic
-    - Broadcasting being separated is working
-    - A lot of `pyarrow.compute` (section 2) can work on either scalar or series (`FunctionExpr`)
-      - Aggregation can't, but that is already handled in `ExprIR`
-      - `polars` noops on aggregating a scalar, which we might be able to support this way
-    """
+    """Everything common to `Expr`/`Series` and `Scalar` literal values."""
 
     _evaluated: Any
     """Compliant or native value."""
@@ -551,20 +541,6 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
 
 
 class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
-    """Need to hold `Expr` and `Scalar` types outside of their defs.
-
-    Likely, re-wrapping the output types will work like:
-
-
-        ns = DataFrame().__narwhals_namespace__()
-        if ns._expr.is_native(out):
-            ns._expr.from_native(out, ...)
-        elif ns._scalar.is_native(out):
-            ns._scalar.from_native(out, ...)
-        else:
-            assert_never(out)
-    """
-
     @property
     def _frame(self) -> type[FrameT]: ...
     @property

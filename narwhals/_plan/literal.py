@@ -56,11 +56,6 @@ class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
 
 
 class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
-    """We already need this.
-
-    https://github.com/narwhals-dev/narwhals/blob/e51eba891719a5eb1f7ce91c02a477af39c0baee/narwhals/_expression_parsing.py#L96-L97
-    """
-
     __slots__ = ("value",)
     value: Series[NativeSeriesT]
 

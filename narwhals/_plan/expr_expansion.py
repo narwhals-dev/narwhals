@@ -184,11 +184,6 @@ def prepare_projection(
     frozen_schema = freeze_schema(schema)
     rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
-    # TODO @dangotbanned: (Seq[ExprIR], OutputNames) -> (Seq[NamedIR])
-    # See `expr_rewrites.rewrite_all`
-    # TODO @dangotbanned: Return a new schema, with the changes (name only) from projecting exprs
-    #  - `select` (subset from schema, maybe need root names as well?)
-    #  - `with_columns` https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1045-L1079
     return rewritten, frozen_schema, output_names
 
 
@@ -274,10 +269,7 @@ def remove_exclude(origin: ExprIR, /) -> ExprIR:
 def replace_with_column(
     origin: ExprIR, tp: type[_ColumnSelection], /, name: str
 ) -> ExprIR:
-    """Expand a single column within a multi-selection using `name`.
-
-    For `Columns`, `IndexColumns`, `All`.
-    """
+    """Expand a single column within a multi-selection using `name`."""
 
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, tp):
@@ -386,13 +378,7 @@ def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
 def prepare_excluded(
     origin: ExprIR, /, keys: GroupByKeys, *, has_exclude: bool
 ) -> Excluded:
-    """Huge simplification of [`polars_plan::plans::conversion::expr_expansion::prepare_excluded`].
-
-    - `DTypes` are not allowed
-    - regex in `exclude(...)` is not allowed
-
-    [`polars_plan::plans::conversion::expr_expansion::prepare_excluded`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555
-    """
+    """Huge simplification of https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555."""
     exclude: set[str] = set()
     if has_exclude:
         exclude.update(_iter_exclude_names(origin))

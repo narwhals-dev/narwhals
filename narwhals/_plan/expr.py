@@ -7,7 +7,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
-from narwhals._plan.common import ExprIR, SelectorIR, collect, is_regex_projection
+from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.typing import (
@@ -152,13 +152,6 @@ class Nth(_ColumnSelection):
 
 
 class IndexColumns(_ColumnSelection):
-    """Renamed from `IndexColumn`.
-
-    `Nth` provides the singular variant.
-
-    https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L80
-    """
-
     __slots__ = ("indices",)
     indices: Seq[int]
 
@@ -167,11 +160,6 @@ class IndexColumns(_ColumnSelection):
 
 
 class All(_ColumnSelection):
-    """Aka Wildcard (`pl.all()` or `pl.col("*")`).
-
-    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L137
-    """
-
     def __repr__(self) -> str:
         return "all()"
 
@@ -181,19 +169,12 @@ class Exclude(_ColumnSelection):
     expr: ExprIR
     """Default is `all()`."""
     names: Seq[str]
-    """Excluded names.
-
-    - We're using a `frozenset` in main.
-    - Might want to switch to that later.
-    """
+    """Excluded names."""
 
     @staticmethod
     def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
         flat = flatten(names)
-        if any(is_regex_projection(nm) for nm in flat):
-            msg = f"Using regex in `exclude(...)` is not yet supported.\nnames={flat!r}"
-            raise NotImplementedError(msg)
-        return Exclude(expr=expr, names=tuple(flat))
+        return Exclude(expr=expr, names=collect(flat))
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"
@@ -408,14 +389,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     __slots__ = ("function", "input", "options")
     input: Seq[ExprIR]
     function: FunctionT
-    """Operation applied to each element of `input`.
-
-    Notes:
-       [Upstream enum type] is named `FunctionExpr` in `rust`.
-       Mirroring *exactly* doesn't make much sense in OOP.
-
-    [Upstream enum type]: https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L123
-    """
+    """Operation applied to each element of `input`."""
 
     options: FunctionOptions
     """Combined flags from chained operations."""
@@ -495,10 +469,6 @@ class RangeExpr(FunctionExpr[RangeT]):
     """E.g. `int_range(...)`.
 
     Special-cased as it is only allowed scalar inputs, and is row_separable.
-
-    Contradicts the check in `FunctionExpr`, so we've got something *like* [`ensure_range_bounds_contain_exactly_one_value`].
-
-    [`ensure_range_bounds_contain_exactly_one_value`]:https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/function_expr/range/int_range.rs#L9-L14
     """
 
     def __init__(
@@ -557,11 +527,8 @@ class Filter(ExprIR):
         return function(Filter(expr=expr, by=by))
 
 
-# TODO @dangotbanned: Clean up docs/notes
 class WindowExpr(ExprIR):
     """A fully specified `.over()`, that occurred after another expression.
-
-    I think we want variants for partitioned, ordered, both.
 
     Related:
     - https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136
@@ -571,17 +538,9 @@ class WindowExpr(ExprIR):
 
     __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
     expr: ExprIR
-    """Renamed from `function`.
-
-    For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`.
-    """
+    """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
     partition_by: Seq[ExprIR]
     options: Window
-    """Currently **always** represents over.
-
-    Expr::Window { options: WindowType::Over(WindowMapping) }
-    Expr::Window { options: WindowType::Rolling(RollingGroupOptions) }
-    """
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
@@ -619,16 +578,11 @@ class WindowExpr(ExprIR):
         return type(self)(expr=self.expr, partition_by=by, options=self.options)
 
 
-# TODO @dangotbanned: Reduce repetition from `WindowExpr`
 class OrderedWindowExpr(WindowExpr):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
     expr: ExprIR
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]
-    """Deviates from the `polars` version.
-
-    - `order_by` starts the same as here, but `polars` reduces into a struct - becoming a single (nested) node.
-    """
     sort_options: SortOptions
     options: Window
 
@@ -727,7 +681,6 @@ class RootSelector(SelectorIR):
 
     __slots__ = ("selector",)
     selector: Selector
-    """by_dtype, matches, numeric, boolean, string, categorical, datetime, all."""
 
     def __repr__(self) -> str:
         return f"{self.selector!r}"
@@ -744,11 +697,7 @@ class BinarySelector(
     SelectorIR,
     t.Generic[LeftSelectorT, SelectorOperatorT, RightSelectorT],
 ):
-    """Application of two selector exprs via a set operator.
-
-    Note:
-        `left` and `right` may also nest other `BinarySelector`s.
-    """
+    """Application of two selector exprs via a set operator."""
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         left = self.left.matches_column(name, dtype)
@@ -762,7 +711,6 @@ class BinarySelector(
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
     selector: SelectorT
-    """`(Root|Binary)Selector`."""
 
     def __repr__(self) -> str:
         return f"~{self.selector!r}"

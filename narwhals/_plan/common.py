@@ -433,9 +433,7 @@ class Function(Immutable):
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
         from narwhals._plan.expr import FunctionExpr
 
-        options = self.function_options
-        # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L442-L450.
-        return FunctionExpr(input=inputs, function=self, options=options)
+        return FunctionExpr(input=inputs, function=self, options=self.function_options)
 
     def __init_subclass__(
         cls,
@@ -444,8 +442,6 @@ class Function(Immutable):
         options: Callable[[], FunctionOptions] | None = None,
         **kwds: Any,
     ) -> None:
-        # NOTE: Hook for defining namespaced functions
-        # All subclasses will use the prefix in `accessor` for their repr
         super().__init_subclass__(*args, **kwds)
         if accessor:
             cls._accessor = accessor
@@ -527,10 +523,6 @@ def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSerie
     from narwhals._plan.dummy import Series
 
     return isinstance(obj, (str, bytes, Series)) or is_compliant_series(obj)
-
-
-def is_regex_projection(name: str) -> bool:
-    return name.startswith("^") and name.endswith("$")
 
 
 def is_window_expr(obj: Any) -> TypeIs[WindowExpr]:

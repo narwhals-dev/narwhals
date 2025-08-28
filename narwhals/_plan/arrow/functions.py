@@ -113,14 +113,10 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
 def cast(
     native: Scalar[Any], target_type: DataTypeT, *, safe: bool | None = ...
 ) -> Scalar[DataTypeT]: ...
-
-
 @t.overload
 def cast(
     native: ChunkedArray[Any], target_type: DataTypeT, *, safe: bool | None = ...
 ) -> ChunkedArray[Scalar[DataTypeT]]: ...
-
-
 @t.overload
 def cast(
     native: ChunkedOrScalar[Scalar[Any]],
@@ -128,8 +124,6 @@ def cast(
     *,
     safe: bool | None = ...,
 ) -> ChunkedArray[Scalar[DataTypeT]] | Scalar[DataTypeT]: ...
-
-
 def cast(
     native: ChunkedOrScalar[Scalar[Any]],
     target_type: DataTypeT,
@@ -220,8 +214,6 @@ def int_range(
 
 
 def lit(value: Any, dtype: DataType | None = None) -> NativeScalar:
-    # NOTE: PR that fixed these the overloads was closed
-    # https://github.com/zen-xu/pyarrow-stubs/pull/208
     return pa.scalar(value) if dtype is None else pa.scalar(value, dtype)
 
 
@@ -244,7 +236,6 @@ def chunked_array(
 def concat_vertical_chunked(
     arrays: Iterable[ChunkedArrayAny], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
-    # NOTE: Overloads are broken, this is legit
     v_concat: Incomplete = pa.chunked_array
     return v_concat(arrays, dtype)  # type: ignore[no-any-return]
 

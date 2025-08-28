@@ -43,11 +43,6 @@ class Replace(StringFunction):
 
 
 class ReplaceAll(StringFunction):
-    """`polars` uses a single node for this and `Replace`.
-
-    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/strings.rs#L65-L70
-    """
-
     __slots__ = ("literal", "pattern", "value")
     pattern: str
     value: str
@@ -55,11 +50,6 @@ class ReplaceAll(StringFunction):
 
 
 class Slice(StringFunction):
-    """We're using for `Head`, `Tail` as well.
-
-    https://github.com/dangotbanned/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/strings.rs#L87-L89
-    """
-
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
@@ -81,13 +71,6 @@ class StripChars(StringFunction):
 
 
 class ToDatetime(StringFunction):
-    """`polars` uses `Strptime`.
-
-    We've got a fairly different representation.
-
-    https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/function_expr/strings.rs#L112
-    """
-
     __slots__ = ("format",)
     format: str | None
 

@@ -49,7 +49,6 @@ class HistBins(Hist):
 class HistBinCount(Hist):
     __slots__ = ("bin_count", *Hist.__slots__)
     bin_count: int
-    """Polars (v1.20) sets `bin_count=10` if neither `bins` or `bin_count` are provided."""
 
     def __init__(self, *, bin_count: int = 10, include_breakpoint: bool = True) -> None:
         object.__setattr__(self, "bin_count", bin_count)
@@ -93,24 +92,9 @@ class FillNull(Function, options=FunctionOptions.elementwise):
 
 
 class FillNullWithStrategy(Function):
-    """We don't support this variant in a lot of backends, so worth keeping it split out.
-
-    https://github.com/narwhals-dev/narwhals/pull/2555
-    """
-
     __slots__ = ("limit", "strategy")
     strategy: FillNullStrategy
     limit: int | None
-
-    @property
-    def function_options(self) -> FunctionOptions:
-        # NOTE: We don't support these strategies yet
-        # but might be good to encode this difference now
-        return (
-            FunctionOptions.elementwise()
-            if self.strategy in {"one", "zero"}
-            else FunctionOptions.groupwise()
-        )
 
 
 class Shift(Function, options=FunctionOptions.length_preserving):
@@ -228,7 +212,6 @@ class MapBatches(Function):
 
     @property
     def function_options(self) -> FunctionOptions:
-        """https://github.com/narwhals-dev/narwhals/issues/2522."""
         options = super().function_options
         if self.is_elementwise:
             options = options.with_elementwise()
