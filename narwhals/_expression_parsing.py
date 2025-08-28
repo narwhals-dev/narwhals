@@ -141,9 +141,6 @@ class ExprKind(Enum):
     ORDERABLE_FILTRATION = auto()
     """Changes length, affected by row order, e.g. `tail`."""
 
-    NARY = auto()
-    """Results from the combination of multiple expressions."""
-
     OVER = auto()
     """Results from calling `.over` on expression."""
 
@@ -574,7 +571,8 @@ def combine_metadata(
 
     return ExprMetadata(
         result_expansion_kind,
-        ExprKind.NARY,
+        # n-ary operations align positionally, and so the last node is elementwise.
+        ExprKind.ELEMENTWISE,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
