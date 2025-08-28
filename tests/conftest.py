@@ -235,6 +235,10 @@ LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
 
+ID_PANDAS_LIKE = frozenset(
+    ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
+)
+
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if metafunc.config.getoption("all_cpu_constructors"):  # pragma: no cover
@@ -287,6 +291,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
+    elif "constructor_pandas_like" in metafunc.fixturenames:
+        pandas_like_constructors = []
+        pandas_like_constructors_ids = []
+        for fn, name in zip(eager_constructors, eager_constructors_ids):
+            if name in ID_PANDAS_LIKE:
+                pandas_like_constructors.append(fn)
+                pandas_like_constructors_ids.append(name)
+        metafunc.parametrize(
+            "constructor_pandas_like",
+            pandas_like_constructors,
+            ids=pandas_like_constructors_ids,
+        )
 
 
 TEST_EAGER_BACKENDS: list[EagerAllowed] = []

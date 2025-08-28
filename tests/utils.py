@@ -55,6 +55,7 @@ https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 NamePandasLikePyArrow: TypeAlias = Literal[
     "pandas_pyarrow_constructor", "modin_pyarrow_constructor"
