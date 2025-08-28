@@ -333,7 +333,11 @@ def _cudf_categorical_to_list(
 
 
 def native_to_narwhals_dtype(
-    native_dtype: Any, version: Version, implementation: Implementation
+    native_dtype: Any,
+    version: Version,
+    implementation: Implementation,
+    *,
+    allow_object: bool = False,
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -358,6 +362,8 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
+    if allow_object:  # pragma: no cover
+        return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
