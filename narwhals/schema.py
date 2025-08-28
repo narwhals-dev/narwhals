@@ -359,23 +359,10 @@ class Schema(OrderedDict[str, "DType"]):
     def _from_pandas_like(
         cls, schema: IntoPandasSchema, implementation: Implementation, /
     ) -> Self:
-        from narwhals._pandas_like.utils import (
-            native_to_narwhals_dtype,
-            object_native_to_narwhals_dtype,
-        )
+        from narwhals._pandas_like.utils import native_to_narwhals_dtype
 
         impl = implementation
-        is_object = impl.to_native_namespace().api.types.is_object_dtype
-        from_native = partial(
-            native_to_narwhals_dtype, implementation=impl, version=cls._version
-        )
-        object_dtype = partial(
-            object_native_to_narwhals_dtype,
-            (),  # type: ignore[arg-type]
-            implementation=impl,
-            version=cls._version,
-        )
         return cls(
-            (name, (object_dtype() if is_object(dtype) else from_native(dtype)))
+            (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
             for name, dtype in schema.items()
         )
