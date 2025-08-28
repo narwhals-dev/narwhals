@@ -22,11 +22,10 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals._typing import Arrow, Pandas, _DataFrameLazyImpl, _LazyFrameCollectImpl
+from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
-    can_dataframe_lazy,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -35,6 +34,7 @@ from narwhals._utils import (
     is_compliant_lazyframe,
     is_eager_allowed,
     is_index_selector,
+    is_lazy_allowed,
     is_list_of,
     is_sequence_like,
     is_slice_none,
@@ -72,7 +72,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Dask, DuckDB, EagerAllowed, Ibis, IntoBackend, Polars
+    from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -724,7 +724,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
         """Restrict available API methods to lazy-only ones.
 
@@ -735,6 +738,18 @@ class DataFrame(BaseFrame[DataFrameT]):
         then this is will only restrict the API to lazy-only operations. This is useful
         if you want to ensure that you write dataframe-agnostic code which all has
         the possibility of running entirely lazily.
+
+        Note:
+            If `backend` is spark-like, then a valid `session` is required.
+
+            For instance:
+
+            ```py
+            import narwhals as nw
+            from sqlframe.duckdb import DuckDBSession
+
+            df.lazy(backend=nw.Implementation.SQLFRAME, session=DuckDBSession())
+            ```
 
         Arguments:
             backend: Which lazy backend collect to. This will be the underlying
@@ -748,6 +763,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                     `IBIS` or `POLARS`.
                 - As a string: `"dask"`, `"duckdb"`, `"ibis"` or `"polars"`
                 - Directly as a module `dask.dataframe`, `duckdb`, `ibis` or `polars`.
+            session: Session to be used if backend is spark-like.
 
         Examples:
             >>> import polars as pl
@@ -783,11 +799,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         lazy = self._compliant_frame.lazy
         if backend is None:
-            return self._lazyframe(lazy(None), level="lazy")
+            return self._lazyframe(lazy(None, session=session), level="lazy")
         lazy_backend = Implementation.from_backend(backend)
-        if can_dataframe_lazy(lazy_backend):
-            return self._lazyframe(lazy(lazy_backend), level="lazy")
-        msg = f"Not-supported backend.\n\nExpected one of {get_args(_DataFrameLazyImpl)} or `None`, got {lazy_backend}"
+        if is_lazy_allowed(lazy_backend):
+            return self._lazyframe(lazy(lazy_backend, session=session), level="lazy")
+        msg = f"Not-supported backend.\n\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)
 
     def to_native(self) -> DataFrameT:
