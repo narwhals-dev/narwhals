@@ -41,6 +41,7 @@ from narwhals._utils import (
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
+    from types import ModuleType
 
     import pandas as pd
     import polars as pl
@@ -97,7 +98,7 @@ class CompliantFrame(
     _implementation: Implementation
     _version: Version
 
-    def __native_namespace__(self) -> Any: ...
+    def __native_namespace__(self) -> ModuleType: ...
     def __narwhals_namespace__(self) -> Any: ...
     def _with_version(self, version: Version) -> Self: ...
     @classmethod
