@@ -77,7 +77,7 @@ if TYPE_CHECKING:
 
     Incomplete: TypeAlias = Any
 
-__all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
+__all__ = ["CompliantDataFrame", "CompliantFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
 T = TypeVar("T")
 

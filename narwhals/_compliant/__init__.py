@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from narwhals._compliant.dataframe import (
     CompliantDataFrame,
+    CompliantFrame,
     CompliantLazyFrame,
     EagerDataFrame,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "CompliantDataFrame",
     "CompliantExpr",
     "CompliantExprT",
+    "CompliantFrame",
     "CompliantFrameT",
     "CompliantGroupBy",
     "CompliantLazyFrame",
