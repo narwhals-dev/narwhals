@@ -9,8 +9,9 @@ from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
 from narwhals._utils import Implementation, requires, zip_strict
-from narwhals.dependencies import is_numpy_array_2d
+from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
 from narwhals.dtypes import DType
+from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -20,7 +21,17 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        IntoSchema,
+        NonNestedLiteral,
+        TimeUnit,
+        _1DArray,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -69,6 +80,30 @@ class PolarsNamespace:
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    def parse_into_expr(
+        self,
+        data: Expr | NonNestedLiteral | Series[pl.Series] | _1DArray,
+        /,
+        *,
+        str_as_lit: bool,
+    ) -> PolarsExpr | NonNestedLiteral:
+        from narwhals._expression_parsing import is_expr, is_series
+
+        if is_expr(data):
+            expr = data._to_compliant_expr(self)
+            if isinstance(expr, self._expr):
+                return expr
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
+        if isinstance(data, str) and not str_as_lit:
+            return self.col(data)
+        if not (is_series(data) or is_numpy_array(data)):
+            return data
+        return self._expr._from_series(
+            data._compliant_series
+            if is_series(data)
+            else self._series.from_numpy(data, context=self)
+        )
 
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...

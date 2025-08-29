@@ -16,6 +16,7 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
+from narwhals._expression_parsing import is_expr, is_series
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
@@ -62,6 +63,17 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
+    def parse_into_expr(
+        self, data: Expr | NonNestedLiteral | Any, /, *, str_as_lit: bool
+    ) -> CompliantExprT | NonNestedLiteral:
+        if is_expr(data):
+            expr = data._to_compliant_expr(self)
+            if isinstance(expr, self._expr):
+                return expr
+            raise InvalidIntoExprError.from_invalid_type(type(expr))
+        if isinstance(data, str) and not str_as_lit:
+            return self.col(data)
+        return data
 
     # NOTE: `polars`
     def all(self) -> CompliantExprT:
@@ -179,7 +191,6 @@ class EagerNamespace(
     def from_narwhals(
         self, data: DataFrame[Any] | LazyFrame[Any] | Series[NativeSeriesT] | Expr, /
     ) -> EagerDataFrameT | EagerSeriesT | EagerExprT:
-        from narwhals._expression_parsing import is_expr, is_series
         from narwhals.dataframe import DataFrame, LazyFrame
 
         if isinstance(data, (DataFrame, LazyFrame)) and isinstance(
@@ -193,6 +204,21 @@ class EagerNamespace(
             if isinstance(expr, self._expr):
                 return expr
         raise InvalidIntoExprError.from_invalid_type(type(data))
+
+    def parse_into_expr(
+        self,
+        data: Expr | Series[NativeSeriesT] | _1DArray | NonNestedLiteral,
+        /,
+        *,
+        str_as_lit: bool,
+    ) -> EagerExprT | NonNestedLiteral:
+        if not (is_series(data) or is_numpy_array(data)):
+            return super().parse_into_expr(data, str_as_lit=str_as_lit)
+        return self._expr._from_series(
+            data._compliant_series
+            if is_series(data)
+            else self._series.from_numpy(data, context=self)
+        )
 
     @overload
     def parse_narwhals(
@@ -216,6 +242,11 @@ class EagerNamespace(
         from narwhals.expr import Expr
         from narwhals.series import Series
 
+        # TODO @dangotbanned: Try to factor out the `BaseFrame` parts
+        # They don't make sense alongside expression parsing
+        # and are the key difference between
+        # - `DataFrame._extract_compliant`
+        # - `_expression_parsing.extract_compliant`
         if isinstance(data, (Expr, Series, DataFrame, LazyFrame)):
             return self.from_narwhals(data)
         if isinstance(data, str) and not str_as_lit:

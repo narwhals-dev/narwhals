@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum, auto
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_narwhals_series, is_numpy_array
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         CompliantExprAny,
         CompliantFrameAny,
         CompliantNamespaceAny,
-        EagerNamespaceAny,
         EvalNames,
     )
     from narwhals.expr import Expr
@@ -72,24 +71,6 @@ def combine_alias_output_names(*exprs: CompliantExprAny) -> AliasNames | None:
         return exprs[0]._alias_output_names(names)[:1]  # type: ignore[misc]
 
     return alias_output_names
-
-
-def extract_compliant(
-    plx: CompliantNamespaceAny,
-    other: IntoExpr | NonNestedLiteral | _1DArray,
-    *,
-    str_as_lit: bool,
-) -> CompliantExprAny | NonNestedLiteral:
-    if is_expr(other):
-        return other._to_compliant_expr(plx)
-    if isinstance(other, str) and not str_as_lit:
-        return plx.col(other)
-    if is_narwhals_series(other):
-        return other._compliant_series._to_expr()
-    if is_numpy_array(other):
-        ns = cast("EagerNamespaceAny", plx)
-        return ns._series.from_numpy(other, context=ns)._to_expr()
-    return other
 
 
 def evaluate_output_names_and_aliases(
@@ -610,10 +591,8 @@ def apply_n_ary_operation(
     *comparands: IntoExpr | NonNestedLiteral | _1DArray,
     str_as_lit: bool,
 ) -> CompliantExprAny:
-    compliant_exprs = (
-        extract_compliant(plx, comparand, str_as_lit=str_as_lit)
-        for comparand in comparands
-    )
+    parse = plx.parse_into_expr
+    compliant_exprs = (parse(into, str_as_lit=str_as_lit) for into in comparands)
     kinds = [
         ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
         for comparand in comparands
