@@ -12,7 +12,6 @@ from narwhals._compliant.typing import (
     EagerExprT,
     EagerSeriesT,
     NativeDataFrameT,
-    NativeFrameT,
     NativeLazyFrameT,
     NativeSeriesT,
 )
@@ -177,8 +176,8 @@ class CompliantDataFrame(
     DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
     ArrowConvertible["pa.Table", "IntoArrowTable"],
     Sized,
-    CompliantFrame[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
-    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
+    CompliantFrame[CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
 ):
     def __narwhals_dataframe__(self) -> Self: ...
     @classmethod
