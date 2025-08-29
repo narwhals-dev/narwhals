@@ -50,7 +50,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     EvalNames,
     EvalSeries,
-    IntoCompliantExpr,
     NativeFrameT_co,
     NativeSeriesT_co,
 )
@@ -94,7 +93,6 @@ __all__ = [
     "EagerWhen",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "LazyExpr",
     "LazyExprNamespace",
     "LazyNamespace",

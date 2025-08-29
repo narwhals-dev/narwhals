@@ -66,7 +66,6 @@ __all__ = [
     "CompliantSeriesT",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -136,8 +135,6 @@ CompliantNamespaceT = TypeVar("CompliantNamespaceT", bound=CompliantNamespaceAny
 CompliantNamespaceT_co = TypeVar(
     "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
 )
-
-IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 
 DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
 DepthTrackingExprT_contra = TypeVar(
