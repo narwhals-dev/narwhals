@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import (
         CompliantDataFrame,
+        CompliantFrame,
         CompliantLazyFrame,
         EagerDataFrame,
     )
@@ -66,7 +67,6 @@ __all__ = [
     "CompliantSeriesT",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -76,7 +76,7 @@ CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
 CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
-CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantFrameAny: TypeAlias = "CompliantFrame[Any, Any, Any]"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 ImplExprAny: TypeAlias = "ImplExpr[Any, Any]"
@@ -138,8 +138,6 @@ CompliantNamespaceT = TypeVar("CompliantNamespaceT", bound=CompliantNamespaceAny
 CompliantNamespaceT_co = TypeVar(
     "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
 )
-
-IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
 
 ImplExprT_contra = TypeVar("ImplExprT_contra", bound=ImplExprAny, contravariant=True)
 

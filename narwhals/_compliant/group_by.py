@@ -5,12 +5,11 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
 
 from narwhals._compliant.typing import (
-    CompliantDataFrameAny,
+    CompliantDataFrameT,
     CompliantDataFrameT_co,
     CompliantExprT_contra,
     CompliantFrameT,
     CompliantFrameT_co,
-    CompliantLazyFrameAny,
     DepthTrackingExprAny,
     DepthTrackingExprT_contra,
     EagerExprT_contra,
@@ -23,8 +22,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from narwhals._compliant.expr import ImplExpr
-
-    _SameFrameT = TypeVar("_SameFrameT", CompliantDataFrameAny, CompliantLazyFrameAny)
 
 
 __all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy"]
@@ -71,14 +68,14 @@ class DataFrameGroupBy(
 
 
 class ParseKeysGroupBy(
-    CompliantGroupBy[CompliantFrameT_co, ImplExprT_contra],
-    Protocol[CompliantFrameT_co, ImplExprT_contra],
+    CompliantGroupBy[CompliantFrameT, ImplExprT_contra],
+    Protocol[CompliantFrameT, ImplExprT_contra],
 ):
     def _parse_keys(
         self,
-        compliant_frame: _SameFrameT,
+        compliant_frame: CompliantFrameT,
         keys: Sequence[ImplExprT_contra] | Sequence[str],
-    ) -> tuple[_SameFrameT, list[str], list[str]]:
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
             return compliant_frame, keys_str, keys_str.copy()
@@ -86,8 +83,8 @@ class ParseKeysGroupBy(
 
     @staticmethod
     def _parse_expr_keys(
-        compliant_frame: _SameFrameT, keys: Sequence[ImplExprT_contra]
-    ) -> tuple[_SameFrameT, list[str], list[str]]:
+        compliant_frame: CompliantFrameT, keys: Sequence[ImplExprT_contra]
+    ) -> tuple[CompliantFrameT, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 
         Since keys are expressions, it's possible to alias any such key to match
@@ -126,8 +123,8 @@ class ParseKeysGroupBy(
 
 
 class DepthTrackingGroupBy(
-    ParseKeysGroupBy[CompliantFrameT_co, DepthTrackingExprT_contra],
-    Protocol[CompliantFrameT_co, DepthTrackingExprT_contra, NativeAggregationT_co],
+    ParseKeysGroupBy[CompliantFrameT, DepthTrackingExprT_contra],
+    Protocol[CompliantFrameT, DepthTrackingExprT_contra, NativeAggregationT_co],
 ):
     """`CompliantGroupBy` variant, deals with `Eager` and other backends that utilize `CompliantExpr._depth`."""
 
@@ -177,9 +174,7 @@ class DepthTrackingGroupBy(
 
 
 class EagerGroupBy(
-    DepthTrackingGroupBy[
-        CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co
-    ],
-    DataFrameGroupBy[CompliantDataFrameT_co, EagerExprT_contra],
-    Protocol[CompliantDataFrameT_co, EagerExprT_contra, NativeAggregationT_co],
+    DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
+    DataFrameGroupBy[CompliantDataFrameT, EagerExprT_contra],
+    Protocol[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
 ): ...
