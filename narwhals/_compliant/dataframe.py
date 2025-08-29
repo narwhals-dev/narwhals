@@ -91,6 +91,8 @@ class CompliantFrame(
     ToNarwhals[ToNarwhalsT_co],
     Protocol[CompliantExprT_contra, _NativeFrameT, ToNarwhalsT_co],
 ):
+    """Common parts of `DataFrame`, `LazyFrame`."""
+
     _native_frame: _NativeFrameT
     _implementation: Implementation
     _version: Version
