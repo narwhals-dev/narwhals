@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     from typing_extensions import NotRequired, Self, TypedDict
 
     from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.expr import CompliantExpr, EagerExpr
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -94,7 +93,6 @@ class CompliantSeries(
     def to_narwhals(self) -> Series[NativeSeriesT]:
         return self._version.series(self, level="full")
 
-    def _to_expr(self) -> CompliantExpr[Any, Self]: ...
     def _with_native(self, series: Any) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
 
@@ -244,9 +242,6 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[Any, Self, Any, Any, NativeSeriesT]: ...
-
-    def _to_expr(self) -> EagerExpr[Any, Any]:
-        return self.__narwhals_namespace__()._expr._from_series(self)  # type: ignore[no-any-return]
 
     def _gather(self, rows: SizedMultiIndexSelector[NativeSeriesT]) -> Self: ...
     def _gather_slice(self, rows: _SliceIndex | range) -> Self: ...
