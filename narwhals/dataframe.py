@@ -42,12 +42,12 @@ from narwhals._utils import (
     supports_arrow_c_stream,
     zip_strict,
 )
-from narwhals.dependencies import get_polars, is_numpy_array_2d, is_pyarrow_table
+from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
-    InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
+    invalid_into_expr_error,
 )
 from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
@@ -445,15 +445,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if is_into_expr_eager(arg):
             plx: EagerNamespaceAny = self.__narwhals_namespace__()
             return plx.parse_into_expr(arg, str_as_lit=False)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+        raise invalid_into_expr_error(arg)
 
     @property
     def _series(self) -> type[Series[Any]]:
@@ -2316,15 +2308,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 )
                 raise InvalidOperationError(msg)
             return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
+        raise invalid_into_expr_error(arg)
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:

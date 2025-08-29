@@ -97,6 +97,21 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
         return InvalidIntoExprError(message)
 
 
+def invalid_into_expr_error(arg: object, /) -> TypeError | InvalidIntoExprError:
+    from narwhals.dependencies import get_polars
+
+    tp = type(arg)
+    if get_polars() is not None and "polars" in str(tp):
+        msg = (
+            f"Expected Narwhals object, got: {tp}.\n\n"
+            "Perhaps you:\n"
+            "- Forgot a `nw.from_native` somewhere?\n"
+            "- Used `pl.col` instead of `nw.col`?"
+        )
+        return TypeError(msg)
+    return InvalidIntoExprError.from_invalid_type(tp)
+
+
 class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 

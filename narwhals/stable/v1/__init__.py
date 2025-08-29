@@ -22,8 +22,7 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.dependencies import get_polars
-from narwhals.exceptions import InvalidIntoExprError
+from narwhals.exceptions import invalid_into_expr_error
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
@@ -252,15 +251,7 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         if isinstance(arg, str):
             plx = self.__narwhals_namespace__()
             return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))
+        raise invalid_into_expr_error(arg)
 
     def collect(
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
