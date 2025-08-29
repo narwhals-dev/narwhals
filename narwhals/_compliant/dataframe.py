@@ -111,12 +111,6 @@ class CompliantFrame(
 
     @property
     def schema(self) -> Mapping[str, DType]: ...
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        ...
 
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
@@ -211,9 +205,6 @@ class CompliantDataFrame(
             MultiColSelector[CompliantSeriesT],
         ],
     ) -> Self: ...
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        # NOTE: Ignore is to avoid an intermittent false positive
-        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     @property
     def shape(self) -> tuple[int, int]: ...
@@ -291,6 +282,13 @@ class CompliantLazyFrame(
     def __narwhals_lazyframe__(self) -> Self: ...
     # `LazySelectorNamespace._iter_columns` depends
     def _iter_columns(self) -> Iterator[Any]: ...
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
+        """`select` where all args are aggregations or literals.
+
+        (so, no broadcasting is necessary).
+        """
+        ...
+
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
