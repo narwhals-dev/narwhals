@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
+from narwhals._duration import Interval
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._duration import Interval, IntervalUnit
+    from narwhals._duration import IntervalUnit
     from narwhals._plan.dummy import Expr
     from narwhals.typing import TimeUnit
 
@@ -95,12 +96,7 @@ class Timestamp(TemporalFunction):
     @staticmethod
     def from_time_unit(time_unit: TimeUnit, /) -> Timestamp:
         if not _is_polars_time_unit(time_unit):
-            from typing import get_args
-
-            msg = (
-                "invalid `time_unit`"
-                f"\n\nExpected one of {get_args(PolarsTimeUnit)}, got {time_unit!r}."
-            )
+            msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
             raise ValueError(msg)
         return Timestamp(time_unit=time_unit)
 
@@ -115,8 +111,6 @@ class Truncate(TemporalFunction):
 
     @staticmethod
     def from_string(every: str, /) -> Truncate:
-        from narwhals._duration import Interval
-
         return Truncate.from_interval(Interval.parse(every))
 
     @staticmethod

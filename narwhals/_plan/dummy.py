@@ -385,9 +385,6 @@ class Expr:
             before = tuple(old)
             after = tuple(old.values())
         elif isinstance(old, t.Mapping):
-            # NOTE: polars raises later when this occurs
-            # TypeError: cannot create expression literal for value of type dict.
-            # Hint: Pass `allow_object=True` to accept any value and create a literal of type Object.
             msg = "`new` argument cannot be used if `old` argument is a Mapping type"
             raise TypeError(msg)
         else:
@@ -616,20 +613,6 @@ class Expr:
 
 
 class Selector(Expr):
-    """Selectors placeholder.
-
-    Examples:
-        >>> from narwhals._plan import selectors as ncs
-        >>>
-        >>> (ncs.matches("[^z]a") & ncs.string()) | ncs.datetime("us", None)
-        nw._plan.Selector(main):
-        [([(ncs.matches(pattern='[^z]a')) & (ncs.string())]) | (ncs.datetime(time_unit=['us'], time_zone=[None]))]
-        >>>
-        >>> ~(ncs.boolean() | ncs.matches(r"is_.*"))
-        nw._plan.Selector(main):
-        ~[(ncs.boolean()) | (ncs.matches(pattern='is_.*'))]
-    """
-
     _ir: expr.SelectorIR
 
     def __repr__(self) -> str:

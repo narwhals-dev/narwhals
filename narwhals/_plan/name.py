@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 
 class KeepName(ExprIR):
-    """Keep the original root name."""
-
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -92,23 +90,18 @@ class IRNameNamespace(IRNamespace):
         return KeepName(expr=self._ir)
 
     def map(self, function: AliasName) -> RenameAlias:
-        """Define an alias by mapping a function over the original root column name."""
         return RenameAlias(expr=self._ir, function=function)
 
     def prefix(self, prefix: str) -> RenameAlias:
-        """Add a prefix to the root column name."""
         return self.map(Prefix(prefix=prefix))
 
     def suffix(self, suffix: str) -> RenameAlias:
-        """Add a suffix to the root column name."""
         return self.map(Suffix(suffix=suffix))
 
     def to_lowercase(self) -> RenameAlias:
-        """Update the root column name to use lowercase characters."""
         return self.map(str.lower)
 
     def to_uppercase(self) -> RenameAlias:
-        """Update the root column name to use uppercase characters."""
         return self.map(str.upper)
 
 

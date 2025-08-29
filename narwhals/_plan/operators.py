@@ -82,12 +82,7 @@ def _is_filtration(ir: ExprIR) -> bool:
 
 
 class SelectorOperator(Operator):
-    """Operators that can *also* be used in selectors.
-
-    Remember that `Or` is named [`meta._selector_add`]!
-
-    [`meta._selector_add`]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L113-L124
-    """
+    """Operators that can *also* be used in selectors."""
 
     def to_binary_selector(
         self, left: LeftSelectorT, right: RightSelectorT, /

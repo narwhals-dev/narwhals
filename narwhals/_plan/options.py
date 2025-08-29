@@ -71,10 +71,7 @@ class FunctionFlags(enum.Flag):
 
 
 class FunctionOptions(Immutable):
-    """ExprMetadata` but less god object.
-
-    https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs
-    """
+    """https://github.com/pola-rs/polars/blob/3fd7ecc5f9de95f62b70ea718e7e5dbf951b6d1c/crates/polars-plan/src/plans/options.rs"""  # noqa: D415
 
     __slots__ = ("flags",)
     flags: FunctionFlags

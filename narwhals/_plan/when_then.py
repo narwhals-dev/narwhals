@@ -79,8 +79,6 @@ class ChainedWhen(Immutable):
 
 
 class ChainedThen(Immutable, Expr):
-    """https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/arity.rs#L89-L130."""
-
     __slots__ = ("conditions", "statements")
     conditions: Seq[ExprIR]
     statements: Seq[ExprIR]

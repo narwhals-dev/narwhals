@@ -92,12 +92,10 @@ class Var(AggExpr):
 class OrderableAggExpr(AggExpr): ...
 
 
-class First(OrderableAggExpr):
-    """https://github.com/narwhals-dev/narwhals/issues/2526."""
+class First(OrderableAggExpr): ...
 
 
-class Last(OrderableAggExpr):
-    """https://github.com/narwhals-dev/narwhals/issues/2526."""
+class Last(OrderableAggExpr): ...
 
 
 class ArgMin(OrderableAggExpr): ...

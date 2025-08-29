@@ -135,19 +135,6 @@ def when(
     Examples:
         >>> from narwhals._plan import demo as nwd
 
-        >>> when_then_many = (
-        ...     nwd.when(nwd.col("x") == "a")
-        ...     .then(1)
-        ...     .when(nwd.col("x") == "b")
-        ...     .then(2)
-        ...     .when(nwd.col("x") == "c")
-        ...     .then(3)
-        ...     .otherwise(4)
-        ... )
-        >>> when_then_many
-        nw._plan.Expr(main):
-        .when([(col('x')) == (lit(str: a))]).then(lit(int: 1)).otherwise(.when([(col('x')) == (lit(str: b))]).then(lit(int: 2)).otherwise(.when([(col('x')) == (lit(str: c))]).then(lit(int: 3)).otherwise(lit(int: 4))))
-        >>>
         >>> nwd.when(nwd.col("y") == "b").then(1)
         nw._plan.Expr(main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
