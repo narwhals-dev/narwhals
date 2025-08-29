@@ -9,7 +9,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 from narwhals._utils import is_compliant_expr, zip_strict
-from narwhals.dependencies import is_narwhals_series, is_numpy_array
+from narwhals.dependencies import is_narwhals_series, is_numpy_array, is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -44,6 +44,13 @@ def is_series(obj: Any) -> TypeIs[Series[Any]]:
     from narwhals.series import Series
 
     return isinstance(obj, Series)
+
+
+def is_into_expr_eager(obj: Any) -> TypeIs[Expr | Series[Any] | str | _1DArray]:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    return isinstance(obj, (Series, Expr, str)) or is_numpy_array_1d(obj)
 
 
 def combine_evaluate_output_names(
