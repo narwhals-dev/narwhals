@@ -86,13 +86,18 @@ def assert_series_equal(
 
     _check_metadata(left, right, check_dtypes=check_dtypes, check_names=check_names)
 
-    left_, right_ = _maybe_apply_preprocessing(
-        left, right, categorical_as_str=categorical_as_str, check_order=check_order
-    )
+    if categorical_as_str:
+        left, right = _cast_categorical_as_str(left, right)
 
-    left_vals, right_vals = _check_null_values(left_, right_)
+    if not check_order:
+        if left.dtype.is_nested():
+            msg = "`check_order=False` is not supported (yet) with nested data type."
+            raise NotImplementedError(msg)
+        left, right = left.sort(), right.sort()
 
-    if check_exact or not left_.dtype.is_float():
+    left_vals, right_vals = _check_null_values(left, right)
+
+    if check_exact or not left.dtype.is_float():
         _check_exact_values(
             left_vals,
             right_vals,
@@ -127,22 +132,10 @@ def _check_metadata(
         raise_assertion_error("Series", "name mismatch", left_name, right_name)
 
 
-def _maybe_apply_preprocessing(
-    left: SeriesT, right: SeriesT, *, categorical_as_str: bool, check_order: bool
-) -> tuple[SeriesT, SeriesT]:
-    """Apply preprocessing transformations: categorical casting and sorting."""
-    left_dtype = left.dtype
-
+def _cast_categorical_as_str(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
     # TODO(FBruzzesi): Add coverage
-    if isinstance(left_dtype, Categorical) and categorical_as_str:  # pragma: no cover
+    if isinstance(left.dtype, Categorical):  # pragma: no cover
         left, right = left.cast(String()), right.cast(String())
-
-    if not check_order:
-        if left_dtype.is_nested():
-            msg = "`check_order=False` is not supported (yet) with nested data type."
-            raise NotImplementedError(msg)
-        left, right = left.sort(), right.sort()
-
     return left, right
 
 
