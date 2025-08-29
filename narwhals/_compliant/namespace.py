@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
-    from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.series import Series
     from narwhals.typing import (
@@ -188,23 +187,6 @@ class EagerNamespace(
         msg = f"Unsupported type: {type(data).__name__!r}"
         raise TypeError(msg)
 
-    def from_narwhals(
-        self, data: DataFrame[Any] | LazyFrame[Any] | Series[NativeSeriesT] | Expr, /
-    ) -> EagerDataFrameT | EagerSeriesT | EagerExprT:
-        from narwhals.dataframe import DataFrame, LazyFrame
-
-        if isinstance(data, (DataFrame, LazyFrame)) and isinstance(
-            data._compliant_frame, self._dataframe
-        ):
-            return data._compliant_frame
-        if is_series(data):
-            return self._expr._from_series(data._compliant_series)
-        if is_expr(data):
-            expr = data._to_compliant_expr(self)
-            if isinstance(expr, self._expr):
-                return expr
-        raise InvalidIntoExprError.from_invalid_type(type(data))
-
     def parse_into_expr(
         self,
         data: Expr | Series[NativeSeriesT] | _1DArray | NonNestedLiteral,
@@ -219,43 +201,6 @@ class EagerNamespace(
             if is_series(data)
             else self._series.from_numpy(data, context=self)
         )
-
-    @overload
-    def parse_narwhals(
-        self,
-        data: DataFrame[Any] | LazyFrame[Any] | Series[NativeSeriesT] | _1DArray | str,
-        /,
-        *,
-        str_as_lit: bool,
-        pass_through: Literal[False],
-    ) -> EagerDataFrameT | EagerSeriesT | EagerExprT: ...
-
-    @overload
-    def parse_narwhals(
-        self, data: Any, /, *, str_as_lit: bool, pass_through: Literal[True]
-    ) -> Any: ...
-
-    def parse_narwhals(
-        self, data: Any, /, *, str_as_lit: bool, pass_through: bool
-    ) -> Any:
-        from narwhals.dataframe import DataFrame, LazyFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        # TODO @dangotbanned: Try to factor out the `BaseFrame` parts
-        # They don't make sense alongside expression parsing
-        # and are the key difference between
-        # - `DataFrame._extract_compliant`
-        # - `_expression_parsing.extract_compliant`
-        if isinstance(data, (Expr, Series, DataFrame, LazyFrame)):
-            return self.from_narwhals(data)
-        if isinstance(data, str) and not str_as_lit:
-            return self.col(data)
-        if is_numpy_array(data):
-            return self._expr._from_series(self._series.from_numpy(data, context=self))
-        if pass_through:
-            return data
-        raise InvalidIntoExprError.from_invalid_type(type(data))
 
     @overload
     def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT: ...
