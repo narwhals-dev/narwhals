@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
+from narwhals._expression_parsing import is_expr, is_series
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
@@ -87,8 +88,6 @@ class PolarsNamespace:
         *,
         str_as_lit: bool,
     ) -> PolarsExpr | None:
-        from narwhals._expression_parsing import is_expr, is_series
-
         if data is None:
             # NOTE: To avoid `pl.lit(None)` failing this `None` check
             # https://github.com/pola-rs/polars/blob/58dd8e5770f16a9bef9009a1c05f00e15a5263c7/py-polars/polars/expr/expr.py#L2870-L2872
