@@ -136,13 +136,10 @@ class BaseFrame(Generic[_FrameT]):
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
 
-    def _extract_compliant_frame(self, other: Any, /) -> Any:
+    def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
         if isinstance(other, type(self)):
             return other._compliant_frame
-        msg = (
-            f"Expected `other` to be a {qualified_type_name(self)!r}, "
-            f"got: {qualified_type_name(other)!r}"
-        )
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"
         raise TypeError(msg)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
