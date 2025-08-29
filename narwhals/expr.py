@@ -1234,8 +1234,8 @@ class Expr:
             |└────────┴────────┴───────────────┴───────────────┘|
             └───────────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).fill_nan(value), self._metadata
+        return self._with_elementwise(
+            lambda plx: self._to_compliant_expr(plx).fill_nan(value)
         )
 
     # --- partial reduction ---
