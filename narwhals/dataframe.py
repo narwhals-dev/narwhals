@@ -38,6 +38,7 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
+    qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
 )
@@ -138,6 +139,12 @@ class BaseFrame(Generic[_FrameT]):
     @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
+
+    def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
+        if isinstance(other, type(self)):
+            return other._compliant_frame
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"
+        raise TypeError(msg)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
@@ -269,7 +276,7 @@ class BaseFrame(Generic[_FrameT]):
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
         compliant = self._compliant_frame
-        other = self._extract_compliant(other)
+        other = self._extract_compliant_frame(other)
 
         if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
@@ -357,7 +364,7 @@ class BaseFrame(Generic[_FrameT]):
 
         return self._with_compliant(
             self._compliant_frame.join_asof(
-                self._extract_compliant(other),
+                self._extract_compliant_frame(other),
                 left_on=left_on,
                 right_on=right_on,
                 by_left=by_left,
@@ -448,8 +455,6 @@ class DataFrame(BaseFrame[DataFrameT]):
         from narwhals.series import Series
 
         plx: EagerNamespaceAny = self.__narwhals_namespace__()
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):
             return arg._compliant_series._to_expr()
         if isinstance(arg, Expr):
@@ -2296,8 +2301,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
