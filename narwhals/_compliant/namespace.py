@@ -23,7 +23,6 @@ from narwhals._utils import (
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
-from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Sequence
@@ -67,9 +66,8 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     ) -> CompliantExprT | NonNestedLiteral:
         if is_expr(data):
             expr = data._to_compliant_expr(self)
-            if isinstance(expr, self._expr):
-                return expr
-            raise InvalidIntoExprError.from_invalid_type(type(expr))
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
         if isinstance(data, str) and not str_as_lit:
             return self.col(data)
         return data

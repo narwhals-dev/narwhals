@@ -11,7 +11,6 @@ from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
 from narwhals._utils import Implementation, requires, zip_strict
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
-from narwhals.exceptions import InvalidIntoExprError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -96,9 +95,8 @@ class PolarsNamespace:
             return data
         if is_expr(data):
             expr = data._to_compliant_expr(self)
-            if isinstance(expr, self._expr):
-                return expr
-            raise InvalidIntoExprError.from_invalid_type(type(expr))
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
         if isinstance(data, str) and not str_as_lit:
             return self.col(data)
         return self.lit(data.to_native() if is_series(data) else data, None)
