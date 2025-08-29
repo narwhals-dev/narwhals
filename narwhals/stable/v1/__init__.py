@@ -245,12 +245,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
-        if isinstance(arg, Expr):
-            # After stable.v1, we raise for order-dependent exprs or filtrations
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
+        # After stable.v1, we raise for order-dependent exprs or filtrations
+        if isinstance(arg, (Expr, str)):
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
         raise invalid_into_expr_error(arg)
 
     def collect(
