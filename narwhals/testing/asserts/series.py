@@ -4,10 +4,10 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._utils import zip_strict
+from narwhals.dependencies import is_narwhals_series
 from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
 from narwhals.functions import new_series
 from narwhals.testing.asserts.utils import raise_assertion_error
-from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
 
 def assert_series_equal(
-    left: IntoSeriesT,
-    right: IntoSeriesT,
+    left: Series[IntoSeriesT],
+    right: Series[IntoSeriesT],
     *,
     check_dtypes: bool = True,
     check_names: bool = True,
@@ -80,13 +80,14 @@ def assert_series_equal(
     """
     __tracebackhide__ = True
 
-    left_ = from_native(left, series_only=True, pass_through=False)
-    right_ = from_native(right, series_only=True, pass_through=False)
+    if any(not is_narwhals_series(obj) for obj in (left, right)):
+        # No preference on what should happen here if anything
+        raise TypeError
 
-    _check_metadata(left_, right_, check_dtypes=check_dtypes, check_names=check_names)
+    _check_metadata(left, right, check_dtypes=check_dtypes, check_names=check_names)
 
     left_, right_ = _maybe_apply_preprocessing(
-        left_, right_, categorical_as_str=categorical_as_str, check_order=check_order
+        left, right, categorical_as_str=categorical_as_str, check_order=check_order
     )
 
     left_vals, right_vals = _check_null_values(left_, right_)

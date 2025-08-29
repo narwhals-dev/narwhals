@@ -12,7 +12,7 @@ from tests.utils import PANDAS_VERSION, PYARROW_VERSION
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, IntoSeriesT
     from tests.conftest import Data
     from tests.utils import ConstructorEager
 
@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
 def _pytest_assertion_error(detail: str) -> Any:
     return pytest.raises(AssertionError, match=rf"Series are different \({detail}\)")
+
+
+def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
+    return nw.from_native(native, series_only=True)
 
 
 def test_self_equal(
@@ -59,7 +63,10 @@ def test_implementation_mismatch() -> None:
     import pyarrow as pa
 
     with _pytest_assertion_error("implementation mismatch"):
-        assert_series_equal(pd.Series([1]), pa.chunked_array([[2]]))
+        assert_series_equal(
+            series_from_native(pd.Series([1])),
+            series_from_native(pa.chunked_array([[2]])),  # type: ignore[misc] # pyright: ignore[reportArgumentType]
+        )
 
 
 @pytest.mark.parametrize(
