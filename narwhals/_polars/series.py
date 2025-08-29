@@ -506,7 +506,7 @@ class PolarsSeries:
             name = self.name
             ns = self.__narwhals_namespace__()
             other_expr = (
-                ns._expr._from_series(other) if isinstance(other, PolarsSeries) else other
+                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
             )
             expr = ns.col(name).is_close(
                 other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal

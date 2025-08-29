@@ -9,7 +9,7 @@ from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
 from narwhals._utils import Implementation, requires, zip_strict
-from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
+from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidIntoExprError
 
@@ -87,9 +87,13 @@ class PolarsNamespace:
         /,
         *,
         str_as_lit: bool,
-    ) -> PolarsExpr | NonNestedLiteral:
+    ) -> PolarsExpr | None:
         from narwhals._expression_parsing import is_expr, is_series
 
+        if data is None:
+            # NOTE: To avoid `pl.lit(None)` failing this `None` check
+            # https://github.com/pola-rs/polars/blob/58dd8e5770f16a9bef9009a1c05f00e15a5263c7/py-polars/polars/expr/expr.py#L2870-L2872
+            return data
         if is_expr(data):
             expr = data._to_compliant_expr(self)
             if isinstance(expr, self._expr):
@@ -97,13 +101,7 @@ class PolarsNamespace:
             raise InvalidIntoExprError.from_invalid_type(type(expr))
         if isinstance(data, str) and not str_as_lit:
             return self.col(data)
-        if not (is_series(data) or is_numpy_array(data)):
-            return data
-        return self._expr._from_series(
-            data._compliant_series
-            if is_series(data)
-            else self._series.from_numpy(data, context=self)
-        )
+        return self.lit(data.to_native() if is_series(data) else data, None)
 
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
