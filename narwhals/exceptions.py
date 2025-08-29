@@ -97,10 +97,6 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
         return InvalidIntoExprError(message)
 
 
-def invalid_into_expr_error(arg: object, /) -> InvalidIntoExprError:
-    return InvalidIntoExprError.from_invalid_type(type(arg))
-
-
 class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 

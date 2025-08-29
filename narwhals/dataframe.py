@@ -46,9 +46,9 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
+    InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
-    invalid_into_expr_error,
 )
 from narwhals.functions import _from_dict_no_backend, _is_into_schema
 from narwhals.schema import Schema
@@ -450,7 +450,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if is_into_expr_eager(arg):
             plx: EagerNamespaceAny = self.__narwhals_namespace__()
             return plx.parse_into_expr(arg, str_as_lit=False)
-        raise invalid_into_expr_error(arg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _series(self) -> type[Series[Any]]:
@@ -2309,7 +2309,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                     )
                     raise InvalidOperationError(msg)
             return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
-        raise invalid_into_expr_error(arg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:

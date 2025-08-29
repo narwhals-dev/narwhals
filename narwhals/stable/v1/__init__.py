@@ -22,7 +22,7 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.exceptions import invalid_into_expr_error
+from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
@@ -244,7 +244,7 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
             raise TypeError(msg)
         if isinstance(arg, (Expr, str)):
             return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
-        raise invalid_into_expr_error(arg)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwargs: Any
