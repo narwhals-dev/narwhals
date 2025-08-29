@@ -126,8 +126,7 @@ class CompliantFrame(
         keys: Sequence[str] | Sequence[CompliantExprT_contra],
         *,
         drop_null_keys: bool,
-        # TODO @dangotbanned: Update typing for `CompliantGroupBy` to support `Self`
-    ) -> CompliantGroupBy[Incomplete, CompliantExprT_contra]: ...
+    ) -> CompliantGroupBy[Self, CompliantExprT_contra]: ...
     def head(self, n: int) -> Self: ...
     def join(
         self,
@@ -292,12 +291,6 @@ class CompliantLazyFrame(
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
-    def group_by(
-        self,
-        keys: Sequence[str] | Sequence[CompliantExprT_contra],
-        *,
-        drop_null_keys: bool,
-    ) -> CompliantGroupBy[Self, CompliantExprT_contra]: ...
     def sink_parquet(self, file: str | Path | BytesIO) -> None: ...
 
 

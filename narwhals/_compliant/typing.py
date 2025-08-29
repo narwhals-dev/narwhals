@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import (
         CompliantDataFrame,
+        CompliantFrame,
         CompliantLazyFrame,
         EagerDataFrame,
     )
@@ -75,7 +76,7 @@ CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
 CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
-CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantFrameAny: TypeAlias = "CompliantFrame[Any, Any, Any]"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
