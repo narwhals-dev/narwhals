@@ -234,18 +234,14 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         return DataFrame
 
     def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent or length-changing
-        # expressions to LazyFrame
-        from narwhals.dataframe import BaseFrame
+        # After v1, we raise when passing order-dependent, length-changing,
+        # or filtration expressions to LazyFrame
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
-        # After stable.v1, we raise for order-dependent exprs or filtrations
         if isinstance(arg, (Expr, str)):
             return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
         raise invalid_into_expr_error(arg)
