@@ -32,7 +32,7 @@ from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -189,7 +189,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> Self:
+    def lazy(self, backend: None = None, **_: None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
@@ -412,6 +412,27 @@ class DuckDBLazyFrame(
                 for name, desc in zip_strict(by, descending)
             )
         return self._with_native(self.native.sort(*it))
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        _df = self.native
+        by = list(by)
+        if isinstance(reverse, bool):
+            descending = [not reverse] * len(by)
+        else:
+            descending = [not rev for rev in reverse]
+        expr = window_expression(
+            F("row_number"),
+            order_by=by,
+            descending=descending,
+            nulls_last=[True] * len(by),
+        )
+        condition = expr <= lit(k)
+        query = f"""
+        SELECT *
+        FROM _df
+        QUALIFY {condition}
+        """  # noqa: S608
+        return self._with_native(duckdb.sql(query))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns

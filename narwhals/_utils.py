@@ -70,17 +70,16 @@ if TYPE_CHECKING:
         CompliantFrameT,
         CompliantSeriesOrNativeExprT_co,
         CompliantSeriesT,
-        NativeFrameT_co,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames, NativeLazyFrameT
+    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
     from narwhals._namespace import Namespace
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
         Backend,
         IntoBackend,
-        _DataFrameLazyImpl,
         _EagerAllowedImpl,
+        _LazyAllowedImpl,
         _LazyFrameCollectImpl,
     )
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -1612,11 +1611,11 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 def is_compliant_dataframe(
     obj: CompliantDataFrame[
-        CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co
+        CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
     ]
     | Any,
 ) -> TypeIs[
-    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]
+    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co]
 ]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
@@ -1648,9 +1647,9 @@ def is_compliant_expr(
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     """Return True if `impl` allows eager operations."""
     return impl in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
         Implementation.CUDF,
+        Implementation.MODIN,
+        Implementation.PANDAS,
         Implementation.POLARS,
         Implementation.PYARROW,
     }
@@ -1661,13 +1660,16 @@ def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectIm
     return impl in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
 
 
-def can_dataframe_lazy(impl: Implementation, /) -> TypeIs[_DataFrameLazyImpl]:
+def is_lazy_allowed(impl: Implementation, /) -> TypeIs[_LazyAllowedImpl]:
     """Return True if `DataFrame.lazy(impl)` is allowed."""
     return impl in {
         Implementation.DASK,
         Implementation.DUCKDB,
-        Implementation.POLARS,
         Implementation.IBIS,
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+        Implementation.SQLFRAME,
     }
 
 

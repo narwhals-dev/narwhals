@@ -798,3 +798,23 @@ def test_join_duplicate_column_names(
     else:
         with pytest.raises(exception):
             df.join(df, on=["a"]).join(df, on=["a"])
+
+
+def test_join_same_laziness(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data_left = {"id": [1, 2, 3], "age": [25, 30, 35]}
+    data_right = {"id": [2, 3, 4], "active": [False, True, True]}
+    frame = nw.from_native(constructor(data_left))
+    df_pl = pl.DataFrame(data_right)
+    frame_pl: pl.DataFrame | pl.LazyFrame
+    if isinstance(frame, nw.DataFrame):
+        msg = r"Expected.+\.DataFrame.+got.+\.LazyFrame"
+        frame_pl = df_pl.lazy()
+    else:
+        msg = r"Expected.+\.LazyFrame.+got.+\.DataFrame"
+        frame_pl = df_pl
+    other = nw.from_native(frame_pl)
+    with pytest.raises(TypeError, match=msg):
+        frame.join(other, on="id")  # type: ignore[arg-type]

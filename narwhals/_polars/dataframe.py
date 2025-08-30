@@ -29,6 +29,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
     from typing import Callable
 
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
@@ -111,7 +113,9 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     unique: Method[Self]
     with_columns: Method[Self]
 
+    _native_frame: NativePolarsFrame
     _implementation = Implementation.POLARS
+    _version: Version
 
     def __init__(
         self,
@@ -120,7 +124,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         version: Version,
         validate_backend_version: bool = False,
     ) -> None:
-        self._native_frame: NativePolarsFrame = df
+        self._native_frame = df
         self._version = version
         if validate_backend_version:
             self._validate_backend_version()
@@ -196,6 +200,19 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 suffix=suffix,
             )
         )
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        if self._backend_version < (1, 0, 0):
+            return self._with_native(
+                self.native.top_k(
+                    k=k,
+                    by=by,
+                    descending=reverse,  # type: ignore[call-arg]
+                )
+            )
+        return self._with_native(self.native.top_k(k=k, by=by, reverse=reverse))
 
     def unpivot(
         self,
@@ -441,7 +458,12 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         for series in self.native.iter_columns():
             yield PolarsSeries.from_native(series, context=self)
 
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
         if backend is None or backend is Implementation.POLARS:
             return PolarsLazyFrame.from_native(self.native.lazy(), context=self)
         if backend is Implementation.DUCKDB:
@@ -449,10 +471,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
             from narwhals._duckdb.dataframe import DuckDBLazyFrame
 
-            # NOTE: (F841) is a false positive
-            df = self.native  # noqa: F841
+            _df = self.native
             return DuckDBLazyFrame(
-                duckdb.table("df"), validate_backend_version=True, version=self._version
+                duckdb.table("_df"), validate_backend_version=True, version=self._version
             )
         if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
@@ -464,7 +485,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_ibis():
+        if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -472,6 +493,20 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             return IbisLazyFrame(
                 ibis.memtable(self.native, columns=self.columns),
                 validate_backend_version=True,
+                version=self._version,
+            )
+
+        if backend.is_spark_like():
+            from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+            if session is None:
+                msg = "Spark like backends require `session` to be not None."
+                raise ValueError(msg)
+
+            return SparkLikeLazyFrame._from_compliant_dataframe(
+                self,  # pyright: ignore[reportArgumentType]
+                session=session,
+                implementation=backend,
                 version=self._version,
             )
 
@@ -545,6 +580,14 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 other=other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
             )
         except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
+
+    def top_k(
+        self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
+    ) -> Self:
+        try:
+            return super().top_k(k=k, by=by, reverse=reverse)
+        except Exception as e:  # noqa: BLE001  # pragma: no cover
             raise catch_polars_exception(e) from None
 
 

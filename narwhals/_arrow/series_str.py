@@ -19,11 +19,23 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
 
     def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> ArrowSeries:
         fn = pc.replace_substring if literal else pc.replace_substring_regex
-        arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        try:
+            arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `.str.replace` only supports str replacement values"
+                raise TypeError(msg) from e
+            raise
         return self.with_native(arr)
 
     def replace_all(self, pattern: str, value: str, *, literal: bool) -> ArrowSeries:
-        return self.replace(pattern, value, literal=literal, n=-1)
+        try:
+            return self.replace(pattern, value, literal=literal, n=-1)
+        except TypeError as e:
+            if not isinstance(value, str):
+                msg = "PyArrow backed `.str.replace_all` only supports str replacement values."
+                raise TypeError(msg) from e
+            raise
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(

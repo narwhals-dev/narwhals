@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.group_by import PandasLikeGroupBy
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
@@ -490,6 +491,18 @@ class PandasLikeDataFrame(
             validate_column_names=False,
         )
 
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        df = self.native
+        schema = self.schema
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
+            if reverse:
+                return self._with_native(df.nsmallest(k, by))
+            return self._with_native(df.nlargest(k, by))
+        return self._with_native(
+            df.sort_values(list(by), ascending=reverse).head(k),
+            validate_column_names=False,
+        )
+
     # --- convert ---
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
@@ -760,7 +773,12 @@ class PandasLikeDataFrame(
         )
 
     # --- lazy-only ---
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> CompliantLazyFrameAny:
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
             return self
@@ -794,7 +812,7 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
-        if backend.is_ibis():
+        if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
             from narwhals._ibis.dataframe import IbisLazyFrame
@@ -804,6 +822,21 @@ class PandasLikeDataFrame(
                 validate_backend_version=True,
                 version=self._version,
             )
+
+        if backend.is_spark_like():
+            from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+            if session is None:
+                msg = "Spark like backends require `session` to be not None."
+                raise ValueError(msg)
+
+            return SparkLikeLazyFrame(
+                session.createDataFrame(pandas_df),
+                version=self._version,
+                implementation=backend,
+                validate_backend_version=True,
+            )
+
         raise AssertionError  # pragma: no cover
 
     @property

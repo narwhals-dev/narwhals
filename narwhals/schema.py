@@ -7,20 +7,36 @@ https://github.com/pola-rs/polars/blob/main/py-polars/polars/schema.py.
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Mapping
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import Implementation, Version, zip_strict
+from narwhals._utils import Implementation, Version, qualified_type_name, zip_strict
+from narwhals.dependencies import (
+    get_cudf,
+    is_cudf_dtype,
+    is_pandas_like_dtype,
+    is_polars_data_type,
+    is_polars_schema,
+    is_pyarrow_data_type,
+    is_pyarrow_schema,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable
     from typing import Any, ClassVar
 
     import polars as pl
     import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals.dtypes import DType
-    from narwhals.typing import DTypeBackend
+    from narwhals.typing import (
+        DTypeBackend,
+        IntoArrowSchema,
+        IntoPandasSchema,
+        IntoPolarsSchema,
+    )
 
 
 __all__ = ["Schema"]
@@ -75,6 +91,150 @@ class Schema(OrderedDict[str, "DType"]):
     def len(self) -> int:
         """Get the number of columns in the schema."""
         return len(self)
+
+    @classmethod
+    def from_arrow(cls, schema: IntoArrowSchema, /) -> Self:
+        """Construct a Schema from a pyarrow Schema.
+
+        Arguments:
+            schema: A pyarrow Schema or mapping of column names to pyarrow data types.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> mapping = {
+            ...     "a": pa.timestamp("us", "UTC"),
+            ...     "b": pa.date32(),
+            ...     "c": pa.string(),
+            ...     "d": pa.uint8(),
+            ... }
+            >>> native = pa.schema(mapping)
+            >>>
+            >>> nw.Schema.from_arrow(native)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
+
+            >>> nw.Schema.from_arrow(mapping) == nw.Schema.from_arrow(native)
+            True
+        """
+        if isinstance(schema, Mapping):
+            if not schema:
+                return cls()
+            import pyarrow as pa  # ignore-banned-import
+
+            schema = pa.schema(schema)
+        from narwhals._arrow.utils import native_to_narwhals_dtype
+
+        return cls(
+            (field.name, native_to_narwhals_dtype(field.type, cls._version))
+            for field in schema
+        )
+
+    @classmethod
+    def from_pandas_like(cls, schema: IntoPandasSchema, /) -> Self:
+        """Construct a Schema from a pandas-like schema representation.
+
+        Arguments:
+            schema: A mapping of column names to pandas-like data types.
+
+        Examples:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [1], "b": ["a"], "c": [False], "d": [9.2]}
+            >>> native = pd.DataFrame(data).convert_dtypes().dtypes.to_dict()
+            >>>
+            >>> nw.Schema.from_pandas_like(native)
+            Schema({'a': Int64, 'b': String, 'c': Boolean, 'd': Float64})
+            >>>
+            >>> mapping = {
+            ...     "a": pd.DatetimeTZDtype("us", "UTC"),
+            ...     "b": pd.ArrowDtype(pa.date32()),
+            ...     "c": pd.StringDtype("python"),
+            ...     "d": np.dtype("uint8"),
+            ... }
+            >>>
+            >>> nw.Schema.from_pandas_like(mapping)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
+        """
+        if not schema:
+            return cls()
+        impl = (
+            Implementation.CUDF
+            if get_cudf() and any(is_cudf_dtype(dtype) for dtype in schema.values())
+            else Implementation.PANDAS
+        )
+        return cls._from_pandas_like(schema, impl)
+
+    @classmethod
+    def from_native(
+        cls, schema: IntoArrowSchema | IntoPolarsSchema | IntoPandasSchema, /
+    ) -> Self:
+        """Construct a Schema from a native schema representation.
+
+        Arguments:
+            schema: A native schema object, or mapping of column names to
+                *instantiated* native data types.
+
+        Examples:
+            >>> import datetime as dt
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [1], "b": ["a"], "c": [dt.time(1, 2, 3)], "d": [[2]]}
+            >>> native = pa.table(data).schema
+            >>>
+            >>> nw.Schema.from_native(native)
+            Schema({'a': Int64, 'b': String, 'c': Time, 'd': List(Int64)})
+        """
+        if is_pyarrow_schema(schema):
+            return cls.from_arrow(schema)
+        if is_polars_schema(schema):
+            return cls.from_polars(schema)
+        if isinstance(schema, Mapping):
+            return cls._from_native_mapping(schema) if schema else cls()
+        msg = (
+            f"Expected an arrow, polars, or pandas schema, but got "
+            f"{qualified_type_name(schema)!r}\n\n{schema!r}"
+        )
+        raise TypeError(msg)
+
+    @classmethod
+    def from_polars(cls, schema: IntoPolarsSchema, /) -> Self:
+        """Construct a Schema from a polars Schema.
+
+        Arguments:
+            schema: A polars Schema or mapping of column names to *instantiated*
+                polars data types.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> mapping = {
+            ...     "a": pl.Datetime(time_zone="UTC"),
+            ...     "b": pl.Date(),
+            ...     "c": pl.String(),
+            ...     "d": pl.UInt8(),
+            ... }
+            >>> native = pl.Schema(mapping)
+            >>>
+            >>> nw.Schema.from_polars(native)
+            Schema({'a': Datetime(time_unit='us', time_zone='UTC'), 'b': Date, 'c': String, 'd': UInt8})
+
+            >>> nw.Schema.from_polars(mapping) == nw.Schema.from_polars(native)
+            True
+        """
+        if not schema:
+            return cls()
+        from narwhals._polars.utils import native_to_narwhals_dtype
+
+        return cls(
+            (name, native_to_narwhals_dtype(dtype, cls._version))
+            for name, dtype in schema.items()
+        )
 
     def to_arrow(self) -> pa.Schema:
         """Convert Schema to a pyarrow Schema.
@@ -170,4 +330,36 @@ class Schema(OrderedDict[str, "DType"]):
             pl.Schema(schema)
             if pl_version >= (1, 0, 0)
             else cast("pl.Schema", dict(schema))
+        )
+
+    @classmethod
+    def _from_native_mapping(
+        cls,
+        native: Mapping[str, pa.DataType] | Mapping[str, pl.DataType] | IntoPandasSchema,
+        /,
+    ) -> Self:
+        first_item = next(iter(native.items()))
+        first_key, first_dtype = first_item
+        if is_polars_data_type(first_dtype):
+            return cls.from_polars(cast("IntoPolarsSchema", native))
+        if is_pandas_like_dtype(first_dtype):
+            return cls.from_pandas_like(cast("IntoPandasSchema", native))
+        if is_pyarrow_data_type(first_dtype):
+            return cls.from_arrow(cast("IntoArrowSchema", native))
+        msg = (
+            f"Expected an arrow, polars, or pandas dtype, but found "
+            f"`{first_key}: {qualified_type_name(first_dtype)}`\n\n{native!r}"
+        )
+        raise TypeError(msg)
+
+    @classmethod
+    def _from_pandas_like(
+        cls, schema: IntoPandasSchema, implementation: Implementation, /
+    ) -> Self:
+        from narwhals._pandas_like.utils import native_to_narwhals_dtype
+
+        impl = implementation
+        return cls(
+            (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
+            for name, dtype in schema.items()
         )

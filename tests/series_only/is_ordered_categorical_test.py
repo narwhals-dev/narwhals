@@ -9,7 +9,6 @@ from narwhals._utils import Implementation, Version
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoSeries
     from tests.utils import ConstructorEager
 
 
@@ -33,7 +32,6 @@ def test_is_ordered_categorical_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    s: IntoSeries | Any
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
     if POLARS_VERSION < (1, 32):  # pragma: no cover
         assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))

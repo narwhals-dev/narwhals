@@ -22,7 +22,6 @@ from narwhals._utils import (
     validate_strict_and_pass_though,
 )
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
-from narwhals.dependencies import get_polars
 from narwhals.exceptions import InvalidIntoExprError
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
@@ -72,11 +71,9 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Arrow,
         Backend,
-        Dask,
-        DuckDB,
         EagerAllowed,
-        Ibis,
         IntoBackend,
+        LazyAllowed,
         Pandas,
         Polars,
     )
@@ -193,9 +190,12 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         return super().get_column(name)  # type: ignore[return-value]
 
     def lazy(
-        self, backend: IntoBackend[Polars | DuckDB | Ibis | Dask] | None = None
+        self,
+        backend: IntoBackend[LazyAllowed] | None = None,
+        *,
+        session: Any | None = None,
     ) -> LazyFrame[Any]:
-        return _stableify(super().lazy(backend=backend))
+        return _stableify(super().lazy(backend=backend, session=session))
 
     @overload  # type: ignore[override]
     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series[Any]]: ...
@@ -234,31 +234,16 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
         return DataFrame
 
     def _extract_compliant(self, arg: Any) -> Any:
-        # After v1, we raise when passing order-dependent or length-changing
-        # expressions to LazyFrame
-        from narwhals.dataframe import BaseFrame
+        # After v1, we raise when passing order-dependent, length-changing,
+        # or filtration expressions to LazyFrame
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Mixing Series with LazyFrame is not supported."
             raise TypeError(msg)
-        if isinstance(arg, Expr):
-            # After stable.v1, we raise for order-dependent exprs or filtrations
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
+        if isinstance(arg, (Expr, str)):
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(
