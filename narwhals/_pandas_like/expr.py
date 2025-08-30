@@ -134,8 +134,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
         return PandasLikeNamespace(self._implementation, version=self._version)
 
-    def __narwhals_expr__(self) -> None: ...
-
     @classmethod
     def from_column_names(
         cls: type[Self],
