@@ -90,7 +90,9 @@ class CompliantExpr(
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
-    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_expr__(self) -> Self:
+        return self
+
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
     @classmethod
     def from_column_indices(
@@ -222,8 +224,6 @@ class EagerExpr(
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
-    def __narwhals_expr__(self) -> None: ...
-
     @classmethod
     def _from_callable(
         cls,

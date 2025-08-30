@@ -58,7 +58,9 @@ class PolarsExpr:
     def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
         raise NotImplementedError
 
-    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_expr__(self) -> Self:
+        return self
+
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
         from narwhals._polars.namespace import PolarsNamespace
 
