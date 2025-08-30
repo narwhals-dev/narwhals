@@ -137,7 +137,9 @@ INHERITED_METHODS = frozenset(
 
 
 class PolarsSeries:
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _native_series: pl.Series
+    _version: Version
 
     _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
         True: ["breakpoint", "count"],
@@ -145,7 +147,7 @@ class PolarsSeries:
     }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
-        self._native_series: pl.Series = series
+        self._native_series = series
         self._version = version
 
     @property

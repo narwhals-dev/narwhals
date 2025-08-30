@@ -32,7 +32,9 @@ if TYPE_CHECKING:
 
 class PolarsExpr:
     # CompliantExpr
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _version: Version
+    _native_expr: pl.Expr
     _metadata: ExprMetadata | None = None
     _evaluate_output_names: Any
     _alias_output_names: Any
