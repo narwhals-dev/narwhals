@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import sys
 from collections.abc import Iterable
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
@@ -24,7 +25,6 @@ from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from copy import replace as replace  # noqa: PLC0414
     from typing import Any, Callable, Literal
 
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
@@ -72,19 +72,18 @@ else:
 
         return decorator
 
-    import sys
 
-    if sys.version_info >= (3, 13):
-        from copy import replace
-    else:
+if sys.version_info >= (3, 13):
+    from copy import replace as replace  # noqa: PLC0414
+else:
 
-        def replace(obj: T, /, **changes: Any) -> T:
-            cls = obj.__class__
-            func = getattr(cls, "__replace__", None)
-            if func is None:
-                msg = f"replace() does not support {cls.__name__} objects"
-                raise TypeError(msg)
-            return func(obj, **changes)
+    def replace(obj: T, /, **changes: Any) -> T:
+        cls = obj.__class__
+        func = getattr(cls, "__replace__", None)
+        if func is None:
+            msg = f"replace() does not support {cls.__name__} objects"
+            raise TypeError(msg)
+        return func(obj, **changes)
 
 
 T = TypeVar("T")
