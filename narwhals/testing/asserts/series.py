@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable
 
-from narwhals._utils import zip_strict
+from narwhals._utils import qualified_type_name, zip_strict
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
 from narwhals.functions import new_series
@@ -81,8 +81,13 @@ def assert_series_equal(
     __tracebackhide__ = True
 
     if any(not is_narwhals_series(obj) for obj in (left, right)):
-        # No preference on what should happen here if anything
-        raise TypeError
+        msg = (
+            "Expected `narwhals.Series` instance, found:\n"
+            f"[left]: {qualified_type_name(type(left))}\n"
+            f"[right]: {qualified_type_name(type(left))}\n\n"
+            "Hint: Use `nw.from_native(obj, series_only=True) to convert to `narwhals.Series`"
+        )
+        raise TypeError(msg)
 
     _check_metadata(left, right, check_dtypes=check_dtypes, check_names=check_names)
 

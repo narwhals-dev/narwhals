@@ -311,3 +311,17 @@ def test_struct(
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
     with context:
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
+
+
+def test_non_nw_series() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+
+    import pandas as pd
+    import pyarrow as pa
+
+    with pytest.raises(TypeError, match=r"Expected `narwhals.Series` instance, found"):
+        assert_series_equal(
+            left=pd.Series([1]),  # type: ignore[arg-type]
+            right=pa.chunked_array([[2]]),  # type: ignore[arg-type]
+        )
