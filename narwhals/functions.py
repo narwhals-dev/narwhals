@@ -11,7 +11,6 @@ from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
-    extract_compliant,
     is_scalar_like,
 )
 from narwhals._utils import (
@@ -1410,7 +1409,7 @@ class Then(Expr):
 
         def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
             compliant_expr = self._to_compliant_expr(plx)
-            compliant_value = extract_compliant(plx, value, str_as_lit=False)
+            compliant_value = plx.parse_into_expr(value, str_as_lit=False)
             if (
                 not self._metadata.is_scalar_like
                 and is_scalar_like(kind)

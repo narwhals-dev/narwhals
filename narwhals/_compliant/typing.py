@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         CompliantExpr,
         DepthTrackingExpr,
         EagerExpr,
+        ImplExpr,
         LazyExpr,
         NativeExpr,
     )
@@ -78,6 +79,8 @@ CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
 CompliantFrameAny: TypeAlias = "CompliantFrame[Any, Any, Any]"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
 
+ImplExprAny: TypeAlias = "ImplExpr[Any, Any]"
+
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any, Any]"
@@ -135,6 +138,8 @@ CompliantNamespaceT = TypeVar("CompliantNamespaceT", bound=CompliantNamespaceAny
 CompliantNamespaceT_co = TypeVar(
     "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
 )
+
+ImplExprT_contra = TypeVar("ImplExprT_contra", bound=ImplExprAny, contravariant=True)
 
 DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
 DepthTrackingExprT_contra = TypeVar(

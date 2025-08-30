@@ -13,6 +13,7 @@ from narwhals._compliant.typing import (
     DepthTrackingExprAny,
     DepthTrackingExprT_contra,
     EagerExprT_contra,
+    ImplExprT_contra,
     NarwhalsAggregation,
 )
 from narwhals._utils import is_sequence_of, zip_strict
@@ -20,7 +21,7 @@ from narwhals._utils import is_sequence_of, zip_strict
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from narwhals._compliant.expr import CompliantExpr
+    from narwhals._compliant.expr import ImplExpr
 
 
 __all__ = ["CompliantGroupBy", "DepthTrackingGroupBy", "EagerGroupBy"]
@@ -34,7 +35,7 @@ _RE_LEAF_NAME: re.Pattern[str] = re.compile(r"(\w+->)")
 
 
 def _evaluate_aliases(
-    frame: CompliantFrameT, exprs: Iterable[CompliantExpr[CompliantFrameT, Any]], /
+    frame: CompliantFrameT, exprs: Iterable[ImplExpr[CompliantFrameT, Any]], /
 ) -> list[str]:
     it = (expr._evaluate_aliases(frame) for expr in exprs)
     return list(chain.from_iterable(it))
@@ -67,13 +68,13 @@ class DataFrameGroupBy(
 
 
 class ParseKeysGroupBy(
-    CompliantGroupBy[CompliantFrameT, CompliantExprT_contra],
-    Protocol[CompliantFrameT, CompliantExprT_contra],
+    CompliantGroupBy[CompliantFrameT, ImplExprT_contra],
+    Protocol[CompliantFrameT, ImplExprT_contra],
 ):
     def _parse_keys(
         self,
         compliant_frame: CompliantFrameT,
-        keys: Sequence[CompliantExprT_contra] | Sequence[str],
+        keys: Sequence[ImplExprT_contra] | Sequence[str],
     ) -> tuple[CompliantFrameT, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
@@ -82,7 +83,7 @@ class ParseKeysGroupBy(
 
     @staticmethod
     def _parse_expr_keys(
-        compliant_frame: CompliantFrameT, keys: Sequence[CompliantExprT_contra]
+        compliant_frame: CompliantFrameT, keys: Sequence[ImplExprT_contra]
     ) -> tuple[CompliantFrameT, list[str], list[str]]:
         """Parses key expressions to set up `.agg` operation with correct information.
 

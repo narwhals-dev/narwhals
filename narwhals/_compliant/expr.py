@@ -81,6 +81,7 @@ class NativeExpr(Protocol):
 class CompliantExpr(
     CompliantColumn, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 ):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
@@ -89,8 +90,14 @@ class CompliantExpr(
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
-    def __narwhals_expr__(self) -> None: ...
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
+        return self
+
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...
+    @classmethod
+    def from_column_indices(
+        cls, *column_indices: int, context: _LimitedContext
+    ) -> Self: ...
     @classmethod
     def from_column_names(
         cls,
@@ -99,9 +106,8 @@ class CompliantExpr(
         *,
         context: _LimitedContext,
     ) -> Self: ...
-    @classmethod
-    def from_column_indices(
-        cls, *column_indices: int, context: _LimitedContext
+    def broadcast(
+        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
     @staticmethod
     def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
@@ -111,6 +117,7 @@ class CompliantExpr(
 
         return fn
 
+    # NOTE: `polars`
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def count(self) -> Self: ...
@@ -137,35 +144,24 @@ class CompliantExpr(
         *,
         returns_scalar: bool,
     ) -> Self: ...
-    def broadcast(
-        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
-    ) -> Self: ...
-    def _is_multi_output_unnamed(self) -> bool:
-        """Return `True` for multi-output aggregations without names.
-
-        For example, column `'a'` only appears in the output as a grouping key:
-
-            df.group_by('a').agg(nw.all().sum())
-
-        It does not get included in:
-
-            nw.all().sum().
-        """
-        assert self._metadata is not None  # noqa: S101
-        return self._metadata.expansion_kind.is_multi_unnamed()
-
-    def _evaluate_aliases(
-        self: CompliantExpr[CompliantFrameT, Any], frame: CompliantFrameT, /
-    ) -> Sequence[str]:
-        names = self._evaluate_output_names(frame)
-        return alias(names) if (alias := self._alias_output_names) else names
-
     @property
     def name(self) -> NameNamespace[Self]: ...
 
 
-class DepthTrackingExpr(
+class ImplExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+    Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
+):
+    def _evaluate_aliases(self, frame: CompliantFrameT, /) -> Sequence[str]:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "CompliantFrameT@ImplExpr" cannot be assigned to parameter of type "CompliantFrameT@ImplExpr"
+        #  Type "CompliantFrameT@ImplExpr" is not assignable to type "CompliantFrameT@ImplExpr"
+        names = self._evaluate_output_names(frame)  # pyright: ignore[reportArgumentType]
+        return alias(names) if (alias := self._alias_output_names) else names
+
+
+class DepthTrackingExpr(
+    ImplExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
     _depth: int
@@ -228,8 +224,6 @@ class EagerExpr(
     def __narwhals_namespace__(
         self,
     ) -> EagerNamespace[EagerDataFrameT, EagerSeriesT, Self, Any, Any]: ...
-    def __narwhals_expr__(self) -> None: ...
-
     @classmethod
     def _from_callable(
         cls,
@@ -888,8 +882,7 @@ class EagerExpr(
 
 # mypy thinks `NativeExprT` should be covariant, pyright thinks it should be invariant
 class LazyExpr(  # type: ignore[misc]
-    CompliantExpr[CompliantLazyFrameT, NativeExprT],
-    Protocol[CompliantLazyFrameT, NativeExprT],
+    ImplExpr[CompliantLazyFrameT, NativeExprT], Protocol[CompliantLazyFrameT, NativeExprT]
 ):
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:

@@ -111,12 +111,6 @@ class CompliantFrame(
 
     @property
     def schema(self) -> Mapping[str, DType]: ...
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        ...
 
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
@@ -211,9 +205,6 @@ class CompliantDataFrame(
             MultiColSelector[CompliantSeriesT],
         ],
     ) -> Self: ...
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        # NOTE: Ignore is to avoid an intermittent false positive
-        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     @property
     def shape(self) -> tuple[int, int]: ...
@@ -289,7 +280,15 @@ class CompliantLazyFrame(
     Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
 ):
     def __narwhals_lazyframe__(self) -> Self: ...
+    # `LazySelectorNamespace._iter_columns` depends
     def _iter_columns(self) -> Iterator[Any]: ...
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
+        """`select` where all args are aggregations or literals.
+
+        (so, no broadcasting is necessary).
+        """
+        ...
+
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
@@ -317,6 +316,12 @@ class EagerDataFrame(
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
 
+    def aggregate(self, *exprs: EagerExprT) -> Self:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "exprs" of type "EagerExprT@EagerDataFrame" in function "select"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
+
     def _with_native(
         self, df: NativeDataFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
@@ -331,7 +336,9 @@ class EagerDataFrame(
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
-        # NOTE: Ignore is to avoid an intermittent false positive
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
     def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
