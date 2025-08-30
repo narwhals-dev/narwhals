@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan import common
 from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
 
 if TYPE_CHECKING:
@@ -37,7 +38,7 @@ class KeepName(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return self if expr == self.expr else type(self)(expr=expr)
+        return common.replace(self, expr=expr)
 
 
 class RenameAlias(ExprIR):
@@ -64,9 +65,7 @@ class RenameAlias(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return (
-            self if expr == self.expr else type(self)(expr=expr, function=self.function)
-        )
+        return common.replace(self, expr=expr)
 
 
 class Prefix(Immutable):
