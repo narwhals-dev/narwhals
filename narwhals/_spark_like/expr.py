@@ -149,8 +149,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         """Wraps `Window().partitionBy`, with default and `WindowInputs` handling."""
         return self._Window.partitionBy(*cols or [self._F.lit(1)])
 
-    def __narwhals_expr__(self) -> None: ...
-
     def __narwhals_namespace__(self) -> SparkLikeNamespace:  # pragma: no cover
         from narwhals._spark_like.namespace import SparkLikeNamespace
 

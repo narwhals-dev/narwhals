@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
+from narwhals._expression_parsing import is_expr, is_series
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
@@ -20,7 +21,17 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        IntoSchema,
+        NonNestedLiteral,
+        TimeUnit,
+        _1DArray,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -35,6 +46,7 @@ class PolarsNamespace:
     when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
     _implementation: Implementation = Implementation.POLARS
+    _version: Version
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -69,6 +81,25 @@ class PolarsNamespace:
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    def parse_into_expr(
+        self,
+        data: Expr | NonNestedLiteral | Series[pl.Series] | _1DArray,
+        /,
+        *,
+        str_as_lit: bool,
+    ) -> PolarsExpr | None:
+        if data is None:
+            # NOTE: To avoid `pl.lit(None)` failing this `None` check
+            # https://github.com/pola-rs/polars/blob/58dd8e5770f16a9bef9009a1c05f00e15a5263c7/py-polars/polars/expr/expr.py#L2870-L2872
+            return data
+        if is_expr(data):
+            expr = data._to_compliant_expr(self)
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
+        if isinstance(data, str) and not str_as_lit:
+            return self.col(data)
+        return self.lit(data.to_native() if is_series(data) else data, None)
 
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
