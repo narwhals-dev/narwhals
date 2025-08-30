@@ -81,7 +81,7 @@ def test_namespace_from_native_object(constructor: Constructor) -> None:
 def test_namespace_from_native_object_invalid() -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     with pytest.raises(TypeError, match=r"dict"):
-        Namespace.from_native_object(data)  # pyright: ignore[reportCallIssue, reportArgumentType]
+        Namespace.from_native_object(data)  # type: ignore[call-overload]
 
 
 @eager_allowed

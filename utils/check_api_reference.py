@@ -5,8 +5,8 @@ import string
 import sys
 
 # ruff: noqa: N806
-from collections import deque
-from inspect import isfunction
+from collections import OrderedDict, deque
+from inspect import isfunction, ismethoddescriptor
 from pathlib import Path
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
@@ -24,13 +24,14 @@ if sys.version_info >= (3, 13):
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            isfunction(obj) or isinstance(obj, (MethodType, property))
+            isfunction(obj)
+            or (isinstance(obj, (MethodType, property)) or ismethoddescriptor(obj))
         ) and obj.__name__.startswith(LOWERCASE)
 else:
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            (isfunction(obj) or isinstance(obj, MethodType))
+            (isfunction(obj) or (isinstance(obj, MethodType) or ismethoddescriptor(obj)))
             and obj.__name__.startswith(LOWERCASE)
         ) or (isinstance(obj, property) and obj.fget.__name__.startswith(LOWERCASE))
 
@@ -222,7 +223,11 @@ if extra := set(documented).difference(dtypes):
 # Schema
 schema_methods = list(iter_api_reference_names(nw.Schema))
 documented = read_documented_members(DIR_API_REF / "schema.md")
-if missing := set(schema_methods).difference(documented):
+if (
+    missing := set(schema_methods)
+    .difference(documented)
+    .difference(iter_api_reference_names(OrderedDict))
+):
     print("Schema: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
