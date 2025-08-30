@@ -90,7 +90,7 @@ class CompliantExpr(
     def __call__(
         self, df: CompliantFrameT
     ) -> Sequence[CompliantSeriesOrNativeExprT_co]: ...
-    def __narwhals_expr__(self) -> Self:
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
         return self
 
     def __narwhals_namespace__(self) -> CompliantNamespace[CompliantFrameT, Self]: ...

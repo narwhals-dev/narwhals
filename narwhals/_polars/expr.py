@@ -53,7 +53,7 @@ class PolarsExpr:
     def _eval_names_indices(*_: Any) -> Any:
         raise NotImplementedError
 
-    def __narwhals_expr__(self) -> Self:
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
         return self
 
     def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
