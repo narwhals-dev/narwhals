@@ -22,11 +22,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import EvalNames
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._polars.dataframe import Method, PolarsDataFrame
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import Version
     from narwhals.typing import IntoDType, ModeKeepStrategy, NumericLiteral
 
 
@@ -43,21 +42,15 @@ class PolarsExpr:
     # CompliantExpr + builtin descriptor
     # TODO @dangotbanned: Remove in #2713
     @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: EvalNames[PolarsDataFrame],
-        /,
-        *,
-        context: _LimitedContext,
-    ) -> Self:
+    def from_column_names(cls, *_: Any, **__: Any) -> Self:
         raise NotImplementedError
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
+    def from_column_indices(cls, *_: Any, **__: Any) -> Self:
         raise NotImplementedError
 
     @staticmethod
-    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
+    def _eval_names_indices(*_: Any) -> Any:
         raise NotImplementedError
 
     def __narwhals_expr__(self) -> Self:
