@@ -372,9 +372,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
         return self.with_expr(function(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
-        if expr == self.expr:
-            return cast("NamedIR[ExprIRT2]", self)
-        return NamedIR(expr=expr, name=self.name)
+        return cast("NamedIR[ExprIRT2]", replace(self, expr=expr))
 
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"

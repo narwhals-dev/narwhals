@@ -43,6 +43,7 @@ from functools import lru_cache
 from itertools import chain
 from typing import TYPE_CHECKING
 
+from narwhals._plan import common
 from narwhals._plan.common import (
     ExprIR,
     Immutable,
@@ -157,13 +158,7 @@ class ExpansionFlags(Immutable):
         return cls.from_ir(expr._ir)
 
     def with_multiple_columns(self) -> ExpansionFlags:
-        return ExpansionFlags(
-            multiple_columns=True,
-            has_nth=self.has_nth,
-            has_wildcard=self.has_wildcard,
-            has_selector=self.has_selector,
-            has_exclude=self.has_exclude,
-        )
+        return common.replace(self, multiple_columns=True)
 
 
 def prepare_projection(
