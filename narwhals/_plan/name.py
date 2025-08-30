@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan import common
 from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.dummy import Expr
-    from narwhals._plan.typing import MapIR
+    from narwhals._plan.typing import MapIR, Seq
 
 
 class KeepName(ExprIR):
     __slots__ = ("expr",)
+    _child: ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
 
     @property
@@ -25,14 +24,6 @@ class KeepName(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
-
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))
@@ -43,6 +34,7 @@ class KeepName(ExprIR):
 
 class RenameAlias(ExprIR):
     __slots__ = ("expr", "function")
+    _child: ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     function: AliasName
 
@@ -52,14 +44,6 @@ class RenameAlias(ExprIR):
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"
-
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_expr(self.expr.map_ir(function)))

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan.common import ExprIR, _pascal_to_snake_case, replace
 from narwhals._plan.exceptions import agg_scalar_error
@@ -10,12 +10,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.typing import MapIR
+    from narwhals._plan.typing import MapIR, Seq
     from narwhals.typing import RollingInterpolationMethod
 
 
 class AggExpr(ExprIR):
     __slots__ = ("expr",)
+    _child: ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
 
     @property
@@ -24,14 +25,6 @@ class AggExpr(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.{_pascal_to_snake_case(type(self).__name__)}()"
-
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
