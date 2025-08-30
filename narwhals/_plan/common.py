@@ -83,7 +83,7 @@ else:
         if func is None:
             msg = f"replace() does not support {cls.__name__} objects"
             raise TypeError(msg)
-        return func(obj, **changes)
+        return func(obj, **changes)  # type: ignore[no-any-return]
 
 
 T = TypeVar("T")
