@@ -24,6 +24,7 @@ from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from copy import replace as replace  # noqa: PLC0414
     from typing import Any, Callable, Literal
 
     from typing_extensions import Never, Self, TypeIs, dataclass_transform
@@ -71,6 +72,20 @@ else:
 
         return decorator
 
+    import sys
+
+    if sys.version_info >= (3, 13):
+        from copy import replace
+    else:
+
+        def replace(obj: T, /, **changes: Any) -> T:
+            cls = obj.__class__
+            func = getattr(cls, "__replace__", None)
+            if func is None:
+                msg = f"replace() does not support {cls.__name__} objects"
+                raise TypeError(msg)
+            return func(obj, **changes)
+
 
 T = TypeVar("T")
 
@@ -110,6 +125,21 @@ class Immutable:
     def __setattr__(self, name: str, value: Never) -> Never:
         msg = f"{type(self).__name__!r} is immutable, {name!r} cannot be set."
         raise AttributeError(msg)
+
+    def __replace__(self, **changes: Any) -> Self:
+        """https://docs.python.org/3.13/library/copy.html#copy.replace"""  # noqa: D415
+        if len(changes) == 1:
+            k_new, v_new = next(iter(changes.items()))
+            # NOTE: Will trigger an attribute error if invalid name
+            if getattr(self, k_new) == v_new:
+                return self
+            changed = dict(self.__immutable_items__)
+            # Now we *don't* need to check the key is valid
+            changed[k_new] = v_new
+        else:
+            changed = dict(self.__immutable_items__)
+            changed |= changes
+        return type(self)(**changed)
 
     def __init_subclass__(cls, *args: Any, **kwds: Any) -> None:
         super().__init_subclass__(*args, **kwds)
