@@ -676,7 +676,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 class Ternary(ExprIR):
     """When-Then-Otherwise."""
 
-    __slots__ = ("predicate", "truthy", "falsy")  # noqa: RUF023
+    __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
     predicate: ExprIR
     truthy: ExprIR
     falsy: ExprIR
