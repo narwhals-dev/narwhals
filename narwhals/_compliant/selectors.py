@@ -56,9 +56,12 @@ SelectorOrExpr: TypeAlias = (
 
 
 class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _version: Version
 
+    @property
+    def _selector(self) -> type[CompliantSelector[FrameT, SeriesOrExprT]]: ...
     @classmethod
     def from_namespace(cls, context: _LimitedContext, /) -> Self:
         obj = cls.__new__(cls)
@@ -66,17 +69,11 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
         obj._version = context._version
         return obj
 
-    @property
-    def _selector(self) -> type[CompliantSelector[FrameT, SeriesOrExprT]]: ...
-
     def _iter_columns(self, df: FrameT, /) -> Iterator[SeriesOrExprT]: ...
-
     def _iter_schema(self, df: FrameT, /) -> Iterator[tuple[str, DType]]: ...
-
     def _iter_columns_dtypes(
         self, df: FrameT, /
     ) -> Iterator[tuple[SeriesOrExprT, DType]]: ...
-
     def _iter_columns_names(self, df: FrameT, /) -> Iterator[tuple[SeriesOrExprT, str]]:
         yield from zip_strict(self._iter_columns(df), df.columns)
 
@@ -93,6 +90,7 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
 
         return self._selector.from_callables(series, names, context=self)
 
+    # NOTE: `polars`
     def by_dtype(
         self, dtypes: Collection[DType | type[DType]]
     ) -> CompliantSelector[FrameT, SeriesOrExprT]:

@@ -20,6 +20,7 @@ from narwhals._expression_parsing import (
     ExprKind,
     all_exprs_are_scalar_like,
     check_expressions_preserve_length,
+    is_into_expr_eager,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -42,12 +43,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
     zip_strict,
 )
-from narwhals.dependencies import (
-    get_polars,
-    is_numpy_array,
-    is_numpy_array_2d,
-    is_pyarrow_table,
-)
+from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidIntoExprError,
@@ -451,26 +447,9 @@ class DataFrame(BaseFrame[DataFrameT]):
     _version: ClassVar[Version] = Version.MAIN
 
     def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        plx: EagerNamespaceAny = self.__narwhals_namespace__()
-        if isinstance(arg, Series):
-            return arg._compliant_series._to_expr()
-        if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        if is_numpy_array(arg):
-            return plx._series.from_numpy(arg, context=plx)._to_expr()
+        if is_into_expr_eager(arg):
+            plx: EagerNamespaceAny = self.__narwhals_namespace__()
+            return plx.parse_into_expr(arg, str_as_lit=False)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -2365,43 +2344,33 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
-        if isinstance(arg, str):  # pragma: no cover
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if isinstance(arg, Expr):
-            if arg._metadata.n_orderable_ops:
-                msg = (
-                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                    "`'date'` which orders your data, then replace:\n\n"
-                    "   nw.col('price').cum_sum()\n\n"
-                    " with:\n\n"
-                    "   nw.col('price').cum_sum().over(order_by='date')\n"
-                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                    "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
-                )
-                raise InvalidOperationError(msg)
-            if arg._metadata.is_filtration:
-                msg = (
-                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
-                    "followed by an aggregation.\n\n"
-                    "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
-                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
-                )
-                raise InvalidOperationError(msg)
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
+        if isinstance(arg, (Expr, str)):
+            if isinstance(arg, Expr):
+                if arg._metadata.n_orderable_ops:
+                    msg = (
+                        "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                        "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                        "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                        "`'date'` which orders your data, then replace:\n\n"
+                        "   nw.col('price').cum_sum()\n\n"
+                        " with:\n\n"
+                        "   nw.col('price').cum_sum().over(order_by='date')\n"
+                        "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                        "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
+                    )
+                    raise InvalidOperationError(msg)
+                if arg._metadata.is_filtration:
+                    msg = (
+                        "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                        "followed by an aggregation.\n\n"
+                        "Hints:\n"
+                        "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                        "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                        "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                    )
+                    raise InvalidOperationError(msg)
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:

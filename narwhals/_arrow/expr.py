@@ -105,8 +105,6 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
         return ArrowNamespace(version=self._version)
 
-    def __narwhals_expr__(self) -> None: ...
-
     def _reuse_series_extra_kwargs(
         self, *, returns_scalar: bool = False
     ) -> dict[str, Any]:
