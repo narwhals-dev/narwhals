@@ -6,6 +6,7 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
+from narwhals._plan import common
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
@@ -111,7 +112,7 @@ class Alias(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return self if expr == self.expr else type(self)(expr=expr, name=self.name)
+        return common.replace(self, expr=expr)
 
 
 class Column(ExprIR):
@@ -122,7 +123,7 @@ class Column(ExprIR):
         return f"col({self.name!r})"
 
     def with_name(self, name: str, /) -> Column:
-        return self if name == self.name else col(name)
+        return common.replace(self, name=name)
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self)
@@ -191,7 +192,7 @@ class Exclude(_ColumnSelection):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return self if expr == self.expr else type(self)(expr=expr, names=self.names)
+        return common.replace(self, expr=expr)
 
 
 class Literal(ExprIR, t.Generic[LiteralT]):
@@ -255,14 +256,12 @@ class BinaryExpr(
         yield from self.left.iter_output_name()
 
     def with_left(self, left: LeftT2, /) -> BinaryExpr[LeftT2, OperatorT, RightT]:
-        if left == self.left:
-            return t.cast("BinaryExpr[LeftT2, OperatorT, RightT]", self)
-        return BinaryExpr(left=left, op=self.op, right=self.right)
+        changed = common.replace(self, left=left)
+        return t.cast("BinaryExpr[LeftT2, OperatorT, RightT]", changed)
 
     def with_right(self, right: RightT2, /) -> BinaryExpr[LeftT, OperatorT, RightT2]:
-        if right == self.right:
-            return t.cast("BinaryExpr[LeftT, OperatorT, RightT2]", self)
-        return BinaryExpr(left=self.left, op=self.op, right=right)
+        changed = common.replace(self, right=right)
+        return t.cast("BinaryExpr[LeftT, OperatorT, RightT2]", changed)
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(
@@ -299,7 +298,7 @@ class Cast(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return self if expr == self.expr else type(self)(expr=expr, dtype=self.dtype)
+        return common.replace(self, expr=expr)
 
 
 class Sort(ExprIR):
@@ -330,7 +329,7 @@ class Sort(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        return self if expr == self.expr else type(self)(expr=expr, options=self.options)
+        return common.replace(self, expr=expr)
 
 
 class SortBy(ExprIR):
@@ -368,15 +367,10 @@ class SortBy(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)).with_by(by))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        if expr == self.expr:
-            return self
-        return type(self)(expr=expr, by=self.by, options=self.options)
+        return common.replace(self, expr=expr)
 
     def with_by(self, by: t.Iterable[ExprIR], /) -> Self:
-        by = collect(by)
-        if by == self.by:
-            return self
-        return type(self)(expr=self.expr, by=by, options=self.options)
+        return common.replace(self, by=collect(by))
 
 
 class FunctionExpr(ExprIR, t.Generic[FunctionT]):
@@ -399,14 +393,10 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
         return self.function.is_scalar
 
     def with_options(self, options: FunctionOptions, /) -> Self:
-        options = self.options.with_flags(options.flags)
-        return type(self)(input=self.input, function=self.function, options=options)
+        return common.replace(self, options=self.options.with_flags(options.flags))
 
     def with_input(self, input: t.Iterable[ExprIR], /) -> Self:  # noqa: A002
-        input = collect(input)
-        if input == self.input:
-            return self
-        return type(self)(input=input, function=self.function, options=self.options)
+        return common.replace(self, input=collect(input))
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
         return function(self.with_input(ir.map_ir(function) for ir in self.input))
@@ -520,11 +510,9 @@ class Filter(ExprIR):
         yield from self.expr.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
-        expr = self.expr.map_ir(function)
-        by = self.by.map_ir(function)
-        expr = self.expr if self.expr == expr else expr
-        by = self.by if self.by == by else by
-        return function(Filter(expr=expr, by=by))
+        expr, by = self.expr, self.by
+        changed = common.replace(self, expr=expr.map_ir(function), by=by.map_ir(function))
+        return function(changed)
 
 
 class WindowExpr(ExprIR):
@@ -567,15 +555,10 @@ class WindowExpr(ExprIR):
         return function(over)
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        if expr == self.expr:
-            return self
-        return type(self)(expr=expr, partition_by=self.partition_by, options=self.options)
+        return common.replace(self, expr=expr)
 
     def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
-        by = collect(partition_by)
-        if by == self.partition_by:
-            return self
-        return type(self)(expr=self.expr, partition_by=by, options=self.options)
+        return common.replace(self, partition_by=collect(partition_by))
 
 
 class OrderedWindowExpr(WindowExpr):
@@ -625,39 +608,7 @@ class OrderedWindowExpr(WindowExpr):
         return function(over)
 
     def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
-        by = collect(order_by)
-        if by == self.order_by:
-            return self
-        return type(self)(
-            expr=self.expr,
-            partition_by=self.partition_by,
-            order_by=by,
-            sort_options=self.sort_options,
-            options=self.options,
-        )
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        if expr == self.expr:
-            return self
-        return type(self)(
-            expr=expr,
-            partition_by=self.partition_by,
-            order_by=self.order_by,
-            sort_options=self.sort_options,
-            options=self.options,
-        )
-
-    def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
-        by = collect(partition_by)
-        if by == self.partition_by:
-            return self
-        return type(self)(
-            expr=self.expr,
-            partition_by=by,
-            order_by=self.order_by,
-            sort_options=self.sort_options,
-            options=self.options,
-        )
+        return common.replace(self, order_by=collect(order_by))
 
 
 class Len(ExprIR):
@@ -758,7 +709,5 @@ class Ternary(ExprIR):
         predicate = self.predicate.map_ir(function)
         truthy = self.truthy.map_ir(function)
         falsy = self.falsy.map_ir(function)
-        predicate = self.predicate if self.predicate == predicate else predicate
-        truthy = self.truthy if self.truthy == truthy else truthy
-        falsy = self.falsy if self.falsy == falsy else falsy
-        return function(Ternary(predicate=predicate, truthy=truthy, falsy=falsy))
+        changed = common.replace(self, predicate=predicate, truthy=truthy, falsy=falsy)
+        return function(changed)

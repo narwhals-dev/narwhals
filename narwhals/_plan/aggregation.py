@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan.common import ExprIR, _pascal_to_snake_case
+from narwhals._plan.common import ExprIR, _pascal_to_snake_case, replace
 from narwhals._plan.exceptions import agg_scalar_error
 
 if TYPE_CHECKING:
@@ -40,10 +40,7 @@ class AggExpr(ExprIR):
         return function(self.with_expr(self.expr.map_ir(function)))
 
     def with_expr(self, expr: ExprIR, /) -> Self:
-        if expr == self.expr:
-            return self
-        it = ((k, v) for k, v in self.__immutable_items__ if k != "expr")
-        return type(self)(expr=expr, **dict(it))
+        return replace(self, expr=expr)
 
     def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
         if expr.is_scalar:
