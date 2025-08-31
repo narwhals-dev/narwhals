@@ -60,7 +60,6 @@ class NUnique(AggExpr): ...
 
 class Quantile(AggExpr):
     __slots__ = (*AggExpr.__slots__, "interpolation", "quantile")
-
     quantile: float
     interpolation: RollingInterpolationMethod
 
