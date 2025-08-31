@@ -202,9 +202,13 @@ def _field_str(name: str, value: Any) -> str:
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
-    # NOTE: No frills solution *first*
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
+
+    def __init_subclass__(cls, *args: Any, child: Seq[str] = (), **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        if child:
+            cls._child = child
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy

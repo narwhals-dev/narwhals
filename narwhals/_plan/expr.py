@@ -88,9 +88,8 @@ def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
 
-class Alias(ExprIR):
+class Alias(ExprIR, child=("expr",)):
     __slots__ = ("expr", "name")
-    _child: t.ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     name: str
 
@@ -158,9 +157,8 @@ class All(_ColumnSelection):
         return "all()"
 
 
-class Exclude(_ColumnSelection):
+class Exclude(_ColumnSelection, child=("expr",)):
     __slots__ = ("expr", "names")
-    _child: t.ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     """Default is `all()`."""
     names: Seq[str]
@@ -224,11 +222,11 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
 
 
 class BinaryExpr(
-    _BinaryOp[LeftT, OperatorT, RightT], t.Generic[LeftT, OperatorT, RightT]
+    _BinaryOp[LeftT, OperatorT, RightT],
+    t.Generic[LeftT, OperatorT, RightT],
+    child=("left", "right"),
 ):
     """Application of two exprs via an `Operator`."""
-
-    _child: t.ClassVar[Seq[str]] = ("left", "right")
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
@@ -249,9 +247,8 @@ class BinaryExpr(
         )
 
 
-class Cast(ExprIR):
+class Cast(ExprIR, child=("expr",)):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     dtype: DType
 
@@ -272,9 +269,8 @@ class Cast(ExprIR):
         return common.replace(self, expr=expr)
 
 
-class Sort(ExprIR):
+class Sort(ExprIR, child=("expr",)):
     __slots__ = ("expr", "options")
-    _child: t.ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     options: SortOptions
 
@@ -296,11 +292,10 @@ class Sort(ExprIR):
         return common.replace(self, expr=expr)
 
 
-class SortBy(ExprIR):
+class SortBy(ExprIR, child=("expr", "by")):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("expr", "by")
     expr: ExprIR
     by: Seq[ExprIR]
     options: SortMultipleOptions
@@ -326,7 +321,7 @@ class SortBy(ExprIR):
         return common.replace(self, by=collect(by))
 
 
-class FunctionExpr(ExprIR, t.Generic[FunctionT]):
+class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -334,7 +329,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     """
 
     __slots__ = ("function", "input", "options")
-    _child: t.ClassVar[Seq[str]] = ("input",)
     input: Seq[ExprIR]
     function: FunctionT
     """Operation applied to each element of `input`."""
@@ -428,9 +422,8 @@ class RangeExpr(FunctionExpr[RangeT]):
         return f"{self.function!r}({list(self.input)!r})"
 
 
-class Filter(ExprIR):
+class Filter(ExprIR, child=("expr", "by")):
     __slots__ = ("expr", "by")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("expr", "by")
     expr: ExprIR
     by: ExprIR
 
@@ -450,7 +443,7 @@ class Filter(ExprIR):
         return function(changed)
 
 
-class WindowExpr(ExprIR):
+class WindowExpr(ExprIR, child=("expr", "partition_by")):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -460,7 +453,6 @@ class WindowExpr(ExprIR):
     """
 
     __slots__ = ("expr", "partition_by", "options")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("expr", "partition_by")
     expr: ExprIR
     """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
     partition_by: Seq[ExprIR]
@@ -485,9 +477,8 @@ class WindowExpr(ExprIR):
         return common.replace(self, partition_by=collect(partition_by))
 
 
-class OrderedWindowExpr(WindowExpr):
+class OrderedWindowExpr(WindowExpr, child=("expr", "partition_by", "order_by")):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("expr", "partition_by", "order_by")
     expr: ExprIR
     partition_by: Seq[ExprIR]
     order_by: Seq[ExprIR]
@@ -585,11 +576,10 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
         return function(self)
 
 
-class Ternary(ExprIR):
+class Ternary(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
-    _child: t.ClassVar[Seq[str]] = ("truthy", "falsy", "predicate")
     predicate: ExprIR
     truthy: ExprIR
     falsy: ExprIR

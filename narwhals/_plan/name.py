@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from narwhals._plan import common
 from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
@@ -10,12 +10,11 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.dummy import Expr
-    from narwhals._plan.typing import MapIR, Seq
+    from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR):
+class KeepName(ExprIR, child=("expr",)):
     __slots__ = ("expr",)
-    _child: ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
 
     @property
@@ -32,9 +31,8 @@ class KeepName(ExprIR):
         return common.replace(self, expr=expr)
 
 
-class RenameAlias(ExprIR):
+class RenameAlias(ExprIR, child=("expr",)):
     __slots__ = ("expr", "function")
-    _child: ClassVar[Seq[str]] = ("expr",)
     expr: ExprIR
     function: AliasName
 
