@@ -253,11 +253,11 @@ class ExprIR(Immutable):
         """
         for name in self._child:
             child: ExprIR | Seq[ExprIR] = getattr(self, name)
-            if not isinstance(child, ExprIR):
-                for nested in child:
-                    yield from nested.iter_left()
-            else:
+            if isinstance(child, ExprIR):
                 yield from child.iter_left()
+            else:
+                for node in child:
+                    yield from node.iter_left()
         yield self
 
     def iter_right(self) -> Iterator[ExprIR]:
@@ -289,11 +289,11 @@ class ExprIR(Immutable):
         yield self
         for name in reversed(self._child):
             child: ExprIR | Seq[ExprIR] = getattr(self, name)
-            if not isinstance(child, ExprIR):
-                for nested in reversed(child):
-                    yield from nested.iter_right()
-            else:
+            if isinstance(child, ExprIR):
                 yield from child.iter_right()
+            else:
+                for node in reversed(child):
+                    yield from node.iter_right()
 
     def iter_root_names(self) -> Iterator[ExprIR]:
         """Override for different iteration behavior in `ExprIR.meta.root_names`.
