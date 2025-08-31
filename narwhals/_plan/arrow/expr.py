@@ -11,7 +11,7 @@ from narwhals._plan.arrow.functions import lit
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.arrow.typing import NativeScalar, StoresNativeT_co
 from narwhals._plan.common import ExprIR, NamedIR, into_dtype
-from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
+from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch, namespace
 from narwhals._utils import (
     Implementation,
     Version,
@@ -245,8 +245,8 @@ class ArrowExpr(  # type: ignore[misc]
             self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
             for idx, e in enumerate(node.by)
         )
-        ns = self.__narwhals_namespace__()
-        df = ns._concat_horizontal((series, *by))
+
+        df = namespace(self)._concat_horizontal((series, *by))
         names = df.columns[1:]
         indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
         result: ChunkedArrayAny = df.native.column(0).take(indices)

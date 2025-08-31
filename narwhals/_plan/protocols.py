@@ -70,6 +70,14 @@ LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
 
+def namespace(obj: _SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    return obj.__narwhals_namespace__()
+
+
+class _SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
+
 # NOTE: Unlike the version in `nw._utils`, here `.version` it is public
 class StoresVersion(Protocol):
     _version: Version
@@ -144,15 +152,13 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
-        expr.Column: lambda self, node, frame, name: self.__narwhals_namespace__().col(
+        expr.Column: lambda self, node, frame, name: namespace(self).col(
             node, frame, name
         ),
-        expr.Literal: lambda self, node, frame, name: self.__narwhals_namespace__().lit(
+        expr.Literal: lambda self, node, frame, name: namespace(self).lit(
             node, frame, name
         ),
-        expr.Len: lambda self, node, frame, name: self.__narwhals_namespace__().len(
-            node, frame, name
-        ),
+        expr.Len: lambda self, node, frame, name: namespace(self).len(node, frame, name),
         expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
         expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
         expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
@@ -185,10 +191,9 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         ),
         # NOTE: Keeping it simple for now
         # When adding other `*_range` functions, this should instead map to `range_expr`
-        expr.RangeExpr: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().int_range(node, frame, name),
+        expr.RangeExpr: lambda self, node, frame, name: namespace(self).int_range(
+            node, frame, name
+        ),
         expr.OrderedWindowExpr: lambda self, node, frame, name: self.over_ordered(
             node, frame, name
         ),
@@ -200,34 +205,27 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH_FUNCTION: ClassVar[
         Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
     ] = {
-        boolean.AnyHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().any_horizontal(node, frame, name),
-        boolean.AllHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().all_horizontal(node, frame, name),
-        F.SumHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().sum_horizontal(node, frame, name),
-        F.MinHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().min_horizontal(node, frame, name),
-        F.MaxHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().max_horizontal(node, frame, name),
-        F.MeanHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().mean_horizontal(node, frame, name),
-        strings.ConcatHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().concat_str(node, frame, name),
+        boolean.AnyHorizontal: lambda self, node, frame, name: namespace(
+            self
+        ).any_horizontal(node, frame, name),
+        boolean.AllHorizontal: lambda self, node, frame, name: namespace(
+            self
+        ).all_horizontal(node, frame, name),
+        F.SumHorizontal: lambda self, node, frame, name: namespace(self).sum_horizontal(
+            node, frame, name
+        ),
+        F.MinHorizontal: lambda self, node, frame, name: namespace(self).min_horizontal(
+            node, frame, name
+        ),
+        F.MaxHorizontal: lambda self, node, frame, name: namespace(self).max_horizontal(
+            node, frame, name
+        ),
+        F.MeanHorizontal: lambda self, node, frame, name: namespace(self).mean_horizontal(
+            node, frame, name
+        ),
+        strings.ConcatHorizontal: lambda self, node, frame, name: namespace(
+            self
+        ).concat_str(node, frame, name),
         F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
         F.FillNull: lambda self, node, frame, name: self.fill_null(node, frame, name),
         boolean.IsBetween: lambda self, node, frame, name: self.is_between(
@@ -704,12 +702,10 @@ class EagerDataFrame(
 ):
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     def select(self, irs: Seq[NamedIR]) -> Self:
-        ns = self.__narwhals_namespace__()
-        return ns._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        ns = self.__narwhals_namespace__()
-        return ns._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
 
 class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
