@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from narwhals.typing import RollingInterpolationMethod
 
 
-class AggExpr(ExprIR):
+class AggExpr(ExprIR, child=("expr",)):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -24,14 +24,6 @@ class AggExpr(ExprIR):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.{_pascal_to_snake_case(type(self).__name__)}()"
-
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
@@ -68,7 +60,6 @@ class NUnique(AggExpr): ...
 
 class Quantile(AggExpr):
     __slots__ = (*AggExpr.__slots__, "interpolation", "quantile")
-
     quantile: float
     interpolation: RollingInterpolationMethod
 

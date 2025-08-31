@@ -202,6 +202,14 @@ def _field_str(name: str, value: Any) -> str:
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
+    _child: ClassVar[Seq[str]] = ()
+    """Nested node names, in iteration order."""
+
+    def __init_subclass__(cls, *args: Any, child: Seq[str] = (), **kwds: Any) -> None:
+        super().__init_subclass__(*args, **kwds)
+        if child:
+            cls._child = child
+
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy
 
@@ -247,6 +255,13 @@ class ExprIR(Immutable):
             >>> list(d._ir.iter_left())
             [col('a'), col('a').alias('b'), col('a').alias('b').min(), col('a').alias('b').min().alias('c'), col('e'), col('f'), col('a').alias('b').min().alias('c').over([col('e'), col('f')])]
         """
+        for name in self._child:
+            child: ExprIR | Seq[ExprIR] = getattr(self, name)
+            if isinstance(child, ExprIR):
+                yield from child.iter_left()
+            else:
+                for node in child:
+                    yield from node.iter_left()
         yield self
 
     def iter_right(self) -> Iterator[ExprIR]:
@@ -276,6 +291,13 @@ class ExprIR(Immutable):
             [col('a').alias('b').min().alias('c').over([col('e'), col('f')]), col('f'), col('e'), col('a').alias('b').min().alias('c'), col('a').alias('b').min(), col('a').alias('b'), col('a')]
         """
         yield self
+        for name in reversed(self._child):
+            child: ExprIR | Seq[ExprIR] = getattr(self, name)
+            if isinstance(child, ExprIR):
+                yield from child.iter_right()
+            else:
+                for node in reversed(child):
+                    yield from node.iter_right()
 
     def iter_root_names(self) -> Iterator[ExprIR]:
         """Override for different iteration behavior in `ExprIR.meta.root_names`.
