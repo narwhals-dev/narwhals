@@ -5,7 +5,7 @@ import re
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast, overload
 
 from narwhals._plan.typing import (
     Accessor,
@@ -25,9 +25,9 @@ from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any, Callable, Literal
+    from typing import Any, Callable
 
-    from typing_extensions import Never, Self, TypeIs, dataclass_transform
+    from typing_extensions import Never, Self, TypeAlias, TypeIs, dataclass_transform
 
     from narwhals._plan import expr
     from narwhals._plan.dummy import Expr, Selector, Series
@@ -42,7 +42,11 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.protocols import (
+        CompliantSeries,
+        NamespaceT_co,
+        SupportsNarwhalsNamespace,
+    )
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
@@ -199,16 +203,123 @@ def _field_str(name: str, value: Any) -> str:
     return f"{name}={value}"
 
 
+def _tp_repr(tp: type[Any], /) -> str:
+    return _pascal_to_snake_case(tp.__name__)
+
+
+# TODO @dangotbanned: Add caching strategy?
+def _function_repr(tp: type[Function], /) -> str:
+    name = _tp_repr(tp)
+    return f"{ns_name}.{name}" if (ns_name := tp._accessor) else name
+
+
+def _pascal_to_snake_case(s: str) -> str:
+    """Convert a PascalCase, camelCase string to snake_case.
+
+    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
+    """
+    # Handle the sequence of uppercase letters followed by a lowercase letter
+    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
+    # Insert an underscore between a lowercase letter and an uppercase letter
+    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
+
+
+_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
+
+
+def _re_repl_snake(match: re.Match[str], /) -> str:
+    return f"{match.group(1)}_{match.group(2)}"
+
+
+DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespace__"]
+Incomplete: TypeAlias = "Any"
+
+
+def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    """Return the compliant namespace."""
+    return obj.__narwhals_namespace__()
+
+
+class _ExprIRConfig(Immutable):
+    __slots__ = ("no_dispatch", "origin", "override_name")
+    origin: DispatchOrigin
+    override_name: str
+    no_dispatch: bool
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+def dispatch_config(
+    *, origin: DispatchOrigin = "expr", override_name: str = "", no_dispatch: bool = False
+) -> _ExprIRConfig:
+    return _ExprIRConfig(
+        origin=origin, override_name=override_name, no_dispatch=no_dispatch
+    )
+
+
+def _dispatch_generate(
+    tp: type[ExprIRT], /
+) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
+    if tp.__expr_ir_config__.no_dispatch:
+
+        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
+            tp_name = type(node).__name__
+            msg = (
+                f"{tp_name!r} should not appear at the compliant-level.\n\n"
+                f"Make sure to expand all expressions first, got:\n{self!r}\n{node!r}\n{name!r}"
+            )
+            raise TypeError(msg)
+
+        return _
+    method_name = tp.__expr_ir_config__.override_name or _tp_repr(tp)
+    origin = tp.__expr_ir_config__.origin
+    if origin == "expr":
+
+        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:
+            return getattr(self, method_name)(node, frame, name)
+
+        return _
+    if origin == "__narwhals_namespace__":
+
+        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:
+            return getattr(namespace(self), method_name)(node, frame, name)
+
+        return _
+    msg = f"`FunctionExpr` can't work this way, the dispatch mostly happens on `.function`, which has the accessor.\n\nGot: {tp.__name__}"
+    raise NotImplementedError(msg)
+
+
 class ExprIR(Immutable):
     """Anything that can be a node on a graph of expressions."""
 
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    def __init_subclass__(cls, *args: Any, child: Seq[str] = (), **kwds: Any) -> None:
+    __expr_ir_config__: ClassVar[_ExprIRConfig] = dispatch_config()
+    __expr_ir_dispatch__: ClassVar[
+        staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
+    ]
+
+    def __init_subclass__(
+        cls: type[Self],  # `mypy` doesn't understand without
+        *args: Any,
+        child: Seq[str] = (),
+        config: _ExprIRConfig | None = None,
+        **kwds: Any,
+    ) -> None:
         super().__init_subclass__(*args, **kwds)
         if child:
             cls._child = child
+        if config:
+            cls.__expr_ir_config__ = config
+        cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
+
+    def dispatch(self, ctx: Incomplete, frame: Incomplete, name: str, /) -> Incomplete:
+        """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
+        # NOTE: `mypy` would require `Self` on `self` but that conflicts w/ pre-commit
+        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy
@@ -498,31 +609,6 @@ class Function(Immutable):
 
     def __repr__(self) -> str:
         return _function_repr(type(self))
-
-
-# TODO @dangotbanned: Add caching strategy?
-def _function_repr(tp: type[Function], /) -> str:
-    name = _pascal_to_snake_case(tp.__name__)
-    return f"{ns_name}.{name}" if (ns_name := tp._accessor) else name
-
-
-def _pascal_to_snake_case(s: str) -> str:
-    """Convert a PascalCase, camelCase string to snake_case.
-
-    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
-    """
-    # Handle the sequence of uppercase letters followed by a lowercase letter
-    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
-    # Insert an underscore between a lowercase letter and an uppercase letter
-    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
-
-
-_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
-_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
-
-
-def _re_repl_snake(match: re.Match[str], /) -> str:
-    return f"{match.group(1)}_{match.group(2)}"
 
 
 _NON_NESTED_LITERAL_TPS = (

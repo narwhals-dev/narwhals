@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Siz
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
-from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
+from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe, namespace
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -70,11 +70,7 @@ LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
 
-def namespace(obj: _SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
-    return obj.__narwhals_namespace__()
-
-
-class _SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
+class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
@@ -159,7 +155,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             node, frame, name
         ),
         expr.Len: lambda self, node, frame, name: namespace(self).len(node, frame, name),
-        expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
+        # expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
         expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
         expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
         expr.Filter: lambda self, node, frame, name: self.filter(node, frame, name),
@@ -246,6 +242,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             result := method(self, node, frame, name)
         ):
             return result  # type: ignore[no-any-return]
+        return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
         msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 

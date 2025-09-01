@@ -8,8 +8,8 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
-from narwhals._plan.common import ExprIR
-from narwhals._plan.protocols import EagerDataFrame, namespace
+from narwhals._plan.common import ExprIR, namespace
+from narwhals._plan.protocols import EagerDataFrame
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
