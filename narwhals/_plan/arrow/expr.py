@@ -53,7 +53,7 @@ if TYPE_CHECKING:
         FunctionExpr,
         OrderedWindowExpr,
         RollingExpr,
-        Ternary,
+        TernaryExpr,
         WindowExpr,
     )
     from narwhals._plan.functions import FillNull, Pow
@@ -157,7 +157,7 @@ class _ArrowDispatch(
         return self._with_native(result, name)
 
     def ternary_expr(
-        self, node: Ternary, frame: ArrowDataFrame, name: str
+        self, node: TernaryExpr, frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         when = self._dispatch(node.predicate, frame, name)
         then = self._dispatch(node.truthy, frame, name)

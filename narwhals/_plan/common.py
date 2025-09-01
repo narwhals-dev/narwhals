@@ -539,7 +539,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
             return ir.options.is_elementwise()
         if is_literal(ir):
             return ir.is_scalar
-        return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.Ternary, expr.Cast))
+        return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.TernaryExpr, expr.Cast))
 
 
 class IRNamespace(Immutable):

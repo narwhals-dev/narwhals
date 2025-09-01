@@ -66,7 +66,7 @@ __all__ = [
     "SelectorIR",
     "Sort",
     "SortBy",
-    "Ternary",
+    "TernaryExpr",
     "WindowExpr",
     "col",
 ]
@@ -563,11 +563,7 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
         return not self.selector.matches_column(name, dtype)
 
 
-class Ternary(
-    ExprIR,
-    child=("truthy", "falsy", "predicate"),
-    config=ExprIRConfig.renamed("ternary_expr"),
-):
+class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
