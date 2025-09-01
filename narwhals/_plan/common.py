@@ -229,6 +229,7 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
 
 
 DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespace__"]
+Incomplete: TypeAlias = "Any"
 
 
 class _ExprIRConfig(Immutable):
@@ -249,7 +250,9 @@ def dispatch_config(
     )
 
 
-def _dispatch_generate(tp: type[ExprIRT], /) -> Callable[[Any, ExprIRT, Any, str], Any]:
+def _dispatch_generate(
+    tp: type[ExprIRT], /
+) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
     if tp.__expr_ir_config__.no_dispatch:
 
         def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
@@ -286,7 +289,9 @@ class ExprIR(Immutable):
     """Nested node names, in iteration order."""
 
     __expr_ir_config__: ClassVar[_ExprIRConfig] = dispatch_config()
-    __expr_ir_dispatch__: ClassVar[staticmethod[[Any, Self, Any, str], Any]]
+    __expr_ir_dispatch__: ClassVar[
+        staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
+    ]
 
     def __init_subclass__(
         cls: type[Self],  # `mypy` doesn't understand without
@@ -302,7 +307,7 @@ class ExprIR(Immutable):
             cls.__expr_ir_config__ = config
         cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
 
-    def dispatch(self, ctx: Any, frame: Any, name: str, /) -> Any:
+    def dispatch(self, ctx: Incomplete, frame: Incomplete, name: str, /) -> Incomplete:
         """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
         # NOTE: `mypy` would require `Self` on `self` but that conflicts w/ pre-commit
         return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)
