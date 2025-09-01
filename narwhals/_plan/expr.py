@@ -117,15 +117,9 @@ class Column(ExprIR):
     def with_name(self, name: str, /) -> Column:
         return common.replace(self, name=name)
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class _ColumnSelection(ExprIR):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class Columns(_ColumnSelection):
@@ -202,9 +196,6 @@ class Literal(ExprIR, t.Generic[LiteralT]):
 
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
@@ -526,9 +517,6 @@ class Len(ExprIR):
     def __repr__(self) -> str:
         return "len()"
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class RootSelector(SelectorIR):
     """A single selector expression."""
@@ -541,9 +529,6 @@ class RootSelector(SelectorIR):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class BinarySelector(
@@ -558,9 +543,6 @@ class BinarySelector(
         right = self.right.matches_column(name, dtype)
         return bool(self.op(left, right))
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
@@ -571,9 +553,6 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class Ternary(ExprIR, child=("truthy", "falsy", "predicate")):
