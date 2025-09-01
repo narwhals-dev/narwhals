@@ -229,8 +229,7 @@ class ExprIR(Immutable):
         [`polars_plan::plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/iterator.rs#L152-L159
         [`polars_plan::plans::visitor::visitors`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/visitor/visitors.rs
         """
-        msg = f"Need to handle recursive visiting first for {type(self).__qualname__!r}!\n\n{self!r}"
-        raise NotImplementedError(msg)
+        return function(self)
 
     def iter_left(self) -> Iterator[ExprIR]:
         """Yield nodes root->leaf.
