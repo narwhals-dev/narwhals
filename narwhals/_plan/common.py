@@ -302,6 +302,11 @@ class ExprIR(Immutable):
             cls.__expr_ir_config__ = config
         cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
 
+    def dispatch(self, ctx: Any, frame: Any, name: str, /) -> Any:
+        """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
+        # NOTE: `mypy` would require `Self` on `self` but that conflicts w/ pre-commit
+        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)
+
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy
 

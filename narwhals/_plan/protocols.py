@@ -246,7 +246,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             result := method(self, node, frame, name)
         ):
             return result  # type: ignore[no-any-return]
-        return node.__expr_ir_dispatch__(self, node, frame, name)  # type: ignore[no-any-return]
+        return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
         msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
