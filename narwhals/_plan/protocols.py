@@ -155,30 +155,6 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             node, frame, name
         ),
         expr.Len: lambda self, node, frame, name: namespace(self).len(node, frame, name),
-        # expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
-        expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
-        expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
-        expr.Filter: lambda self, node, frame, name: self.filter(node, frame, name),
-        agg.First: lambda self, node, frame, name: self.first(node, frame, name),
-        agg.Last: lambda self, node, frame, name: self.last(node, frame, name),
-        agg.ArgMin: lambda self, node, frame, name: self.arg_min(node, frame, name),
-        agg.ArgMax: lambda self, node, frame, name: self.arg_max(node, frame, name),
-        agg.Sum: lambda self, node, frame, name: self.sum(node, frame, name),
-        agg.NUnique: lambda self, node, frame, name: self.n_unique(node, frame, name),
-        agg.Std: lambda self, node, frame, name: self.std(node, frame, name),
-        agg.Var: lambda self, node, frame, name: self.var(node, frame, name),
-        agg.Quantile: lambda self, node, frame, name: self.quantile(node, frame, name),
-        agg.Count: lambda self, node, frame, name: self.count(node, frame, name),
-        agg.Max: lambda self, node, frame, name: self.max(node, frame, name),
-        agg.Mean: lambda self, node, frame, name: self.mean(node, frame, name),
-        agg.Median: lambda self, node, frame, name: self.median(node, frame, name),
-        agg.Min: lambda self, node, frame, name: self.min(node, frame, name),
-        expr.BinaryExpr: lambda self, node, frame, name: self.binary_expr(
-            node, frame, name
-        ),
-        expr.RollingExpr: lambda self, node, frame, name: self.rolling_expr(
-            node, frame, name
-        ),
         expr.AnonymousExpr: lambda self, node, frame, name: self.map_batches(
             node, frame, name
         ),
