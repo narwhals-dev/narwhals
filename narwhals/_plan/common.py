@@ -241,28 +241,38 @@ def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co
     return obj.__narwhals_namespace__()
 
 
-class _ExprIRConfig(Immutable):
-    __slots__ = ("no_dispatch", "origin", "override_name")
+class ExprIRConfig(Immutable):
+    __slots__ = ("allow_dispatch", "origin", "override_name")
     origin: DispatchOrigin
     override_name: str
-    no_dispatch: bool
+    allow_dispatch: bool
 
     def __repr__(self) -> str:
         return self.__str__()
 
+    @staticmethod
+    def default() -> ExprIRConfig:
+        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=True)
 
-def dispatch_config(
-    *, origin: DispatchOrigin = "expr", override_name: str = "", no_dispatch: bool = False
-) -> _ExprIRConfig:
-    return _ExprIRConfig(
-        origin=origin, override_name=override_name, no_dispatch=no_dispatch
-    )
+    @staticmethod
+    def no_dispatch() -> ExprIRConfig:
+        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=False)
+
+    @staticmethod
+    def renamed(name: str, /) -> ExprIRConfig:
+        return ExprIRConfig(origin="expr", override_name=name, allow_dispatch=True)
+
+    @staticmethod
+    def namespaced(override_name: str = "", /) -> ExprIRConfig:
+        origin: DispatchOrigin = "__narwhals_namespace__"
+        name = override_name
+        return ExprIRConfig(origin=origin, override_name=name, allow_dispatch=True)
 
 
 def _dispatch_generate(
     tp: type[ExprIRT], /
 ) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
-    if tp.__expr_ir_config__.no_dispatch:
+    if not tp.__expr_ir_config__.allow_dispatch:
 
         def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
             tp_name = type(node).__name__
@@ -297,7 +307,7 @@ class ExprIR(Immutable):
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    __expr_ir_config__: ClassVar[_ExprIRConfig] = dispatch_config()
+    __expr_ir_config__: ClassVar[ExprIRConfig] = ExprIRConfig.default()
     __expr_ir_dispatch__: ClassVar[
         staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
     ]
@@ -306,7 +316,7 @@ class ExprIR(Immutable):
         cls: type[Self],  # `mypy` doesn't understand without
         *args: Any,
         child: Seq[str] = (),
-        config: _ExprIRConfig | None = None,
+        config: ExprIRConfig | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
@@ -445,7 +455,7 @@ class ExprIR(Immutable):
         return self.__repr__()
 
 
-class SelectorIR(ExprIR, config=dispatch_config(no_dispatch=True)):
+class SelectorIR(ExprIR, config=ExprIRConfig.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan import dummy
 
