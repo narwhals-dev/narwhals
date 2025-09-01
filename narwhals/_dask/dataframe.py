@@ -22,7 +22,7 @@ from narwhals._utils import (
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -261,6 +261,22 @@ class DaskLazyFrame(
         position = "last" if nulls_last else "first"
         return self._with_native(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
+        )
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        df = self.native
+        schema = self.schema
+        by = list(by)
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
+            if reverse:
+                return self._with_native(df.nsmallest(k, by))
+            return self._with_native(df.nlargest(k, by))
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(by)
+        return self._with_native(
+            df.sort_values(by, ascending=list(reverse)).head(
+                n=k, compute=False, npartitions=-1
+            )
         )
 
     def _join_inner(

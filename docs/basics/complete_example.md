@@ -151,7 +151,7 @@ Here is our dataframe-agnostic standard scaler:
     ```
 
 Next, let's try running it. Notice how, as `transform` doesn't use
-any eager-only features, so we can pass a Polars LazyFrame to it and have it
+any eager-only features, we can pass a Polars LazyFrame to it and have it
 stay lazy!
 
 === "pandas"

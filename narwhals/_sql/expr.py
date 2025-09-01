@@ -29,7 +29,13 @@ if TYPE_CHECKING:
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
-    from narwhals.typing import NumericLiteral, PythonLiteral, RankMethod, TemporalLiteral
+    from narwhals.typing import (
+        ModeKeepStrategy,
+        NumericLiteral,
+        PythonLiteral,
+        RankMethod,
+        TemporalLiteral,
+    )
 
 
 class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
@@ -326,6 +332,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             implementation=context._implementation,
         )
 
+    def _is_multi_output_unnamed(self) -> bool:
+        """Return `True` for multi-output aggregations without names.
+
+        For example, column `'a'` only appears in the output as a grouping key:
+
+            df.group_by('a').agg(nw.all().sum())
+
+        It does not get included in:
+
+            nw.all().sum().
+        """
+        assert self._metadata is not None  # noqa: S101
+        return self._metadata.expansion_kind.is_multi_unnamed()
+
     # Binary
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]
         return self._with_binary(lambda expr, other: expr.__eq__(other), other)
@@ -436,6 +456,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def median(self) -> Self:
         return self._with_callable(lambda expr: self._function("median", expr))
+
+    def fill_nan(self, value: float | None) -> Self:
+        def _fill_nan(expr: NativeExprT) -> NativeExprT:
+            return self._when(self._function("isnan", expr), self._lit(value), expr)
+
+        return self._with_elementwise(_fill_nan)
 
     def min(self) -> Self:
         return self._with_callable(lambda expr: self._function("min", expr))
@@ -740,6 +766,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             implementation=self._implementation,
         )
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        if keep != "any":
+            msg = (
+                f"`Expr.mode(keep='{keep}')` is not implemented for backend {self._implementation}\n\n"
+                "Hint: Use `nw.col(...).mode(keep='any')` instead."
+            )
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: self._function("mode", expr))
+
     # Namespaces
     @property
     def str(self) -> SQLExprStringNamespace[Self]: ...
@@ -758,7 +794,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()
     sort: not_implemented = not_implemented()
     tail: not_implemented = not_implemented()

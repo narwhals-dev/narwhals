@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from narwhals._compliant.dataframe import (
     CompliantDataFrame,
+    CompliantFrame,
     CompliantLazyFrame,
     EagerDataFrame,
 )
@@ -49,7 +50,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     EvalNames,
     EvalSeries,
-    IntoCompliantExpr,
     NativeFrameT_co,
     NativeSeriesT_co,
 )
@@ -60,6 +60,7 @@ __all__ = [
     "CompliantDataFrame",
     "CompliantExpr",
     "CompliantExprT",
+    "CompliantFrame",
     "CompliantFrameT",
     "CompliantGroupBy",
     "CompliantLazyFrame",
@@ -92,7 +93,6 @@ __all__ = [
     "EagerWhen",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "LazyExpr",
     "LazyExprNamespace",
     "LazyNamespace",

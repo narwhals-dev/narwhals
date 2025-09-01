@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import (
         CompliantDataFrame,
+        CompliantFrame,
         CompliantLazyFrame,
         EagerDataFrame,
     )
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
         CompliantExpr,
         DepthTrackingExpr,
         EagerExpr,
+        ImplExpr,
         LazyExpr,
         NativeExpr,
     )
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoLazyFrame,
+        ModeKeepStrategy,
         NativeDataFrame,
         NativeFrame,
         NativeSeries,
@@ -43,6 +46,7 @@ if TYPE_CHECKING:
         half_life: float | None
         ignore_nulls: bool
         interpolation: RollingInterpolationMethod
+        keep: ModeKeepStrategy
         limit: int | None
         method: RankMethod
         min_samples: int
@@ -63,7 +67,6 @@ __all__ = [
     "CompliantSeriesT",
     "EvalNames",
     "EvalSeries",
-    "IntoCompliantExpr",
     "NarwhalsAggregation",
     "NativeFrameT_co",
     "NativeSeriesT_co",
@@ -73,8 +76,10 @@ CompliantSeriesAny: TypeAlias = "CompliantSeries[Any]"
 CompliantSeriesOrNativeExprAny: TypeAlias = "CompliantSeriesAny | NativeExpr"
 CompliantDataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any, Any]"
 CompliantLazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any, Any]"
-CompliantFrameAny: TypeAlias = "CompliantDataFrameAny | CompliantLazyFrameAny"
+CompliantFrameAny: TypeAlias = "CompliantFrame[Any, Any, Any]"
 CompliantNamespaceAny: TypeAlias = "CompliantNamespace[Any, Any]"
+
+ImplExprAny: TypeAlias = "ImplExpr[Any, Any]"
 
 DepthTrackingExprAny: TypeAlias = "DepthTrackingExpr[Any, Any]"
 
@@ -134,7 +139,7 @@ CompliantNamespaceT_co = TypeVar(
     "CompliantNamespaceT_co", bound=CompliantNamespaceAny, covariant=True
 )
 
-IntoCompliantExpr: TypeAlias = "CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | CompliantSeriesOrNativeExprT_co"
+ImplExprT_contra = TypeVar("ImplExprT_contra", bound=ImplExprAny, contravariant=True)
 
 DepthTrackingExprT = TypeVar("DepthTrackingExprT", bound=DepthTrackingExprAny)
 DepthTrackingExprT_contra = TypeVar(
@@ -180,6 +185,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "median",
     "max",
     "min",
+    "mode",
     "std",
     "var",
     "len",

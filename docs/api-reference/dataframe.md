@@ -43,6 +43,7 @@
         - shape
         - sort
         - tail
+        - top_k
         - to_arrow
         - to_dict
         - to_native

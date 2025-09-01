@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
@@ -7,11 +8,14 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Mapping, Sequence, Sized
+    from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
 
     import numpy as np
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
@@ -342,6 +346,12 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 - *"none"*: Don't keep duplicate rows.
 """
 
+ModeKeepStrategy: TypeAlias = Literal["any", "all"]
+"""Which of the mode's to keep.
+
+- *"any"*: Does not give any guarantee of which mode is kept.
+- *"all"*: Keeps all the mode's.
+"""
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
@@ -352,6 +362,8 @@ _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
 
 NumericLiteral: TypeAlias = "int | float | Decimal"
@@ -422,6 +434,10 @@ Examples:
     |c: [[2.1,2,null]]       |
     └────────────────────────┘
 """
+
+IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
+IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
+IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
 
 # Annotations for `__getitem__` methods
