@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import common
+from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ExprIR, ExprIRConfig
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ class RenameAlias(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
         return common.replace(self, expr=expr)
 
 
-class Prefix(common.Immutable):
+class Prefix(Immutable):
     __slots__ = ("prefix",)
     prefix: str
 
@@ -58,7 +59,7 @@ class Prefix(common.Immutable):
         return f"{self.prefix}{name}"
 
 
-class Suffix(common.Immutable):
+class Suffix(Immutable):
     __slots__ = ("suffix",)
     suffix: str
 

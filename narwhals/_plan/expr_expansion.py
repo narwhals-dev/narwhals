@@ -44,13 +44,8 @@ from itertools import chain
 from typing import TYPE_CHECKING
 
 from narwhals._plan import common
-from narwhals._plan.common import (
-    ExprIR,
-    Immutable,
-    NamedIR,
-    SelectorIR,
-    is_horizontal_reduction,
-)
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import ExprIR, NamedIR, SelectorIR, is_horizontal_reduction
 from narwhals._plan.exceptions import (
     column_index_error,
     column_not_found_error,

@@ -4,7 +4,7 @@ import enum
 from itertools import repeat
 from typing import TYPE_CHECKING, Literal
 
-from narwhals._plan.common import Immutable
+from narwhals._plan._immutable import Immutable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence

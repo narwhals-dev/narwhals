@@ -7,7 +7,8 @@ from itertools import chain, repeat
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-from narwhals._plan.common import _IMMUTABLE_HASH_NAME, Immutable, NamedIR
+from narwhals._plan._immutable import _IMMUTABLE_HASH_NAME, Immutable
+from narwhals._plan.common import NamedIR
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:

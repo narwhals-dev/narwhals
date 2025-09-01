@@ -9,7 +9,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable, flatten_hash_safe
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
