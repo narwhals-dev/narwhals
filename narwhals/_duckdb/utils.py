@@ -295,6 +295,10 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
     return f"partition by {by_sql}"
 
 
+def join_column_names(*names: str) -> str:
+    return ", ".join(str(col(name)) for name in names)
+
+
 def generate_order_by_sql(
     *order_by: str | Expression, descending: Sequence[bool], nulls_last: Sequence[bool]
 ) -> str:
