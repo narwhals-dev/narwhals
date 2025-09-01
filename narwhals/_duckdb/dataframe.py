@@ -500,7 +500,7 @@ class DuckDBLazyFrame(
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = join_column_names(on_)
+        unpivot_on = join_column_names(*on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
