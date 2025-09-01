@@ -508,8 +508,8 @@ class DuckDBLazyFrame(
             unpivot rel
             on {unpivot_on}
             into
-                name "{variable_name}"
-                value "{value_name}"
+                name {col(variable_name)}
+                value {col(value_name)}
             """
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
