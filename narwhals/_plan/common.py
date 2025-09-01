@@ -42,7 +42,11 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.options import FunctionOptions
-    from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.protocols import (
+        CompliantSeries,
+        NamespaceT_co,
+        SupportsNarwhalsNamespace,
+    )
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 else:
@@ -232,6 +236,11 @@ DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespa
 Incomplete: TypeAlias = "Any"
 
 
+def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    """Return the compliant namespace."""
+    return obj.__narwhals_namespace__()
+
+
 class _ExprIRConfig(Immutable):
     __slots__ = ("no_dispatch", "origin", "override_name")
     origin: DispatchOrigin
@@ -275,7 +284,7 @@ def _dispatch_generate(
     if origin == "__narwhals_namespace__":
 
         def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:
-            return getattr(self.__narwhals_namespace__(), method_name)(node, frame, name)
+            return getattr(namespace(self), method_name)(node, frame, name)
 
         return _
     msg = f"`FunctionExpr` can't work this way, the dispatch mostly happens on `.function`, which has the accessor.\n\nGot: {tp.__name__}"

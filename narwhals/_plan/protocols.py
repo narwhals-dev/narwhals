@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Siz
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
-from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
+from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe, namespace
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -70,11 +70,7 @@ LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
 
-def namespace(obj: _SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
-    return obj.__narwhals_namespace__()
-
-
-class _SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
+class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
