@@ -159,7 +159,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             node, frame, name
         ),
         expr.Len: lambda self, node, frame, name: namespace(self).len(node, frame, name),
-        expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
+        # expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
         expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
         expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
         expr.Filter: lambda self, node, frame, name: self.filter(node, frame, name),
@@ -246,6 +246,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
             result := method(self, node, frame, name)
         ):
             return result  # type: ignore[no-any-return]
+        return node.__expr_ir_dispatch__(self, node, frame, name)  # type: ignore[no-any-return]
         msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
