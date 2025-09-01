@@ -445,7 +445,7 @@ class ExprIR(Immutable):
         return self.__repr__()
 
 
-class SelectorIR(ExprIR):
+class SelectorIR(ExprIR, config=dispatch_config(no_dispatch=True)):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan import dummy
 

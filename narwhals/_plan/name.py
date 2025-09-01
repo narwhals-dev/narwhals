@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR, child=("expr",)):
+class KeepName(ExprIR, child=("expr",), config=common.dispatch_config(no_dispatch=True)):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -31,7 +31,9 @@ class KeepName(ExprIR, child=("expr",)):
         return common.replace(self, expr=expr)
 
 
-class RenameAlias(ExprIR, child=("expr",)):
+class RenameAlias(
+    ExprIR, child=("expr",), config=common.dispatch_config(no_dispatch=True)
+):
     __slots__ = ("expr", "function")
     expr: ExprIR
     function: AliasName

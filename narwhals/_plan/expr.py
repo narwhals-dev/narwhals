@@ -88,7 +88,7 @@ def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
 
-class Alias(ExprIR, child=("expr",)):
+class Alias(ExprIR, child=("expr",), config=common.dispatch_config(no_dispatch=True)):
     __slots__ = ("expr", "name")
     expr: ExprIR
     name: str
@@ -107,7 +107,10 @@ class Alias(ExprIR, child=("expr",)):
         return common.replace(self, expr=expr)
 
 
-class Column(ExprIR):
+class Column(
+    ExprIR,
+    config=common.dispatch_config(origin="__narwhals_namespace__", override_name="col"),
+):
     __slots__ = ("name",)
     name: str
 
@@ -118,7 +121,7 @@ class Column(ExprIR):
         return common.replace(self, name=name)
 
 
-class _ColumnSelection(ExprIR):
+class _ColumnSelection(ExprIR, config=common.dispatch_config(no_dispatch=True)):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
 
 
@@ -173,7 +176,11 @@ class Exclude(_ColumnSelection, child=("expr",)):
         return common.replace(self, expr=expr)
 
 
-class Literal(ExprIR, t.Generic[LiteralT]):
+class Literal(
+    ExprIR,
+    t.Generic[LiteralT],
+    config=common.dispatch_config(origin="__narwhals_namespace__", override_name="lit"),
+):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -380,7 +387,9 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
 class RollingExpr(FunctionExpr[RollingT]): ...
 
 
-class AnonymousExpr(FunctionExpr["MapBatches"]):
+class AnonymousExpr(
+    FunctionExpr["MapBatches"], config=common.dispatch_config(override_name="map_batches")
+):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
 
@@ -434,7 +443,11 @@ class Filter(ExprIR, child=("expr", "by")):
         return function(changed)
 
 
-class WindowExpr(ExprIR, child=("expr", "partition_by")):
+class WindowExpr(
+    ExprIR,
+    child=("expr", "partition_by"),
+    config=common.dispatch_config(override_name="over"),
+):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -468,7 +481,11 @@ class WindowExpr(ExprIR, child=("expr", "partition_by")):
         return common.replace(self, partition_by=collect(partition_by))
 
 
-class OrderedWindowExpr(WindowExpr, child=("expr", "partition_by", "order_by")):
+class OrderedWindowExpr(
+    WindowExpr,
+    child=("expr", "partition_by", "order_by"),
+    config=common.dispatch_config(override_name="over_ordered"),
+):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
     expr: ExprIR
     partition_by: Seq[ExprIR]
@@ -505,7 +522,7 @@ class OrderedWindowExpr(WindowExpr, child=("expr", "partition_by", "order_by")):
         return common.replace(self, order_by=collect(order_by))
 
 
-class Len(ExprIR):
+class Len(ExprIR, config=common.dispatch_config(origin="__narwhals_namespace__")):
     @property
     def is_scalar(self) -> bool:
         return True
@@ -555,7 +572,11 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
         return not self.selector.matches_column(name, dtype)
 
 
-class Ternary(ExprIR, child=("truthy", "falsy", "predicate")):
+class Ternary(
+    ExprIR,
+    child=("truthy", "falsy", "predicate"),
+    config=common.dispatch_config(override_name="ternary_expr"),
+):
     """When-Then-Otherwise."""
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023

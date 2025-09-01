@@ -148,29 +148,12 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
-        expr.Column: lambda self, node, frame, name: namespace(self).col(
-            node, frame, name
-        ),
-        expr.Literal: lambda self, node, frame, name: namespace(self).lit(
-            node, frame, name
-        ),
-        expr.Len: lambda self, node, frame, name: namespace(self).len(node, frame, name),
-        expr.AnonymousExpr: lambda self, node, frame, name: self.map_batches(
-            node, frame, name
-        ),
         expr.FunctionExpr: lambda self, node, frame, name: self._dispatch_function(
             node, frame, name
         ),
         # NOTE: Keeping it simple for now
         # When adding other `*_range` functions, this should instead map to `range_expr`
         expr.RangeExpr: lambda self, node, frame, name: namespace(self).int_range(
-            node, frame, name
-        ),
-        expr.OrderedWindowExpr: lambda self, node, frame, name: self.over_ordered(
-            node, frame, name
-        ),
-        expr.WindowExpr: lambda self, node, frame, name: self.over(node, frame, name),
-        expr.Ternary: lambda self, node, frame, name: self.ternary_expr(
             node, frame, name
         ),
     }
