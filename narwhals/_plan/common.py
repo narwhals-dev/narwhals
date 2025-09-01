@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast, overload
 
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.options import FunctionOptions
 from narwhals._plan.typing import (
     Accessor,
     DTypeT,
@@ -42,7 +43,6 @@ if TYPE_CHECKING:
         WindowExpr,
     )
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.options import FunctionOptions
     from narwhals._plan.protocols import (
         CompliantSeries,
         NamespaceT_co,
@@ -434,12 +434,6 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
         return self._expr._with_unary(function)
 
 
-def _function_options_default() -> FunctionOptions:
-    from narwhals._plan.options import FunctionOptions
-
-    return FunctionOptions.default()
-
-
 class Function(Immutable):
     """Shared by expr functions and namespace functions.
 
@@ -452,7 +446,7 @@ class Function(Immutable):
     """Namespace accessor name, if any."""
 
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
-        _function_options_default
+        FunctionOptions.default
     )
 
     @property
