@@ -8,9 +8,10 @@ import typing as t
 
 from narwhals._plan import common
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
-from narwhals._plan.common import ExprIR, ExprIRConfig, SelectorIR, collect
+from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
+from narwhals._plan.options import ExprIRConfig
 from narwhals._plan.typing import (
     FunctionT,
     LeftSelectorT,
@@ -376,6 +377,11 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
             raise function_expr_invalid_operation_error(function, parent)
         super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
+    def dispatch(self, ctx: t.Any, frame: t.Any, name: str) -> t.Any:
+        return self.function.__function_expr_dispatch__(
+            ctx, t.cast("Self", self), frame, name
+        )
+
 
 class RollingExpr(FunctionExpr[RollingT]): ...
 
@@ -384,6 +390,9 @@ class AnonymousExpr(
     FunctionExpr["MapBatches"], config=ExprIRConfig.renamed("map_batches")
 ):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
+
+    def dispatch(self, ctx: t.Any, frame: t.Any, name: str) -> t.Any:
+        return self.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)
 
 
 class RangeExpr(FunctionExpr[RangeT]):

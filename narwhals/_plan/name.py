@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan import common
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import ExprIR, ExprIRConfig
+from narwhals._plan.common import ExprIR
+from narwhals._plan.options import ExprIRConfig
 
 if TYPE_CHECKING:
     from typing_extensions import Self

@@ -5,10 +5,10 @@ import re
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import ExprIRConfig, FunctionExprConfig, FunctionOptions
 from narwhals._plan.typing import (
     Accessor,
     DTypeT,
@@ -96,41 +96,12 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
     return f"{match.group(1)}_{match.group(2)}"
 
 
-DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespace__"]
 Incomplete: TypeAlias = "Any"
 
 
 def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
     """Return the compliant namespace."""
     return obj.__narwhals_namespace__()
-
-
-class ExprIRConfig(Immutable):
-    __slots__ = ("allow_dispatch", "origin", "override_name")
-    origin: DispatchOrigin
-    override_name: str
-    allow_dispatch: bool
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    @staticmethod
-    def default() -> ExprIRConfig:
-        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=True)
-
-    @staticmethod
-    def no_dispatch() -> ExprIRConfig:
-        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=False)
-
-    @staticmethod
-    def renamed(name: str, /) -> ExprIRConfig:
-        return ExprIRConfig(origin="expr", override_name=name, allow_dispatch=True)
-
-    @staticmethod
-    def namespaced(override_name: str = "", /) -> ExprIRConfig:
-        origin: DispatchOrigin = "__narwhals_namespace__"
-        name = override_name
-        return ExprIRConfig(origin=origin, override_name=name, allow_dispatch=True)
 
 
 def _dispatch_generate(
@@ -442,12 +413,18 @@ class Function(Immutable):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
     """
 
+    # TODO @dangotbanned: Move into `__function_expr_config__`
     _accessor: ClassVar[Accessor | None] = None
     """Namespace accessor name, if any."""
 
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
+    __function_expr_config__: ClassVar[FunctionExprConfig] = FunctionExprConfig.default()
+    __function_expr_dispatch__: ClassVar[
+        staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
+    ]
+    """TODO @dangotbanned: Actually add the runtime support!"""
 
     @property
     def function_options(self) -> FunctionOptions:

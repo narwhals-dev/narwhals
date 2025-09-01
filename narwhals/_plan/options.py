@@ -10,9 +10,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import pyarrow.compute as pc
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import Accessor, Seq
     from narwhals.typing import RankMethod
+
+DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespace__"]
 
 
 class FunctionFlags(enum.Flag):
@@ -263,3 +266,52 @@ def rolling_options(
         center=center,
         fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
     )
+
+
+class _BaseConfig(Immutable):
+    __slots__ = ("origin", "override_name")
+    origin: DispatchOrigin
+    override_name: str
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="")
+
+    @classmethod
+    def renamed(cls, name: str, /) -> Self:
+        from narwhals._plan.common import replace
+
+        return replace(cls.default(), override_name=name)
+
+    @classmethod
+    def namespaced(cls, override_name: str = "", /) -> Self:
+        from narwhals._plan.common import replace
+
+        return replace(
+            cls.default(), origin="__narwhals_namespace__", override_name=override_name
+        )
+
+
+class ExprIRConfig(_BaseConfig):
+    __slots__ = (*_BaseConfig.__slots__, "allow_dispatch")
+    allow_dispatch: bool
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="", allow_dispatch=True)
+
+    @staticmethod
+    def no_dispatch() -> ExprIRConfig:
+        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=False)
+
+
+class FunctionExprConfig(_BaseConfig):
+    __slots__ = (*_BaseConfig.__slots__, "accessor")
+    accessor: Accessor | None
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="", accessor=None)
