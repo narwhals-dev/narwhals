@@ -103,7 +103,7 @@ def _dispatch_generate(
 ) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
     if not tp.__expr_ir_config__.allow_dispatch:
 
-        def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
+        def _(ctx: Any, /, node: ExprIRT, _: Any, name: str) -> Any:
             msg = (
                 f"{tp.__name__!r} should not appear at the compliant-level.\n\n"
                 f"Make sure to expand all expressions first, got:\n{ctx!r}\n{node!r}\n{name!r}"
@@ -142,7 +142,7 @@ class ExprIR(Immutable):
     ]
 
     def __init_subclass__(
-        cls: type[Self],  # `mypy` doesn't understand without
+        cls: type[Self],
         *args: Any,
         child: Seq[str] = (),
         config: ExprIRConfig | None = None,
@@ -159,7 +159,6 @@ class ExprIR(Immutable):
         self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
     ) -> R_co:
         """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
-        # NOTE: `mypy` would require `Self` on `self` but that conflicts w/ pre-commit
         return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
@@ -403,8 +402,6 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
 
 class Function(Immutable):
     """Shared by expr functions and namespace functions.
-
-    Only valid in `FunctionExpr.function`
 
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
     """
