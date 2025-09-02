@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan.common import Immutable, is_expr
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import is_expr
 from narwhals._plan.dummy import Expr
 from narwhals._plan.expr_parsing import (
     parse_into_expr_ir,
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import Ternary
+    from narwhals._plan.expr import TernaryExpr
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
 
 
@@ -116,7 +117,7 @@ class ChainedThen(Immutable, Expr):
         return super().__eq__(value)
 
 
-def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> Ternary:
-    from narwhals._plan.expr import Ternary
+def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
+    from narwhals._plan.expr import TernaryExpr
 
-    return Ternary(predicate=predicate, truthy=truthy, falsy=falsy)
+    return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

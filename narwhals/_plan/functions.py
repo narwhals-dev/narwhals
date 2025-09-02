@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Function
+from narwhals._plan.common import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class Abs(Function, options=FunctionOptions.elementwise): ...
 
 
-class Hist(Function, options=FunctionOptions.groupwise):
+class Hist(Function):
     """Only supported for `Series` so far."""
 
     __slots__ = ("include_breakpoint",)
@@ -105,13 +105,13 @@ class Shift(Function, options=FunctionOptions.length_preserving):
 class DropNulls(Function, options=FunctionOptions.row_separable): ...
 
 
-class Mode(Function, options=FunctionOptions.groupwise): ...
+class Mode(Function): ...
 
 
 class Skew(Function, options=FunctionOptions.aggregation): ...
 
 
-class Rank(Function, options=FunctionOptions.groupwise):
+class Rank(Function):
     __slots__ = ("options",)
     options: RankOptions
 
@@ -165,7 +165,7 @@ class RollingStd(RollingWindow): ...
 class Diff(Function, options=FunctionOptions.length_preserving): ...
 
 
-class Unique(Function, options=FunctionOptions.groupwise): ...
+class Unique(Function): ...
 
 
 class Round(Function, options=FunctionOptions.elementwise):
@@ -173,16 +173,16 @@ class Round(Function, options=FunctionOptions.elementwise):
     decimals: int
 
 
-class SumHorizontal(Function, options=FunctionOptions.horizontal): ...
+class SumHorizontal(HorizontalFunction): ...
 
 
-class MinHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MinHorizontal(HorizontalFunction): ...
 
 
-class MaxHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MaxHorizontal(HorizontalFunction): ...
 
 
-class MeanHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MeanHorizontal(HorizontalFunction): ...
 
 
 class EwmMean(Function, options=FunctionOptions.length_preserving):
@@ -197,7 +197,7 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     return_dtype: DType | None
 
 
-class GatherEvery(Function, options=FunctionOptions.groupwise):
+class GatherEvery(Function):
     __slots__ = ("n", "offset")
     n: int
     offset: int

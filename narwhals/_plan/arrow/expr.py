@@ -11,7 +11,7 @@ from narwhals._plan.arrow.functions import lit
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.arrow.typing import NativeScalar, StoresNativeT_co
 from narwhals._plan.common import ExprIR, NamedIR, into_dtype
-from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
+from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch, namespace
 from narwhals._utils import (
     Implementation,
     Version,
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
         FunctionExpr,
         OrderedWindowExpr,
         RollingExpr,
-        Ternary,
+        TernaryExpr,
         WindowExpr,
     )
     from narwhals._plan.functions import FillNull, Pow
@@ -76,32 +76,32 @@ class _ArrowDispatch(
     def _with_native(self, native: Any, name: str, /) -> StoresNativeT_co: ...
     def cast(self, node: expr.Cast, frame: ArrowDataFrame, name: str) -> StoresNativeT_co:
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
-        native = self._dispatch(node.expr, frame, name).native
+        native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(
         self, node: FunctionExpr[Pow], frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         base, exponent = node.function.unwrap_input(node)
-        base_ = self._dispatch(base, frame, "base").native
-        exponent_ = self._dispatch(exponent, frame, "exponent").native
+        base_ = base.dispatch(self, frame, "base").native
+        exponent_ = exponent.dispatch(self, frame, "exponent").native
         return self._with_native(pc.power(base_, exponent_), name)
 
     def fill_null(
         self, node: FunctionExpr[FillNull], frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         expr, value = node.function.unwrap_input(node)
-        native = self._dispatch(expr, frame, name).native
-        value_ = self._dispatch(value, frame, "value").native
+        native = expr.dispatch(self, frame, name).native
+        value_ = value.dispatch(self, frame, "value").native
         return self._with_native(pc.fill_null(native, value_), name)
 
     def is_between(
         self, node: FunctionExpr[IsBetween], frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         expr, lower_bound, upper_bound = node.function.unwrap_input(node)
-        native = self._dispatch(expr, frame, name).native
-        lower = self._dispatch(lower_bound, frame, "lower").native
-        upper = self._dispatch(upper_bound, frame, "upper").native
+        native = expr.dispatch(self, frame, name).native
+        lower = lower_bound.dispatch(self, frame, "lower").native
+        upper = upper_bound.dispatch(self, frame, "upper").native
         result = fn.is_between(native, lower, upper, node.function.closed)
         return self._with_native(result, name)
 
@@ -111,7 +111,7 @@ class _ArrowDispatch(
         def func(
             node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
         ) -> StoresNativeT_co:
-            native = self._dispatch(node.input[0], frame, name).native
+            native = node.input[0].dispatch(self, frame, name).native
             return self._with_native(fn_native(native), name)
 
         return func
@@ -150,18 +150,18 @@ class _ArrowDispatch(
         self, node: BinaryExpr, frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         lhs, rhs = (
-            self._dispatch(node.left, frame, name),
-            self._dispatch(node.right, frame, name),
+            node.left.dispatch(self, frame, name),
+            node.right.dispatch(self, frame, name),
         )
         result = fn.binary(lhs.native, node.op.__class__, rhs.native)
         return self._with_native(result, name)
 
     def ternary_expr(
-        self, node: Ternary, frame: ArrowDataFrame, name: str
+        self, node: TernaryExpr, frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
-        when = self._dispatch(node.predicate, frame, name)
-        then = self._dispatch(node.truthy, frame, name)
-        otherwise = self._dispatch(node.falsy, frame, name)
+        when = node.predicate.dispatch(self, frame, name)
+        then = node.truthy.dispatch(self, frame, name)
+        otherwise = node.falsy.dispatch(self, frame, name)
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
@@ -216,7 +216,7 @@ class ArrowExpr(  # type: ignore[misc]
         Mainly for the benefit of a type checker, but the equivalent `ArrowScalar._dispatch_expr` will raise if
         the assumption fails.
         """
-        return self._dispatch(node, frame, name).to_series()
+        return node.dispatch(self, frame, name).to_series()
 
     @property
     def native(self) -> ChunkedArrayAny:
@@ -245,8 +245,7 @@ class ArrowExpr(  # type: ignore[misc]
             self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
             for idx, e in enumerate(node.by)
         )
-        ns = self.__narwhals_namespace__()
-        df = ns._concat_horizontal((series, *by))
+        df = namespace(self)._concat_horizontal((series, *by))
         names = df.columns[1:]
         indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
         result: ChunkedArrayAny = df.native.column(0).take(indices)
@@ -351,7 +350,7 @@ class ArrowExpr(  # type: ignore[misc]
         options = node.sort_options.to_multiple(len(node.order_by))
         idx_name = generate_temporary_column_name(8, frame.columns)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
-        evaluated = self._dispatch(node.expr, sorted_context.drop([idx_name]), name)
+        evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
             # NOTE: We're already sorted, defer broadcasting to the outer context
             # Wouldn't be suitable for partitions, but will be fine here
@@ -479,7 +478,7 @@ class ArrowScalar(
         return self._with_native(pa.scalar(None, pa.null()), name)
 
     def count(self, node: Count, frame: ArrowDataFrame, name: str) -> ArrowScalar:
-        native = self._dispatch(node.expr, frame, name).native
+        native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
     filter = not_implemented()

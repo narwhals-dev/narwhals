@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import common
-from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import ExprIR
+from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR, child=("expr",)):
+class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -31,7 +33,7 @@ class KeepName(ExprIR, child=("expr",)):
         return common.replace(self, expr=expr)
 
 
-class RenameAlias(ExprIR, child=("expr",)):
+class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
     expr: ExprIR
     function: AliasName
@@ -66,7 +68,7 @@ class Suffix(Immutable):
         return f"{name}{self.suffix}"
 
 
-class IRNameNamespace(IRNamespace):
+class IRNameNamespace(common.IRNamespace):
     def keep(self) -> KeepName:
         return KeepName(expr=self._ir)
 
@@ -86,7 +88,7 @@ class IRNameNamespace(IRNamespace):
         return self.map(str.upper)
 
 
-class ExprNameNamespace(ExprNamespace[IRNameNamespace]):
+class ExprNameNamespace(common.ExprNamespace[IRNameNamespace]):
     @property
     def _ir_namespace(self) -> type[IRNameNamespace]:
         return IRNameNamespace

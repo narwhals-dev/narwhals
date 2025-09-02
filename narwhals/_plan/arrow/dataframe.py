@@ -9,7 +9,7 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.common import ExprIR
-from narwhals._plan.protocols import EagerDataFrame
+from narwhals._plan.protocols import EagerDataFrame, namespace
 from narwhals._utils import Version
 
 if t.TYPE_CHECKING:
@@ -89,7 +89,7 @@ class ArrowDataFrame(EagerDataFrame[ArrowSeries, "pa.Table", "ChunkedArrayAny"])
         return {ser.name: ser.to_list() for ser in it}
 
     def _evaluate_irs(self, nodes: Iterable[NamedIR[ExprIR]], /) -> Iterator[ArrowSeries]:
-        ns = self.__narwhals_namespace__()
+        ns = namespace(self)
         from_named_ir = ns._expr.from_named_ir
         yield from ns._expr.align(from_named_ir(e, self) for e in nodes)
 

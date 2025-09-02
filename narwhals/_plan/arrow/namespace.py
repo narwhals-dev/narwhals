@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Series
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatHorizontal
+    from narwhals._plan.strings import ConcatStr
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 
@@ -162,7 +162,7 @@ class ArrowNamespace(
         return self._expr.from_native(result, name, self.version)
 
     def concat_str(
-        self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
+        self, node: FunctionExpr[ConcatStr], frame: ArrowDataFrame, name: str
     ) -> ArrowExpr | ArrowScalar:
         exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))
