@@ -13,7 +13,7 @@ from narwhals._plan.common import (
 from narwhals._plan.expr import All, Len
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange
-from narwhals._plan.strings import ConcatHorizontal
+from narwhals._plan.strings import ConcatStr
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
 
@@ -121,7 +121,7 @@ def concat_str(
 ) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return (
-        ConcatHorizontal(separator=separator, ignore_nulls=ignore_nulls)
+        ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
         .to_function_expr(*it)
         .to_narwhals()
     )

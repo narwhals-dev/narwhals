@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
+from narwhals._plan import aggregation as agg, boolean, expr, functions as F
 from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe, namespace
+from narwhals._plan.strings import ConcatStr
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -173,9 +174,9 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
         F.MeanHorizontal: lambda self, node, frame, name: namespace(self).mean_horizontal(
             node, frame, name
         ),
-        strings.ConcatHorizontal: lambda self, node, frame, name: namespace(
-            self
-        ).concat_str(node, frame, name),
+        ConcatStr: lambda self, node, frame, name: namespace(self).concat_str(
+            node, frame, name
+        ),
         F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
         F.FillNull: lambda self, node, frame, name: self.fill_null(node, frame, name),
         boolean.IsBetween: lambda self, node, frame, name: self.is_between(
@@ -520,7 +521,7 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
         self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def concat_str(
-        self, node: FunctionExpr[strings.ConcatHorizontal], frame: FrameT, name: str
+        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def int_range(
         self, node: RangeExpr[IntRange], frame: FrameT, name: str

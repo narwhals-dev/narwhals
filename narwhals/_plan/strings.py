@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FConfig, FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
 
 
-class ConcatHorizontal(StringFunction, options=FunctionOptions.horizontal):
-    """`nw.functions.concat_str`."""
-
+class ConcatStr(
+    StringFunction, options=FunctionOptions.horizontal, config=FConfig.namespaced()
+):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
