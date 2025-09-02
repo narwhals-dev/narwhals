@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from narwhals._duration import Interval
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
@@ -60,7 +60,7 @@ class Timestamp(TemporalFunction):
     time_unit: PolarsTimeUnit
 
     @staticmethod
-    def from_time_unit(time_unit: TimeUnit, /) -> Timestamp:
+    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
         if not _is_polars_time_unit(time_unit):
             msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
             raise ValueError(msg)
@@ -85,71 +85,28 @@ class Truncate(TemporalFunction):
 
 
 class IRDateTimeNamespace(IRNamespace):
-    def date(self) -> Date:
-        return Date()
-
-    def year(self) -> Year:
-        return Year()
-
-    def month(self) -> Month:
-        return Month()
-
-    def day(self) -> Day:
-        return Day()
-
-    def hour(self) -> Hour:
-        return Hour()
-
-    def minute(self) -> Minute:
-        return Minute()
-
-    def second(self) -> Second:
-        return Second()
-
-    def millisecond(self) -> Millisecond:
-        return Millisecond()
-
-    def microsecond(self) -> Microsecond:
-        return Microsecond()
-
-    def nanosecond(self) -> Nanosecond:
-        return Nanosecond()
-
-    def ordinal_day(self) -> OrdinalDay:
-        return OrdinalDay()
-
-    def weekday(self) -> WeekDay:
-        return WeekDay()
-
-    def total_minutes(self) -> TotalMinutes:
-        return TotalMinutes()
-
-    def total_seconds(self) -> TotalSeconds:
-        return TotalSeconds()
-
-    def total_milliseconds(self) -> TotalMilliseconds:
-        return TotalMilliseconds()
-
-    def total_microseconds(self) -> TotalMicroseconds:
-        return TotalMicroseconds()
-
-    def total_nanoseconds(self) -> TotalNanoseconds:
-        return TotalNanoseconds()
-
-    def to_string(self, format: str) -> ToString:
-        return ToString(format=format)
-
-    def replace_time_zone(self, time_zone: str | None) -> ReplaceTimeZone:
-        return ReplaceTimeZone(time_zone=time_zone)
-
-    def convert_time_zone(self, time_zone: str) -> ConvertTimeZone:
-        return ConvertTimeZone(time_zone=time_zone)
-
-    def timestamp(self, time_unit: TimeUnit = "us") -> Timestamp:
-        return Timestamp.from_time_unit(time_unit)
-
-    def truncate(self, every: str) -> Truncate:
-        return Truncate.from_string(every)
+    date: ClassVar = Date
+    year: ClassVar = Year
+    month: ClassVar = Month
+    day: ClassVar = Day
+    hour: ClassVar = Hour
+    minute: ClassVar = Minute
+    second: ClassVar = Second
+    millisecond: ClassVar = Millisecond
+    microsecond: ClassVar = Microsecond
+    nanosecond: ClassVar = Nanosecond
+    ordinal_day: ClassVar = OrdinalDay
+    weekday: ClassVar = WeekDay
+    total_minutes: ClassVar = TotalMinutes
+    total_seconds: ClassVar = TotalSeconds
+    total_milliseconds: ClassVar = TotalMilliseconds
+    total_microseconds: ClassVar = TotalMicroseconds
+    total_nanoseconds: ClassVar = TotalNanoseconds
+    to_string: ClassVar = ToString
+    replace_time_zone: ClassVar = ReplaceTimeZone
+    convert_time_zone: ClassVar = ConvertTimeZone
+    truncate: ClassVar = staticmethod(Truncate.from_string)
+    timestamp: ClassVar = staticmethod(Timestamp.from_time_unit)
 
 
 class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
@@ -218,7 +175,7 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
         return self._with_unary(self._ir.convert_time_zone(time_zone=time_zone))
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
-        return self._with_unary(self._ir.timestamp(time_unit=time_unit))
+        return self._with_unary(self._ir.timestamp(time_unit))
 
     def truncate(self, every: str) -> Expr:
-        return self._with_unary(self._ir.truncate(every=every))
+        return self._with_unary(self._ir.truncate(every))

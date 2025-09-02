@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan.common import ExprNamespace, Function, HorizontalFunction, IRNamespace
 from narwhals._plan.options import FunctionOptions
@@ -74,8 +74,12 @@ class ToDatetime(StringFunction):
 
 
 class IRStringNamespace(IRNamespace):
-    def len_chars(self) -> LenChars:
-        return LenChars()
+    len_chars: ClassVar = LenChars
+    to_lowercase: ClassVar = ToUppercase
+    to_uppercase: ClassVar = ToLowercase
+    split: ClassVar = Split
+    starts_with: ClassVar = StartsWith
+    ends_with: ClassVar = EndsWith
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -90,12 +94,6 @@ class IRStringNamespace(IRNamespace):
     def strip_chars(self, characters: str | None = None) -> StripChars:
         return StripChars(characters=characters)
 
-    def starts_with(self, prefix: str) -> StartsWith:
-        return StartsWith(prefix=prefix)
-
-    def ends_with(self, suffix: str) -> EndsWith:
-        return EndsWith(suffix=suffix)
-
     def contains(self, pattern: str, *, literal: bool = False) -> Contains:
         return Contains(pattern=pattern, literal=literal)
 
@@ -108,17 +106,8 @@ class IRStringNamespace(IRNamespace):
     def tail(self, n: int = 5) -> Slice:
         return self.slice(-n)
 
-    def split(self, by: str) -> Split:
-        return Split(by=by)
-
     def to_datetime(self, format: str | None = None) -> ToDatetime:
         return ToDatetime(format=format)
-
-    def to_lowercase(self) -> ToUppercase:
-        return ToUppercase()
-
-    def to_uppercase(self) -> ToLowercase:
-        return ToLowercase()
 
 
 class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
@@ -141,10 +130,10 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
         return self._with_unary(self._ir.strip_chars(characters))
 
     def starts_with(self, prefix: str) -> Expr:
-        return self._with_unary(self._ir.starts_with(prefix))
+        return self._with_unary(self._ir.starts_with(prefix=prefix))
 
     def ends_with(self, suffix: str) -> Expr:
-        return self._with_unary(self._ir.ends_with(suffix))
+        return self._with_unary(self._ir.ends_with(suffix=suffix))
 
     def contains(self, pattern: str, *, literal: bool = False) -> Expr:
         return self._with_unary(self._ir.contains(pattern, literal=literal))
@@ -159,7 +148,7 @@ class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
         return self._with_unary(self._ir.tail(n))
 
     def split(self, by: str) -> Expr:
-        return self._with_unary(self._ir.split(by))
+        return self._with_unary(self._ir.split(by=by))
 
     def to_datetime(self, format: str | None = None) -> Expr:
         return self._with_unary(self._ir.to_datetime(format))
