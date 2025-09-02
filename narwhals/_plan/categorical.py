@@ -8,12 +8,10 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
+# fmt: off
 class CategoricalFunction(Function, accessor="cat"): ...
-
-
 class GetCategories(CategoricalFunction): ...
-
-
+# fmt: on
 class IRCatNamespace(IRNamespace):
     def get_categories(self) -> GetCategories:
         return GetCategories()

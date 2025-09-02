@@ -20,60 +20,26 @@ def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
     return obj in {"ns", "us", "ms"}
 
 
+# fmt: off
 class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
-
-
 class Date(TemporalFunction): ...
-
-
 class Year(TemporalFunction): ...
-
-
 class Month(TemporalFunction): ...
-
-
 class Day(TemporalFunction): ...
-
-
 class Hour(TemporalFunction): ...
-
-
 class Minute(TemporalFunction): ...
-
-
 class Second(TemporalFunction): ...
-
-
 class Millisecond(TemporalFunction): ...
-
-
 class Microsecond(TemporalFunction): ...
-
-
 class Nanosecond(TemporalFunction): ...
-
-
 class OrdinalDay(TemporalFunction): ...
-
-
 class WeekDay(TemporalFunction): ...
-
-
 class TotalMinutes(TemporalFunction): ...
-
-
 class TotalSeconds(TemporalFunction): ...
-
-
 class TotalMilliseconds(TemporalFunction): ...
-
-
 class TotalMicroseconds(TemporalFunction): ...
-
-
 class TotalNanoseconds(TemporalFunction): ...
-
-
+# fmt: on
 class ToString(TemporalFunction):
     __slots__ = ("format",)
     format: str
