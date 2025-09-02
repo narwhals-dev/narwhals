@@ -60,7 +60,7 @@ class Timestamp(TemporalFunction):
     time_unit: PolarsTimeUnit
 
     @staticmethod
-    def from_time_unit(time_unit: TimeUnit, /) -> Timestamp:
+    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
         if not _is_polars_time_unit(time_unit):
             msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
             raise ValueError(msg)
@@ -105,10 +105,8 @@ class IRDateTimeNamespace(IRNamespace):
     to_string: ClassVar = ToString
     replace_time_zone: ClassVar = ReplaceTimeZone
     convert_time_zone: ClassVar = ConvertTimeZone
-    truncate: ClassVar = Truncate.from_string
-
-    def timestamp(self, time_unit: TimeUnit = "us") -> Timestamp:
-        return Timestamp.from_time_unit(time_unit)
+    truncate: ClassVar = staticmethod(Truncate.from_string)
+    timestamp: ClassVar = staticmethod(Timestamp.from_time_unit)
 
 
 class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
