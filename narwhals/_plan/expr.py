@@ -38,6 +38,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
@@ -377,8 +378,10 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
             raise function_expr_invalid_operation_error(function, parent)
         super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
-    def dispatch(self, ctx: t.Any, frame: t.Any, name: str) -> t.Any:
-        return self.function.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)
+    def dispatch(
+        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.function.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
 
 class RollingExpr(FunctionExpr[RollingT]): ...
@@ -389,8 +392,10 @@ class AnonymousExpr(
 ):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
-    def dispatch(self, ctx: t.Any, frame: t.Any, name: str) -> t.Any:
-        return self.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)
+    def dispatch(
+        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
 
 class RangeExpr(FunctionExpr[RangeT]):

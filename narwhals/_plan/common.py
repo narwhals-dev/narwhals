@@ -45,7 +45,7 @@ if TYPE_CHECKING:
         WindowExpr,
     )
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.protocols import CompliantSeries, Ctx, FrameT_contra, R_co
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 
@@ -155,10 +155,12 @@ class ExprIR(Immutable):
             cls.__expr_ir_config__ = config
         cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate(cls))
 
-    def dispatch(self, ctx: Incomplete, frame: Incomplete, name: str, /) -> Incomplete:
+    def dispatch(
+        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str, /
+    ) -> R_co:
         """Evaluate expression in `frame`, using `ctx` for implementation(s)."""
         # NOTE: `mypy` would require `Self` on `self` but that conflicts w/ pre-commit
-        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)
+        return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy

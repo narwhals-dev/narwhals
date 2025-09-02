@@ -70,6 +70,13 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
 
+Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co, NamespaceAny]"
+"""Type of an unknown expression dispatch context.
+
+- `FrameT_contra`: Compliant data/lazyframe
+- `R_co`: Upper bound return type of the context
+"""
+
 
 class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
@@ -154,13 +161,13 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
+        return node.dispatch(self, frame, name)
 
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
         obj._version = frame.version
-        return obj._dispatch(node, frame, name)
+        return node.dispatch(obj, frame, name)
 
     @classmethod
     def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:

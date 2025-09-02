@@ -83,7 +83,7 @@ class _ArrowDispatch(
         self, node: FunctionExpr[Pow], frame: ArrowDataFrame, name: str
     ) -> StoresNativeT_co:
         base, exponent = node.function.unwrap_input(node)
-        base_ = self._dispatch(base, frame, "base").native
+        base_ = base.dispatch(self, frame, "base").native
         exponent_ = self._dispatch(exponent, frame, "exponent").native
         return self._with_native(pc.power(base_, exponent_), name)
 
