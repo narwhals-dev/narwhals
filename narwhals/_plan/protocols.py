@@ -150,12 +150,7 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
         expr.FunctionExpr: lambda self, node, frame, name: self._dispatch_function(
             node, frame, name
-        ),
-        # NOTE: Keeping it simple for now
-        # When adding other `*_range` functions, this should instead map to `range_expr`
-        expr.RangeExpr: lambda self, node, frame, name: namespace(self).int_range(
-            node, frame, name
-        ),
+        )
     }
     _DISPATCH_FUNCTION: ClassVar[
         Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]

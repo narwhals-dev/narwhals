@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FConfig, FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -19,7 +19,9 @@ class RangeFunction(Function):
         return RangeExpr(input=inputs, function=self, options=self.function_options)
 
 
-class IntRange(RangeFunction, options=FunctionOptions.row_separable):
+class IntRange(
+    RangeFunction, options=FunctionOptions.row_separable, config=FConfig.namespaced()
+):
     """N-ary (start, end)."""
 
     __slots__ = ("step", "dtype")  # noqa: RUF023
