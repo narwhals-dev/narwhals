@@ -378,9 +378,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
         super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
     def dispatch(self, ctx: t.Any, frame: t.Any, name: str) -> t.Any:
-        return self.function.__function_expr_dispatch__(
-            ctx, t.cast("Self", self), frame, name
-        )
+        return self.function.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)
 
 
 class RollingExpr(FunctionExpr[RollingT]): ...

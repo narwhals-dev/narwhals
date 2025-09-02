@@ -67,13 +67,7 @@ else:
 
 
 T = TypeVar("T")
-
-
-# TODO @dangotbanned: Add caching strategy?
-def _function_repr(tp: type[Function], /) -> str:
-    config = tp.__function_expr_config__
-    name = config.override_name or _pascal_to_snake_case(tp.__name__)
-    return f"{ns_name}.{name}" if (ns_name := config.accessor_name) else name
+Incomplete: TypeAlias = "Any"
 
 
 def _pascal_to_snake_case(s: str) -> str:
@@ -95,12 +89,22 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
     return f"{match.group(1)}_{match.group(2)}"
 
 
-Incomplete: TypeAlias = "Any"
-
-
 def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
     """Return the compliant namespace."""
     return obj.__narwhals_namespace__()
+
+
+def _dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
+    config = tp.__expr_ir_config__
+    name = config.override_name or _pascal_to_snake_case(tp.__name__)
+    return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
+
+
+def _dispatch_getter(tp: type[ExprIRT | FunctionT]) -> Callable[[Any], Any]:
+    getter = attrgetter(_dispatch_method_name(tp))
+    if tp.__expr_ir_config__.origin == "expr":
+        return getter
+    return lambda ctx: getter(namespace(ctx))
 
 
 def _dispatch_generate(
@@ -108,51 +112,31 @@ def _dispatch_generate(
 ) -> Callable[[Incomplete, ExprIRT, Incomplete, str], Incomplete]:
     if not tp.__expr_ir_config__.allow_dispatch:
 
-        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
-            tp_name = type(node).__name__
+        def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:  # noqa: ARG001
             msg = (
-                f"{tp_name!r} should not appear at the compliant-level.\n\n"
-                f"Make sure to expand all expressions first, got:\n{self!r}\n{node!r}\n{name!r}"
+                f"{tp.__name__!r} should not appear at the compliant-level.\n\n"
+                f"Make sure to expand all expressions first, got:\n{ctx!r}\n{node!r}\n{name!r}"
             )
             raise TypeError(msg)
 
         return _
-    config = tp.__expr_ir_config__
-    method_name = config.override_name or _pascal_to_snake_case(tp.__name__)
-    origin = tp.__expr_ir_config__.origin
-    if origin == "expr":
+    getter = _dispatch_getter(tp)
 
-        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:
-            return getattr(self, method_name)(node, frame, name)
+    def _(ctx: Any, /, node: ExprIRT, frame: Any, name: str) -> Any:
+        return getter(ctx)(node, frame, name)
 
-        return _
-    if origin == "__narwhals_namespace__":
-
-        def _(self: Any, node: ExprIRT, frame: Any, name: str) -> Any:
-            return getattr(namespace(self), method_name)(node, frame, name)
-
-        return _
-    raise NotImplementedError(origin)
+    return _
 
 
 def _dispatch_generate_function(
     tp: type[FunctionT], /
 ) -> Callable[[Incomplete, FunctionExpr[FunctionT], Incomplete, str], Incomplete]:
-    origin = tp.__function_expr_config__.origin
-    getter = attrgetter(_function_repr(tp))
-    if origin == "expr":
+    getter = _dispatch_getter(tp)
 
-        def _(self: Any, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
-            return getter(self)(node, frame, name)
+    def _(ctx: Any, /, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
+        return getter(ctx)(node, frame, name)
 
-        return _
-    if origin == "__narwhals_namespace__":
-
-        def _(self: Any, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
-            return getter(namespace(self))(node, frame, name)
-
-        return _
-    raise NotImplementedError(origin)
+    return _
 
 
 class ExprIR(Immutable):
@@ -435,8 +419,8 @@ class Function(Immutable):
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
-    __function_expr_config__: ClassVar[FConfig] = FConfig.default()
-    __function_expr_dispatch__: ClassVar[
+    __expr_ir_config__: ClassVar[FConfig] = FConfig.default()
+    __expr_ir_dispatch__: ClassVar[
         staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
     ]
 
@@ -470,11 +454,11 @@ class Function(Immutable):
         if options:
             cls._function_options = staticmethod(options)
         if config:
-            cls.__function_expr_config__ = config
-        cls.__function_expr_dispatch__ = staticmethod(_dispatch_generate_function(cls))
+            cls.__expr_ir_config__ = config
+        cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate_function(cls))
 
     def __repr__(self) -> str:
-        return _function_repr(type(self))
+        return _dispatch_method_name(type(self))
 
 
 class HorizontalFunction(
