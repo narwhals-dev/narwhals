@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Function
+from narwhals._plan.common import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 
@@ -173,16 +173,16 @@ class Round(Function, options=FunctionOptions.elementwise):
     decimals: int
 
 
-class SumHorizontal(Function, options=FunctionOptions.horizontal): ...
+class SumHorizontal(HorizontalFunction): ...
 
 
-class MinHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MinHorizontal(HorizontalFunction): ...
 
 
-class MaxHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MaxHorizontal(HorizontalFunction): ...
 
 
-class MeanHorizontal(Function, options=FunctionOptions.horizontal): ...
+class MeanHorizontal(HorizontalFunction): ...
 
 
 class EwmMean(Function, options=FunctionOptions.length_preserving):

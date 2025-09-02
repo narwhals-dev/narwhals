@@ -4,7 +4,7 @@ from __future__ import annotations
 # - Any
 import typing as t
 
-from narwhals._plan.common import Function
+from narwhals._plan.common import Function, HorizontalFunction
 from narwhals._plan.options import FConfig, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
@@ -27,13 +27,13 @@ class BooleanFunction(Function): ...
 class All(BooleanFunction, options=FunctionOptions.aggregation): ...
 
 
-class AllHorizontal(BooleanFunction, options=FunctionOptions.horizontal): ...
+class AllHorizontal(HorizontalFunction, BooleanFunction): ...
 
 
 class Any(BooleanFunction, options=FunctionOptions.aggregation): ...
 
 
-class AnyHorizontal(BooleanFunction, options=FunctionOptions.horizontal): ...
+class AnyHorizontal(HorizontalFunction, BooleanFunction): ...
 
 
 class IsBetween(BooleanFunction, options=FunctionOptions.elementwise):

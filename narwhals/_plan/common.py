@@ -479,6 +479,11 @@ class Function(Immutable):
         return _function_repr(type(self))
 
 
+class HorizontalFunction(
+    Function, options=FunctionOptions.horizontal, config=FunctionExprConfig.namespaced()
+): ...
+
+
 _NON_NESTED_LITERAL_TPS = (
     int,
     float,
