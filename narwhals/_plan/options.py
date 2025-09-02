@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Accessor, Seq
     from narwhals.typing import RankMethod
 
-DispatchOrigin: TypeAlias = Literal["expr", "expr-accessor", "__narwhals_namespace__"]
+DispatchOrigin: TypeAlias = Literal["expr", "__narwhals_namespace__"]
 
 
 class FunctionFlags(enum.Flag):
@@ -309,9 +309,24 @@ class ExprIRConfig(_BaseConfig):
 
 
 class FunctionExprConfig(_BaseConfig):
-    __slots__ = (*_BaseConfig.__slots__, "accessor")
-    accessor: Accessor | None
+    """Really need a better name for these classes."""
+
+    __slots__ = (*_BaseConfig.__slots__, "accessor_name")
+    accessor_name: Accessor | None
+    """Namespace accessor name, if any."""
 
     @classmethod
     def default(cls) -> Self:
-        return cls(origin="expr", override_name="", accessor=None)
+        return cls(origin="expr", override_name="", accessor_name=None)
+
+    @classmethod
+    def accessor(cls, name: Accessor, /) -> Self:
+        return cls(origin="expr", override_name="", accessor_name=name)
+
+    def with_accessor(self, name: Accessor, /) -> Self:
+        from narwhals._plan.common import replace
+
+        return replace(self, accessor_name=name)
+
+
+FConfig = FunctionExprConfig

@@ -5,6 +5,7 @@ import re
 import sys
 from collections.abc import Iterable
 from decimal import Decimal
+from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
 from narwhals._plan._immutable import Immutable
@@ -14,6 +15,7 @@ from narwhals._plan.typing import (
     DTypeT,
     ExprIRT,
     ExprIRT2,
+    FunctionT,
     IRNamespaceT,
     MapIR,
     NamedOrExprIRT,
@@ -73,8 +75,9 @@ def _tp_repr(tp: type[Any], /) -> str:
 
 # TODO @dangotbanned: Add caching strategy?
 def _function_repr(tp: type[Function], /) -> str:
-    name = _tp_repr(tp)
-    return f"{ns_name}.{name}" if (ns_name := tp._accessor) else name
+    config = tp.__function_expr_config__
+    name = config.override_name or _tp_repr(tp)
+    return f"{ns_name}.{name}" if (ns_name := config.accessor_name) else name
 
 
 def _pascal_to_snake_case(s: str) -> str:
@@ -132,8 +135,27 @@ def _dispatch_generate(
             return getattr(namespace(self), method_name)(node, frame, name)
 
         return _
-    msg = f"`FunctionExpr` can't work this way, the dispatch mostly happens on `.function`, which has the accessor.\n\nGot: {tp.__name__}"
-    raise NotImplementedError(msg)
+    raise NotImplementedError(origin)
+
+
+def _dispatch_generate_function(
+    tp: type[FunctionT], /
+) -> Callable[[Incomplete, FunctionExpr[FunctionT], Incomplete, str], Incomplete]:
+    origin = tp.__function_expr_config__.origin
+    getter = attrgetter(_function_repr(tp))
+    if origin == "expr":
+
+        def _(self: Any, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
+            return getter(self)(node, frame, name)
+
+        return _
+    if origin == "__narwhals_namespace__":
+
+        def _(self: Any, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
+            return getter(namespace(self))(node, frame, name)
+
+        return _
+    raise NotImplementedError(origin)
 
 
 class ExprIR(Immutable):
@@ -413,10 +435,6 @@ class Function(Immutable):
     https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L114
     """
 
-    # TODO @dangotbanned: Move into `__function_expr_config__`
-    _accessor: ClassVar[Accessor | None] = None
-    """Namespace accessor name, if any."""
-
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
@@ -440,17 +458,22 @@ class Function(Immutable):
         return FunctionExpr(input=inputs, function=self, options=self.function_options)
 
     def __init_subclass__(
-        cls,
+        cls: type[Self],
         *args: Any,
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
+        config: FunctionExprConfig | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
         if accessor:
-            cls._accessor = accessor
+            into_cfg = config.with_accessor if config else FunctionExprConfig.accessor
+            config = into_cfg(accessor)
         if options:
             cls._function_options = staticmethod(options)
+        if config:
+            cls.__function_expr_config__ = config
+        cls.__function_expr_dispatch__ = staticmethod(_dispatch_generate_function(cls))
 
     def __repr__(self) -> str:
         return _function_repr(type(self))
