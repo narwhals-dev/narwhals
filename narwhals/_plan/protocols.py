@@ -3,9 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan import aggregation as agg, boolean, expr, functions as F
-from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe, namespace
-from narwhals._plan.strings import ConcatStr
+from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -13,10 +11,12 @@ from narwhals._utils import Version, _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._plan import aggregation as agg, boolean, expr, functions as F
     from narwhals._plan.dummy import BaseFrame, DataFrame, Series
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
+    from narwhals._plan.strings import ConcatStr
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -148,49 +148,12 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
-        expr.FunctionExpr: lambda self, node, frame, name: self._dispatch_function(
-            node, frame, name
-        )
-    }
+    _DISPATCH: ClassVar[
+        Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]
+    ] = {}
     _DISPATCH_FUNCTION: ClassVar[
         Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
-    ] = {
-        boolean.AnyHorizontal: lambda self, node, frame, name: namespace(
-            self
-        ).any_horizontal(node, frame, name),
-        boolean.AllHorizontal: lambda self, node, frame, name: namespace(
-            self
-        ).all_horizontal(node, frame, name),
-        F.SumHorizontal: lambda self, node, frame, name: namespace(self).sum_horizontal(
-            node, frame, name
-        ),
-        F.MinHorizontal: lambda self, node, frame, name: namespace(self).min_horizontal(
-            node, frame, name
-        ),
-        F.MaxHorizontal: lambda self, node, frame, name: namespace(self).max_horizontal(
-            node, frame, name
-        ),
-        F.MeanHorizontal: lambda self, node, frame, name: namespace(self).mean_horizontal(
-            node, frame, name
-        ),
-        ConcatStr: lambda self, node, frame, name: namespace(self).concat_str(
-            node, frame, name
-        ),
-        F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
-        F.FillNull: lambda self, node, frame, name: self.fill_null(node, frame, name),
-        boolean.IsBetween: lambda self, node, frame, name: self.is_between(
-            node, frame, name
-        ),
-        boolean.IsFinite: lambda self, node, frame, name: self.is_finite(
-            node, frame, name
-        ),
-        boolean.IsNan: lambda self, node, frame, name: self.is_nan(node, frame, name),
-        boolean.IsNull: lambda self, node, frame, name: self.is_null(node, frame, name),
-        boolean.Not: lambda self, node, frame, name: self.not_(node, frame, name),
-        boolean.Any: lambda self, node, frame, name: self.any(node, frame, name),
-        boolean.All: lambda self, node, frame, name: self.all(node, frame, name),
-    }
+    ] = {}
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         if (method := self._DISPATCH.get(node.__class__)) and (
