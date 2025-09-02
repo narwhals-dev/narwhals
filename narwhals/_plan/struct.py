@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FEOptions, FunctionOptions
@@ -23,8 +23,7 @@ class FieldByName(
 
 
 class IRStructNamespace(IRNamespace):
-    def field(self, name: str) -> FieldByName:
-        return FieldByName(name=name)
+    field: ClassVar = FieldByName
 
 
 class ExprStructNamespace(ExprNamespace[IRStructNamespace]):
@@ -33,4 +32,4 @@ class ExprStructNamespace(ExprNamespace[IRStructNamespace]):
         return IRStructNamespace
 
     def field(self, name: str) -> Expr:
-        return self._with_unary(self._ir.field(name))
+        return self._with_unary(self._ir.field(name=name))

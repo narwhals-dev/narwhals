@@ -102,21 +102,13 @@ class IRDateTimeNamespace(IRNamespace):
     total_milliseconds: ClassVar = TotalMilliseconds
     total_microseconds: ClassVar = TotalMicroseconds
     total_nanoseconds: ClassVar = TotalNanoseconds
-
-    def to_string(self, format: str) -> ToString:
-        return ToString(format=format)
-
-    def replace_time_zone(self, time_zone: str | None) -> ReplaceTimeZone:
-        return ReplaceTimeZone(time_zone=time_zone)
-
-    def convert_time_zone(self, time_zone: str) -> ConvertTimeZone:
-        return ConvertTimeZone(time_zone=time_zone)
+    to_string: ClassVar = ToString
+    replace_time_zone: ClassVar = ReplaceTimeZone
+    convert_time_zone: ClassVar = ConvertTimeZone
+    truncate: ClassVar = Truncate.from_string
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Timestamp:
         return Timestamp.from_time_unit(time_unit)
-
-    def truncate(self, every: str) -> Truncate:
-        return Truncate.from_string(every)
 
 
 class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
@@ -185,7 +177,7 @@ class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
         return self._with_unary(self._ir.convert_time_zone(time_zone=time_zone))
 
     def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
-        return self._with_unary(self._ir.timestamp(time_unit=time_unit))
+        return self._with_unary(self._ir.timestamp(time_unit))
 
     def truncate(self, every: str) -> Expr:
-        return self._with_unary(self._ir.truncate(every=every))
+        return self._with_unary(self._ir.truncate(every))
