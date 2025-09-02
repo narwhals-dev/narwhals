@@ -21,9 +21,47 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
 
 
+class CumAgg(Function, options=FunctionOptions.length_preserving):
+    __slots__ = ("reverse",)
+    reverse: bool
+
+
+class RollingWindow(Function, options=FunctionOptions.length_preserving):
+    __slots__ = ("options",)
+    options: RollingOptionsFixedWindow
+
+    def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
+        from narwhals._plan.expr import RollingExpr
+
+        options = self.function_options
+        return RollingExpr(input=inputs, function=self, options=options)
+
+
+# fmt: off
 class Abs(Function, options=FunctionOptions.elementwise): ...
-
-
+class NullCount(Function, options=FunctionOptions.aggregation): ...
+class Exp(Function, options=FunctionOptions.elementwise): ...
+class Sqrt(Function, options=FunctionOptions.elementwise): ...
+class DropNulls(Function, options=FunctionOptions.row_separable): ...
+class Mode(Function): ...
+class Skew(Function, options=FunctionOptions.aggregation): ...
+class Clip(Function, options=FunctionOptions.elementwise): ...
+class CumCount(CumAgg): ...
+class CumMin(CumAgg): ...
+class CumMax(CumAgg): ...
+class CumProd(CumAgg): ...
+class CumSum(CumAgg): ...
+class RollingSum(RollingWindow): ...
+class RollingMean(RollingWindow): ...
+class RollingVar(RollingWindow): ...
+class RollingStd(RollingWindow): ...
+class Diff(Function, options=FunctionOptions.length_preserving): ...
+class Unique(Function): ...
+class SumHorizontal(HorizontalFunction): ...
+class MinHorizontal(HorizontalFunction): ...
+class MaxHorizontal(HorizontalFunction): ...
+class MeanHorizontal(HorizontalFunction): ...
+# fmt: on
 class Hist(Function):
     """Only supported for `Series` so far."""
 
@@ -55,15 +93,9 @@ class HistBinCount(Hist):
         object.__setattr__(self, "include_breakpoint", include_breakpoint)
 
 
-class NullCount(Function, options=FunctionOptions.aggregation): ...
-
-
 class Log(Function, options=FunctionOptions.elementwise):
     __slots__ = ("base",)
     base: float
-
-
-class Exp(Function, options=FunctionOptions.elementwise): ...
 
 
 class Pow(Function, options=FunctionOptions.elementwise):
@@ -72,9 +104,6 @@ class Pow(Function, options=FunctionOptions.elementwise):
     def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
         base, exponent = node.input
         return base, exponent
-
-
-class Sqrt(Function, options=FunctionOptions.elementwise): ...
 
 
 class Kurtosis(Function, options=FunctionOptions.aggregation):
@@ -102,87 +131,14 @@ class Shift(Function, options=FunctionOptions.length_preserving):
     n: int
 
 
-class DropNulls(Function, options=FunctionOptions.row_separable): ...
-
-
-class Mode(Function): ...
-
-
-class Skew(Function, options=FunctionOptions.aggregation): ...
-
-
 class Rank(Function):
     __slots__ = ("options",)
     options: RankOptions
 
 
-class Clip(Function, options=FunctionOptions.elementwise): ...
-
-
-class CumAgg(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("reverse",)
-    reverse: bool
-
-
-class RollingWindow(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("options",)
-    options: RollingOptionsFixedWindow
-
-    def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
-        from narwhals._plan.expr import RollingExpr
-
-        options = self.function_options
-        return RollingExpr(input=inputs, function=self, options=options)
-
-
-class CumCount(CumAgg): ...
-
-
-class CumMin(CumAgg): ...
-
-
-class CumMax(CumAgg): ...
-
-
-class CumProd(CumAgg): ...
-
-
-class CumSum(CumAgg): ...
-
-
-class RollingSum(RollingWindow): ...
-
-
-class RollingMean(RollingWindow): ...
-
-
-class RollingVar(RollingWindow): ...
-
-
-class RollingStd(RollingWindow): ...
-
-
-class Diff(Function, options=FunctionOptions.length_preserving): ...
-
-
-class Unique(Function): ...
-
-
 class Round(Function, options=FunctionOptions.elementwise):
     __slots__ = ("decimals",)
     decimals: int
-
-
-class SumHorizontal(HorizontalFunction): ...
-
-
-class MinHorizontal(HorizontalFunction): ...
-
-
-class MaxHorizontal(HorizontalFunction): ...
-
-
-class MeanHorizontal(HorizontalFunction): ...
 
 
 class EwmMean(Function, options=FunctionOptions.length_preserving):

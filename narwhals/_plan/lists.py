@@ -9,12 +9,10 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
+# fmt: off
 class ListFunction(Function, accessor="list"): ...
-
-
 class Len(ListFunction, options=FunctionOptions.elementwise): ...
-
-
+# fmt: on
 class IRListNamespace(IRNamespace):
     def len(self) -> Len:
         return Len()

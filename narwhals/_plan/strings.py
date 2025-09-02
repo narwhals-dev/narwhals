@@ -9,9 +9,12 @@ if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
+# fmt: off
 class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
-
-
+class LenChars(StringFunction): ...
+class ToLowercase(StringFunction): ...
+class ToUppercase(StringFunction): ...
+# fmt: on
 class ConcatStr(HorizontalFunction, StringFunction):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
@@ -27,9 +30,6 @@ class Contains(StringFunction):
 class EndsWith(StringFunction):
     __slots__ = ("suffix",)
     suffix: str
-
-
-class LenChars(StringFunction): ...
 
 
 class Replace(StringFunction):
@@ -71,12 +71,6 @@ class StripChars(StringFunction):
 class ToDatetime(StringFunction):
     __slots__ = ("format",)
     format: str | None
-
-
-class ToLowercase(StringFunction): ...
-
-
-class ToUppercase(StringFunction): ...
 
 
 class IRStringNamespace(IRNamespace):
