@@ -323,10 +323,5 @@ class FunctionExprConfig(_BaseConfig):
     def accessor(cls, name: Accessor, /) -> Self:
         return cls(origin="expr", override_name="", accessor_name=name)
 
-    def with_accessor(self, name: Accessor, /) -> Self:
-        from narwhals._plan.common import replace
-
-        return replace(self, accessor_name=name)
-
 
 FConfig = FunctionExprConfig

@@ -9,7 +9,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import ExprIRConfig, FunctionExprConfig, FunctionOptions
+from narwhals._plan.options import ExprIRConfig, FConfig, FunctionOptions
 from narwhals._plan.typing import (
     Accessor,
     DTypeT,
@@ -435,7 +435,7 @@ class Function(Immutable):
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
-    __function_expr_config__: ClassVar[FunctionExprConfig] = FunctionExprConfig.default()
+    __function_expr_config__: ClassVar[FConfig] = FConfig.default()
     __function_expr_dispatch__: ClassVar[
         staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
     ]
@@ -458,13 +458,15 @@ class Function(Immutable):
         *args: Any,
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
-        config: FunctionExprConfig | None = None,
+        config: FConfig | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
         if accessor:
-            into_cfg = config.with_accessor if config else FunctionExprConfig.accessor
-            config = into_cfg(accessor)
+            name = accessor
+            config = (
+                replace(config, accessor_name=name) if config else FConfig.accessor(name)
+            )
         if options:
             cls._function_options = staticmethod(options)
         if config:
@@ -476,7 +478,7 @@ class Function(Immutable):
 
 
 class HorizontalFunction(
-    Function, options=FunctionOptions.horizontal, config=FunctionExprConfig.namespaced()
+    Function, options=FunctionOptions.horizontal, config=FConfig.namespaced()
 ): ...
 
 
