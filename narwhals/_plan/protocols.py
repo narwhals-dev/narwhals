@@ -160,9 +160,6 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        return node.dispatch(self, frame, name)
-
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
