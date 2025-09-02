@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
+from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
+from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, _hasattr_static
@@ -153,25 +153,7 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    _DISPATCH: ClassVar[
-        Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]
-    ] = {}
-    """Overrides for `ExprIR`."""
-    _DISPATCH_FUNCTION: ClassVar[
-        Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
-    ] = {}
-    """Overrides for `Function`."""
-
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        if method := self._DISPATCH.get(node.__class__):
-            return method(self, node, frame, name)  # type: ignore[no-any-return]
-        return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
-
-    def _dispatch_function(
-        self, node: FunctionExpr, frame: FrameT_contra, name: str
-    ) -> R_co:
-        if method := self._DISPATCH_FUNCTION.get(node.function.__class__):
-            return method(self, node, frame, name)  # type: ignore[no-any-return]
         return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
 
     @classmethod
