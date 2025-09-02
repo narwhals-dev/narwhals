@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
@@ -14,8 +14,7 @@ class ListFunction(Function, accessor="list"): ...
 class Len(ListFunction, options=FunctionOptions.elementwise): ...
 # fmt: on
 class IRListNamespace(IRNamespace):
-    def len(self) -> Len:
-        return Len()
+    len: ClassVar = Len
 
 
 class ExprListNamespace(ExprNamespace[IRListNamespace]):

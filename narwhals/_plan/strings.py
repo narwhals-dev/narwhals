@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan.common import ExprNamespace, Function, HorizontalFunction, IRNamespace
 from narwhals._plan.options import FunctionOptions
@@ -74,8 +74,9 @@ class ToDatetime(StringFunction):
 
 
 class IRStringNamespace(IRNamespace):
-    def len_chars(self) -> LenChars:
-        return LenChars()
+    len_chars: ClassVar = LenChars
+    to_lowercase: ClassVar = ToUppercase
+    to_uppercase: ClassVar = ToLowercase
 
     def replace(
         self, pattern: str, value: str, *, literal: bool = False, n: int = 1
@@ -113,12 +114,6 @@ class IRStringNamespace(IRNamespace):
 
     def to_datetime(self, format: str | None = None) -> ToDatetime:
         return ToDatetime(format=format)
-
-    def to_lowercase(self) -> ToUppercase:
-        return ToUppercase()
-
-    def to_uppercase(self) -> ToLowercase:
-        return ToLowercase()
 
 
 class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
