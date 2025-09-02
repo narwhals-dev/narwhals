@@ -4,8 +4,6 @@ from typing import Literal
 
 import pytest
 
-# We use nw instead of nw.stable.v1 to ensure that DuckDBPyRelation
-# becomes LazyFrame instead of DataFrame
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -100,3 +98,15 @@ def test_unique_none(constructor: Constructor) -> None:
     if not isinstance(df, nw.LazyFrame):
         result = df.unique(maintain_order=True)
         assert_equal_data(result, data)
+
+
+def test_unique_3069(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11591
+        request.applymarker(pytest.mark.xfail)
+    data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+    unique_to_get = "group"
+    result = df.select(nw.col(unique_to_get)).unique().sort(unique_to_get)
+    expected = {"group": ["d", "e", "f"]}
+    assert_equal_data(result, expected)
