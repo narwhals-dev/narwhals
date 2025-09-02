@@ -12,16 +12,14 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
 
 
-class RangeFunction(Function):
+class RangeFunction(Function, config=FConfig.namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expr import RangeExpr
 
         return RangeExpr(input=inputs, function=self, options=self.function_options)
 
 
-class IntRange(
-    RangeFunction, options=FunctionOptions.row_separable, config=FConfig.namespaced()
-):
+class IntRange(RangeFunction, options=FunctionOptions.row_separable):
     """N-ary (start, end)."""
 
     __slots__ = ("step", "dtype")  # noqa: RUF023

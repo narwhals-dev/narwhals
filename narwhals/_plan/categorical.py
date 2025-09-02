@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
@@ -12,7 +11,7 @@ if TYPE_CHECKING:
 class CategoricalFunction(Function, accessor="cat"): ...
 
 
-class GetCategories(CategoricalFunction, options=FunctionOptions.groupwise): ...
+class GetCategories(CategoricalFunction): ...
 
 
 class IRCatNamespace(IRNamespace):

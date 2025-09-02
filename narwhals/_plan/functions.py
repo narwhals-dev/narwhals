@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class Abs(Function, options=FunctionOptions.elementwise): ...
 
 
-class Hist(Function, options=FunctionOptions.groupwise):
+class Hist(Function):
     """Only supported for `Series` so far."""
 
     __slots__ = ("include_breakpoint",)
@@ -105,13 +105,13 @@ class Shift(Function, options=FunctionOptions.length_preserving):
 class DropNulls(Function, options=FunctionOptions.row_separable): ...
 
 
-class Mode(Function, options=FunctionOptions.groupwise): ...
+class Mode(Function): ...
 
 
 class Skew(Function, options=FunctionOptions.aggregation): ...
 
 
-class Rank(Function, options=FunctionOptions.groupwise):
+class Rank(Function):
     __slots__ = ("options",)
     options: RankOptions
 
@@ -165,7 +165,7 @@ class RollingStd(RollingWindow): ...
 class Diff(Function, options=FunctionOptions.length_preserving): ...
 
 
-class Unique(Function, options=FunctionOptions.groupwise): ...
+class Unique(Function): ...
 
 
 class Round(Function, options=FunctionOptions.elementwise):
@@ -197,7 +197,7 @@ class ReplaceStrict(Function, options=FunctionOptions.elementwise):
     return_dtype: DType | None
 
 
-class GatherEvery(Function, options=FunctionOptions.groupwise):
+class GatherEvery(Function):
     __slots__ = ("n", "offset")
     n: int
     offset: int
