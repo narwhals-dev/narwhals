@@ -156,29 +156,23 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     _DISPATCH: ClassVar[
         Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]
     ] = {}
+    """Overrides for `ExprIR`."""
     _DISPATCH_FUNCTION: ClassVar[
         Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
     ] = {}
+    """Overrides for `Function`."""
 
     def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        if (method := self._DISPATCH.get(node.__class__)) and (
-            result := method(self, node, frame, name)
-        ):
-            return result  # type: ignore[no-any-return]
+        if method := self._DISPATCH.get(node.__class__):
+            return method(self, node, frame, name)  # type: ignore[no-any-return]
         return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
-        msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
-        raise NotImplementedError(msg)
 
     def _dispatch_function(
         self, node: FunctionExpr, frame: FrameT_contra, name: str
     ) -> R_co:
-        fn = node.function
-        if (method := self._DISPATCH_FUNCTION.get(fn.__class__)) and (
-            result := method(self, node, frame, name)
-        ):
-            return result  # type: ignore[no-any-return]
-        msg = f"Support for {fn.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
-        raise NotImplementedError(msg)
+        if method := self._DISPATCH_FUNCTION.get(node.function.__class__):
+            return method(self, node, frame, name)  # type: ignore[no-any-return]
+        return node.dispatch(self, frame, name)  # type: ignore[no-any-return]
 
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
