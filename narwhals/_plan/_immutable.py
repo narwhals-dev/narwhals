@@ -9,9 +9,6 @@ if TYPE_CHECKING:
     from typing_extensions import Never, Self, dataclass_transform
 
 else:
-    # NOTE: This isn't important to the proposal, just wanted IDE support
-    # for the **temporary** constructors.
-    # It is interesting how much boilerplate this avoids though 🤔
     # https://docs.python.org/3/library/typing.html#typing.dataclass_transform
     def dataclass_transform(
         *,
@@ -119,19 +116,15 @@ class Immutable:
         )
 
     def __str__(self) -> str:
-        # NOTE: Debug repr, closer to constructor
         fields = ", ".join(f"{_field_str(k, v)}" for k, v in self.__immutable_items__)
         return f"{type(self).__name__}({fields})"
 
     def __init__(self, **kwds: Any) -> None:
-        # NOTE: DUMMY CONSTRUCTOR - don't use beyond prototyping!
-        # Just need a quick way to demonstrate `ExprIR` and interactions
         required: set[str] = set(self.__immutable_keys__)
         if not required and not kwds:
             # NOTE: Fastpath for empty slots
             ...
         elif required == set(kwds):
-            # NOTE: Everything is as expected
             for name, value in kwds.items():
                 object.__setattr__(self, name, value)
         elif missing := required.difference(kwds):

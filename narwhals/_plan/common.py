@@ -69,14 +69,10 @@ else:
 T = TypeVar("T")
 
 
-def _tp_repr(tp: type[Any], /) -> str:
-    return _pascal_to_snake_case(tp.__name__)
-
-
 # TODO @dangotbanned: Add caching strategy?
 def _function_repr(tp: type[Function], /) -> str:
     config = tp.__function_expr_config__
-    name = config.override_name or _tp_repr(tp)
+    name = config.override_name or _pascal_to_snake_case(tp.__name__)
     return f"{ns_name}.{name}" if (ns_name := config.accessor_name) else name
 
 
@@ -121,7 +117,8 @@ def _dispatch_generate(
             raise TypeError(msg)
 
         return _
-    method_name = tp.__expr_ir_config__.override_name or _tp_repr(tp)
+    config = tp.__expr_ir_config__
+    method_name = config.override_name or _pascal_to_snake_case(tp.__name__)
     origin = tp.__expr_ir_config__.origin
     if origin == "expr":
 
@@ -442,7 +439,6 @@ class Function(Immutable):
     __function_expr_dispatch__: ClassVar[
         staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
     ]
-    """TODO @dangotbanned: Actually add the runtime support!"""
 
     @property
     def function_options(self) -> FunctionOptions:
