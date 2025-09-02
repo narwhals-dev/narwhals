@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FConfig, FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 class StructFunction(Function, accessor="struct"): ...
 
 
-class FieldByName(StructFunction, options=FunctionOptions.elementwise):
-    """https://github.com/pola-rs/polars/blob/62257860a43ec44a638e8492ed2cf98a49c05f2e/crates/polars-plan/src/dsl/function_expr/struct_.rs#L11."""
-
+class FieldByName(
+    StructFunction, options=FunctionOptions.elementwise, config=FConfig.renamed("field")
+):
     __slots__ = ("name",)
     name: str
 
