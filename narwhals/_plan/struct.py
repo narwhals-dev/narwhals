@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FConfig, FunctionOptions
+from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
@@ -13,7 +13,7 @@ class StructFunction(Function, accessor="struct"): ...
 
 
 class FieldByName(
-    StructFunction, options=FunctionOptions.elementwise, config=FConfig.renamed("field")
+    StructFunction, options=FunctionOptions.elementwise, config=FEOptions.renamed("field")
 ):
     __slots__ = ("name",)
     name: str

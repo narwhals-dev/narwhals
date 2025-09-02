@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 
 from narwhals._plan.common import Function, HorizontalFunction
-from narwhals._plan.options import FConfig, FunctionOptions
+from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
@@ -104,4 +104,4 @@ class IsNull(BooleanFunction): ...
 class IsUnique(BooleanFunction, options=FunctionOptions.length_preserving): ...
 
 
-class Not(BooleanFunction, config=FConfig.renamed("not_")): ...
+class Not(BooleanFunction, config=FEOptions.renamed("not_")): ...

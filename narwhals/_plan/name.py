@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._plan import common
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ExprIR
-from narwhals._plan.options import ExprIRConfig
+from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
+class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr",)
     expr: ExprIR
 
@@ -33,7 +33,7 @@ class KeepName(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
         return common.replace(self, expr=expr)
 
 
-class RenameAlias(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
+class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
     expr: ExprIR
     function: AliasName

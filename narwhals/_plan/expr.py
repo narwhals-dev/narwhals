@@ -11,7 +11,7 @@ from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
-from narwhals._plan.options import ExprIRConfig
+from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
     FunctionT,
     LeftSelectorT,
@@ -90,7 +90,7 @@ def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
 
-class Alias(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
+class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "name")
     expr: ExprIR
     name: str
@@ -109,7 +109,7 @@ class Alias(ExprIR, child=("expr",), config=ExprIRConfig.no_dispatch()):
         return common.replace(self, expr=expr)
 
 
-class Column(ExprIR, config=ExprIRConfig.namespaced("col")):
+class Column(ExprIR, config=ExprIROptions.namespaced("col")):
     __slots__ = ("name",)
     name: str
 
@@ -120,7 +120,7 @@ class Column(ExprIR, config=ExprIRConfig.namespaced("col")):
         return common.replace(self, name=name)
 
 
-class _ColumnSelection(ExprIR, config=ExprIRConfig.no_dispatch()):
+class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
 
 
@@ -175,7 +175,7 @@ class Exclude(_ColumnSelection, child=("expr",)):
         return common.replace(self, expr=expr)
 
 
-class Literal(ExprIR, t.Generic[LiteralT], config=ExprIRConfig.namespaced("lit")):
+class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -388,7 +388,7 @@ class RollingExpr(FunctionExpr[RollingT]): ...
 
 
 class AnonymousExpr(
-    FunctionExpr["MapBatches"], config=ExprIRConfig.renamed("map_batches")
+    FunctionExpr["MapBatches"], config=ExprIROptions.renamed("map_batches")
 ):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
 
@@ -449,7 +449,7 @@ class Filter(ExprIR, child=("expr", "by")):
 
 
 class WindowExpr(
-    ExprIR, child=("expr", "partition_by"), config=ExprIRConfig.renamed("over")
+    ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
 ):
     """A fully specified `.over()`, that occurred after another expression.
 
@@ -487,7 +487,7 @@ class WindowExpr(
 class OrderedWindowExpr(
     WindowExpr,
     child=("expr", "partition_by", "order_by"),
-    config=ExprIRConfig.renamed("over_ordered"),
+    config=ExprIROptions.renamed("over_ordered"),
 ):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
     expr: ExprIR
@@ -525,7 +525,7 @@ class OrderedWindowExpr(
         return common.replace(self, order_by=collect(order_by))
 
 
-class Len(ExprIR, config=ExprIRConfig.namespaced()):
+class Len(ExprIR, config=ExprIROptions.namespaced()):
     @property
     def is_scalar(self) -> bool:
         return True

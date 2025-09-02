@@ -9,7 +9,7 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.options import ExprIRConfig, FConfig, FunctionOptions
+from narwhals._plan.options import ExprIROptions, FEOptions, FunctionOptions
 from narwhals._plan.typing import (
     Accessor,
     DTypeT,
@@ -136,7 +136,7 @@ class ExprIR(Immutable):
     _child: ClassVar[Seq[str]] = ()
     """Nested node names, in iteration order."""
 
-    __expr_ir_config__: ClassVar[ExprIRConfig] = ExprIRConfig.default()
+    __expr_ir_config__: ClassVar[ExprIROptions] = ExprIROptions.default()
     __expr_ir_dispatch__: ClassVar[
         staticmethod[[Incomplete, Self, Incomplete, str], Incomplete]
     ]
@@ -145,7 +145,7 @@ class ExprIR(Immutable):
         cls: type[Self],
         *args: Any,
         child: Seq[str] = (),
-        config: ExprIRConfig | None = None,
+        config: ExprIROptions | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
@@ -285,7 +285,7 @@ class ExprIR(Immutable):
         return self.__repr__()
 
 
-class SelectorIR(ExprIR, config=ExprIRConfig.no_dispatch()):
+class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         from narwhals._plan import dummy
 
@@ -409,7 +409,7 @@ class Function(Immutable):
     _function_options: ClassVar[staticmethod[[], FunctionOptions]] = staticmethod(
         FunctionOptions.default
     )
-    __expr_ir_config__: ClassVar[FConfig] = FConfig.default()
+    __expr_ir_config__: ClassVar[FEOptions] = FEOptions.default()
     __expr_ir_dispatch__: ClassVar[
         staticmethod[[Incomplete, FunctionExpr[Self], Incomplete, str], Incomplete]
     ]
@@ -432,15 +432,12 @@ class Function(Immutable):
         *args: Any,
         accessor: Accessor | None = None,
         options: Callable[[], FunctionOptions] | None = None,
-        config: FConfig | None = None,
+        config: FEOptions | None = None,
         **kwds: Any,
     ) -> None:
         super().__init_subclass__(*args, **kwds)
         if accessor:
-            name = accessor
-            config = (
-                replace(config, accessor_name=name) if config else FConfig.accessor(name)
-            )
+            config = replace(config or FEOptions.default(), accessor_name=accessor)
         if options:
             cls._function_options = staticmethod(options)
         if config:
@@ -452,7 +449,7 @@ class Function(Immutable):
 
 
 class HorizontalFunction(
-    Function, options=FunctionOptions.horizontal, config=FConfig.namespaced()
+    Function, options=FunctionOptions.horizontal, config=FEOptions.namespaced()
 ): ...
 
 

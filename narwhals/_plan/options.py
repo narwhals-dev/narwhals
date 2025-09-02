@@ -268,7 +268,7 @@ def rolling_options(
     )
 
 
-class _BaseConfig(Immutable):
+class _BaseIROptions(Immutable):
     __slots__ = ("origin", "override_name")
     origin: DispatchOrigin
     override_name: str
@@ -295,8 +295,8 @@ class _BaseConfig(Immutable):
         )
 
 
-class ExprIRConfig(_BaseConfig):
-    __slots__ = (*_BaseConfig.__slots__, "allow_dispatch")
+class ExprIROptions(_BaseIROptions):
+    __slots__ = (*_BaseIROptions.__slots__, "allow_dispatch")
     allow_dispatch: bool
 
     @classmethod
@@ -304,14 +304,12 @@ class ExprIRConfig(_BaseConfig):
         return cls(origin="expr", override_name="", allow_dispatch=True)
 
     @staticmethod
-    def no_dispatch() -> ExprIRConfig:
-        return ExprIRConfig(origin="expr", override_name="", allow_dispatch=False)
+    def no_dispatch() -> ExprIROptions:
+        return ExprIROptions(origin="expr", override_name="", allow_dispatch=False)
 
 
-class FunctionExprConfig(_BaseConfig):
-    """Really need a better name for these classes."""
-
-    __slots__ = (*_BaseConfig.__slots__, "accessor_name")
+class FunctionExprOptions(_BaseIROptions):
+    __slots__ = (*_BaseIROptions.__slots__, "accessor_name")
     accessor_name: Accessor | None
     """Namespace accessor name, if any."""
 
@@ -319,9 +317,5 @@ class FunctionExprConfig(_BaseConfig):
     def default(cls) -> Self:
         return cls(origin="expr", override_name="", accessor_name=None)
 
-    @classmethod
-    def accessor(cls, name: Accessor, /) -> Self:
-        return cls(origin="expr", override_name="", accessor_name=name)
 
-
-FConfig = FunctionExprConfig
+FEOptions = FunctionExprOptions
