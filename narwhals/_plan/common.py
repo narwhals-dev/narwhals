@@ -45,11 +45,7 @@ if TYPE_CHECKING:
         WindowExpr,
     )
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.protocols import (
-        CompliantSeries,
-        NamespaceT_co,
-        SupportsNarwhalsNamespace,
-    )
+    from narwhals._plan.protocols import CompliantSeries
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 
@@ -89,11 +85,6 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
     return f"{match.group(1)}_{match.group(2)}"
 
 
-def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
-    """Return the compliant namespace."""
-    return obj.__narwhals_namespace__()
-
-
 def _dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
     config = tp.__expr_ir_config__
     name = config.override_name or _pascal_to_snake_case(tp.__name__)
@@ -104,7 +95,7 @@ def _dispatch_getter(tp: type[ExprIRT | FunctionT]) -> Callable[[Any], Any]:
     getter = attrgetter(_dispatch_method_name(tp))
     if tp.__expr_ir_config__.origin == "expr":
         return getter
-    return lambda ctx: getter(namespace(ctx))
+    return lambda ctx: getter(ctx.__narwhals_namespace__())
 
 
 def _dispatch_generate(

@@ -10,8 +10,8 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.functions import lit
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._plan.arrow.typing import NativeScalar, StoresNativeT_co
-from narwhals._plan.common import ExprIR, NamedIR, into_dtype, namespace
-from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
+from narwhals._plan.common import ExprIR, NamedIR, into_dtype
+from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch, namespace
 from narwhals._utils import (
     Implementation,
     Version,

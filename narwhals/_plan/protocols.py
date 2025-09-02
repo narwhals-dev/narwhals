@@ -75,6 +75,11 @@ class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
+def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    """Return the compliant namespace."""
+    return obj.__narwhals_namespace__()
+
+
 # NOTE: Unlike the version in `nw._utils`, here `.version` it is public
 class StoresVersion(Protocol):
     _version: Version
