@@ -74,7 +74,11 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "sqlframe",
   "polars==1.32.2",
   "uv",
-  "narwhals[ibis,dask,modin]",
+  "narwhals[ibis]",
+]
+typing-ci = [
+  "narwhals[dask,modin]",
+  {include-group = "typing"}
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
