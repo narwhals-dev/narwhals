@@ -145,7 +145,6 @@ import narwhals as nw
 from narwhals.typing import FrameT
 
 
-@nw.narwhalify
 def my_func(df: FrameT) -> FrameT:
     return df.with_columns((nw.col("a") * 2).alias("c"))
 ```
