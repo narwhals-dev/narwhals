@@ -4,18 +4,16 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan import common
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import ExprIR
 from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.dummy import Expr
-    from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class KeepName(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr",)
-    expr: ExprIR
+    expr: common.ExprIR
 
     @property
     def is_scalar(self) -> bool:
@@ -24,13 +22,10 @@ class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(common.replace(self, expr=self.expr.map_ir(function)))
 
-
-class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class RenameAlias(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
-    expr: ExprIR
+    expr: common.ExprIR
     function: AliasName
 
     @property
@@ -39,9 +34,6 @@ class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(common.replace(self, expr=self.expr.map_ir(function)))
 
 
 class Prefix(Immutable):
