@@ -180,7 +180,11 @@ class ExprIR(Immutable):
         [`polars_plan::plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/iterator.rs#L152-L159
         [`polars_plan::plans::visitor::visitors`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/visitor/visitors.rs
         """
-        return function(self)
+        if not self._child:
+            return function(self)
+        children = ((name, getattr(self, name)) for name in self._child)
+        changed = {name: _map_ir_child(child, function) for name, child in children}
+        return function(replace(self, **changed))
 
     def iter_left(self) -> Iterator[ExprIR]:
         """Yield nodes root->leaf.
@@ -338,12 +342,9 @@ class NamedIR(Immutable, Generic[ExprIRT]):
         """
         return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
 
-    def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
+    def map_ir(self, function: MapIR, /) -> Self:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
-        return self.with_expr(function(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
-        return cast("NamedIR[ExprIRT2]", replace(self, expr=expr))
+        return replace(self, expr=function(self.expr.map_ir(function)))
 
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"
@@ -588,6 +589,10 @@ def map_ir(
             result = result.map_ir(fn)
         return result
     return origin.map_ir(function)
+
+
+def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
+    return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
 # TODO @dangotbanned: Review again and try to work around (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)

@@ -84,17 +84,17 @@ class Immutable:
     def __replace__(self, **changes: Any) -> Self:
         """https://docs.python.org/3.13/library/copy.html#copy.replace"""  # noqa: D415
         if len(changes) == 1:
-            k_new, v_new = next(iter(changes.items()))
-            # NOTE: Will trigger an attribute error if invalid name
-            if getattr(self, k_new) == v_new:
+            # The most common case is a single field replacement.
+            # Iff that field happens to be equal, we can noop, preserving the current object's hash.
+            name, value_changed = next(iter(changes.items()))
+            if getattr(self, name) == value_changed:
                 return self
-            changed = dict(self.__immutable_items__)
-            # Now we *don't* need to check the key is valid
-            changed[k_new] = v_new
+            changes = dict(self.__immutable_items__, **changes)
         else:
-            changed = dict(self.__immutable_items__)
-            changed |= changes
-        return type(self)(**changed)
+            for name, value_current in self.__immutable_items__:
+                if name not in changes or value_current == changes[name]:
+                    changes[name] = value_current
+        return type(self)(**changes)
 
     def __init_subclass__(cls, *args: Any, **kwds: Any) -> None:
         super().__init_subclass__(*args, **kwds)

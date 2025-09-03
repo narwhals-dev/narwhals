@@ -212,9 +212,8 @@ def _root_names_unique(exprs: Seq[ExprIR]) -> set[str]:
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         if is_horizontal_reduction(child):
-            return child.with_input(
-                rewrite_projections(child.input, keys=(), schema=schema)
-            )
+            rewrites = rewrite_projections(child.input, keys=(), schema=schema)
+            return common.replace(child, input=rewrites)
         return child
 
     return origin.map_ir(fn)
