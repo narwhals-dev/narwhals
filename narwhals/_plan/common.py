@@ -338,12 +338,9 @@ class NamedIR(Immutable, Generic[ExprIRT]):
         """
         return NamedIR(expr=expr, name=expr.meta.output_name(raise_if_undetermined=True))
 
-    def map_ir(self, function: MapIR, /) -> NamedIR[ExprIR]:
+    def map_ir(self, function: MapIR, /) -> Self:
         """**WARNING**: don't use renaming ops here, or `self.name` is invalid."""
-        return self.with_expr(function(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIRT2, /) -> NamedIR[ExprIRT2]:
-        return cast("NamedIR[ExprIRT2]", replace(self, expr=expr))
+        return replace(self, expr=function(self.expr.map_ir(function)))
 
     def __repr__(self) -> str:
         return f"{self.name}={self.expr!r}"

@@ -12,6 +12,7 @@ from narwhals._plan.common import (
     is_function_expr,
     is_window_expr,
     map_ir,
+    replace,
 )
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
@@ -59,7 +60,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     ):
         func = window.expr
         parent, *args = func.input
-        return func.with_input((window.with_expr(parent), *args))
+        return replace(func, input=(replace(window, expr=parent), *args))
     return window
 
 
@@ -85,5 +86,5 @@ def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
     ):
         binary_expr = window.expr
         rhs = window.expr.right
-        return binary_expr.with_right(window.with_expr(rhs))
+        return replace(binary_expr, right=replace(window, expr=rhs))
     return window

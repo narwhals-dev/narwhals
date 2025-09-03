@@ -8,8 +8,6 @@ from narwhals._plan.exceptions import agg_scalar_error
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from typing_extensions import Self
-
     from narwhals._plan.typing import MapIR
     from narwhals.typing import RollingInterpolationMethod
 
@@ -29,10 +27,7 @@ class AggExpr(ExprIR, child=("expr",)):
         yield from self.expr.iter_output_name()
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return replace(self, expr=expr)
+        return function(replace(self, expr=self.expr.map_ir(function)))
 
     def __init__(self, *, expr: ExprIR, **kwds: Any) -> None:
         if expr.is_scalar:

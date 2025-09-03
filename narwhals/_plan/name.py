@@ -8,8 +8,6 @@ from narwhals._plan.common import ExprIR
 from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.dummy import Expr
     from narwhals._plan.typing import MapIR
@@ -27,10 +25,7 @@ class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
         return f"{self.expr!r}.name.keep()"
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
+        return function(common.replace(self, expr=self.expr.map_ir(function)))
 
 
 class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
@@ -46,10 +41,7 @@ class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
         return f".rename_alias({self.expr!r})"
 
     def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
+        return function(common.replace(self, expr=self.expr.map_ir(function)))
 
 
 class Prefix(Immutable):
