@@ -6,7 +6,6 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan import common
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
@@ -277,9 +276,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
     @property
     def is_scalar(self) -> bool:
         return self.function.is_scalar
-
-    def with_options(self, options: FunctionOptions, /) -> Self:
-        return common.replace(self, options=self.options.with_flags(options.flags))
 
     def __repr__(self) -> str:
         if self.input:
