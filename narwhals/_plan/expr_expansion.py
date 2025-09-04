@@ -335,17 +335,19 @@ def replace_and_add_to_results(
     if flags.expands:
         it = (e for e in origin.iter_left() if isinstance(e, (Columns, IndexColumns)))
         if e := next(it, None):
-            exclude = prepare_excluded(origin, keys, has_exclude=flags.has_exclude)
             if isinstance(e, Columns):
-                result.extend(expand_columns(origin, e, exclude=exclude))
+                if not _all_columns_match(origin, e):
+                    msg = "expanding more than one `col` is not allowed"
+                    raise ComputeError(msg)
+                names: Iterable[str] = e.names
             else:
                 names = _iter_index_names(e, col_names)
-                expanding = _expand_column_selection(origin, IndexColumns, names, exclude)
-                result.extend(expanding)
+            exclude = prepare_excluded(origin, keys, flags)
+            result.extend(expand_column_selection(origin, type(e), names, exclude))
     else:
-        exclude = prepare_excluded(origin, keys, has_exclude=flags.has_exclude)
+        exclude = prepare_excluded(origin, keys, flags)
         if flags.has_wildcard:
-            result.extend(_expand_column_selection(origin, All, col_names, exclude))
+            result.extend(expand_column_selection(origin, All, col_names, exclude))
         else:
             result.append(rewrite_special_aliases(origin))
     return tuple(result)
@@ -359,11 +361,11 @@ def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
 
 
 def prepare_excluded(
-    origin: ExprIR, /, keys: GroupByKeys, *, has_exclude: bool
+    origin: ExprIR, keys: GroupByKeys, flags: ExpansionFlags, /
 ) -> Excluded:
     """Huge simplification of https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555."""
     exclude: set[str] = set()
-    if has_exclude:
+    if flags.has_exclude:
         exclude.update(_iter_exclude_names(origin))
     for group_by_key in keys:
         if name := group_by_key.meta.output_name(raise_if_undetermined=False):
@@ -376,15 +378,6 @@ def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
     return all(it)
 
 
-def expand_columns(
-    origin: ExprIR, /, columns: Columns, *, exclude: Excluded
-) -> Iterator[ExprIR]:
-    if not _all_columns_match(origin, columns):
-        msg = "expanding more than one `col` is not allowed"
-        raise ComputeError(msg)
-    return _expand_column_selection(origin, Columns, columns.names, exclude)
-
-
 def _iter_index_names(indices: IndexColumns, names: FrozenColumns, /) -> Iterator[str]:
     n_fields = len(names)
     for index in indices.indices:
@@ -393,7 +386,7 @@ def _iter_index_names(indices: IndexColumns, names: FrozenColumns, /) -> Iterato
         yield names[index]
 
 
-def _expand_column_selection(
+def expand_column_selection(
     origin: ExprIR, tp: type[_ColumnSelection], /, names: Iterable[str], exclude: Excluded
 ) -> Iterator[ExprIR]:
     for name in names:
