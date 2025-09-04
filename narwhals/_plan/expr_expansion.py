@@ -74,7 +74,7 @@ from narwhals.dtypes import DType
 from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
 
     from typing_extensions import TypeAlias
 
@@ -344,12 +344,12 @@ def replace_and_add_to_results(
                 exclude = prepare_excluded(
                     origin, keys=keys, has_exclude=flags.has_exclude
                 )
-                result.extend(
-                    expand_indices(origin, e, col_names=col_names, exclude=exclude)
-                )
+                names = _iter_index_names(e, col_names)
+                expanding = _expand_column_selection(origin, IndexColumns, names, exclude)
+                result.extend(expanding)
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result.extend(replace_wildcard(origin, col_names=col_names, exclude=exclude))
+        result.extend(_expand_column_selection(origin, All, col_names, exclude))
     else:
         exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
         expanded = rewrite_special_aliases(origin)
@@ -384,50 +384,27 @@ def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
 
 def expand_columns(
     origin: ExprIR, /, columns: Columns, *, exclude: Excluded
-) -> Seq[ExprIR]:
+) -> Iterator[ExprIR]:
     if not _all_columns_match(origin, columns):
         msg = "expanding more than one `col` is not allowed"
         raise ComputeError(msg)
-    result: deque[ExprIR] = deque()
-    for name in columns.names:
-        if name not in exclude:
-            expanded = replace_with_column(origin, Columns, name)
-            expanded = rewrite_special_aliases(expanded)
-            result.append(expanded)
-    return tuple(result)
+    return _expand_column_selection(origin, Columns, columns.names, exclude)
 
 
-def expand_indices(
-    origin: ExprIR,
-    /,
-    indices: IndexColumns,
-    *,
-    col_names: FrozenColumns,
-    exclude: Excluded,
-) -> Seq[ExprIR]:
-    result: deque[ExprIR] = deque()
-    n_fields = len(col_names)
+def _iter_index_names(indices: IndexColumns, names: FrozenColumns, /) -> Iterator[str]:
+    n_fields = len(names)
     for index in indices.indices:
         if not is_index_in_range(index, n_fields):
-            raise column_index_error(index, col_names)
-        name = col_names[index]
-        if name not in exclude:
-            expanded = replace_with_column(origin, IndexColumns, name)
-            expanded = rewrite_special_aliases(expanded)
-            result.append(expanded)
-    return tuple(result)
+            raise column_index_error(index, names)
+        yield names[index]
 
 
-def replace_wildcard(
-    origin: ExprIR, /, *, col_names: FrozenColumns, exclude: Excluded
-) -> Seq[ExprIR]:
-    result: deque[ExprIR] = deque()
-    for name in col_names:
+def _expand_column_selection(
+    origin: ExprIR, tp: type[_ColumnSelection], /, names: Iterable[str], exclude: Excluded
+) -> Iterator[ExprIR]:
+    for name in names:
         if name not in exclude:
-            expanded = replace_with_column(origin, All, name)
-            expanded = rewrite_special_aliases(expanded)
-            result.append(expanded)
-    return tuple(result)
+            yield rewrite_special_aliases(replace_with_column(origin, tp, name))
 
 
 def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
