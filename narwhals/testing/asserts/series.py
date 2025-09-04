@@ -84,8 +84,9 @@ def assert_series_equal(
         msg = (
             "Expected `narwhals.Series` instance, found:\n"
             f"[left]: {qualified_type_name(type(left))}\n"
-            f"[right]: {qualified_type_name(type(left))}\n\n"
-            "Hint: Use `nw.from_native(obj, series_only=True) to convert to `narwhals.Series`"
+            f"[right]: {qualified_type_name(type(right))}\n\n"
+            "Hint: Use `nw.from_native(obj, series_only=True) to convert each native "
+            "object into a `narwhals.Series` first."
         )
         raise TypeError(msg)
 
@@ -138,8 +139,7 @@ def _check_metadata(
 
 
 def _cast_categorical_as_str(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
-    # TODO(FBruzzesi): Add coverage
-    if isinstance(left.dtype, Categorical):  # pragma: no cover
+    if isinstance(left.dtype, Categorical):
         left, right = left.cast(String()), right.cast(String())
     return left, right
 
@@ -191,7 +191,7 @@ def _check_exact_values(
         )
         _check_list_like(left, right, left_dtype, right_dtype, check_fn=check_fn)
         # If `_check_list_like` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
     elif isinstance(left_dtype, Struct) and isinstance(right_dtype, Struct):
         check_fn = partial(
             assert_series_equal,
@@ -205,7 +205,13 @@ def _check_exact_values(
         )
         _check_struct(left, right, left_dtype, right_dtype, check_fn=check_fn)
         # If `_check_struct` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)  # type: ignore[arg-type] # https://github.com/narwhals-dev/narwhals/pull/3016
+        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
+    elif isinstance(left_dtype, Categorical) and isinstance(right_dtype, Categorical):
+        # If `_check_categorical` didn't raise, then the categories sources/encodings are
+        # the same, and we can use equality
+        is_not_equal_mask = new_series(
+            "", [_check_categorical(left, right)], dtype=Boolean(), backend=left_impl
+        )
     else:
         is_not_equal_mask = left != right
 
@@ -271,3 +277,16 @@ def _check_struct(
             )
     except AssertionError:
         raise_assertion_error("Series", "exact value mismatch", left_vals, right_vals)
+
+
+def _check_categorical(left_vals: SeriesT, right_vals: SeriesT) -> bool:
+    """Try to compare if any element of categorical series' differ.
+
+    Inability to compare means that the encoding is different, and an exception is raised.
+    """
+    try:
+        return (left_vals != right_vals).any()
+    except Exception as exc:
+        msg = "Cannot compare categoricals coming from different sources."
+        # TODO(FBruzzesi): Improve error message
+        raise AssertionError(msg) from exc

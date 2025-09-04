@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
-from tests.utils import PANDAS_VERSION, PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -324,4 +324,46 @@ def test_non_nw_series() -> None:
         assert_series_equal(
             left=pd.Series([1]),  # type: ignore[arg-type]
             right=pa.chunked_array([[2]]),  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize(
+    ("categorical_as_str", "context"),
+    [
+        (True, does_not_raise()),
+        (
+            False,
+            pytest.raises(
+                AssertionError,
+                match="Cannot compare categoricals coming from different sources",
+            ),
+        ),
+    ],
+)
+def test_categorical_as_str(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    *,
+    categorical_as_str: bool,
+    context: Any,
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION >= (1, 32):
+        # https://github.com/pola-rs/polars/pull/23016 removed StringCache, it still
+        # exists but it does nothing in python.
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow" in str(constructor_eager) and not categorical_as_str:
+        # pyarrow dictionary dtype compares values, not the encoding.
+        request.applymarker(pytest.mark.xfail)
+
+    data = {
+        "left": ["beluga", "dolphin", "narwhal", "orca"],
+        "right": ["unicorn", "orca", "narwhal", "orca"],
+    }
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    left = frame["left"].cast(nw.Categorical())[2:]
+    right = frame["right"].cast(nw.Categorical())[2:]
+
+    with context:
+        assert_series_equal(
+            left, right, check_names=False, categorical_as_str=categorical_as_str
         )
