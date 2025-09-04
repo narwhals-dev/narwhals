@@ -40,10 +40,9 @@ from __future__ import annotations
 
 from collections import deque
 from functools import lru_cache
-from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan import common
+from narwhals._plan import common, meta
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ExprIR, NamedIR, SelectorIR, is_horizontal_reduction
 from narwhals._plan.exceptions import (
@@ -184,7 +183,7 @@ def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
 def ensure_valid_exprs(exprs: Seq[ExprIR], schema: FrozenSchema) -> OutputNames:
     """Raise an appropriate error if we can't materialize."""
     output_names = _ensure_output_names_unique(exprs)
-    root_names = _root_names_unique(exprs)
+    root_names = meta.root_names_unique(exprs)
     if not (set(schema.names).issuperset(root_names)):
         raise column_not_found_error(root_names, schema)
     return output_names
@@ -195,13 +194,6 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
     if len(names) != len(set(names)):
         raise duplicate_error(exprs)
     return names
-
-
-def _root_names_unique(exprs: Seq[ExprIR]) -> set[str]:
-    from narwhals._plan.meta import _expr_to_leaf_column_names_iter
-
-    it = chain.from_iterable(_expr_to_leaf_column_names_iter(expr) for expr in exprs)
-    return set(it)
 
 
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
@@ -380,8 +372,6 @@ def rewrite_special_aliases(origin: ExprIR, /) -> ExprIR:
         - Expanding all selections into `Column`
         - Dealing with `FunctionExpr.input`
     """
-    from narwhals._plan import meta
-
     if meta.has_expr_ir(origin, KeepName, RenameAlias):
         if isinstance(origin, KeepName):
             parent = origin.expr
