@@ -2069,8 +2069,9 @@ def discover_plugins() -> EntryPoints:
     from importlib.metadata import entry_points as eps
 
     group = "narwhals.plugins"
-    plugins = eps(group=group) if sys.version_info >= (3, 10) else eps()[group]
-    return cast("EntryPoints", plugins)
+    if sys.version_info < (3, 10):
+        return cast("EntryPoints", eps().get(group, ()))
+    return eps(group=group)
 
 
 class Compliant(
