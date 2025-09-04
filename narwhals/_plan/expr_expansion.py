@@ -344,12 +344,11 @@ def replace_and_add_to_results(
                 names = _iter_index_names(e, col_names)
             exclude = prepare_excluded(origin, keys, flags)
             result.extend(expand_column_selection(origin, type(e), names, exclude))
-    else:
+    elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys, flags)
-        if flags.has_wildcard:
-            result.extend(expand_column_selection(origin, All, col_names, exclude))
-        else:
-            result.append(rewrite_special_aliases(origin))
+        result.extend(expand_column_selection(origin, All, col_names, exclude))
+    else:
+        result.append(rewrite_special_aliases(origin))
     return tuple(result)
 
 
