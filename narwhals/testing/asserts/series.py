@@ -92,9 +92,6 @@ def assert_series_equal(
 
     _check_metadata(left, right, check_dtypes=check_dtypes, check_names=check_names)
 
-    if categorical_as_str:
-        left, right = _cast_categorical_as_str(left, right)
-
     if not check_order:
         if left.dtype.is_nested():
             msg = "`check_order=False` is not supported (yet) with nested data type."
@@ -136,12 +133,6 @@ def _check_metadata(
     left_name, right_name = left.name, right.name
     if check_names and left_name != right_name:
         raise_assertion_error("Series", "name mismatch", left_name, right_name)
-
-
-def _cast_categorical_as_str(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
-    if isinstance(left.dtype, Categorical):
-        left, right = left.cast(String()), right.cast(String())
-    return left, right
 
 
 def _check_null_values(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
@@ -209,8 +200,11 @@ def _check_exact_values(
     elif isinstance(left_dtype, Categorical) and isinstance(right_dtype, Categorical):
         # If `_check_categorical` didn't raise, then the categories sources/encodings are
         # the same, and we can use equality
+        _not_equal = _check_categorical(
+            left, right, categorical_as_str=categorical_as_str
+        )
         is_not_equal_mask = new_series(
-            "", [_check_categorical(left, right)], dtype=Boolean(), backend=left_impl
+            "", [_not_equal], dtype=Boolean(), backend=left_impl
         )
     else:
         is_not_equal_mask = left != right
@@ -279,14 +273,19 @@ def _check_struct(
         raise_assertion_error("Series", "exact value mismatch", left_vals, right_vals)
 
 
-def _check_categorical(left_vals: SeriesT, right_vals: SeriesT) -> bool:
+def _check_categorical(
+    left_vals: SeriesT, right_vals: SeriesT, *, categorical_as_str: bool
+) -> bool:
     """Try to compare if any element of categorical series' differ.
 
     Inability to compare means that the encoding is different, and an exception is raised.
     """
+    if categorical_as_str:
+        left_vals, right_vals = left_vals.cast(String()), right_vals.cast(String())
+
     try:
         return (left_vals != right_vals).any()
     except Exception as exc:
         msg = "Cannot compare categoricals coming from different sources."
-        # TODO(FBruzzesi): Improve error message
+        # TODO(FBruzzesi): Improve error message?
         raise AssertionError(msg) from exc

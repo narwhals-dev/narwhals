@@ -347,11 +347,16 @@ def test_categorical_as_str(
     categorical_as_str: bool,
     context: Any,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION >= (1, 32):
+    if (
+        "polars" in str(constructor_eager)
+        and POLARS_VERSION >= (1, 32)
+        and not categorical_as_str
+    ):
         # https://github.com/pola-rs/polars/pull/23016 removed StringCache, it still
         # exists but it does nothing in python.
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor_eager) and not categorical_as_str:
+
+    if "pyarrow_table" in str(constructor_eager) and not categorical_as_str:
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
