@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from itertools import chain
 from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan.common import IRNamespace
@@ -14,7 +15,7 @@ from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
     from typing_extensions import TypeIs
 
@@ -119,6 +120,10 @@ def _expr_to_leaf_column_name(ir: ExprIR) -> str | ComputeError:
         return ComputeError(msg)
     msg = f"Expected unreachable, got {type(leaf).__name__!r}\n\n{leaf}"
     return ComputeError(msg)
+
+
+def root_names_unique(irs: Iterable[ExprIR], /) -> set[str]:
+    return set(chain.from_iterable(_expr_to_leaf_column_names_iter(e) for e in irs))
 
 
 @lru_cache(maxsize=32)
