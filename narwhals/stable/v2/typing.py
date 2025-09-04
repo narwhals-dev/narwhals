@@ -1,36 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar, Union
 
 if TYPE_CHECKING:
-    import sys
-    from collections.abc import Iterable, Sized
+    from typing_extensions import TypeAlias
 
-    from narwhals.stable.v2 import DataFrame, LazyFrame
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
-    from narwhals.stable.v2 import Expr, Series
-
-    # All dataframes supported by Narwhals have a
-    # `columns` property. Their similarities don't extend
-    # _that_ much further unfortunately...
-    class NativeFrame(Protocol):
-        @property
-        def columns(self) -> Any: ...
-
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
-
-    class NativeLazyFrame(NativeFrame, Protocol):
-        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeSeries(Sized, Iterable[Any], Protocol):
-        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
+    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
+    from narwhals.stable.v2 import DataFrame, Expr, LazyFrame, Series
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
