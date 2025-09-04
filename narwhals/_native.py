@@ -1,7 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Sized
-from typing import TYPE_CHECKING, Any, Protocol
+from collections.abc import Callable, Collection, Iterable, Sized
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
+
+from narwhals.dependencies import (
+    get_cudf,
+    get_modin,
+    get_pandas,
+    get_polars,
+    get_pyarrow,
+    is_dask_dataframe,
+    is_duckdb_relation,
+    is_ibis_table,
+    is_pyspark_connect_dataframe,
+    is_pyspark_dataframe,
+    is_sqlframe_dataframe,
+)
 
 if TYPE_CHECKING:
     import duckdb
@@ -9,9 +23,11 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from sqlframe.base.dataframe import BaseDataFrame as _BaseDataFrame
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     SQLFrameDataFrame = _BaseDataFrame[Any, Any, Any, Any, Any]
+    T = TypeVar("T")
+    _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
 __all__ = [
     "NativeAny",
@@ -36,6 +52,19 @@ __all__ = [
     "NativeSeries",
     "NativeSparkLike",
     "NativeUnknown",
+    "is_native_arrow",
+    "is_native_cudf",
+    "is_native_dask",
+    "is_native_duckdb",
+    "is_native_ibis",
+    "is_native_modin",
+    "is_native_pandas",
+    "is_native_pandas_like",
+    "is_native_polars",
+    "is_native_pyspark",
+    "is_native_pyspark_connect",
+    "is_native_spark_like",
+    "is_native_sqlframe",
 ]
 
 
@@ -139,3 +168,61 @@ NativeSparkLike: TypeAlias = "NativeSQLFrame | NativePySpark | NativePySparkConn
 NativeKnown: TypeAlias = "NativePolars | NativeArrow | NativePandasLike | NativeSparkLike | NativeDuckDB | NativeDask | NativeIbis"
 NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeLazyFrame"
 NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
+
+
+def is_native_polars(obj: Any) -> TypeIs[NativePolars]:
+    return (pl := get_polars()) is not None and isinstance(
+        obj, (pl.DataFrame, pl.Series, pl.LazyFrame)
+    )
+
+
+def is_native_arrow(obj: Any) -> TypeIs[NativeArrow]:
+    return (pa := get_pyarrow()) is not None and isinstance(
+        obj, (pa.Table, pa.ChunkedArray)
+    )
+
+
+def is_native_dask(obj: Any) -> TypeIs[NativeDask]:
+    return is_dask_dataframe(obj)
+
+
+is_native_duckdb: _Guard[NativeDuckDB] = is_duckdb_relation
+is_native_sqlframe: _Guard[NativeSQLFrame] = is_sqlframe_dataframe
+is_native_pyspark = cast("_Guard[NativePySpark]", is_pyspark_dataframe)
+is_native_pyspark_connect = cast(
+    "_Guard[NativePySparkConnect]", is_pyspark_connect_dataframe
+)
+
+
+def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
+    return (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series))
+
+
+def is_native_modin(obj: Any) -> TypeIs[NativeModin]:
+    return (mpd := get_modin()) is not None and isinstance(
+        obj, (mpd.DataFrame, mpd.Series)
+    )  # pragma: no cover
+
+
+def is_native_cudf(obj: Any) -> TypeIs[NativeCuDF]:
+    return (cudf := get_cudf()) is not None and isinstance(
+        obj, (cudf.DataFrame, cudf.Series)
+    )  # pragma: no cover
+
+
+def is_native_pandas_like(obj: Any) -> TypeIs[NativePandasLike]:
+    return (
+        is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
+    )  # pragma: no cover
+
+
+def is_native_spark_like(obj: Any) -> TypeIs[NativeSparkLike]:
+    return (
+        is_native_sqlframe(obj)
+        or is_native_pyspark(obj)
+        or is_native_pyspark_connect(obj)
+    )
+
+
+def is_native_ibis(obj: Any) -> TypeIs[NativeIbis]:
+    return is_ibis_table(obj)
