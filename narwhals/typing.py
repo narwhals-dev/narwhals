@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._namespace import _NativeIbis
+    from narwhals._native import NativeIbis
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
@@ -127,7 +127,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = Union["NativeLazyFrame", "_NativeIbis"]
+IntoLazyFrame: TypeAlias = Union["NativeLazyFrame", "NativeIbis"]
 
 IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
