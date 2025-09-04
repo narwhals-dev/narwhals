@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     SQLFrameDataFrame = _BaseDataFrame[Any, Any, Any, Any, Any]
     T = TypeVar("T")
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
+    Incomplete: TypeAlias = Any
 
 __all__ = [
     "IntoDataFrame",
@@ -74,9 +75,6 @@ __all__ = [
     "is_native_spark_like",
     "is_native_sqlframe",
 ]
-
-
-Incomplete: TypeAlias = Any
 
 
 # All dataframes supported by Narwhals have a
@@ -191,7 +189,6 @@ Examples:
 """
 
 IntoLazyFrame: TypeAlias = Union[NativeLazyFrame, NativeIbis]
-
 IntoFrame: TypeAlias = Union[IntoDataFrame, IntoLazyFrame]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
@@ -250,7 +247,6 @@ Examples:
 """
 
 IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound=IntoLazyFrame)
-
 IntoSeriesT = TypeVar("IntoSeriesT", bound=IntoSeries)
 """TypeVar bound to object convertible to Narwhals Series.
 
@@ -278,16 +274,14 @@ def is_native_arrow(obj: Any) -> TypeIs[NativeArrow]:
     )
 
 
-def is_native_dask(obj: Any) -> TypeIs[NativeDask]:
-    return is_dask_dataframe(obj)
-
-
+is_native_dask = cast("_Guard[NativeDask]", is_dask_dataframe)
 is_native_duckdb: _Guard[NativeDuckDB] = is_duckdb_relation
 is_native_sqlframe: _Guard[NativeSQLFrame] = is_sqlframe_dataframe
 is_native_pyspark = cast("_Guard[NativePySpark]", is_pyspark_dataframe)
 is_native_pyspark_connect = cast(
     "_Guard[NativePySparkConnect]", is_pyspark_connect_dataframe
 )
+is_native_ibis = cast("_Guard[NativeIbis]", is_ibis_table)
 
 
 def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
@@ -316,7 +310,3 @@ def is_native_spark_like(obj: Any) -> TypeIs[NativeSparkLike]:
         or is_native_pyspark(obj)
         or is_native_pyspark_connect(obj)
     )
-
-
-def is_native_ibis(obj: Any) -> TypeIs[NativeIbis]:
-    return is_ibis_table(obj)
