@@ -226,9 +226,7 @@ def is_index_in_range(index: int, n_fields: int) -> bool:
 
 def remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, Alias):
-            return child.expr
-        return child
+        return child.expr if isinstance(child, Alias) else child
 
     return origin.map_ir(fn)
 
@@ -241,20 +239,14 @@ def replace_with_column(
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, tp):
             return col(name)
-        if isinstance(child, Exclude):
-            return child.expr
-        return child
+        return child.expr if isinstance(child, Exclude) else child
 
     return origin.map_ir(fn)
 
 
 def replace_selector(ir: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
-    """Fully diverging from `polars`, we'll see how that goes."""
-
     def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, SelectorIR):
-            return expand_selector(child, schema=schema)
-        return child
+        return expand_selector(child, schema) if isinstance(child, SelectorIR) else child
 
     return ir.map_ir(fn)
 
@@ -271,7 +263,7 @@ def selector_matches_column(selector: SelectorIR, name: str, dtype: DType, /) ->
 
 
 @lru_cache(maxsize=100)
-def expand_selector(selector: SelectorIR, *, schema: FrozenSchema) -> Columns:
+def expand_selector(selector: SelectorIR, schema: FrozenSchema) -> Columns:
     """Expand `selector` into `Columns`, within the context of `schema`."""
     matches = selector_matches_column
     return cols(*(k for k, v in schema.items() if matches(selector, k, v)))
@@ -291,11 +283,9 @@ def rewrite_projections(
         if flags.has_selector:
             expanded = replace_selector(expanded, schema=schema)
             flags = flags.with_multiple_columns()
-        result.extend(
-            replace_and_add_to_results(
-                expanded, keys=keys, col_names=schema.names, flags=flags
-            )
-        )
+        names = schema.names
+        results = replace_and_add_to_results(expanded, keys, col_names=names, flags=flags)
+        result.extend(results)
     return tuple(result)
 
 
