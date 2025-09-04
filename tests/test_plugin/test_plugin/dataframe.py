@@ -40,6 +40,7 @@ class DictLazyFrame(
 
     # Dunders
     __narwhals_namespace__ = not_implemented()
+    __native_namespace__ = not_implemented()
 
     # Properties
     schema = not_implemented()  # type: ignore[assignment]
@@ -68,6 +69,7 @@ class DictLazyFrame(
     simple_select = not_implemented()
     sink_parquet = not_implemented()
     sort = not_implemented()
+    tail = not_implemented()
     to_narwhals = not_implemented()
     unique = not_implemented()
     unpivot = not_implemented()
