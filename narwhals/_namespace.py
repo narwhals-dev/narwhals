@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
 from narwhals._native import (
@@ -37,8 +37,6 @@ from narwhals._native import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from typing import ClassVar
-
     import pandas as pd
     from typing_extensions import TypeAlias
 
@@ -61,8 +59,6 @@ if TYPE_CHECKING:
         Polars,
         SparkLike,
     )
-
-    T = TypeVar("T")
 
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
 
