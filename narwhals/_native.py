@@ -1,3 +1,71 @@
+"""The home for *mostly* [structural] counterparts to [nominal] native types.
+
+If you find yourself being yelled at by a typechecker and ended up here - **do not fear!**
+
+### (1) `Native(*Frame|Series)`
+Minimal `Protocol`(s) for matching *almost any* supported native type of that group:
+
+    class NativeThing(Protocol):
+        def something_common(self, *args: Any, **kwargs: Any) -> Any: ...
+
+Note:
+    This group is primarily a building block for more useful types.
+
+### (2) `Into(*Frame|Series)`
+*Publicly* exported `TypeAlias`(s) of **(1)**:
+
+    IntoThing: TypeAlias = NativeThing
+
+**But**, occasionally, there'll be an edge-case which we can spell like:
+
+    IntoThing: TypeAlias = Union[<type that does not fit the protocol>, NativeThing]
+
+Tip:
+    Reach for these when there **isn't a need to preserve** the original native type.
+
+### (3) `Into(*Frame|Series)T`
+*Publicly* exported `TypeVar`(s), bound to **(2)**:
+
+    IntoThingT = TypeVar("IntoThingT", bound=IntoThing)
+
+Important:
+    In most situations, you'll want to use these as they **do preserve** the original native type.
+
+Putting it all together, we can now add a *narwhals-level* wrapper:
+
+    class Thing(Generic[IntoThingT]):
+        def to_native(self) -> IntoThingT: ...
+
+### (4) The funky ones (WIP)
+Everything so far has been focused on the idea of matching an *unknown* native object to
+a protocol used by a generic class:
+
+    DataFrame[IntoDataFrameT]
+    LazyFrame[IntoLazyFrameT]
+    Series[IntoSeriesT]
+
+A unique problem arises when we want to describe different behaviors, depending on what
+`Into*T` actually is.
+
+TODO @dangotbanned: finish/shorten/scrap this section
+
+#### Notes
+- Previous comments
+  - NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
+  - Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
+- Related `@overload` content
+  - https://github.com/pola-rs/polars/pull/8011#discussion_r1158657862
+
+
+### (5) Type guards (WIP)
+Using the types from **(4)**, these guards are *mostly* the same as those found in `nw.dependencies`.
+
+They differ in *how many* native types are checked per-call.
+
+[structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
+[nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Iterable, Sized
