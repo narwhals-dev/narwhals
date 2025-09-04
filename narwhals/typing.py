@@ -8,7 +8,7 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Sequence, Sized
+    from collections.abc import Sequence
     from decimal import Decimal
     from types import ModuleType
 
@@ -19,28 +19,16 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
-    from narwhals._native import NativeIbis
+    from narwhals._native import (
+        NativeDataFrame,
+        NativeIbis,
+        NativeLazyFrame,
+        NativeSeries,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
     from narwhals.series import Series
-
-    # All dataframes supported by Narwhals have a
-    # `columns` property. Their similarities don't extend
-    # _that_ much further unfortunately...
-    class NativeFrame(Protocol):
-        @property
-        def columns(self) -> Any: ...
-
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
-
-    class NativeLazyFrame(NativeFrame, Protocol):
-        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeSeries(Sized, Iterable[Any], Protocol):
-        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class SupportsNativeNamespace(Protocol):
         def __native_namespace__(self) -> ModuleType: ...
