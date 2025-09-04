@@ -283,21 +283,18 @@ def rewrite_projections(
         if flags.has_selector:
             expanded = replace_selector(expanded, schema=schema)
             flags = flags.with_multiple_columns()
-        names = schema.names
-        results = replace_and_add_to_results(expanded, keys, col_names=names, flags=flags)
-        result.extend(results)
+        result.extend(iter_replace(expanded, keys, col_names=schema.names, flags=flags))
     return tuple(result)
 
 
-def replace_and_add_to_results(
+def iter_replace(
     origin: ExprIR,
     /,
     keys: GroupByKeys,
     *,
     col_names: FrozenColumns,
     flags: ExpansionFlags,
-) -> Seq[ExprIR]:
-    result: deque[ExprIR] = deque()
+) -> Iterator[ExprIR]:
     if flags.has_nth:
         origin = replace_nth(origin, col_names)
     if flags.expands:
@@ -311,13 +308,12 @@ def replace_and_add_to_results(
             else:
                 names = _iter_index_names(e, col_names)
             exclude = prepare_excluded(origin, keys, flags)
-            result.extend(expand_column_selection(origin, type(e), names, exclude))
+            yield from expand_column_selection(origin, type(e), names, exclude)
     elif flags.has_wildcard:
         exclude = prepare_excluded(origin, keys, flags)
-        result.extend(expand_column_selection(origin, All, col_names, exclude))
+        yield from expand_column_selection(origin, All, col_names, exclude)
     else:
-        result.append(rewrite_special_aliases(origin))
-    return tuple(result)
+        yield rewrite_special_aliases(origin)
 
 
 def prepare_excluded(
