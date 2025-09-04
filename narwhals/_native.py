@@ -297,7 +297,7 @@ def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
 def is_native_modin(obj: Any) -> TypeIs[NativeModin]:
     return (mpd := get_modin()) is not None and isinstance(
         obj, (mpd.DataFrame, mpd.Series)
-    )  # pragma: no cover
+    )
 
 
 def is_native_cudf(obj: Any) -> TypeIs[NativeCuDF]:
@@ -307,9 +307,7 @@ def is_native_cudf(obj: Any) -> TypeIs[NativeCuDF]:
 
 
 def is_native_pandas_like(obj: Any) -> TypeIs[NativePandasLike]:
-    return (
-        is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
-    )  # pragma: no cover
+    return is_native_pandas(obj) or is_native_cudf(obj) or is_native_modin(obj)
 
 
 def is_native_spark_like(obj: Any) -> TypeIs[NativeSparkLike]:
