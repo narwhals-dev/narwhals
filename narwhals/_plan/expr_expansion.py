@@ -352,20 +352,13 @@ def replace_and_add_to_results(
     return tuple(result)
 
 
-def _iter_exclude_names(origin: ExprIR, /) -> Iterator[str]:
-    """Yield all excluded names in `origin`."""
-    for e in origin.iter_left():
-        if isinstance(e, Exclude):
-            yield from e.names
-
-
 def prepare_excluded(
     origin: ExprIR, keys: GroupByKeys, flags: ExpansionFlags, /
 ) -> Excluded:
     """Huge simplification of https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555."""
     exclude: set[str] = set()
     if flags.has_exclude:
-        exclude.update(_iter_exclude_names(origin))
+        exclude.update(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
     for group_by_key in keys:
         if name := group_by_key.meta.output_name(raise_if_undetermined=False):
             exclude.add(name)
