@@ -78,7 +78,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.dummy import Expr
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
@@ -147,10 +146,6 @@ class ExpansionFlags(Immutable):
             has_selector=has_selector,
             has_exclude=has_exclude,
         )
-
-    @classmethod
-    def from_expr(cls, expr: Expr, /) -> ExpansionFlags:
-        return cls.from_ir(expr._ir)
 
     def with_multiple_columns(self) -> ExpansionFlags:
         return common.replace(self, multiple_columns=True)
@@ -240,15 +235,6 @@ def is_index_in_range(index: int, n_fields: int) -> bool:
 def remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         if isinstance(child, Alias):
-            return child.expr
-        return child
-
-    return origin.map_ir(fn)
-
-
-def remove_exclude(origin: ExprIR, /) -> ExprIR:
-    def fn(child: ExprIR, /) -> ExprIR:
-        if isinstance(child, Exclude):
             return child.expr
         return child
 
