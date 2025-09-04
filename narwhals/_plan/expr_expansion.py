@@ -335,25 +335,19 @@ def replace_and_add_to_results(
     if flags.expands:
         it = (e for e in origin.iter_left() if isinstance(e, (Columns, IndexColumns)))
         if e := next(it, None):
+            exclude = prepare_excluded(origin, keys, has_exclude=flags.has_exclude)
             if isinstance(e, Columns):
-                exclude = prepare_excluded(
-                    origin, keys=keys, has_exclude=flags.has_exclude
-                )
                 result.extend(expand_columns(origin, e, exclude=exclude))
             else:
-                exclude = prepare_excluded(
-                    origin, keys=keys, has_exclude=flags.has_exclude
-                )
                 names = _iter_index_names(e, col_names)
                 expanding = _expand_column_selection(origin, IndexColumns, names, exclude)
                 result.extend(expanding)
-    elif flags.has_wildcard:
-        exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        result.extend(_expand_column_selection(origin, All, col_names, exclude))
     else:
-        exclude = prepare_excluded(origin, keys=keys, has_exclude=flags.has_exclude)
-        expanded = rewrite_special_aliases(origin)
-        result.append(expanded)
+        exclude = prepare_excluded(origin, keys, has_exclude=flags.has_exclude)
+        if flags.has_wildcard:
+            result.extend(_expand_column_selection(origin, All, col_names, exclude))
+        else:
+            result.append(rewrite_special_aliases(origin))
     return tuple(result)
 
 
