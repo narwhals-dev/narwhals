@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import sys
 from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
@@ -565,24 +564,19 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    if sys.version_info >= (3, 10):
-        discovered_plugins = discover_plugins()
-
-        for plugin in discovered_plugins:
-            obj = plugin.load()
-            if obj.is_native_object(native_object):
-                compliant_object = obj.from_native(native_object, version)
-                return _translate_if_compliant(
-                    compliant_object,
-                    pass_through=pass_through,
-                    eager_only=eager_only,
-                    eager_or_interchange_only=eager_or_interchange_only,
-                    series_only=series_only,
-                    allow_series=allow_series,
-                    version=version,
-                )
-    else:  # pragma: no cover
-        pass
+    for plugin in discover_plugins():
+        obj = plugin.load()
+        if obj.is_native_object(native_object):
+            compliant_object = obj.from_native(native_object, version)
+            return _translate_if_compliant(
+                compliant_object,
+                pass_through=pass_through,
+                eager_only=eager_only,
+                eager_or_interchange_only=eager_or_interchange_only,
+                series_only=series_only,
+                allow_series=allow_series,
+                version=version,
+            )
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"

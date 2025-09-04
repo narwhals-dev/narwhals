@@ -2065,9 +2065,12 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
 
 @cache
 def discover_plugins() -> EntryPoints:
-    from importlib.metadata import entry_points
+    import sys
+    from importlib.metadata import entry_points as eps
 
-    return entry_points(group="narwhals.plugins")
+    group = "narwhals.plugins"
+    plugins = eps(group=group) if sys.version_info >= (3, 10) else eps()[group]
+    return cast("EntryPoints", plugins)
 
 
 class Compliant(
