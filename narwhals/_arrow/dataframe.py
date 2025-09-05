@@ -489,7 +489,7 @@ class ArrowDataFrame(
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
         if order_by is None:
-            row_index = plx.int_range_eager(0, len(self))._to_expr()
+            row_index = plx._expr._from_series(plx.int_range_eager(0, len(self)))
         else:
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
             row_index = rank.over(partition_by=[], order_by=order_by) - 1
