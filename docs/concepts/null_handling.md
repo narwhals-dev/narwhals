@@ -79,10 +79,6 @@ Notice how the classic pandas dtypes make no distinction between the concepts, w
 libraries do. Note however that discussion on what PyArrow-backed pandas dataframe should do
 [is ongoing](https://github.com/pandas-dev/pandas/issues/32265).
 
-We recommend only handling null values in applications,
-and leaving NaN values as an edge case resulting from users having performed undefined mathematical
-operations.
-
 ## NaN comparisons
 
 According to the IEEE-754 standard, NaN should compare as not equal to itself, and cannot
@@ -117,6 +113,4 @@ print(duckdb.sql("from df select a, a == a as a_equals_a"))
 Furthermore, Polars [excludes NaN values in `max`](https://github.com/pola-rs/polars/issues/23635)
 whereas DuckDB treats them as larger than any other floating-point value.
 
-For these reasons, we recommend only handling null values in applications,
-and leaving NaN values as an edge case resulting from users having performed undefined mathematical
-operations.
+For all these reasons it bears reiterating that our recommendation is to only handle null values in applications, and leave NaN values as an edge case resulting from users having performed undefined mathematical operations.
