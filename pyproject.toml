@@ -76,6 +76,10 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "uv",
   "narwhals[ibis]",
 ]
+typing-ci = [
+  "narwhals[dask,modin]",
+  {include-group = "typing"}
+]
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
