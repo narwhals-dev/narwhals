@@ -71,7 +71,6 @@ class ArrowNamespace(
     def lit(
         self, node: expr.Literal[NonNestedLiteral], frame: ArrowDataFrame, name: str
     ) -> ArrowScalar: ...
-
     @overload
     def lit(
         self,
@@ -79,15 +78,6 @@ class ArrowNamespace(
         frame: ArrowDataFrame,
         name: str,
     ) -> ArrowExpr: ...
-
-    @overload
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
-        frame: ArrowDataFrame,
-        name: str,
-    ) -> ArrowExpr | ArrowScalar: ...
-
     def lit(
         self,
         node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
@@ -213,17 +203,12 @@ class ArrowNamespace(
     def concat(
         self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
     ) -> ArrowDataFrame: ...
-
     @overload
     def concat(
         self, items: Iterable[ArrowSeries], *, how: Literal["vertical"]
     ) -> ArrowSeries: ...
-
     def concat(
-        self,
-        items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries],
-        *,
-        how: ConcatMethod,
+        self, items: Iterable[ArrowDataFrame | ArrowSeries], *, how: ConcatMethod
     ) -> ArrowDataFrame | ArrowSeries:
         if how == "vertical":
             return self._concat_vertical(items)
@@ -258,7 +243,7 @@ class ArrowNamespace(
         return self._dataframe.from_native(native, self.version)
 
     def _concat_vertical(
-        self, items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries]
+        self, items: Iterable[ArrowDataFrame | ArrowSeries]
     ) -> ArrowDataFrame | ArrowSeries:
         collected = collect(items)
         if is_tuple_of(collected, self._series):
