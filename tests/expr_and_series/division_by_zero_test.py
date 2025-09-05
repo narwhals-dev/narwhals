@@ -6,13 +6,8 @@ from typing import Any, Callable
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    zip_strict,
-)
+from narwhals._utils import zip_strict
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data: dict[str, list[float]] = {
     "int": [-2, 0, 2],
