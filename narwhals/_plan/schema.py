@@ -96,8 +96,7 @@ class FrozenSchema(Immutable):
 
     @staticmethod
     def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
-        clone = MappingProxyType(dict(items))
-        return FrozenSchema._from_mapping(clone)
+        return FrozenSchema._from_mapping(MappingProxyType(dict(items)))
 
     def items(self) -> ItemsView[str, DType]:
         return self._mapping.items()

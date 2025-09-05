@@ -164,9 +164,8 @@ class ExprIR(Immutable):
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         from narwhals._plan import dummy
 
-        if version is Version.MAIN:
-            return dummy.Expr._from_ir(self)
-        return dummy.ExprV1._from_ir(self)
+        tp = dummy.Expr if version is Version.MAIN else dummy.ExprV1
+        return tp._from_ir(self)
 
     @property
     def is_scalar(self) -> bool:

@@ -75,16 +75,7 @@ class IRMetaNamespace(IRNamespace):
 
     def root_names(self) -> list[str]:
         """Get the root column names."""
-        return _expr_to_leaf_column_names(self._ir)
-
-
-def _expr_to_leaf_column_names(ir: ExprIR) -> list[str]:
-    """After a lot of indirection, [root_names] resolves [here].
-
-    [root_names]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L27-L30
-    [here]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/utils.rs#L171-L195
-    """
-    return list(_expr_to_leaf_column_names_iter(ir))
+        return list(_expr_to_leaf_column_names_iter(self._ir))
 
 
 def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
@@ -191,26 +182,22 @@ def is_column(ir: ExprIR) -> TypeIs[Column]:
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     from narwhals._plan import expr
-    from narwhals._plan.literal import ScalarLiteral
+    from narwhals._plan.literal import is_literal_scalar
 
-    if isinstance(ir, expr.Literal):
-        return True
-    if isinstance(ir, expr.Alias):
-        return allow_aliasing
-    if isinstance(ir, expr.Cast):
-        return (
-            isinstance(ir.expr, expr.Literal)
-            and isinstance(ir.expr, ScalarLiteral)
+    return (
+        isinstance(ir, expr.Literal)
+        or (allow_aliasing and isinstance(ir, expr.Alias))
+        or (
+            isinstance(ir, expr.Cast)
+            and is_literal_scalar(ir.expr)
             and isinstance(ir.expr.dtype, Version.MAIN.dtypes.Datetime)
         )
-    return False
+    )
 
 
 def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     from narwhals._plan import expr
 
-    if isinstance(ir, (expr.Column, expr._ColumnSelection, expr.SelectorIR)):
-        return True
-    if isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias)):
-        return allow_aliasing
-    return False
+    return isinstance(ir, (expr.Column, expr._ColumnSelection, expr.SelectorIR)) or (
+        allow_aliasing and isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias))
+    )

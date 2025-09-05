@@ -129,8 +129,7 @@ class Matches(Selector):
     def from_names(*names: str | Iterable[str]) -> Matches:
         """Implements `cs.by_name` to support `__r<op>__` with column selections."""
         it: Iterator[str] = flatten_hash_safe(names)
-        pattern = f"^({'|'.join(re.escape(name) for name in it)})$"
-        return Matches.from_string(pattern)
+        return Matches.from_string(f"^({'|'.join(re.escape(name) for name in it)})$")
 
     def __repr__(self) -> str:
         return f"ncs.matches(pattern={self.pattern.pattern!r})"

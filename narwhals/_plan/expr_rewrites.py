@@ -85,6 +85,5 @@ def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
         and (is_aggregation(window.expr.right))
     ):
         binary_expr = window.expr
-        rhs = window.expr.right
-        return replace(binary_expr, right=replace(window, expr=rhs))
+        return replace(binary_expr, right=replace(window, expr=binary_expr.right))
     return window
