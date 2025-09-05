@@ -75,16 +75,7 @@ class IRMetaNamespace(IRNamespace):
 
     def root_names(self) -> list[str]:
         """Get the root column names."""
-        return _expr_to_leaf_column_names(self._ir)
-
-
-def _expr_to_leaf_column_names(ir: ExprIR) -> list[str]:
-    """After a lot of indirection, [root_names] resolves [here].
-
-    [root_names]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/dsl/meta.rs#L27-L30
-    [here]: https://github.com/pola-rs/polars/blob/b9dd8cdbd6e6ec8373110536955ed5940b9460ec/crates/polars-plan/src/utils.rs#L171-L195
-    """
-    return list(_expr_to_leaf_column_names_iter(ir))
+        return list(_expr_to_leaf_column_names_iter(self._ir))
 
 
 def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
