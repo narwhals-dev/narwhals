@@ -2,35 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, Union
 
+from narwhals._native import IntoSeries, IntoSeriesT
+
 if TYPE_CHECKING:
-    import sys
-    from collections.abc import Iterable, Sized
+    from typing_extensions import TypeAlias
 
-    from narwhals.stable.v1 import DataFrame, LazyFrame
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-
-    from narwhals.stable.v1 import Expr, Series
-
-    # All dataframes supported by Narwhals have a
-    # `columns` property. Their similarities don't extend
-    # _that_ much further unfortunately...
-    class NativeFrame(Protocol):
-        @property
-        def columns(self) -> Any: ...
-
-        def join(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
-
-    class NativeLazyFrame(NativeFrame, Protocol):
-        def explain(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class NativeSeries(Sized, Iterable[Any], Protocol):
-        def filter(self, *args: Any, **kwargs: Any) -> Any: ...
+    from narwhals._native import NativeDataFrame, NativeLazyFrame
+    from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
 
     class DataFrameLike(Protocol):
         def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -46,7 +24,6 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-
 IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrameLike"]
 """Anything which can be converted to a Narwhals DataFrame.
 
@@ -61,7 +38,6 @@ Examples:
 """
 
 IntoLazyFrame: TypeAlias = "NativeLazyFrame"
-
 IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
@@ -88,21 +64,6 @@ Examples:
     >>> @nw.narwhalify
     ... def agnostic_columns(df: Frame) -> list[str]:
     ...     return df.columns
-"""
-
-IntoSeries: TypeAlias = "NativeSeries"
-"""Anything which can be converted to a Narwhals Series.
-
-Use this if your function can accept an object which can be converted to `nw.Series`
-and it doesn't care about its backend.
-
-Examples:
-    >>> from typing import Any
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoSeries
-    >>> def agnostic_to_list(s_native: IntoSeries) -> list[Any]:
-    ...     s = nw.from_native(s_native)
-    ...     return s.to_list()
 """
 
 IntoFrameT = TypeVar("IntoFrameT", bound="IntoFrame")
@@ -134,7 +95,6 @@ Examples:
 """
 
 IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
-
 FrameT = TypeVar("FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 """TypeVar bound to Narwhals DataFrame or Narwhals LazyFrame.
 
@@ -161,20 +121,6 @@ Examples:
     >>> @nw.narwhalify
     >>> def func(df: DataFrameT) -> DataFrameT:
     ...     return df.with_columns(c=df["a"] + 1)
-"""
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries")
-"""TypeVar bound to object convertible to Narwhals Series.
-
-Use this if your function accepts an object  which can be converted to `nw.Series`
-and returns an object of the same class.
-
-Examples:
-    >>> import narwhals as nw
-    >>> from narwhals.typing import IntoSeriesT
-    >>> def agnostic_abs(s_native: IntoSeriesT) -> IntoSeriesT:
-    ...     s = nw.from_native(s_native, series_only=True)
-    ...     return s.abs().to_native()
 """
 
 

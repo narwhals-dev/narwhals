@@ -17,7 +17,7 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import NativeLazyFrame
+    from narwhals._native import NativeSQLFrame
 
 DATA = {
     "a": [1],
@@ -282,12 +282,12 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
     if "spark" in str(constructor):  # pragma: no cover
         # Special handling for pyspark as it natively maps the input to
         # a column of type MAP<STRING, STRING>
-        native_ldf = cast("NativeLazyFrame", native_df)
+        native_ldf = cast("NativeSQLFrame", native_df)
         _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
         F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined]
         T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
 
-        native_ldf = native_ldf.withColumn(  # type: ignore[attr-defined]
+        native_ldf = native_ldf.withColumn(
             "a",
             F.struct(
                 F.col("a.movie ").cast(T.StringType()).alias("movie "),

@@ -15,18 +15,16 @@ from tests.utils import PANDAS_VERSION, pyspark_session, sqlframe_session
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import duckdb
     import ibis
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
-    from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
-    from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals._typing import EagerAllowed
-    from narwhals.typing import NativeDataFrame, NativeLazyFrame
+    from narwhals.typing import IntoDataFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"
@@ -100,27 +98,27 @@ def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
-def modin_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
+def modin_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj))
-    return cast("NativeDataFrame", df)
+    return cast("IntoDataFrame", df)
 
 
-def modin_pyarrow_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
+def modin_pyarrow_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
-    return cast("NativeDataFrame", df)
+    return cast("IntoDataFrame", df)
 
 
-def cudf_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
+def cudf_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
     import cudf
 
     df = cudf.DataFrame(obj)
-    return cast("NativeDataFrame", df)
+    return cast("IntoDataFrame", df)
 
 
 def polars_eager_constructor(obj: Data) -> pl.DataFrame:
@@ -135,7 +133,7 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
-def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
+def duckdb_lazy_constructor(obj: Data) -> NativeDuckDB:
     import duckdb
     import polars as pl
 
@@ -145,16 +143,16 @@ def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     return duckdb.table("_df")
 
 
-def dask_lazy_p1_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
+def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
     import dask.dataframe as dd
 
-    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=1))
+    return cast("NativeDask", dd.from_dict(obj, npartitions=1))
 
 
-def dask_lazy_p2_constructor(obj: Data) -> NativeLazyFrame:  # pragma: no cover
+def dask_lazy_p2_constructor(obj: Data) -> NativeDask:  # pragma: no cover
     import dask.dataframe as dd
 
-    return cast("NativeLazyFrame", dd.from_dict(obj, npartitions=2))
+    return cast("NativeDask", dd.from_dict(obj, npartitions=2))
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
@@ -163,7 +161,7 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     return pa.table(obj)
 
 
-def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma: no cover
+def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no cover
     pytest.importorskip("pyspark")
     import warnings
     from atexit import register
@@ -178,22 +176,22 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
         register(session.stop)
 
-        def _constructor(obj: Data) -> PySparkDataFrame:
+        def _constructor(obj: Data) -> NativePySpark:
             _obj = deepcopy(obj)
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
-
-            return (
+            result = (
                 session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
                 .repartition(2)
                 .orderBy(index_col_name)
                 .drop(index_col_name)
             )
+            return cast("NativePySpark", result)
 
         return _constructor
 
 
-def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
+def sqlframe_pyspark_lazy_constructor(obj: Data) -> NativeSQLFrame:  # pragma: no cover
     session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
