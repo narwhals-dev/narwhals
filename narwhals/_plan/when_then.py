@@ -11,11 +11,9 @@ from narwhals._plan.expr_parsing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from narwhals._plan.common import ExprIR
     from narwhals._plan.expr import TernaryExpr
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 
 class When(Immutable):
@@ -40,7 +38,7 @@ class Then(Immutable, Expr):
     statement: ExprIR
 
     def when(
-        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
         condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
@@ -85,7 +83,7 @@ class ChainedThen(Immutable, Expr):
     statements: Seq[ExprIR]
 
     def when(
-        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
         condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(

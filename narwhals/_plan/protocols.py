@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ConcatMethod,
@@ -31,7 +32,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
-OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 

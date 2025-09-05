@@ -21,6 +21,7 @@ from narwhals._plan.typing import (
     MapIR,
     NamedOrExprIRT,
     NonNestedDTypeT,
+    OneOrIterable,
     Seq,
 )
 from narwhals.dtypes import DType
@@ -496,7 +497,7 @@ def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprI
 # TODO @dangotbanned: Review again and try to work around (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)
 # The issue is `T` possibly being `Iterable`
 # Ignoring here still leaks the issue to the caller, where you need to annotate the base case
-def flatten_hash_safe(iterable: Iterable[T | Iterable[T]], /) -> Iterator[T]:
+def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
     """Fully unwrap all levels of nesting.
 
     Aiming to reduce the chances of passing an unhashable argument.

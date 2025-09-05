@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-import typing as t
-from typing import TYPE_CHECKING, Generic
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan import (
     aggregation as agg,
@@ -16,7 +16,7 @@ from narwhals._plan import (
     operators as ops,
 )
 from narwhals._plan._guards import is_column, is_expr, is_series
-from narwhals._plan.common import NamedIR, into_dtype
+from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.options import (
     EWMOptions,
@@ -34,13 +34,11 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
-
     import pyarrow as pa
     from typing_extensions import Never, Self
 
     from narwhals._plan.categorical import ExprCatNamespace
-    from narwhals._plan.common import ExprIR, Function
+    from narwhals._plan.common import ExprIR, Function, NamedIR
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.name import ExprNameNamespace
@@ -53,7 +51,7 @@ if TYPE_CHECKING:
     from narwhals._plan.strings import ExprStringNamespace
     from narwhals._plan.struct import ExprStructNamespace
     from narwhals._plan.temporal import ExprDateTimeNamespace
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq, Udf
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -70,10 +68,10 @@ if TYPE_CHECKING:
 
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
 def _parse_sort_by(
-    by: IntoExpr | Iterable[IntoExpr] = (),
+    by: OneOrIterable[IntoExpr] = (),
     *more_by: IntoExpr,
-    descending: bool | t.Iterable[bool] = False,
-    nulls_last: bool | t.Iterable[bool] = False,
+    descending: OneOrIterable[bool] = False,
+    nulls_last: OneOrIterable[bool] = False,
 ) -> tuple[Seq[ExprIR], SortMultipleOptions]:
     sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
     if length_changing := next((e for e in sort_by if e.is_scalar), None):
@@ -87,7 +85,7 @@ def _parse_sort_by(
 # Entirely ignoring namespace + function binding
 class Expr:
     _ir: ExprIR
-    _version: t.ClassVar[Version] = Version.MAIN
+    _version: ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
         return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!r}"
@@ -115,7 +113,7 @@ class Expr:
     def cast(self, dtype: IntoDType) -> Self:
         return self._from_ir(self._ir.cast(into_dtype(dtype)))
 
-    def exclude(self, *names: str | t.Iterable[str]) -> Self:
+    def exclude(self, *names: OneOrIterable[str]) -> Self:
         return self._from_ir(expr.Exclude.from_names(self._ir, *names))
 
     def count(self) -> Self:
@@ -166,8 +164,8 @@ class Expr:
 
     def over(
         self,
-        *partition_by: IntoExpr | t.Iterable[IntoExpr],
-        order_by: IntoExpr | t.Iterable[IntoExpr] = None,
+        *partition_by: OneOrIterable[IntoExpr],
+        order_by: OneOrIterable[IntoExpr] = None,
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
@@ -192,10 +190,10 @@ class Expr:
 
     def sort_by(
         self,
-        by: IntoExpr | t.Iterable[IntoExpr],
+        by: OneOrIterable[IntoExpr],
         *more_by: IntoExpr,
-        descending: bool | t.Iterable[bool] = False,
-        nulls_last: bool | t.Iterable[bool] = False,
+        descending: OneOrIterable[bool] = False,
+        nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
         keys, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
@@ -203,9 +201,7 @@ class Expr:
         return self._from_ir(expr.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
-        self,
-        *predicates: IntoExprColumn | t.Iterable[IntoExprColumn],
-        **constraints: t.Any,
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
         by = parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(expr.Filter(expr=self._ir, by=by))
@@ -218,7 +214,7 @@ class Expr:
 
     def hist(
         self,
-        bins: t.Sequence[float] | None = None,
+        bins: Sequence[float] | None = None,
         *,
         bin_count: int | None = None,
         include_breakpoint: bool = True,
@@ -372,20 +368,20 @@ class Expr:
 
     def replace_strict(
         self,
-        old: t.Sequence[t.Any] | t.Mapping[t.Any, t.Any],
-        new: t.Sequence[t.Any] | None = None,
+        old: Sequence[Any] | Mapping[Any, Any],
+        new: Sequence[Any] | None = None,
         *,
         return_dtype: IntoDType | None = None,
     ) -> Self:
-        before: Seq[t.Any]
-        after: Seq[t.Any]
+        before: Seq[Any]
+        after: Seq[Any]
         if new is None:
-            if not isinstance(old, t.Mapping):
+            if not isinstance(old, Mapping):
                 msg = "`new` argument is required if `old` argument is not a Mapping type"
                 raise TypeError(msg)
             before = tuple(old)
             after = tuple(old.values())
-        elif isinstance(old, t.Mapping):
+        elif isinstance(old, Mapping):
             msg = "`new` argument cannot be used if `old` argument is a Mapping type"
             raise TypeError(msg)
         else:
@@ -456,10 +452,10 @@ class Expr:
             boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
 
-    def is_in(self, other: t.Iterable[t.Any]) -> Self:
+    def is_in(self, other: Iterable[Any]) -> Self:
         if is_series(other):
             return self._with_unary(boolean.IsInSeries.from_series(other))
-        if isinstance(other, t.Iterable):
+        if isinstance(other, Iterable):
             return self._with_unary(boolean.IsInSeq.from_iterable(other))
         if is_expr(other):
             return self._with_unary(boolean.IsInExpr(other=other._ir))
@@ -628,9 +624,9 @@ class Selector(Expr):
     def _to_expr(self) -> Expr:
         return self._ir.to_narwhals(self.version)
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __or__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __or__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __or__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
@@ -638,9 +634,9 @@ class Selector(Expr):
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() | other
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __and__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __and__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __and__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
@@ -650,9 +646,9 @@ class Selector(Expr):
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() & other
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __sub__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __sub__(self, other: IntoExpr) -> Expr: ...
     def __sub__(self, other: IntoExpr) -> Self | Expr:
         if isinstance(other, type(self)):
@@ -660,9 +656,9 @@ class Selector(Expr):
             return self._from_ir(op.to_binary_selector(self._ir, other._ir))
         return self._to_expr() - other
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __xor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __xor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if isinstance(other, type(self)):
@@ -673,41 +669,41 @@ class Selector(Expr):
     def __invert__(self) -> Self:
         return self._from_ir(expr.InvertSelector(selector=self._ir))
 
-    def __add__(self, other: t.Any) -> Expr:  # type: ignore[override]
+    def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
         return self._to_expr() + other  # type: ignore[no-any-return]
 
-    def __radd__(self, other: t.Any) -> Never:
+    def __radd__(self, other: Any) -> Never:
         msg = "unsupported operand type(s) for op: ('Expr' + 'Selector')"
         raise TypeError(msg)
 
-    def __rsub__(self, other: t.Any) -> Never:
+    def __rsub__(self, other: Any) -> Never:
         msg = "unsupported operand type(s) for op: ('Expr' - 'Selector')"
         raise TypeError(msg)
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __rand__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __rand__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __rand__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) & self
         return self._to_expr().__rand__(other)
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __ror__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __ror__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __ror__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
             return by_name(name) | self
         return self._to_expr().__ror__(other)
 
-    @t.overload  # type: ignore[override]
+    @overload  # type: ignore[override]
     def __rxor__(self, other: Self) -> Self: ...
-    @t.overload
+    @overload
     def __rxor__(self, other: IntoExprColumn | int | bool) -> Expr: ...
     def __rxor__(self, other: IntoExprColumn | int | bool) -> Self | Expr:
         if is_column(other) and (name := other.meta.output_name()):
@@ -716,16 +712,16 @@ class Selector(Expr):
 
 
 class ExprV1(Expr):
-    _version: t.ClassVar[Version] = Version.V1
+    _version: ClassVar[Version] = Version.V1
 
 
 class SelectorV1(Selector):
-    _version: t.ClassVar[Version] = Version.V1
+    _version: ClassVar[Version] = Version.V1
 
 
 class BaseFrame(Generic[NativeFrameT]):
-    _compliant: CompliantBaseFrame[t.Any, NativeFrameT]
-    _version: t.ClassVar[Version] = Version.MAIN
+    _compliant: CompliantBaseFrame[Any, NativeFrameT]
+    _version: ClassVar[Version] = Version.MAIN
 
     @property
     def version(self) -> Version:
@@ -743,13 +739,11 @@ class BaseFrame(Generic[NativeFrameT]):
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
     @classmethod
-    def from_native(cls, native: t.Any, /) -> Self:
+    def from_native(cls, native: Any, /) -> Self:
         raise NotImplementedError
 
     @classmethod
-    def _from_compliant(
-        cls, compliant: CompliantBaseFrame[t.Any, NativeFrameT], /
-    ) -> Self:
+    def _from_compliant(cls, compliant: CompliantBaseFrame[Any, NativeFrameT], /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj
@@ -759,8 +753,8 @@ class BaseFrame(Generic[NativeFrameT]):
 
     def _project(
         self,
-        exprs: tuple[IntoExpr | Iterable[IntoExpr], ...],
-        named_exprs: dict[str, t.Any],
+        exprs: tuple[OneOrIterable[IntoExpr], ...],
+        named_exprs: dict[str, Any],
         context: ExprContext,
         /,
     ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
@@ -771,15 +765,13 @@ class BaseFrame(Generic[NativeFrameT]):
         named_irs = expr_expansion.into_named_irs(irs, output_names)
         return schema_frozen.project(named_irs, context)
 
-    def select(self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any) -> Self:
+    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema_projected = self._project(
             exprs, named_exprs, ExprContext.SELECT
         )
         return self._from_compliant(self._compliant.select(named_irs))
 
-    def with_columns(
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: t.Any
-    ) -> Self:
+    def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema_projected = self._project(
             exprs, named_exprs, ExprContext.WITH_COLUMNS
         )
@@ -787,10 +779,10 @@ class BaseFrame(Generic[NativeFrameT]):
 
     def sort(
         self,
-        by: str | Iterable[str],
+        by: OneOrIterable[str],
         *more_by: str,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool | Sequence[bool] = False,
+        descending: OneOrIterable[bool] = False,
+        nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
@@ -803,7 +795,7 @@ class BaseFrame(Generic[NativeFrameT]):
 
 
 class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
-    _compliant: CompliantDataFrame[t.Any, NativeDataFrameT, NativeSeriesT]
+    _compliant: CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]
 
     @property
     def _series(self) -> type[Series[NativeSeriesT]]:
@@ -813,7 +805,7 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
     @classmethod
     def from_native(  # type: ignore[override]
         cls, native: NativeFrame, /
-    ) -> DataFrame[pa.Table, pa.ChunkedArray[t.Any]]:
+    ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
         if is_pyarrow_table(native):
             from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
@@ -821,22 +813,19 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
         raise NotImplementedError(type(native))
 
-    @t.overload
+    @overload
     def to_dict(
-        self, *, as_series: t.Literal[True] = ...
+        self, *, as_series: Literal[True] = ...
     ) -> dict[str, Series[NativeSeriesT]]: ...
-
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
-
-    @t.overload
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
     def to_dict(
         self, *, as_series: bool
-    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]: ...
-
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
-    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[t.Any]]:
+    ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]:
         if as_series:
             return {
                 key: self._series._from_compliant(value)
@@ -850,7 +839,7 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
 class Series(Generic[NativeSeriesT]):
     _compliant: CompliantSeries[NativeSeriesT]
-    _version: t.ClassVar[Version] = Version.MAIN
+    _version: ClassVar[Version] = Version.MAIN
 
     @property
     def version(self) -> Version:
@@ -868,7 +857,7 @@ class Series(Generic[NativeSeriesT]):
     @classmethod
     def from_native(
         cls, native: NativeSeries, name: str = "", /
-    ) -> Series[pa.ChunkedArray[t.Any]]:
+    ) -> Series[pa.ChunkedArray[Any]]:
         if is_pyarrow_chunked_array(native):
             from narwhals._plan.arrow.series import ArrowSeries
 
@@ -887,12 +876,12 @@ class Series(Generic[NativeSeriesT]):
     def to_native(self) -> NativeSeriesT:
         return self._compliant.native
 
-    def to_list(self) -> list[t.Any]:
+    def to_list(self) -> list[Any]:
         return self._compliant.to_list()
 
-    def __iter__(self) -> t.Iterator[t.Any]:
+    def __iter__(self) -> Iterator[Any]:
         yield from self.to_native()
 
 
 class SeriesV1(Series[NativeSeriesT]):
-    _version: t.ClassVar[Version] = Version.V1
+    _version: ClassVar[Version] = Version.V1
