@@ -13,6 +13,7 @@ from narwhals._duckdb.utils import (
     catch_duckdb_exception,
     col,
     evaluate_exprs,
+    join_column_names,
     lit,
     native_to_narwhals_dtype,
     window_expression,
@@ -26,12 +27,13 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     requires,
+    zip_strict,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -47,6 +49,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -129,7 +132,7 @@ class DuckDBLazyFrame(
             yield col(name)
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -187,7 +190,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, backend: None = None, **_: None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
@@ -231,7 +234,9 @@ class DuckDBLazyFrame(
             column_name: native_to_narwhals_dtype(
                 duckdb_dtype, self._version, deferred_time_zone
             )
-            for column_name, duckdb_dtype in zip(self.native.columns, self.native.types)
+            for column_name, duckdb_dtype in zip_strict(
+                self.native.columns, self.native.types
+            )
         }
 
     @property
@@ -295,7 +300,7 @@ class DuckDBLazyFrame(
             assert right_on is not None  # noqa: S101
             it = (
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip(left_on, right_on)
+                for left, right in zip_strict(left_on, right_on)
             )
             condition: Expression = reduce(and_, it)
             rel = self.native.set_alias("lhs").join(
@@ -340,7 +345,7 @@ class DuckDBLazyFrame(
         if by_left is not None and by_right is not None:
             conditions.extend(
                 col(f'lhs."{left}"') == col(f'rhs."{right}"')
-                for left, right in zip(by_left, by_right)
+                for left, right in zip_strict(by_left, by_right)
             )
         else:
             by_left = by_right = []
@@ -392,7 +397,7 @@ class DuckDBLazyFrame(
                 .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
-        return self._with_native(self.native.unique(", ".join(self.columns)))
+        return self._with_native(self.native.unique(join_column_names(*self.columns)))
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -400,14 +405,35 @@ class DuckDBLazyFrame(
         if nulls_last:
             it = (
                 col(name).nulls_last() if not desc else col(name).desc().nulls_last()
-                for name, desc in zip(by, descending)
+                for name, desc in zip_strict(by, descending)
             )
         else:
             it = (
                 col(name).nulls_first() if not desc else col(name).desc().nulls_first()
-                for name, desc in zip(by, descending)
+                for name, desc in zip_strict(by, descending)
             )
         return self._with_native(self.native.sort(*it))
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        _df = self.native
+        by = list(by)
+        if isinstance(reverse, bool):
+            descending = [not reverse] * len(by)
+        else:
+            descending = [not rev for rev in reverse]
+        expr = window_expression(
+            F("row_number"),
+            order_by=by,
+            descending=descending,
+            nulls_last=[True] * len(by),
+        )
+        condition = expr <= lit(k)
+        query = f"""
+        SELECT *
+        FROM _df
+        QUALIFY {condition}
+        """  # noqa: S608
+        return self._with_native(duckdb.sql(query))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns
@@ -474,7 +500,7 @@ class DuckDBLazyFrame(
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = ", ".join(str(col(name)) for name in on_)
+        unpivot_on = join_column_names(*on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
@@ -482,8 +508,8 @@ class DuckDBLazyFrame(
             unpivot rel
             on {unpivot_on}
             into
-                name "{variable_name}"
-                value "{value_name}"
+                name {col(variable_name)}
+                value {col(value_name)}
             """
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])

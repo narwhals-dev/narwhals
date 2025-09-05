@@ -27,14 +27,17 @@
         - dtype
         - ewm_mean
         - exp
+        - fill_nan
         - fill_null
         - filter
+        - from_iterable
         - from_numpy
         - gather_every
         - head
         - hist
         - implementation
         - is_between
+        - is_close
         - is_duplicated
         - is_empty
         - is_finite

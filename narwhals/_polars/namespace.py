@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
+from narwhals._expression_parsing import is_expr, is_series
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, zip_strict
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
@@ -20,7 +21,17 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        IntoSchema,
+        NonNestedLiteral,
+        TimeUnit,
+        _1DArray,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -34,7 +45,8 @@ class PolarsNamespace:
 
     when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _version: Version
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -69,6 +81,25 @@ class PolarsNamespace:
     @property
     def _series(self) -> type[PolarsSeries]:
         return PolarsSeries
+
+    def parse_into_expr(
+        self,
+        data: Expr | NonNestedLiteral | Series[pl.Series] | _1DArray,
+        /,
+        *,
+        str_as_lit: bool,
+    ) -> PolarsExpr | None:
+        if data is None:
+            # NOTE: To avoid `pl.lit(None)` failing this `None` check
+            # https://github.com/pola-rs/polars/blob/58dd8e5770f16a9bef9009a1c05f00e15a5263c7/py-polars/polars/expr/expr.py#L2870-L2872
+            return data
+        if is_expr(data):
+            expr = data._to_compliant_expr(self)
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
+        if isinstance(data, str) and not str_as_lit:
+            return self.col(data)
+        return self.lit(data.to_native() if is_series(data) else data, None)
 
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...
@@ -118,11 +149,11 @@ class PolarsNamespace:
         return self._expr(pl.len(), self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)
 
     def any_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)  # noqa: FBT003
+        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
     def concat(
@@ -175,7 +206,7 @@ class PolarsNamespace:
             else:
                 init_value, *values = [
                     pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
-                    for expr, nm in zip(pl_exprs, null_mask)
+                    for expr, nm in zip_strict(pl_exprs, null_mask)
                 ]
                 separators = [
                     pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
@@ -184,7 +215,7 @@ class PolarsNamespace:
                 result = pl.fold(  # type: ignore[assignment]
                     acc=init_value,
                     function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values)],
+                    exprs=[s + v for s, v in zip_strict(separators, values)],
                 )
 
             return self._expr(result, version=self._version)

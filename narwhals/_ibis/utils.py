@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import ibis
 import ibis.expr.datatypes as ibis_dtypes
 
-from narwhals._utils import isinstance_or_issubclass
+from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -20,12 +20,30 @@ if TYPE_CHECKING:
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.expr import IbisExpr
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
-lit = ibis.literal
-"""Alias for `ibis.literal`."""
+Incomplete: TypeAlias = Any
+"""Marker for upstream issues."""
+
+
+@overload
+def lit(value: bool, dtype: None = ...) -> ir.BooleanScalar: ...  # noqa: FBT001
+@overload
+def lit(value: int, dtype: None = ...) -> ir.IntegerScalar: ...
+@overload
+def lit(value: float, dtype: None = ...) -> ir.FloatingScalar: ...
+@overload
+def lit(value: str, dtype: None = ...) -> ir.StringScalar: ...
+@overload
+def lit(value: PythonLiteral | ir.Value, dtype: None = ...) -> ir.Scalar: ...
+@overload
+def lit(value: Any, dtype: Any) -> Incomplete: ...
+def lit(value: Any, dtype: Any | None = None) -> Incomplete:
+    """Alias for `ibis.literal`."""
+    literal: Incomplete = ibis.literal
+    return literal(value, dtype)
+
 
 BucketUnit: TypeAlias = Literal[
     "years",
@@ -174,54 +192,38 @@ def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
     return obj.is_floating()
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912
-    dtype: IntoDType, version: Version
-) -> IbisDataType:
-    dtypes = version.dtypes
+dtypes = Version.MAIN.dtypes
+NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
+    dtypes.Float64: ibis_dtypes.Float64(),
+    dtypes.Float32: ibis_dtypes.Float32(),
+    dtypes.Binary: ibis_dtypes.Binary(),
+    dtypes.String: ibis_dtypes.String(),
+    dtypes.Boolean: ibis_dtypes.Boolean(),
+    dtypes.Date: ibis_dtypes.Date(),
+    dtypes.Time: ibis_dtypes.Time(),
+    dtypes.Int8: ibis_dtypes.Int8(),
+    dtypes.Int16: ibis_dtypes.Int16(),
+    dtypes.Int32: ibis_dtypes.Int32(),
+    dtypes.Int64: ibis_dtypes.Int64(),
+    dtypes.UInt8: ibis_dtypes.UInt8(),
+    dtypes.UInt16: ibis_dtypes.UInt16(),
+    dtypes.UInt32: ibis_dtypes.UInt32(),
+    dtypes.UInt64: ibis_dtypes.UInt64(),
+    dtypes.Decimal: ibis_dtypes.Decimal(),
+}
+# Enum support: https://github.com/ibis-project/ibis/issues/10991
+UNSUPPORTED_DTYPES = (dtypes.Int128, dtypes.UInt128, dtypes.Categorical, dtypes.Enum)
 
-    if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
-        return ibis_dtypes.Decimal()
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return ibis_dtypes.Float64()
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return ibis_dtypes.Float32()
-    if isinstance_or_issubclass(dtype, dtypes.Int128):  # pragma: no cover
-        msg = "Int128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return ibis_dtypes.Int64()
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return ibis_dtypes.Int32()
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return ibis_dtypes.Int16()
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return ibis_dtypes.Int8()
-    if isinstance_or_issubclass(dtype, dtypes.UInt128):  # pragma: no cover
-        msg = "UInt128 not supported by Ibis"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return ibis_dtypes.UInt64()
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return ibis_dtypes.UInt32()
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return ibis_dtypes.UInt16()
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return ibis_dtypes.UInt8()
-    if isinstance_or_issubclass(dtype, dtypes.String):
-        return ibis_dtypes.String()
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return ibis_dtypes.Boolean()
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        msg = "Categorical not supported by Ibis"
-        raise NotImplementedError(msg)
+
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType:
+    dtypes = version.dtypes
+    base_type = dtype.base_type()
+    if ibis_type := NW_TO_IBIS_DTYPES.get(base_type):
+        return ibis_type
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
         return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return ibis_dtypes.Date()
-    if isinstance_or_issubclass(dtype, dtypes.Time):
-        return ibis_dtypes.Time()
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner)
@@ -234,11 +236,8 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner, length=dtype.size)
-    if isinstance_or_issubclass(dtype, dtypes.Binary):
-        return ibis_dtypes.Binary()
-    if isinstance_or_issubclass(dtype, dtypes.Enum):
-        # Ibis does not support: https://github.com/ibis-project/ibis/issues/10991
-        msg = "Enum not supported by Ibis"
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Ibis."
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
@@ -251,11 +250,11 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     # Workaround SQL vs Ibis differences.
     if name == "row_number":
-        return ibis.row_number() + 1  # pyright: ignore[reportOperatorIssue]
+        return ibis.row_number() + lit(1)
     if name == "least":
-        return ibis.least(*args)  # pyright: ignore[reportOperatorIssue]
+        return ibis.least(*args)
     if name == "greatest":
-        return ibis.greatest(*args)  # pyright: ignore[reportOperatorIssue]
+        return ibis.greatest(*args)
     expr = args[0]
     if name == "var_pop":
         return cast("ir.NumericColumn", expr).var(how="pop")

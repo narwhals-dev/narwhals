@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from enum import Enum, auto
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
-from narwhals._utils import is_compliant_expr
-from narwhals.dependencies import is_narwhals_series, is_numpy_array
+from narwhals._utils import is_compliant_expr, zip_strict
+from narwhals.dependencies import is_narwhals_series, is_numpy_array, is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
         CompliantExprAny,
         CompliantFrameAny,
         CompliantNamespaceAny,
-        EagerNamespaceAny,
         EvalNames,
     )
     from narwhals.expr import Expr
@@ -45,6 +44,13 @@ def is_series(obj: Any) -> TypeIs[Series[Any]]:
     from narwhals.series import Series
 
     return isinstance(obj, Series)
+
+
+def is_into_expr_eager(obj: Any) -> TypeIs[Expr | Series[Any] | str | _1DArray]:
+    from narwhals.expr import Expr
+    from narwhals.series import Series
+
+    return isinstance(obj, (Series, Expr, str)) or is_numpy_array_1d(obj)
 
 
 def combine_evaluate_output_names(
@@ -74,24 +80,6 @@ def combine_alias_output_names(*exprs: CompliantExprAny) -> AliasNames | None:
     return alias_output_names
 
 
-def extract_compliant(
-    plx: CompliantNamespaceAny,
-    other: IntoExpr | NonNestedLiteral | _1DArray,
-    *,
-    str_as_lit: bool,
-) -> CompliantExprAny | NonNestedLiteral:
-    if is_expr(other):
-        return other._to_compliant_expr(plx)
-    if isinstance(other, str) and not str_as_lit:
-        return plx.col(other)
-    if is_narwhals_series(other):
-        return other._compliant_series._to_expr()
-    if is_numpy_array(other):
-        ns = cast("EagerNamespaceAny", plx)
-        return ns._series.from_numpy(other, context=ns)._to_expr()
-    return other
-
-
 def evaluate_output_names_and_aliases(
     expr: CompliantExprAny, df: CompliantFrameAny, exclude: Sequence[str]
 ) -> tuple[Sequence[str], Sequence[str]]:
@@ -104,10 +92,10 @@ def evaluate_output_names_and_aliases(
     if exclude:
         assert expr._metadata is not None  # noqa: S101
         if expr._metadata.expansion_kind.is_multi_unnamed():
-            output_names, aliases = zip(
+            output_names, aliases = zip_strict(
                 *[
                     (x, alias)
-                    for x, alias in zip(output_names, aliases)
+                    for x, alias in zip_strict(output_names, aliases)
                     if x not in exclude
                 ]
             )
@@ -140,9 +128,6 @@ class ExprKind(Enum):
 
     ORDERABLE_FILTRATION = auto()
     """Changes length, affected by row order, e.g. `tail`."""
-
-    NARY = auto()
-    """Results from the combination of multiple expressions."""
 
     OVER = auto()
     """Results from calling `.over` on expression."""
@@ -574,7 +559,8 @@ def combine_metadata(
 
     return ExprMetadata(
         result_expansion_kind,
-        ExprKind.NARY,
+        # n-ary operations align positionally, and so the last node is elementwise.
+        ExprKind.ELEMENTWISE,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
@@ -608,14 +594,12 @@ def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
 
 def apply_n_ary_operation(
     plx: CompliantNamespaceAny,
-    function: Any,
+    n_ary_function: Callable[..., CompliantExprAny],
     *comparands: IntoExpr | NonNestedLiteral | _1DArray,
     str_as_lit: bool,
 ) -> CompliantExprAny:
-    compliant_exprs = (
-        extract_compliant(plx, comparand, str_as_lit=str_as_lit)
-        for comparand in comparands
-    )
+    parse = plx.parse_into_expr
+    compliant_exprs = (parse(into, str_as_lit=str_as_lit) for into in comparands)
     kinds = [
         ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
         for comparand in comparands
@@ -626,6 +610,6 @@ def apply_n_ary_operation(
         compliant_expr.broadcast(kind)
         if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
         else compliant_expr
-        for compliant_expr, kind in zip(compliant_exprs, kinds)
+        for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
     )
-    return function(*compliant_exprs)
+    return n_ary_function(*compliant_exprs)

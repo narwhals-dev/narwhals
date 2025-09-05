@@ -6,6 +6,8 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    SERIES_ACCEPTS_PD_INDEX,
+    SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -19,7 +21,7 @@ from narwhals._polars.utils import (
     native_to_narwhals_dtype,
 )
 from narwhals._utils import Implementation, requires
-from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -31,7 +33,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
-    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -39,14 +40,17 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
+        NumericLiteral,
         _1DArray,
     )
 
     T = TypeVar("T")
     IncludeBreakpoint: TypeAlias = Literal[False, True]
 
+Incomplete: TypeAlias = Any
 
 # Series methods where PolarsSeries just defers to Polars.Series directly.
 INHERITED_METHODS = frozenset(
@@ -86,10 +90,14 @@ INHERITED_METHODS = frozenset(
         "drop_nulls",
         "exp",
         "fill_null",
+        "fill_nan",
         "filter",
         "gather_every",
         "head",
         "is_between",
+        "is_close",
+        "is_duplicated",
+        "is_empty",
         "is_finite",
         "is_first_distinct",
         "is_in",
@@ -129,10 +137,17 @@ INHERITED_METHODS = frozenset(
 
 
 class PolarsSeries:
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _native_series: pl.Series
+    _version: Version
+
+    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
+        True: ["breakpoint", "count"],
+        False: ["count"],
+    }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
-        self._native_series: pl.Series = series
+        self._native_series = series
         self._version = version
 
     @property
@@ -171,9 +186,15 @@ class PolarsSeries:
     ) -> Self:
         version = context._version
         dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
-        # NOTE: `Iterable` is fine, annotation is overly narrow
-        # https://github.com/pola-rs/polars/blob/82d57a4ee41f87c11ca1b1af15488459727efdd7/py-polars/polars/series/series.py#L332-L333
-        native = pl.Series(name=name, values=cast("Sequence[Any]", data), dtype=dtype_pl)
+        values: Incomplete = data
+        if SERIES_RESPECTS_DTYPE:
+            native = pl.Series(name, values, dtype=dtype_pl)
+        else:  # pragma: no cover
+            if (not SERIES_ACCEPTS_PD_INDEX) and is_pandas_index(values):
+                values = values.to_series()
+            native = pl.Series(name, values)
+            if dtype_pl:
+                native = native.cast(dtype_pl)
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -215,9 +236,6 @@ class PolarsSeries:
             return PolarsDataFrame.from_native(series, context=self)
         # scalar
         return series
-
-    def _to_expr(self) -> PolarsExpr:
-        return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self, attr: str) -> Any:
         if attr not in INHERITED_METHODS:
@@ -489,10 +507,33 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
-        True: ["breakpoint", "count"],
-        False: ["count"],
-    }
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> PolarsSeries:
+        if self._backend_version < (1, 32, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            other_expr = (
+                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
+            )
+            expr = ns.col(name).is_close(
+                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            )
+            return self.to_frame().select(expr).get_column(name)
+        other_series = other.native if isinstance(other, PolarsSeries) else other
+        result = self.native.is_close(
+            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+        )
+        return self._with_native(result)
+
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        result = self.native.mode()
+        return self._with_native(result.head(1) if keep == "any" else result)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
@@ -550,8 +591,6 @@ class PolarsSeries:
         returns bins that range from -inf to +inf and has bin_count + 1 bins.
           for compat: convert `bin_count=` call to `bins=`
         """
-        from typing import cast
-
         lower = cast("float", self.native.min())
         upper = cast("float", self.native.max())
 
@@ -659,10 +698,13 @@ class PolarsSeries:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
+    is_duplicated: Method[Self]
+    is_empty: Method[bool]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
@@ -677,7 +719,6 @@ class PolarsSeries:
     max: Method[Any]
     mean: Method[float]
     min: Method[Any]
-    mode: Method[Self]
     n_unique: Method[int]
     null_count: Method[int]
     quantile: Method[float]

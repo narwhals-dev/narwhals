@@ -6,27 +6,27 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version
+from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
 
+    from pyspark.sql import SparkSession
+    from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import DataFrameLike, Frame, NativeFrame, NativeLazyFrame
+    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
     try:
-        if module_name == "polars":
-            return Implementation.POLARS._backend_version()
         return parse_version(__import__(module_name).__version__)
     except ImportError:
         return (0, 0, 0)
@@ -42,16 +42,10 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeFrame | DataFrameLike"]
-ConstructorEager: TypeAlias = Callable[[Any], "NativeFrame | DataFrameLike"]
+Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
+ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
-
-
-def zip_strict(left: Sequence[Any], right: Sequence[Any]) -> Iterator[Any]:
-    if len(left) != len(right):
-        msg = f"{len(left)=} != {len(right)=}\nLeft: {left}\nRight: {right}"  # pragma: no cover
-        raise ValueError(msg)  # pragma: no cover
-    return zip(left, right)
+ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 
 def _to_comparable_list(column_values: Any) -> Any:
@@ -148,6 +142,39 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             )
 
 
+def assert_equal_series(
+    result: nw.Series[Any], expected: Sequence[Any], name: str
+) -> None:
+    assert_equal_data(result.to_frame(), {name: expected})
+
+
+def sqlframe_session() -> DuckDBSession:
+    from sqlframe.duckdb import DuckDBSession
+
+    # NOTE: `__new__` override inferred by `pyright` only
+    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
+    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
+
+
+def pyspark_session() -> SparkSession:  # pragma: no cover
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
+    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+    builder = (
+        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+        if is_spark_connect
+        else builder.master("local[1]").config("spark.ui.enabled", "false")
+    )
+    return (
+        builder.config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+
+
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
@@ -184,11 +211,9 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
 
 
 def maybe_collect(df: Frame) -> Frame:
-    """Collect the DataFrame if it is a LazyFrame.
+    """Collect to DataFrame if it is a LazyFrame.
 
     Use this function to test specific behaviors during collection.
     For example, Polars only errors when we call `collect` in the lazy case.
     """
-    if isinstance(df, nw.LazyFrame):
-        return df.collect()
-    return df  # pragma: no cover
+    return df.collect() if isinstance(df, nw.LazyFrame) else df

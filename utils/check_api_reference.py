@@ -5,10 +5,10 @@ import string
 import sys
 
 # ruff: noqa: N806
-from collections import deque
-from inspect import isfunction
+from collections import OrderedDict, deque
+from inspect import isfunction, ismethoddescriptor
 from pathlib import Path
-from types import MethodType
+from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
@@ -24,19 +24,31 @@ if sys.version_info >= (3, 13):
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            isfunction(obj) or isinstance(obj, (MethodType, property))
+            isfunction(obj)
+            or (isinstance(obj, (MethodType, property)) or ismethoddescriptor(obj))
         ) and obj.__name__.startswith(LOWERCASE)
 else:
 
     def _is_public_method_or_property(obj: Any) -> bool:
         return (
-            (isfunction(obj) or isinstance(obj, MethodType))
+            (isfunction(obj) or (isinstance(obj, MethodType) or ismethoddescriptor(obj)))
             and obj.__name__.startswith(LOWERCASE)
         ) or (isinstance(obj, property) and obj.fget.__name__.startswith(LOWERCASE))
 
 
 def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
     for name, _ in inspect.getmembers(tp, _is_public_method_or_property):
+        yield name
+
+
+def iter_api_reference_names_dtypes(module: ModuleType) -> Iterator[str]:
+    base = module.DType
+    # NOTE: Special case, only non-dtype
+    field_dtype = module.Field
+    for name, _ in inspect.getmembers(
+        module,
+        lambda x: isinstance(x, type) and (issubclass(x, base) or x is field_dtype),
+    ):
         yield name
 
 
@@ -66,6 +78,7 @@ SERIES_ONLY_METHODS = {
     "arg_min",
     "arg_true",
     "dtype",
+    "from_iterable",
     "from_numpy",
     "gather_every",
     "implementation",
@@ -93,15 +106,6 @@ SERIES_ONLY_METHODS = {
     "zip_with",
     "__iter__",
     "__contains__",
-}
-BASE_DTYPES = {
-    "NumericType",
-    "DType",
-    "TemporalType",
-    "Literal",
-    "OrderedDict",
-    "Mapping",
-    "Iterable",
 }
 DIR_API_REF = Path("docs/api-reference")
 
@@ -205,14 +209,30 @@ for namespace in NAMESPACES:
         ret = 1
 
 # DTypes
-dtypes = [i for i in dir(nw.dtypes) if i[0].isupper() and not i.isupper() and i[0] != "_"]
+dtypes = list(iter_api_reference_names_dtypes(nw.dtypes))
 documented = read_documented_members(DIR_API_REF / "dtypes.md")
-if missing := set(dtypes).difference(documented).difference(BASE_DTYPES):
+if missing := set(dtypes).difference(documented):
     print("Dtype: not documented")  # noqa: T201
     print(missing)  # noqa: T201
     ret = 1
 if extra := set(documented).difference(dtypes):
     print("Dtype: outdated")  # noqa: T201
+    print(extra)  # noqa: T201
+    ret = 1
+
+# Schema
+schema_methods = list(iter_api_reference_names(nw.Schema))
+documented = read_documented_members(DIR_API_REF / "schema.md")
+if (
+    missing := set(schema_methods)
+    .difference(documented)
+    .difference(iter_api_reference_names(OrderedDict))
+):
+    print("Schema: not documented")  # noqa: T201
+    print(missing)  # noqa: T201
+    ret = 1
+if extra := set(documented).difference(schema_methods):
+    print("Schema: outdated")  # noqa: T201
     print(extra)  # noqa: T201
     ret = 1
 

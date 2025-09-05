@@ -4,7 +4,6 @@ import operator
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from duckdb import CoalesceOperator, StarExpression
-from duckdb.typing import DuckDBPyType
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
@@ -94,24 +93,10 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
-    def __narwhals_expr__(self) -> None: ...
-
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
         return DuckDBNamespace(version=self._version)
-
-    def __floordiv__(self, other: Any) -> Self:
-        def func(expr: Expression, other: Expression) -> Expression:
-            return when(other != lit(0), expr // other).otherwise(lit(None))
-
-        return self._with_binary(func, other=other)
-
-    def __rfloordiv__(self, other: Any) -> Self:
-        def func(expr: Expression, other: Expression) -> Expression:
-            return when(expr != lit(0), other // expr).otherwise(lit(None))
-
-        return self._with_binary(func, other=other).alias("literal")
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
@@ -286,15 +271,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(DuckDBPyType(native_dtype)) for expr in self(df)]
+            return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [
-                expr.cast(DuckDBPyType(native_dtype))
-                for expr in self.window_function(df, inputs)
-            ]
+            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,

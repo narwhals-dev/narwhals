@@ -17,11 +17,12 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    zip_strict,
 )
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._dask.expr import DaskExpr
     from narwhals._dask.group_by import DaskLazyGroupBy
     from narwhals._dask.namespace import DaskNamespace
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -111,7 +113,7 @@ class DaskLazyFrame(
         return self._with_native(self.native.assign(**dict(new_series)))
 
     def collect(
-        self, backend: Implementation | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         result = self.native.compute(**kwargs)
 
@@ -261,6 +263,22 @@ class DaskLazyFrame(
             self.native.sort_values(list(by), ascending=ascending, na_position=position)
         )
 
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        df = self.native
+        schema = self.schema
+        by = list(by)
+        if isinstance(reverse, bool) and all(schema[x].is_numeric() for x in by):
+            if reverse:
+                return self._with_native(df.nsmallest(k, by))
+            return self._with_native(df.nlargest(k, by))
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(by)
+        return self._with_native(
+            df.sort_values(by, ascending=list(reverse)).head(
+                n=k, compute=False, npartitions=-1
+            )
+        )
+
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> dd.DataFrame:
@@ -284,7 +302,7 @@ class DaskLazyFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip(left_on, right_on)
+            for left_key, right_key in zip_strict(left_on, right_on)
             if right_key != left_key
         ]
         return result_native.drop(columns=extra)

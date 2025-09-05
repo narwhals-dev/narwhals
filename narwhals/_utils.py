@@ -5,9 +5,10 @@ import re
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
-from functools import cache, lru_cache, wraps
+from functools import cache, lru_cache, partial, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from itertools import chain
 from operator import attrgetter
 from secrets import token_hex
 from typing import (
@@ -69,12 +70,44 @@ if TYPE_CHECKING:
         CompliantFrameT,
         CompliantSeriesOrNativeExprT_co,
         CompliantSeriesT,
-        NativeFrameT_co,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames
-    from narwhals._namespace import EagerAllowedImplementation, Namespace
+    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
+    from narwhals._namespace import (
+        Namespace,
+        _NativeArrow,
+        _NativeCuDF,
+        _NativeDask,
+        _NativeDuckDB,
+        _NativeIbis,
+        _NativeModin,
+        _NativePandas,
+        _NativePandasLike,
+        _NativePolars,
+        _NativePySpark,
+        _NativePySparkConnect,
+        _NativeSQLFrame,
+    )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._typing import (
+        Backend,
+        IntoBackend,
+        _ArrowImpl,
+        _CudfImpl,
+        _DaskImpl,
+        _DuckDBImpl,
+        _EagerAllowedImpl,
+        _IbisImpl,
+        _LazyAllowedImpl,
+        _LazyFrameCollectImpl,
+        _ModinImpl,
+        _PandasImpl,
+        _PandasLikeImpl,
+        _PolarsImpl,
+        _PySparkConnectImpl,
+        _PySparkImpl,
+        _SQLFrameImpl,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -82,7 +115,6 @@ if TYPE_CHECKING:
         CompliantDataFrame,
         CompliantLazyFrame,
         CompliantSeries,
-        DataFrameLike,
         DTypes,
         IntoSeriesT,
         MultiIndexSelector,
@@ -96,6 +128,8 @@ if TYPE_CHECKING:
         _SliceName,
         _SliceNone,
     )
+
+    UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
@@ -133,7 +167,7 @@ _Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
-class _StoresNative(Protocol[NativeT_co]):  # noqa: PYI046
+class _StoresNative(Protocol[NativeT_co]):
     """Provides access to a native object.
 
     Native objects have types like:
@@ -324,9 +358,6 @@ class Implementation(NoAutoEnum):
 
         Arguments:
             native_namespace: Native namespace.
-
-        Returns:
-            Implementation.
         """
         mapping = {
             get_pandas(): Implementation.PANDAS,
@@ -344,16 +375,11 @@ class Implementation(NoAutoEnum):
         return mapping.get(native_namespace, Implementation.UNKNOWN)
 
     @classmethod
-    def from_string(
-        cls: type[Self], backend_name: str
-    ) -> Implementation:  # pragma: no cover
+    def from_string(cls: type[Self], backend_name: str) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
             backend_name: Name of backend, expressed as string.
-
-        Returns:
-            Implementation.
         """
         try:
             return cls(backend_name)
@@ -362,15 +388,12 @@ class Implementation(NoAutoEnum):
 
     @classmethod
     def from_backend(
-        cls: type[Self], backend: str | Implementation | ModuleType
+        cls: type[Self], backend: IntoBackend[Backend] | UnknownBackendName
     ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:
             backend: Backend to instantiate Implementation from.
-
-        Returns:
-            Implementation.
         """
         return (
             cls.from_string(backend)
@@ -381,11 +404,7 @@ class Implementation(NoAutoEnum):
         )
 
     def to_native_namespace(self) -> ModuleType:
-        """Return the native namespace module corresponding to Implementation.
-
-        Returns:
-            Native module.
-        """
+        """Return the native namespace module corresponding to Implementation."""
         if self is Implementation.UNKNOWN:
             msg = "Cannot return native namespace from UNKNOWN Implementation"
             raise AssertionError(msg)
@@ -396,9 +415,6 @@ class Implementation(NoAutoEnum):
 
     def is_pandas(self) -> bool:
         """Return whether implementation is pandas.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -413,9 +429,6 @@ class Implementation(NoAutoEnum):
     def is_pandas_like(self) -> bool:
         """Return whether implementation is pandas, Modin, or cuDF.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -428,9 +441,6 @@ class Implementation(NoAutoEnum):
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import pandas as pd
@@ -449,9 +459,6 @@ class Implementation(NoAutoEnum):
     def is_polars(self) -> bool:
         """Return whether implementation is Polars.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -464,9 +471,6 @@ class Implementation(NoAutoEnum):
 
     def is_cudf(self) -> bool:
         """Return whether implementation is cuDF.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -481,9 +485,6 @@ class Implementation(NoAutoEnum):
     def is_modin(self) -> bool:
         """Return whether implementation is Modin.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -496,9 +497,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -513,9 +511,6 @@ class Implementation(NoAutoEnum):
     def is_pyspark_connect(self) -> bool:
         """Return whether implementation is PySpark.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -528,9 +523,6 @@ class Implementation(NoAutoEnum):
 
     def is_pyarrow(self) -> bool:
         """Return whether implementation is PyArrow.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -545,9 +537,6 @@ class Implementation(NoAutoEnum):
     def is_dask(self) -> bool:
         """Return whether implementation is Dask.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -560,9 +549,6 @@ class Implementation(NoAutoEnum):
 
     def is_duckdb(self) -> bool:
         """Return whether implementation is DuckDB.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -577,9 +563,6 @@ class Implementation(NoAutoEnum):
     def is_ibis(self) -> bool:
         """Return whether implementation is Ibis.
 
-        Returns:
-            Boolean.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -592,9 +575,6 @@ class Implementation(NoAutoEnum):
 
     def is_sqlframe(self) -> bool:
         """Return whether implementation is SQLFrame.
-
-        Returns:
-            Boolean.
 
         Examples:
             >>> import polars as pl
@@ -655,11 +635,7 @@ def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
     native_namespace = _import_native_namespace(module_name)
-    if impl.is_polars():
-        from importlib import metadata
-
-        into_version = metadata.version("polars")
-    elif impl.is_sqlframe():
+    if impl.is_sqlframe():
         import sqlframe._version
 
         into_version = sqlframe._version
@@ -1129,6 +1105,46 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
             obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
+
+
+if TYPE_CHECKING:
+    zip_strict = partial(zip, strict=True)
+else:
+    import sys
+
+    if sys.version_info >= (3, 10):
+        zip_strict = partial(zip, strict=True)
+    else:  # pragma: no cover
+        # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
+
+        def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
+            # For trivial cases, use pure zip.
+            if len(iterables) < 2:
+                return zip(*iterables)
+            # Tail for the first iterable
+            first_stopped = False
+
+            def first_tail() -> Any:
+                nonlocal first_stopped
+                first_stopped = True
+                return
+                yield
+
+            # Tail for the zip
+            def zip_tail() -> Any:
+                if not first_stopped:  # pragma: no cover
+                    msg = "zip_strict: first iterable is longer"
+                    raise ValueError(msg)
+                for _ in chain.from_iterable(rest):  # pragma: no cover
+                    msg = "zip_strict: first iterable is shorter"
+                    raise ValueError(msg)
+                    yield
+
+            # Put the pieces together
+            iterables_it = iter(iterables)
+            first = chain(next(iterables_it), first_tail())
+            rest = list(map(iter, iterables_it))
+            return chain(zip(first, *rest), zip_tail())
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
@@ -1621,18 +1637,18 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 def is_compliant_dataframe(
     obj: CompliantDataFrame[
-        CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co
+        CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
     ]
     | Any,
 ) -> TypeIs[
-    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]
+    CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co]
 ]:
     return _hasattr_static(obj, "__narwhals_dataframe__")
 
 
 def is_compliant_lazyframe(
-    obj: CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co] | Any,
-) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeFrameT_co, ToNarwhalsT_co]]:
+    obj: CompliantLazyFrame[CompliantExprT, NativeLazyFrameT, ToNarwhalsT_co] | Any,
+) -> TypeIs[CompliantLazyFrame[CompliantExprT, NativeLazyFrameT, ToNarwhalsT_co]]:
     return _hasattr_static(obj, "__narwhals_lazyframe__")
 
 
@@ -1654,22 +1670,37 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_eager_allowed(obj: Implementation) -> TypeIs[EagerAllowedImplementation]:
-    return obj in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
+def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
+    """Return True if `impl` allows eager operations."""
+    return impl in {
         Implementation.CUDF,
+        Implementation.MODIN,
+        Implementation.PANDAS,
         Implementation.POLARS,
         Implementation.PYARROW,
     }
 
 
+def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
+    """Return True if `LazyFrame.collect(impl)` is allowed."""
+    return impl in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
+
+
+def is_lazy_allowed(impl: Implementation, /) -> TypeIs[_LazyAllowedImpl]:
+    """Return True if `DataFrame.lazy(impl)` is allowed."""
+    return impl in {
+        Implementation.DASK,
+        Implementation.DUCKDB,
+        Implementation.IBIS,
+        Implementation.POLARS,
+        Implementation.PYSPARK,
+        Implementation.PYSPARK_CONNECT,
+        Implementation.SQLFRAME,
+    }
+
+
 def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
     return _hasattr_static(obj, "__native_namespace__")
-
-
-def _supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return hasattr(obj, "__dataframe__")
 
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
@@ -1834,9 +1865,6 @@ class not_implemented:  # noqa: N801
         Arguments:
             message: **Static-only** deprecation message, emitted in an IDE.
 
-        Returns:
-            An exception-raising [descriptor].
-
         [descriptor]: https://docs.python.org/3/howto/descriptor.html
         """
         obj = cls()
@@ -1885,9 +1913,6 @@ class requires:  # noqa: N801
         Arguments:
             minimum: Minimum backend version.
             hint: Optional suggested alternative.
-
-        Returns:
-            An exception-raising decorator.
         """
         obj = cls.__new__(cls)
         obj._min_version = minimum
@@ -2035,3 +2060,91 @@ def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
 def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     """Perform a nested attribute lookup on `obj`."""
     return deep_attrgetter(name_1, *nested)(obj)
+
+
+class Compliant(
+    _StoresNative[NativeT_co], _StoresImplementation, Protocol[NativeT_co]
+): ...
+
+
+class Narwhals(Protocol[NativeT_co]):
+    """Minimal *Narwhals-level* protocol.
+
+    Provides access to a compliant object:
+
+        obj: Narwhals[NativeT_co]]
+        compliant: Compliant[NativeT_co] = obj._compliant
+
+    Which itself exposes:
+
+        implementation: Implementation = compliant.implementation
+        native: NativeT_co = compliant.native
+
+    This interface is used for revealing which `Implementation` member is associated with **either**:
+    - One or more [nominal] native type(s)
+    - One or more [structural] type(s)
+      - where the true native type(s) are [assignable to] *at least* one of them
+
+    These relationships are defined in the `@overload`s of `_Implementation.__get__(...)`.
+
+    [nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
+    [structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
+    [assignable to]: https://typing.python.org/en/latest/spec/glossary.html#term-assignable
+    """
+
+    @property
+    def _compliant(self) -> Compliant[NativeT_co]: ...
+
+
+class _Implementation:
+    """Descriptor for matching an opaque `Implementation` on a generic class.
+
+    Based on [pyright comment](https://github.com/microsoft/pyright/issues/3071#issuecomment-1043978070)
+    """
+
+    def __set_name__(self, owner: type[Any], name: str) -> None:
+        self.__name__: str = name
+
+    @overload
+    def __get__(self, instance: Narwhals[_NativePolars], owner: Any) -> _PolarsImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
+    @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
+    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CudfImpl: ...
+    @overload
+    def __get__(
+        self, instance: Narwhals[_NativePandasLike], owner: Any
+    ) -> _PandasLikeImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeArrow], owner: Any) -> _ArrowImpl: ...
+    @overload
+    def __get__(
+        self, instance: Narwhals[_NativePolars | _NativeArrow | _NativePandas], owner: Any
+    ) -> _PolarsImpl | _PandasImpl | _ArrowImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeDuckDB], owner: Any) -> _DuckDBImpl: ...
+    @overload
+    def __get__(
+        self, instance: Narwhals[_NativeSQLFrame], owner: Any
+    ) -> _SQLFrameImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeDask], owner: Any) -> _DaskImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeIbis], owner: Any) -> _IbisImpl: ...
+    @overload
+    def __get__(
+        self, instance: Narwhals[_NativePySpark | _NativePySparkConnect], owner: Any
+    ) -> _PySparkImpl | _PySparkConnectImpl: ...
+    # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
+    @overload
+    def __get__(self, instance: None, owner: type[Narwhals[Any]]) -> Self: ...
+    @overload
+    def __get__(
+        self, instance: DataFrame[Any] | Series[Any], owner: Any
+    ) -> _EagerAllowedImpl: ...
+    @overload
+    def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
+    def __get__(self, instance: Narwhals[Any] | None, owner: Any) -> Any:
+        return self if instance is None else instance._compliant._implementation

@@ -16,7 +16,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -31,7 +31,7 @@ jobs:
         run: uv venv .venv
       - name: install-reqs
         # TODO: add more dependencies/backends incrementally
-        run: uv pip install -e ".[pyspark]" --group core --group typing
+        run: uv pip install -e ".[pyspark]" --group core --group typing-ci
       - name: show-deps
         run: uv pip freeze
       - name: Run mypy and pyright

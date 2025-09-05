@@ -15,6 +15,7 @@ from narwhals._utils import (
     Version,
     not_implemented,
     parse_columns_to_drop,
+    zip_strict,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._ibis.series import IbisInterchangeSeries
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -101,7 +103,7 @@ class IbisLazyFrame(
             yield self.native[name]
 
     def collect(
-        self, backend: ModuleType | Implementation | str | None, **kwargs: Any
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
@@ -163,7 +165,7 @@ class IbisLazyFrame(
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, *, backend: Implementation | None = None) -> Self:
+    def lazy(self, backend: None = None, **_: None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for Ibis.
@@ -307,7 +309,7 @@ class IbisLazyFrame(
             return left_on
         return [
             cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
-            for left, right in zip(left_on, right_on)
+            for left, right in zip_strict(left_on, right_on)
         ]
 
     def collect_schema(self) -> dict[str, DType]:
@@ -337,14 +339,26 @@ class IbisLazyFrame(
         if isinstance(descending, bool):
             descending = [descending for _ in range(len(by))]
 
-        sort_cols = []
+        sort_cols: list[Any] = []
 
         for i in range(len(by)):
             direction_fn = ibis.desc if descending[i] else ibis.asc
             col = direction_fn(by[i], nulls_first=not nulls_last)
-            sort_cols.append(cast("ir.Column", col))
+            sort_cols.append(col)
 
         return self._with_native(self.native.order_by(*sort_cols))
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        if isinstance(reverse, bool):
+            reverse = [reverse] * len(list(by))
+        sort_cols = []
+
+        for is_reverse, by_col in zip_strict(reverse, by):
+            direction_fn = ibis.asc if is_reverse else ibis.desc
+            col = direction_fn(by_col, nulls_first=False)
+            sort_cols.append(cast("ir.Column", col))
+
+        return self._with_native(self.native.order_by(*sort_cols).head(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns

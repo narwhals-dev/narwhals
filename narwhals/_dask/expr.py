@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+
+import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
@@ -13,7 +15,7 @@ from narwhals._dask.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RollingInterpolationMethod,
@@ -70,8 +73,6 @@ class DaskExpr(
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
-
-    def __narwhals_expr__(self) -> None: ...
 
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
@@ -187,35 +188,44 @@ class DaskExpr(
             scalar_kwargs=self._scalar_kwargs,
         )
 
-    def __add__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__add__(other), "__add__", other=other
+    def _with_binary(
+        self,
+        call: Callable[[dx.Series, Any], dx.Series],
+        name: str,
+        other: Any,
+        *,
+        reverse: bool = False,
+    ) -> Self:
+        result = self._with_callable(
+            lambda expr, other: call(expr, other), name, other=other
         )
+        if reverse:
+            result = result.alias("literal")
+        return result
+
+    def _binary_op(self, op_name: str, other: Any) -> Self:
+        return self._with_binary(
+            lambda expr, other: getattr(expr, op_name)(other), op_name, other
+        )
+
+    def _reverse_binary_op(
+        self, op_name: str, operator_func: Callable[..., dx.Series], other: Any
+    ) -> Self:
+        return self._with_binary(
+            lambda expr, other: operator_func(other, expr), op_name, other, reverse=True
+        )
+
+    def __add__(self, other: Any) -> Self:
+        return self._binary_op("__add__", other)
 
     def __sub__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__sub__(other), "__sub__", other=other
-        )
-
-    def __rsub__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other - expr, "__rsub__", other=other
-        ).alias("literal")
+        return self._binary_op("__sub__", other)
 
     def __mul__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__mul__(other), "__mul__", other=other
-        )
+        return self._binary_op("__mul__", other)
 
     def __truediv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__truediv__(other), "__truediv__", other=other
-        )
-
-    def __rtruediv__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other / expr, "__rtruediv__", other=other
-        ).alias("literal")
+        return self._binary_op("__truediv__", other)
 
     def __floordiv__(self, other: Any) -> Self:
         def _floordiv(
@@ -244,6 +254,42 @@ class DaskExpr(
             version=self._version,
         )
 
+    def __pow__(self, other: Any) -> Self:
+        return self._binary_op("__pow__", other)
+
+    def __mod__(self, other: Any) -> Self:
+        return self._binary_op("__mod__", other)
+
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__eq__", other)
+
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+        return self._binary_op("__ne__", other)
+
+    def __ge__(self, other: Any) -> Self:
+        return self._binary_op("__ge__", other)
+
+    def __gt__(self, other: Any) -> Self:
+        return self._binary_op("__gt__", other)
+
+    def __le__(self, other: Any) -> Self:
+        return self._binary_op("__le__", other)
+
+    def __lt__(self, other: Any) -> Self:
+        return self._binary_op("__lt__", other)
+
+    def __and__(self, other: Any) -> Self:
+        return self._binary_op("__and__", other)
+
+    def __or__(self, other: Any) -> Self:
+        return self._binary_op("__or__", other)
+
+    def __rsub__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rsub__", lambda a, b: a - b, other)
+
+    def __rtruediv__(self, other: Any) -> Self:
+        return self._reverse_binary_op("__rtruediv__", lambda a, b: a / b, other)
+
     def __rfloordiv__(self, other: Any) -> Self:
         def _rfloordiv(
             df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
@@ -263,65 +309,11 @@ class DaskExpr(
             version=self._version,
         ).alias("literal")
 
-    def __pow__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__pow__(other), "__pow__", other=other
-        )
-
     def __rpow__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other**expr, "__rpow__", other=other
-        ).alias("literal")
-
-    def __mod__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__mod__(other), "__mod__", other=other
-        )
+        return self._reverse_binary_op("__rpow__", lambda a, b: a**b, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: other % expr, "__rmod__", other=other
-        ).alias("literal")
-
-    def __eq__(self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda expr, other: expr.__eq__(other), "__eq__", other=other
-        )
-
-    def __ne__(self, other: DaskExpr) -> Self:  # type: ignore[override]
-        return self._with_callable(
-            lambda expr, other: expr.__ne__(other), "__ne__", other=other
-        )
-
-    def __ge__(self, other: DaskExpr | Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__ge__(other), "__ge__", other=other
-        )
-
-    def __gt__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__gt__(other), "__gt__", other=other
-        )
-
-    def __le__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__le__(other), "__le__", other=other
-        )
-
-    def __lt__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__lt__(other), "__lt__", other=other
-        )
-
-    def __and__(self, other: DaskExpr | Any) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__and__(other), "__and__", other=other
-        )
-
-    def __or__(self, other: DaskExpr) -> Self:
-        return self._with_callable(
-            lambda expr, other: expr.__or__(other), "__or__", other=other
-        )
+        return self._reverse_binary_op("__rmod__", lambda a, b: a % b, other)
 
     def __invert__(self) -> Self:
         return self._with_callable(lambda expr: expr.__invert__(), "__invert__")
@@ -482,6 +474,23 @@ class DaskExpr(
             "any",
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        value_nullable = pd.NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+
+        def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = (
+                value_nullable
+                if get_dtype_backend(expr.dtype, self._implementation)
+                else value_numpy
+            )
+            return expr.mask(mask, fill)  # pyright: ignore[reportArgumentType]
+
+        return self._with_callable(func, "fill_nan")
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -499,7 +508,7 @@ class DaskExpr(
                 )
             return res_ser
 
-        return self._with_callable(func, "fillna")
+        return self._with_callable(func, "fill_null")
 
     def clip(
         self,
@@ -698,6 +707,14 @@ class DaskExpr(
 
         return self._with_callable(da.sqrt, "sqrt")
 
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            result = expr.to_frame().mode()[_name]
+            return result.head(1) if keep == "any" else result
+
+        return self._with_callable(func, "mode", scalar_kwargs={"keep": keep})
+
     @property
     def str(self) -> DaskExprStringNamespace:
         return DaskExprStringNamespace(self)
@@ -713,7 +730,6 @@ class DaskExpr(
     gather_every: not_implemented = not_implemented()
     head: not_implemented = not_implemented()
     map_batches: not_implemented = not_implemented()
-    mode: not_implemented = not_implemented()
     sample: not_implemented = not_implemented()
     rank: not_implemented = not_implemented()
     replace_strict: not_implemented = not_implemented()

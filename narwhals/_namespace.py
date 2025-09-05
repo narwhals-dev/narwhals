@@ -7,9 +7,9 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Literal,
     Protocol,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -31,15 +31,12 @@ from narwhals.dependencies import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sized
-    from types import ModuleType
     from typing import ClassVar
 
     import duckdb
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    import pyspark.sql as pyspark_sql
-    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._arrow.namespace import ArrowNamespace
@@ -50,78 +47,52 @@ if TYPE_CHECKING:
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
-    from narwhals.typing import DataFrameLike, NativeFrame, NativeLazyFrame, NativeSeries
+    from narwhals._typing import (
+        Arrow,
+        Backend,
+        Dask,
+        DuckDB,
+        EagerAllowed,
+        Ibis,
+        IntoBackend,
+        PandasLike,
+        Polars,
+        SparkLike,
+    )
+    from narwhals.typing import NativeDataFrame, NativeLazyFrame, NativeSeries
 
     T = TypeVar("T")
 
     _Guard: TypeAlias = "Callable[[Any], TypeIs[T]]"
 
-    _Polars: TypeAlias = Literal["polars"]
-    _Arrow: TypeAlias = Literal["pyarrow"]
-    _Dask: TypeAlias = Literal["dask"]
-    _DuckDB: TypeAlias = Literal["duckdb"]
-    _PandasLike: TypeAlias = Literal["pandas", "cudf", "modin"]
-    _Ibis: TypeAlias = Literal["ibis"]
-    _SparkLike: TypeAlias = Literal["pyspark", "sqlframe", "pyspark[connect]"]
-    _EagerOnly: TypeAlias = "_PandasLike | _Arrow"
-    _EagerAllowed: TypeAlias = "_Polars | _EagerOnly"
-    _LazyOnly: TypeAlias = "_SparkLike | _Dask | _DuckDB | _Ibis"
-    _LazyAllowed: TypeAlias = "_Polars | _LazyOnly"
-
-    Polars: TypeAlias = Literal[_Polars, Implementation.POLARS]
-    Arrow: TypeAlias = Literal[_Arrow, Implementation.PYARROW]
-    Dask: TypeAlias = Literal[_Dask, Implementation.DASK]
-    DuckDB: TypeAlias = Literal[_DuckDB, Implementation.DUCKDB]
-    Ibis: TypeAlias = Literal[_Ibis, Implementation.IBIS]
-    PandasLike: TypeAlias = Literal[
-        _PandasLike, Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN
-    ]
-    SparkLike: TypeAlias = Literal[
-        _SparkLike,
-        Implementation.PYSPARK,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    ]
-    EagerOnly: TypeAlias = "PandasLike | Arrow"
-    EagerAllowed: TypeAlias = "EagerOnly | Polars"
-    LazyOnly: TypeAlias = "SparkLike | Dask | DuckDB | Ibis"
-    LazyAllowed: TypeAlias = "LazyOnly | Polars"
-
-    BackendName: TypeAlias = "_EagerAllowed | _LazyAllowed"
-    IntoBackend: TypeAlias = "BackendName | Implementation | ModuleType"
-
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
-    EagerAllowedImplementation: TypeAlias = Literal[
-        Implementation.PANDAS,
-        Implementation.CUDF,
-        Implementation.MODIN,
-        Implementation.PYARROW,
-        Implementation.POLARS,
-    ]
+    Incomplete: TypeAlias = Any
 
     class _BasePandasLike(Sized, Protocol):
         index: Any
         """`mypy` doesn't like the asymmetric `property` setter in `pandas`."""
 
         def __getitem__(self, key: Any, /) -> Any: ...
-        def __mul__(self, other: float | Collection[float] | Self) -> Self: ...
-        def __floordiv__(self, other: float | Collection[float] | Self) -> Self: ...
+        def __mul__(self, other: float | Collection[float] | Self, /) -> Self: ...
+        def __floordiv__(self, other: float | Collection[float] | Self, /) -> Self: ...
         @property
         def loc(self) -> Any: ...
         @property
         def shape(self) -> tuple[int, ...]: ...
         def set_axis(self, labels: Any, *, axis: Any = ..., copy: bool = ...) -> Self: ...
         def copy(self, deep: bool = ...) -> Self: ...  # noqa: FBT001
-        def rename(self, *args: Any, inplace: Literal[False], **kwds: Any) -> Self:
-            """`inplace=False` is required to avoid (incorrect?) default overloads."""
-            ...
+        def rename(self, *args: Any, **kwds: Any) -> Self | Incomplete:
+            """`mypy` & `pyright` disagree on overloads.
 
-    class _BasePandasLikeFrame(NativeFrame, _BasePandasLike, Protocol): ...
+            `Incomplete` used to fix [more important issue](https://github.com/narwhals-dev/narwhals/pull/3016#discussion_r2296139744).
+            """
+
+    class _BasePandasLikeFrame(NativeDataFrame, _BasePandasLike, Protocol): ...
 
     class _BasePandasLikeSeries(NativeSeries, _BasePandasLike, Protocol):
-        def where(self, cond: Any, other: Any = ..., **kwds: Any) -> Any: ...
+        def where(self, cond: Any, other: Any = ..., /) -> Self | Incomplete: ...
 
-    class _NativeDask(Protocol):
+    class _NativeDask(NativeLazyFrame, Protocol):
         _partition_type: type[pd.DataFrame]
 
     class _CuDFDataFrame(_BasePandasLikeFrame, Protocol):
@@ -142,6 +113,12 @@ if TYPE_CHECKING:
     class _ModinSeries(_BasePandasLikeSeries, Protocol):
         _pandas_class: type[pd.Series[Any]]
 
+    # NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
+    class _PySparkDataFrame(NativeLazyFrame, Protocol):
+        # Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
+        # https://github.com/apache/spark/blob/8530444e25b83971da4314c608aa7d763adeceb3/python/pyspark/sql/dataframe.py#L4875
+        def dropDuplicatesWithinWatermark(self, *arg: Any, **kwargs: Any) -> Any: ...  # noqa: N802
+
     _NativePolars: TypeAlias = "pl.DataFrame | pl.LazyFrame | pl.Series"
     _NativeArrow: TypeAlias = "pa.Table | pa.ChunkedArray[Any]"
     _NativeDuckDB: TypeAlias = "duckdb.DuckDBPyRelation"
@@ -154,16 +131,14 @@ if TYPE_CHECKING:
     )
     _NativePandasLike: TypeAlias = "_NativePandasLikeDataFrame |_NativePandasLikeSeries"
     _NativeSQLFrame: TypeAlias = "SQLFrameDataFrame"
-    _NativePySpark: TypeAlias = "pyspark_sql.DataFrame"
-    _NativePySparkConnect: TypeAlias = "PySparkConnectDataFrame"
+    _NativePySpark: TypeAlias = _PySparkDataFrame
+    _NativePySparkConnect: TypeAlias = _PySparkDataFrame
     _NativeSparkLike: TypeAlias = (
         "_NativeSQLFrame | _NativePySpark | _NativePySparkConnect"
     )
 
     NativeKnown: TypeAlias = "_NativePolars | _NativeArrow | _NativePandasLike | _NativeSparkLike | _NativeDuckDB | _NativeDask | _NativeIbis"
-    NativeUnknown: TypeAlias = (
-        "NativeFrame | NativeSeries | NativeLazyFrame | DataFrameLike"
-    )
+    NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeLazyFrame"
     NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
 
 __all__ = ["Namespace"]
@@ -235,20 +210,17 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(
-        cls, backend: IntoBackend, /
+        cls, backend: IntoBackend[Backend], /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(
-        cls: type[Namespace[Any]], backend: IntoBackend, /
+        cls: type[Namespace[Any]], backend: IntoBackend[Backend], /
     ) -> Namespace[Any]:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:
             backend: native namespace module, string, or Implementation.
-
-        Returns:
-            Namespace.
 
         Examples:
             >>> from narwhals._namespace import Namespace
@@ -357,6 +329,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     def from_native_object(
         cls: type[Namespace[Any]], native: NativeAny, /
     ) -> Namespace[Any]:
+        impl: Backend
         if is_native_polars(native):
             impl = Implementation.POLARS
         elif is_native_pandas(native):
@@ -405,8 +378,10 @@ def is_native_dask(obj: Any) -> TypeIs[_NativeDask]:
 
 is_native_duckdb: _Guard[_NativeDuckDB] = is_duckdb_relation
 is_native_sqlframe: _Guard[_NativeSQLFrame] = is_sqlframe_dataframe
-is_native_pyspark: _Guard[_NativePySpark] = is_pyspark_dataframe
-is_native_pyspark_connect: _Guard[_NativePySparkConnect] = is_pyspark_connect_dataframe
+is_native_pyspark = cast("_Guard[_NativePySpark]", is_pyspark_dataframe)
+is_native_pyspark_connect = cast(
+    "_Guard[_NativePySparkConnect]", is_pyspark_connect_dataframe
+)
 
 
 def is_native_pandas(obj: Any) -> TypeIs[_NativePandas]:

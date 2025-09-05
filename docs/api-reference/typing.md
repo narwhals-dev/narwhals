@@ -17,6 +17,10 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - IntoFrameT
         - IntoSeries
         - IntoSeriesT
+        - IntoBackend
+        - Backend
+        - EagerAllowed
+        - LazyAllowed
         - IntoDType
         - IntoSchema
         - SizeUnit
@@ -26,6 +30,7 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - ConcatMethod
         - FillNullStrategy
         - JoinStrategy
+        - ModeKeepStrategy
         - PivotAgg
         - RankMethod
         - RollingInterpolationMethod

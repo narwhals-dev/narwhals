@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
 
 import polars as pl
 
@@ -48,6 +48,15 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
+
+SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
+"""`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
+
+Includes `SERIES_ACCEPTS_PD_INDEX`.
+"""
+
+SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
+"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
 
 @overload
@@ -153,41 +162,40 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     return dtypes.Unknown()
 
 
-def narwhals_to_native_dtype(  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
+    dtypes.Float64: pl.Float64(),
+    dtypes.Float32: pl.Float32(),
+    dtypes.Binary: pl.Binary(),
+    dtypes.String: pl.String(),
+    dtypes.Boolean: pl.Boolean(),
+    dtypes.Categorical: pl.Categorical(),
+    dtypes.Date: pl.Date(),
+    dtypes.Time: pl.Time(),
+    dtypes.Int8: pl.Int8(),
+    dtypes.Int16: pl.Int16(),
+    dtypes.Int32: pl.Int32(),
+    dtypes.Int64: pl.Int64(),
+    dtypes.UInt8: pl.UInt8(),
+    dtypes.UInt16: pl.UInt16(),
+    dtypes.UInt32: pl.UInt32(),
+    dtypes.UInt64: pl.UInt64(),
+    dtypes.Object: pl.Object(),
+    dtypes.Unknown: pl.Unknown(),
+}
+UNSUPPORTED_DTYPES = (dtypes.Decimal,)
+
+
+def narwhals_to_native_dtype(  # noqa: C901
     dtype: IntoDType, version: Version
 ) -> pl.DataType:
     dtypes = version.dtypes
-    if dtype == dtypes.Float64:
-        return pl.Float64()
-    if dtype == dtypes.Float32:
-        return pl.Float32()
+    base_type = dtype.base_type()
+    if pl_type := NW_TO_PL_DTYPES.get(base_type):
+        return pl_type
     if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
         # Not available for Polars pre 1.8.0
         return pl.Int128()
-    if dtype == dtypes.Int64:
-        return pl.Int64()
-    if dtype == dtypes.Int32:
-        return pl.Int32()
-    if dtype == dtypes.Int16:
-        return pl.Int16()
-    if dtype == dtypes.Int8:
-        return pl.Int8()
-    if dtype == dtypes.UInt64:
-        return pl.UInt64()
-    if dtype == dtypes.UInt32:
-        return pl.UInt32()
-    if dtype == dtypes.UInt16:
-        return pl.UInt16()
-    if dtype == dtypes.UInt8:
-        return pl.UInt8()
-    if dtype == dtypes.String:
-        return pl.String()
-    if dtype == dtypes.Boolean:
-        return pl.Boolean()
-    if dtype == dtypes.Object:  # pragma: no cover
-        return pl.Object()
-    if dtype == dtypes.Categorical:
-        return pl.Categorical()
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
@@ -196,15 +204,6 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
             return pl.Enum(dtype.categories)
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-    if dtype == dtypes.Date:
-        return pl.Date()
-    if dtype == dtypes.Time:
-        return pl.Time()
-    if dtype == dtypes.Binary:
-        return pl.Binary()
-    if dtype == dtypes.Decimal:
-        msg = "Casting to Decimal is not supported yet."
-        raise NotImplementedError(msg)
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return pl.Datetime(dtype.time_unit, dtype.time_zone)  # type: ignore[arg-type]
     if isinstance_or_issubclass(dtype, dtypes.Duration):
@@ -221,6 +220,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         size = dtype.size
         kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
+    if issubclass(base_type, UNSUPPORTED_DTYPES):
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Polars."
+        raise NotImplementedError(msg)
     return pl.Unknown()  # pragma: no cover
 
 
@@ -338,6 +340,8 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
     @abc.abstractmethod
     def len(self) -> CompliantT: ...
+
+    get: Method[CompliantT]
 
     unique: Method[CompliantT]
 

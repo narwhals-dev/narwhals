@@ -22,21 +22,48 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import EvalNames
     from narwhals._expression_parsing import ExprKind, ExprMetadata
-    from narwhals._polars.dataframe import Method, PolarsDataFrame
+    from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import IntoDType
+    from narwhals._utils import Version
+    from narwhals.typing import IntoDType, ModeKeepStrategy, NumericLiteral
 
 
 class PolarsExpr:
-    _implementation = Implementation.POLARS
+    # CompliantExpr
+    _implementation: Implementation = Implementation.POLARS
+    _version: Version
+    _native_expr: pl.Expr
+    _metadata: ExprMetadata | None = None
+    _evaluate_output_names: Any
+    _alias_output_names: Any
+    __call__: Any
+
+    # CompliantExpr + builtin descriptor
+    # TODO @dangotbanned: Remove in #2713
+    @classmethod
+    def from_column_names(cls, *_: Any, **__: Any) -> Self:
+        raise NotImplementedError
+
+    @classmethod
+    def from_column_indices(cls, *_: Any, **__: Any) -> Self:
+        raise NotImplementedError
+
+    @staticmethod
+    def _eval_names_indices(*_: Any) -> Any:
+        raise NotImplementedError
+
+    def __narwhals_expr__(self) -> Self:  # pragma: no cover
+        return self
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
+        from narwhals._polars.namespace import PolarsNamespace
+
+        return PolarsNamespace(version=self._version)
 
     def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
         self._version = version
-        self._metadata: ExprMetadata | None = None
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -51,10 +78,6 @@ class PolarsExpr:
 
     def _with_native(self, expr: pl.Expr) -> Self:
         return self.__class__(expr, self._version)
-
-    @classmethod
-    def _from_series(cls, series: Any) -> Self:
-        return cls(series.native, series._version)
 
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         # Let Polars do its thing.
@@ -149,14 +172,22 @@ class PolarsExpr:
         return self._with_native(native)
 
     def map_batches(
-        self, function: Callable[[Any], Any], return_dtype: IntoDType | None
+        self,
+        function: Callable[[Any], Any],
+        return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
     ) -> Self:
+        pl_version = self._backend_version
         return_dtype_pl = (
             narwhals_to_native_dtype(return_dtype, self._version)
-            if return_dtype
+            if return_dtype is not None
             else None
+            if pl_version < (1, 32)
+            else pl.self_dtype()
         )
-        native = self.native.map_batches(function, return_dtype_pl)
+        kwargs = {} if pl_version < (0, 20, 31) else {"returns_scalar": returns_scalar}
+        native = self.native.map_batches(function, return_dtype_pl, **kwargs)
         return self._with_native(native)
 
     @requires.backend_version((1,))
@@ -234,11 +265,49 @@ class PolarsExpr:
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
-    def __narwhals_expr__(self) -> None: ...
-    def __narwhals_namespace__(self) -> PolarsNamespace:  # pragma: no cover
-        from narwhals._polars.namespace import PolarsNamespace
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        left = self.native
+        right = other.native if isinstance(other, PolarsExpr) else pl.lit(other)
 
-        return PolarsNamespace(version=self._version)
+        if self._backend_version < (1, 32, 0):
+            lower_bound = right.abs()
+            tolerance = (left.abs().clip(lower_bound) * rel_tol).clip(abs_tol)
+
+            # Values are close if abs_diff <= tolerance, and both finite
+            abs_diff = (left - right).abs()
+            all_ = pl.all_horizontal
+            is_close = all_((abs_diff <= tolerance), left.is_finite(), right.is_finite())
+
+            # Handle infinity cases: infinities are "close" only if they have the same sign
+            is_same_inf = all_(
+                left.is_infinite(), right.is_infinite(), (left.sign() == right.sign())
+            )
+
+            # Handle nan cases:
+            #   * nans_equals = True => if both values are NaN, then True
+            #   * nans_equals = False => if any value is NaN, then False
+            left_is_nan, right_is_nan = left.is_nan(), right.is_nan()
+            either_nan = left_is_nan | right_is_nan
+            result = (is_close | is_same_inf) & either_nan.not_()
+
+            if nans_equal:
+                result = result | (left_is_nan & right_is_nan)
+        else:
+            result = left.is_close(
+                right, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            )
+        return self._with_native(result)
+
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        result = self.native.mode()
+        return self._with_native(result.first() if keep == "any" else result)
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
@@ -264,33 +333,6 @@ class PolarsExpr:
     def struct(self) -> PolarsExprStructNamespace:
         return PolarsExprStructNamespace(self)
 
-    # CompliantExpr
-    _alias_output_names: Any
-    _evaluate_aliases: Any
-    _evaluate_output_names: Any
-    _is_multi_output_unnamed: Any
-    __call__: Any
-
-    # CompliantExpr + builtin descriptor
-    # TODO @dangotbanned: Remove in #2713
-    @classmethod
-    def from_column_names(
-        cls,
-        evaluate_column_names: EvalNames[PolarsDataFrame],
-        /,
-        *,
-        context: _LimitedContext,
-    ) -> Self:
-        raise NotImplementedError
-
-    @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
-        raise NotImplementedError
-
-    @staticmethod
-    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[PolarsDataFrame]:
-        raise NotImplementedError
-
     # Polars
     abs: Method[Self]
     all: Method[Self]
@@ -309,8 +351,11 @@ class PolarsExpr:
     drop_nulls: Method[Self]
     exp: Method[Self]
     fill_null: Method[Self]
+    fill_nan: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
+    is_between: Method[Self]
+    is_duplicated: Method[Self]
     is_finite: Method[Self]
     is_first_distinct: Method[Self]
     is_in: Method[Self]
@@ -324,7 +369,6 @@ class PolarsExpr:
     mean: Method[Self]
     median: Method[Self]
     min: Method[Self]
-    mode: Method[Self]
     n_unique: Method[Self]
     null_count: Method[Self]
     quantile: Method[Self]
@@ -340,6 +384,10 @@ class PolarsExpr:
     tail: Method[Self]
     unique: Method[Self]
     var: Method[Self]
+    __rsub__: Method[Self]
+    __rmod__: Method[Self]
+    __rpow__: Method[Self]
+    __rtruediv__: Method[Self]
 
 
 class PolarsExprNamespace(PolarsAnyNamespace[PolarsExpr, pl.Expr]):

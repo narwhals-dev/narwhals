@@ -47,6 +47,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
@@ -199,7 +200,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
-        Series = series[0].__native_namespace__().Series  # noqa: N806
+        Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         max_length = max(lengths)
         idx = series[lengths.index(max_length)].native.index
@@ -551,10 +552,11 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def is_nan(self) -> Self:
         ser = self.native
-        if self.dtype.is_numeric():
-            return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
-        msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
-        raise InvalidOperationError(msg)
+        if not self.dtype.is_numeric():
+            msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
 
     def fill_null(
         self,
@@ -586,6 +588,18 @@ class PandasLikeSeries(EagerSeries[Any]):
                     preserve_broadcast=True,
                 )
         return res_ser
+
+    def fill_nan(self, value: float | None) -> Self:
+        if not self.dtype.is_numeric():  # pragma: no cover
+            msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
+            raise InvalidOperationError(msg)
+        s = self.native
+        fill = s.array.dtype.na_value if value is None else value
+        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        mask = s != s  # noqa: PLR0124
+        # Carefully use `inplace`, as `mask` isn't provided by the user.
+        mask.fillna(False, inplace=True)  # noqa: PD002
+        return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())
@@ -824,8 +838,22 @@ class PandasLikeSeries(EagerSeries[Any]):
             if upper_bound is not None
             else (None, None)
         )
-        kwargs = {"axis": 0} if self._implementation is Implementation.MODIN else {}
-        return self._with_native(self.native.clip(lower, upper, **kwargs))
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas():
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            if self._is_native(lower):
+                result = result.where(result >= lower, lower)
+                lower = None
+            if self._is_native(upper):
+                result = result.where(result <= upper, upper)
+                upper = None
+
+        return self._with_native(result.clip(lower, upper, **kwargs))
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
@@ -835,10 +863,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return pa.Array.from_pandas(self.native)
 
-    def mode(self) -> Self:
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
         result.name = self.name
-        return self._with_native(result)
+        return self._with_native(result.head(1) if keep == "any" else result)
 
     def cum_count(self, *, reverse: bool) -> Self:
         not_na_series = ~self.native.isna()
@@ -1060,7 +1088,7 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
 
     def to_frame(self) -> PandasLikeDataFrame:
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native
-        DataFrame = self._series.__native_namespace__().DataFrame  # noqa: N806
+        DataFrame = self._series.__native_namespace__().DataFrame
         return from_native(DataFrame(self._data), context=self._series)
 
     # NOTE: *Could* be handled at narwhals-level

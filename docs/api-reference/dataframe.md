@@ -43,6 +43,7 @@
         - shape
         - sort
         - tail
+        - top_k
         - to_arrow
         - to_dict
         - to_native
@@ -57,3 +58,4 @@
         - write_parquet
       show_source: false
       show_bases: false
+      inherited_members: true

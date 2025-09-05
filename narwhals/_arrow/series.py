@@ -15,6 +15,7 @@ from narwhals._arrow.utils import (
     chunked_array,
     extract_native,
     floordiv_compat,
+    is_array_or_scalar,
     lit,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -65,6 +66,7 @@ if TYPE_CHECKING:
         FillNullStrategy,
         Into1DArray,
         IntoDType,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
@@ -156,10 +158,15 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         dtype: IntoDType | None = None,
     ) -> Self:
         version = context._version
-        dtype_pa = narwhals_to_native_dtype(dtype, version) if dtype else None
-        return cls.from_native(
-            chunked_array([data], dtype_pa), name=name, context=context
-        )
+        if dtype is not None:
+            dtype_pa: pa.DataType | None = narwhals_to_native_dtype(dtype, version)
+            if is_array_or_scalar(data):
+                data = data.cast(dtype_pa)
+                dtype_pa = None
+            native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
+        else:
+            native = chunked_array([data])
+        return cls.from_native(native, context=context, name=name)
 
     def _from_scalar(self, value: Any) -> Self:
         if hasattr(value, "as_py"):
@@ -644,6 +651,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         mask = rng.choice(idx, size=n, replace=with_replacement)
         return self._with_native(self.native.take(mask))
 
+    def fill_nan(self, value: float | None) -> Self:
+        result = pc.if_else(pc.is_nan(self.native), value, self.native)
+        return self._with_native(result, preserve_broadcast=True)
+
     def fill_null(
         self,
         value: Self | NonNestedLiteral,
@@ -745,7 +756,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))
         return maybe_extract_py_scalar(result, return_py_scalar=True)
 
-    def unique(self, *, maintain_order: bool) -> Self:
+    def unique(self, *, maintain_order: bool = True) -> Self:
         # TODO(marco): `pc.unique` seems to always maintain order, is that guaranteed?
         return self._with_native(self.native.unique())
 
@@ -850,16 +861,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()
 
-    def mode(self) -> ArrowSeries:
+    def mode(self, *, keep: ModeKeepStrategy) -> ArrowSeries:
         plx = self.__narwhals_namespace__()
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         counts = self.value_counts(
             name=col_token, normalize=False, sort=False, parallel=False
         )
-        return counts.filter(
+        result = counts.filter(
             plx.col(col_token)
             == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
         ).get_column(self.name)
+        return result.head(1) if keep == "any" else result
 
     def is_finite(self) -> Self:
         return self._with_native(pc.is_finite(self.native))

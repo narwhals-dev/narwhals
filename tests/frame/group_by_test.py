@@ -161,7 +161,7 @@ def test_group_by_depth_1_agg_bool_ops(
     expected: dict[str, list[bool]],
 ) -> None:
     if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
-        request.applymarker(pytest.mark.xfail(strict=True))
+        request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
     result = (
@@ -558,14 +558,19 @@ def test_group_by_raise_drop_null_keys_with_exprs(
 
 
 def test_group_by_selector(constructor: Constructor) -> None:
-    data = {"a": [1, 1, 1], "b": [4, 4, 6], "c": [7.5, 8.5, 9.0]}
+    data = {
+        "a": [1, 1, 1],
+        "b": [4, 4, 6],
+        "c": ["foo", "foo", "bar"],
+        "x": [7.5, 8.5, 9.0],
+    }
     result = (
         nw.from_native(constructor(data))
-        .group_by(nw.selectors.by_dtype(nw.Int64))
-        .agg(nw.col("c").mean())
+        .group_by(nw.selectors.by_dtype(nw.Int64), "c")
+        .agg(nw.col("x").mean())
         .sort("a", "b")
     )
-    expected = {"a": [1, 1], "b": [4, 6], "c": [8.0, 9.0]}
+    expected = {"a": [1, 1], "b": [4, 6], "c": ["foo", "bar"], "x": [8.0, 9.0]}
     assert_equal_data(result, expected)
 
 
@@ -657,4 +662,20 @@ def test_group_by_no_preserve_dtype(
     )
     actual_dtype = result.schema["n_unique"]
     assert actual_dtype.is_integer()
+    assert_equal_data(result, expected)
+
+
+def test_top_level_len(constructor: Constructor) -> None:
+    # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
+    df = nw.from_native(
+        constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
+    )
+    result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
+    expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
+    assert_equal_data(result, expected)
+    result = (
+        df.group_by("gender")
+        .agg(nw.col("weight").len(), nw.col("age").len())
+        .sort("gender")
+    )
     assert_equal_data(result, expected)

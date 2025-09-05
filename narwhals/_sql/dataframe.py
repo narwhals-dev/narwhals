@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant.dataframe import CompliantLazyFrame
-from narwhals._compliant.typing import CompliantExprT_contra, NativeExprT, NativeFrameT
+from narwhals._compliant.typing import (
+    CompliantExprT_contra,
+    NativeExprT,
+    NativeLazyFrameT,
+)
 from narwhals._translate import ToNarwhalsT_co
 from narwhals._utils import check_columns_exist
 
@@ -20,8 +24,8 @@ if TYPE_CHECKING:
 
 
 class SQLLazyFrame(
-    CompliantLazyFrame[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
-    Protocol[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
+    CompliantLazyFrame[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
+    Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
 ):
     def _evaluate_window_expr(
         self,

@@ -11,7 +11,8 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
-    NativeFrameT,
+    NativeDataFrameT,
+    NativeLazyFrameT,
     NativeSeriesT,
 )
 from narwhals._translate import (
@@ -40,6 +41,7 @@ from narwhals._utils import (
 if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
+    from types import ModuleType
 
     import pandas as pd
     import polars as pl
@@ -48,7 +50,9 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Implementation, _LimitedContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
@@ -73,233 +77,41 @@ if TYPE_CHECKING:
 
     Incomplete: TypeAlias = Any
 
-__all__ = ["CompliantDataFrame", "CompliantLazyFrame", "EagerDataFrame"]
+__all__ = ["CompliantDataFrame", "CompliantFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
 T = TypeVar("T")
 
 _ToDict: TypeAlias = "dict[str, CompliantSeriesT] | dict[str, list[Any]]"  # noqa: PYI047
 
+_NativeFrameT = TypeVar("_NativeFrameT")
 
-class CompliantDataFrame(
-    NumpyConvertible["_2DArray", "_2DArray"],
-    DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
-    ArrowConvertible["pa.Table", "IntoArrowTable"],
-    _StoresNative[NativeFrameT],
-    FromNative[NativeFrameT],
+
+class CompliantFrame(
+    _StoresNative[_NativeFrameT],
+    FromNative[_NativeFrameT],
     ToNarwhals[ToNarwhalsT_co],
-    Sized,
-    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
+    Protocol[CompliantExprT_contra, _NativeFrameT, ToNarwhalsT_co],
 ):
-    _native_frame: NativeFrameT
+    """Common parts of `DataFrame`, `LazyFrame`."""
+
+    _native_frame: _NativeFrameT
     _implementation: Implementation
     _version: Version
 
-    def __narwhals_dataframe__(self) -> Self: ...
+    def __native_namespace__(self) -> ModuleType: ...
     def __narwhals_namespace__(self) -> Any: ...
-    @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self: ...
-    @classmethod
-    def from_dict(
-        cls,
-        data: Mapping[str, Any],
-        /,
-        *,
-        context: _LimitedContext,
-        schema: IntoSchema | None,
-    ) -> Self: ...
-    @classmethod
-    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
-    @classmethod
-    def from_numpy(
-        cls,
-        data: _2DArray,
-        /,
-        *,
-        context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
-    ) -> Self: ...
-
-    def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
-    def __getitem__(
-        self,
-        item: tuple[
-            SingleIndexSelector | MultiIndexSelector[CompliantSeriesT],
-            MultiColSelector[CompliantSeriesT],
-        ],
-    ) -> Self: ...
-    def simple_select(self, *column_names: str) -> Self:
-        """`select` where all args are column names."""
-        ...
-
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        # NOTE: Ignore is to avoid an intermittent false positive
-        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
-
     def _with_version(self, version: Version) -> Self: ...
-
-    @property
-    def native(self) -> NativeFrameT:
-        return self._native_frame
-
+    @classmethod
+    def from_native(cls, data: _NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
     @property
     def columns(self) -> Sequence[str]: ...
     @property
-    def schema(self) -> Mapping[str, DType]: ...
-    @property
-    def shape(self) -> tuple[int, int]: ...
-    def clone(self) -> Self: ...
-    def collect(
-        self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrameAny: ...
-    def collect_schema(self) -> Mapping[str, DType]: ...
-    def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
-    def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
-    def estimated_size(self, unit: SizeUnit) -> int | float: ...
-    def explode(self, columns: Sequence[str]) -> Self: ...
-    def filter(self, predicate: CompliantExprT_contra | Incomplete) -> Self: ...
-    def gather_every(self, n: int, offset: int) -> Self: ...
-    def get_column(self, name: str) -> CompliantSeriesT: ...
-    def group_by(
-        self,
-        keys: Sequence[str] | Sequence[CompliantExprT_contra],
-        *,
-        drop_null_keys: bool,
-    ) -> DataFrameGroupBy[Self, Any]: ...
-    def head(self, n: int) -> Self: ...
-    def item(self, row: int | None, column: int | str | None) -> Any: ...
-    def iter_columns(self) -> Iterator[CompliantSeriesT]: ...
-    def iter_rows(
-        self, *, named: bool, buffer_size: int
-    ) -> Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]: ...
-    def is_unique(self) -> CompliantSeriesT: ...
-    def join(
-        self,
-        other: Self,
-        *,
-        how: JoinStrategy,
-        left_on: Sequence[str] | None,
-        right_on: Sequence[str] | None,
-        suffix: str,
-    ) -> Self: ...
-    def join_asof(
-        self,
-        other: Self,
-        *,
-        left_on: str,
-        right_on: str,
-        by_left: Sequence[str] | None,
-        by_right: Sequence[str] | None,
-        strategy: AsofJoinStrategy,
-        suffix: str,
-    ) -> Self: ...
-    def lazy(self, *, backend: Implementation | None) -> CompliantLazyFrameAny: ...
-    def pivot(
-        self,
-        on: Sequence[str],
-        *,
-        index: Sequence[str] | None,
-        values: Sequence[str] | None,
-        aggregate_function: PivotAgg | None,
-        sort_columns: bool,
-        separator: str,
-    ) -> Self: ...
-    def rename(self, mapping: Mapping[str, str]) -> Self: ...
-    def row(self, index: int) -> tuple[Any, ...]: ...
-    def rows(
-        self, *, named: bool
-    ) -> Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]: ...
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self: ...
-    def select(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def sort(
-        self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
-    ) -> Self: ...
-    def tail(self, n: int) -> Self: ...
-    def to_arrow(self) -> pa.Table: ...
-    def to_pandas(self) -> pd.DataFrame: ...
-    def to_polars(self) -> pl.DataFrame: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[True]) -> dict[str, CompliantSeriesT]: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, CompliantSeriesT] | dict[str, list[Any]]: ...
-    def unique(
-        self,
-        subset: Sequence[str] | None,
-        *,
-        keep: UniqueKeepStrategy,
-        maintain_order: bool | None = None,
-    ) -> Self: ...
-    def unpivot(
-        self,
-        on: Sequence[str] | None,
-        index: Sequence[str] | None,
-        variable_name: str,
-        value_name: str,
-    ) -> Self: ...
-    def with_columns(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
-    @overload
-    def write_csv(self, file: None) -> str: ...
-    @overload
-    def write_csv(self, file: str | Path | BytesIO) -> None: ...
-    def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
-    def write_parquet(self, file: str | Path | BytesIO) -> None: ...
-
-
-class CompliantLazyFrame(
-    _StoresNative[NativeFrameT],
-    FromNative[NativeFrameT],
-    ToNarwhals[ToNarwhalsT_co],
-    Protocol[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
-):
-    _native_frame: NativeFrameT
-    _implementation: Implementation
-    _version: Version
-
-    def __narwhals_lazyframe__(self) -> Self: ...
-    def __narwhals_namespace__(self) -> Any: ...
-
-    @classmethod
-    def from_native(cls, data: NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
-
-    def simple_select(self, *column_names: str) -> Self:
-        """`select` where all args are column names."""
-        ...
-
-    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
-        """`select` where all args are aggregations or literals.
-
-        (so, no broadcasting is necessary).
-        """
-        ...
-
-    def _with_version(self, version: Version) -> Self: ...
-
-    @property
-    def native(self) -> NativeFrameT:
+    def native(self) -> _NativeFrameT:
         return self._native_frame
 
     @property
-    def columns(self) -> Sequence[str]: ...
-    @property
     def schema(self) -> Mapping[str, DType]: ...
-    def _iter_columns(self) -> Iterator[Any]: ...
-    def collect(
-        self, backend: Implementation | None, **kwargs: Any
-    ) -> CompliantDataFrameAny: ...
+
     def collect_schema(self) -> Mapping[str, DType]: ...
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
@@ -334,10 +146,14 @@ class CompliantLazyFrame(
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
     def select(self, *exprs: CompliantExprT_contra) -> Self: ...
-    def sink_parquet(self, file: str | Path | BytesIO) -> None: ...
+    def simple_select(self, *column_names: str) -> Self:
+        """`select` where all args are column names."""
+        ...
+
     def sort(
         self, *by: str, descending: bool | Sequence[bool], nulls_last: bool
     ) -> Self: ...
+    def tail(self, n: int) -> Self: ...
     def unique(
         self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
     ) -> Self: ...
@@ -352,11 +168,140 @@ class CompliantLazyFrame(
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self: ...
 
 
+class CompliantDataFrame(
+    NumpyConvertible["_2DArray", "_2DArray"],
+    DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
+    ArrowConvertible["pa.Table", "IntoArrowTable"],
+    Sized,
+    CompliantFrame[CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
+):
+    def __narwhals_dataframe__(self) -> Self: ...
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self: ...
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self: ...
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | Sequence[str] | None,
+    ) -> Self: ...
+    def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
+    def __getitem__(
+        self,
+        item: tuple[
+            SingleIndexSelector | MultiIndexSelector[CompliantSeriesT],
+            MultiColSelector[CompliantSeriesT],
+        ],
+    ) -> Self: ...
+
+    @property
+    def shape(self) -> tuple[int, int]: ...
+    def clone(self) -> Self: ...
+    def estimated_size(self, unit: SizeUnit) -> int | float: ...
+    def gather_every(self, n: int, offset: int) -> Self: ...
+    def get_column(self, name: str) -> CompliantSeriesT: ...
+    def group_by(
+        self,
+        keys: Sequence[str] | Sequence[CompliantExprT_contra],
+        *,
+        drop_null_keys: bool,
+    ) -> DataFrameGroupBy[Self, Any]: ...
+    def item(self, row: int | None, column: int | str | None) -> Any: ...
+    def iter_columns(self) -> Iterator[CompliantSeriesT]: ...
+    def iter_rows(
+        self, *, named: bool, buffer_size: int
+    ) -> Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]: ...
+    def is_unique(self) -> CompliantSeriesT: ...
+    def lazy(
+        self, backend: _LazyAllowedImpl | None, *, session: SparkSession | None
+    ) -> CompliantLazyFrameAny: ...
+    def pivot(
+        self,
+        on: Sequence[str],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        sort_columns: bool,
+        separator: str,
+    ) -> Self: ...
+    def row(self, index: int) -> tuple[Any, ...]: ...
+    def rows(
+        self, *, named: bool
+    ) -> Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]: ...
+    def sample(
+        self,
+        n: int | None,
+        *,
+        fraction: float | None,
+        with_replacement: bool,
+        seed: int | None,
+    ) -> Self: ...
+    def to_arrow(self) -> pa.Table: ...
+    def to_pandas(self) -> pd.DataFrame: ...
+    def to_polars(self) -> pl.DataFrame: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, CompliantSeriesT]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool
+    ) -> dict[str, CompliantSeriesT] | dict[str, list[Any]]: ...
+    def unique(
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        maintain_order: bool | None = None,
+    ) -> Self: ...
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: str | Path | BytesIO) -> None: ...
+    def write_csv(self, file: str | Path | BytesIO | None) -> str | None: ...
+    def write_parquet(self, file: str | Path | BytesIO) -> None: ...
+
+
+class CompliantLazyFrame(
+    CompliantFrame[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
+    Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
+):
+    def __narwhals_lazyframe__(self) -> Self: ...
+    # `LazySelectorNamespace._iter_columns` depends
+    def _iter_columns(self) -> Iterator[Any]: ...
+    def aggregate(self, *exprs: CompliantExprT_contra) -> Self:
+        """`select` where all args are aggregations or literals.
+
+        (so, no broadcasting is necessary).
+        """
+        ...
+
+    def collect(
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
+    ) -> CompliantDataFrameAny: ...
+    def sink_parquet(self, file: str | Path | BytesIO) -> None: ...
+
+
 class EagerDataFrame(
-    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
-    CompliantLazyFrame[EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
+    CompliantDataFrame[
+        EagerSeriesT, EagerExprT, NativeDataFrameT, "DataFrame[NativeDataFrameT]"
+    ],
+    CompliantLazyFrame[EagerExprT, "Incomplete", "DataFrame[NativeDataFrameT]"],
     ValidateBackendVersion,
-    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
+    Protocol[EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -364,13 +309,21 @@ class EagerDataFrame(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
+    ) -> EagerNamespace[
+        Self, EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT
+    ]: ...
 
-    def to_narwhals(self) -> DataFrame[NativeFrameT]:
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
 
+    def aggregate(self, *exprs: EagerExprT) -> Self:
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "exprs" of type "EagerExprT@EagerDataFrame" in function "select"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        return self.select(*exprs)  # pyright: ignore[reportArgumentType]
+
     def _with_native(
-        self, df: NativeFrameT, *, validate_column_names: bool = True
+        self, df: NativeDataFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
@@ -383,7 +336,9 @@ class EagerDataFrame(
         return result[0]
 
     def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
-        # NOTE: Ignore is to avoid an intermittent false positive
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
     def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:

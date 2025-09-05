@@ -25,6 +25,7 @@
         - sink_parquet
         - sort
         - tail
+        - top_k
         - to_native
         - unique
         - unpivot
@@ -33,3 +34,4 @@
       show_root_heading: false
       show_source: false
       show_bases: false
+      inherited_members: true

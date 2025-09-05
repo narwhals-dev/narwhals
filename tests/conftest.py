@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import pytest
 
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import PANDAS_VERSION
+from tests.utils import PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,9 +24,9 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
-    from narwhals._namespace import EagerAllowed
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
-    from narwhals.typing import NativeFrame, NativeLazyFrame
+    from narwhals._typing import EagerAllowed
+    from narwhals.typing import NativeDataFrame, NativeLazyFrame
     from tests.utils import Constructor, ConstructorEager, ConstructorLazy
 
     Data: TypeAlias = "dict[str, list[Any]]"
@@ -100,27 +100,27 @@ def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
 
 
-def modin_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def modin_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj))
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
-def modin_pyarrow_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def modin_pyarrow_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
     df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
-def cudf_constructor(obj: Data) -> NativeFrame:  # pragma: no cover
+def cudf_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
     import cudf
 
     df = cudf.DataFrame(obj)
-    return cast("NativeFrame", df)
+    return cast("NativeDataFrame", df)
 
 
 def polars_eager_constructor(obj: Data) -> pl.DataFrame:
@@ -168,35 +168,13 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
     import warnings
     from atexit import register
 
-    is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
-
-    if TYPE_CHECKING:
-        from pyspark.sql import SparkSession
-    elif is_spark_connect:
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-
     with warnings.catch_warnings():
         # The spark session seems to trigger a polars warning.
         # Polars is imported in the tests, but not used in the spark operations
         warnings.filterwarnings(
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
-        builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-
-        session = (
-            (
-                builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-                if is_spark_connect
-                else builder.master("local[1]").config("spark.ui.enabled", "false")
-            )
-            .config("spark.default.parallelism", "1")
-            .config("spark.sql.shuffle.partitions", "2")
-            # common timezone for all tests environments
-            .config("spark.sql.session.timeZone", "UTC")
-            .getOrCreate()
-        )
+        session = pyspark_session()
 
         register(session.stop)
 
@@ -216,9 +194,7 @@ def pyspark_lazy_constructor() -> Callable[[Data], PySparkDataFrame]:  # pragma:
 
 
 def sqlframe_pyspark_lazy_constructor(obj: Data) -> SQLFrameDataFrame:  # pragma: no cover
-    from sqlframe.duckdb import DuckDBSession
-
-    session = DuckDBSession()
+    session = sqlframe_session()
     return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
@@ -257,6 +233,10 @@ LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "ibis": ibis_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
+
+ID_PANDAS_LIKE = frozenset(
+    ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
+)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
@@ -310,6 +290,18 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         )
     elif "constructor" in metafunc.fixturenames:
         metafunc.parametrize("constructor", constructors, ids=constructors_ids)
+    elif "constructor_pandas_like" in metafunc.fixturenames:
+        pandas_like_constructors = []
+        pandas_like_constructors_ids = []
+        for fn, name in zip(eager_constructors, eager_constructors_ids):
+            if name in ID_PANDAS_LIKE:
+                pandas_like_constructors.append(fn)
+                pandas_like_constructors_ids.append(name)
+        metafunc.parametrize(
+            "constructor_pandas_like",
+            pandas_like_constructors,
+            ids=pandas_like_constructors_ids,
+        )
 
 
 TEST_EAGER_BACKENDS: list[EagerAllowed] = []
@@ -326,4 +318,10 @@ TEST_EAGER_BACKENDS.extend(
 
 @pytest.fixture(params=TEST_EAGER_BACKENDS)
 def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(params=[el for el in TEST_EAGER_BACKENDS if not isinstance(el, str)])
+def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
+    """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]

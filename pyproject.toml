@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.0.1"
+version = "2.3.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -44,7 +44,7 @@ polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.0"]
 ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
-sqlframe = ["sqlframe>=3.22.0"]
+sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 
 [dependency-groups]
 core = [
@@ -72,9 +72,13 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
-  "polars==1.32.0",
+  "polars==1.32.2",
   "uv",
   "narwhals[ibis]",
+]
+typing-ci = [
+  "narwhals[dask,modin]",
+  {include-group = "typing"}
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -137,6 +141,8 @@ typing-modules = ["narwhals._typing_compat"]
 extend-safe-fixes = [
   "C419",    # unnecessary-comprehension-in-call
   "C420",    # unnecessary-dict-comprehension-for-iterable
+  "EM101",   # raw-string-in-exception
+  "EM102",   # f-string-in-exception
   "PLR6201", # literal-membership
   "TC",      # flake8-type-checking
   "UP",      # pyupgrade
@@ -165,6 +171,7 @@ ignore = [
   "D107",    # undocumented-public-init
   "DTZ001",  # call-datetime-without-tzinfo
   "E501",    # line-too-long
+  "FBT003",  # boolean-positional-value-in-call (We enforce at definition site when it is a flag, not a value (e.g. `lit(False)`))
   "FIX",     # flake8-fixme
   "PD010",   # pandas-use-of-dot-pivot-or-unstack
   "PD901",   # pandas-df-variable-name (This is a auxiliary library so dataframe variables have no concrete business meaning)
@@ -180,8 +187,20 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = [
+  "Series", 
+  "DataFrame", 
+  "_Window", 
+  "F", 
+  "_F",
+]
+
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"]
+"narwhals/expr_dt.py" = ["RUF002"] 
+"narwhals/typing.py" = [
+  "PYI042",  # snake-case-type-alias (catches `_1DArray`)
+] 
 "narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
@@ -245,6 +264,7 @@ filterwarnings = [
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
+  'ignore:.*invalid value encountered in cast:RuntimeWarning:pandas',
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

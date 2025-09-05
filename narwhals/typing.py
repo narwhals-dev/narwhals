@@ -1,19 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
+from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Mapping, Sequence, Sized
+    from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
 
     import numpy as np
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals._namespace import _NativeIbis
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.expr import Expr
     from narwhals.schema import Schema
@@ -28,14 +34,13 @@ if TYPE_CHECKING:
 
         def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
+    class NativeDataFrame(Sized, NativeFrame, Protocol): ...
+
     class NativeLazyFrame(NativeFrame, Protocol):
         def explain(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class NativeSeries(Sized, Iterable[Any], Protocol):
         def filter(self, *args: Any, **kwargs: Any) -> Any: ...
-
-    class DataFrameLike(Protocol):
-        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
     class SupportsNativeNamespace(Protocol):
         def __native_namespace__(self) -> ModuleType: ...
@@ -109,7 +114,7 @@ as it can either accept a `nw.Expr` (e.g. `df.select(nw.col('a'))`) or a string
 which will be interpreted as a `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeFrame", "DataFrameLike"]
+IntoDataFrame: TypeAlias = "NativeDataFrame"
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
@@ -122,7 +127,7 @@ Examples:
     ...     return df.shape
 """
 
-IntoLazyFrame: TypeAlias = "NativeLazyFrame"
+IntoLazyFrame: TypeAlias = Union["NativeLazyFrame", "_NativeIbis"]
 
 IntoFrame: TypeAlias = Union["IntoDataFrame", "IntoLazyFrame"]
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
@@ -341,16 +346,24 @@ LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
 - *"none"*: Don't keep duplicate rows.
 """
 
+ModeKeepStrategy: TypeAlias = Literal["any", "all"]
+"""Which of the mode's to keep.
+
+- *"any"*: Does not give any guarantee of which mode is kept.
+- *"all"*: Keeps all the mode's.
+"""
 
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
-_1DArray: TypeAlias = "_NDArray[tuple[int]]"  # noqa: PYI042
-_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"  # noqa: PYI042
-_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI042, PYI047
+_1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
+_2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
 _NumpyScalar: TypeAlias = "np.generic[Any]"
 Into1DArray: TypeAlias = "_1DArray | _NumpyScalar"
 """A 1-dimensional `numpy.ndarray` or scalar that can be converted into one."""
+
+PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
 
 NumericLiteral: TypeAlias = "int | float | Decimal"
@@ -391,6 +404,7 @@ Examples:
     └──────────────────┘
 """
 
+
 # TODO @dangotbanned: fix this?
 # Constructor allows tuples, but we don't support that *everywhere* yet
 IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
@@ -421,6 +435,10 @@ Examples:
     └────────────────────────┘
 """
 
+IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
+IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
+IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
+
 
 # Annotations for `__getitem__` methods
 _T = TypeVar("_T")
@@ -443,12 +461,15 @@ MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
 
 
 __all__ = [
+    "Backend",
     "CompliantDataFrame",
     "CompliantLazyFrame",
     "CompliantSeries",
     "DataFrameT",
+    "EagerAllowed",
     "Frame",
     "FrameT",
+    "IntoBackend",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
@@ -456,4 +477,5 @@ __all__ = [
     "IntoFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyAllowed",
 ]

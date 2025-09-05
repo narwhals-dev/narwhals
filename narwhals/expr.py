@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import operator as op
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -8,11 +9,10 @@ from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
-    extract_compliant,
 )
 from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
 from narwhals.dtypes import _validate_dtype
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -22,7 +22,7 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import TypeVar
+    from typing import NoReturn, TypeVar
 
     from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
@@ -33,11 +33,13 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         IntoExpr,
+        ModeKeepStrategy,
         NonNestedLiteral,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TemporalLiteral,
+        _1DArray,
     )
 
     PS = ParamSpec("PS")
@@ -85,8 +87,39 @@ class Expr:
             to_compliant_expr, self._metadata.with_orderable_filtration()
         )
 
+    def _with_nary(
+        self,
+        n_ary_function: Callable[..., Any],
+        *args: IntoExpr | NonNestedLiteral | _1DArray,
+    ) -> Self:
+        return self.__class__(
+            lambda plx: apply_n_ary_operation(
+                plx, n_ary_function, self, *args, str_as_lit=False
+            ),
+            combine_metadata(
+                self,
+                *args,
+                str_as_lit=False,
+                allow_multi_output=False,
+                to_single_output=False,
+            ),
+        )
+
     def __repr__(self) -> str:
         return f"Narwhals Expr\nmetadata: {self._metadata}\n"
+
+    def __bool__(self) -> NoReturn:
+        msg = (
+            f"the truth value of {type(self)} is ambiguous"
+            "\n\n"
+            "You probably got here by using a Python standard library function instead "
+            "of the native expressions API.\n"
+            "Here are some things you might want to try:\n"
+            "- instead of `nw.col('a') and nw.col('b')`, use `nw.col('a') & nw.col('b')`\n"
+            "- instead of `nw.col('a') in [y, z]`, use `nw.col('a').is_in([y, z])`\n"
+            "- instead of `max(nw.col('a'), nw.col('b'))`, use `nw.max_horizontal(nw.col('a'), nw.col('b'))`\n"
+        )
+        raise TypeError(msg)
 
     def _taxicab_norm(self) -> Self:
         # This is just used to test out the stable api feature in a realistic-ish way.
@@ -101,9 +134,6 @@ class Expr:
 
         Arguments:
             name: The new name.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -137,9 +167,6 @@ class Expr:
             args: Positional arguments to pass to function.
             kwargs: Keyword arguments to pass to function.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -164,9 +191,6 @@ class Expr:
         Arguments:
             dtype: Data type that the object will be cast into.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -188,177 +212,91 @@ class Expr:
         )
 
     # --- binary ---
-    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
+    def _with_binary(
+        self,
+        function: Callable[[Any, Any], Any],
+        other: Self | Any,
+        *,
+        str_as_lit: bool = True,
+    ) -> Self:
         return self.__class__(
             lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x == y, self, other, str_as_lit=True
+                plx, function, self, other, str_as_lit=str_as_lit
             ),
             ExprMetadata.from_binary_op(self, other),
         )
+
+    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
+        return self._with_binary(op.eq, other)
 
     def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x != y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.ne, other)
 
     def __and__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x & y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.and_, other)
 
     def __rand__(self, other: Any) -> Self:
         return (self & other).alias("literal")  # type: ignore[no-any-return]
 
     def __or__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x | y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.or_, other)
 
     def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
     def __add__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x + y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.add, other)
 
     def __radd__(self, other: Any) -> Self:
         return (self + other).alias("literal")  # type: ignore[no-any-return]
 
     def __sub__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x - y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.sub, other)
 
     def __rsub__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rsub__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rsub__(y), other)
 
     def __truediv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x / y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.truediv, other)
 
     def __rtruediv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rtruediv__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rtruediv__(y), other)
 
     def __mul__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x * y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.mul, other)
 
     def __rmul__(self, other: Any) -> Self:
         return (self * other).alias("literal")  # type: ignore[no-any-return]
 
     def __le__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x <= y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.le, other)
 
     def __lt__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x < y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.lt, other)
 
     def __gt__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x > y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.gt, other)
 
     def __ge__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x >= y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.ge, other)
 
     def __pow__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x**y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.pow, other)
 
     def __rpow__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rpow__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rpow__(y), other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x // y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.floordiv, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rfloordiv__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rfloordiv__(y), other)
 
     def __mod__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x % y, self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(op.mod, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, lambda x, y: x.__rmod__(y), self, other, str_as_lit=True
-            ),
-            ExprMetadata.from_binary_op(self, other),
-        )
+        return self._with_binary(lambda x, y: x.__rmod__(y), other)
 
     # --- unary ---
     def __invert__(self) -> Self:
@@ -370,9 +308,6 @@ class Expr:
         """Return whether any of the values in the column are `True`.
 
         If there are no non-null elements, the result is `False`.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -393,9 +328,6 @@ class Expr:
         """Return whether all values in the column are `True`.
 
         If there are no non-null elements, the result is `True`.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -457,9 +389,6 @@ class Expr:
                   $1-\alpha$ and $1$ if `adjust=True`,
                   and $1-\alpha$ and $\alpha$ if `adjust=False`.
 
-        Returns:
-            Expr
-
         Examples:
             >>> import pandas as pd
             >>> import polars as pl
@@ -513,9 +442,6 @@ class Expr:
     def mean(self) -> Self:
         """Get mean value.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -533,9 +459,6 @@ class Expr:
 
     def median(self) -> Self:
         """Get median value.
-
-        Returns:
-            A new expression.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -562,9 +485,6 @@ class Expr:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                 where N represents the number of elements. By default ddof is 1.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -589,9 +509,6 @@ class Expr:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
                      where N represents the number of elements. By default ddof is 1.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -613,6 +530,8 @@ class Expr:
         self,
         function: Callable[[Any], CompliantExpr[Any, Any]],
         return_dtype: DType | None = None,
+        *,
+        returns_scalar: bool = False,
     ) -> Self:
         """Apply a custom python function to a whole Series or sequence of Series.
 
@@ -625,9 +544,10 @@ class Expr:
             return_dtype: Dtype of the output Series.
                 If not set, the dtype will be inferred based on the first non-null value
                 that is returned by the function.
-
-        Returns:
-            A new expression.
+            returns_scalar: If the function returns a scalar, by default it will be wrapped
+                in a list in the output, since the assumption is that the function always
+                returns something Series-like.
+                If you want to keep the result as a scalar, set this argument to True.
 
         Examples:
             >>> import pandas as pd
@@ -648,18 +568,21 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        # safest assumptions
-        return self._with_orderable_filtration(
-            lambda plx: self._to_compliant_expr(plx).map_batches(
-                function=function, return_dtype=return_dtype
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).map_batches(
+                function=function,
+                return_dtype=return_dtype,
+                returns_scalar=returns_scalar,
             )
-        )
+
+        if returns_scalar:
+            return self._with_orderable_aggregation(compliant_expr)
+        # safest assumptions
+        return self._with_orderable_filtration(compliant_expr)
 
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
-
-        Returns:
-            An expression representing the sample skewness of the column.
 
         Examples:
             >>> import pandas as pd
@@ -682,9 +605,6 @@ class Expr:
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
 
-        Returns:
-            An expression representing the kurtosis (Fisher's definition) without bias correction of the column.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -704,9 +624,6 @@ class Expr:
         """Return the sum value.
 
         If there are no non-null elements, the result is zero.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import duckdb
@@ -730,9 +647,6 @@ class Expr:
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -750,9 +664,6 @@ class Expr:
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -772,9 +683,6 @@ class Expr:
     def count(self) -> Self:
         """Returns the number of non-null elements in the column.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -792,9 +700,6 @@ class Expr:
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -814,9 +719,6 @@ class Expr:
     def unique(self) -> Self:
         """Return unique values of this expression.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -834,9 +736,6 @@ class Expr:
 
     def abs(self) -> Self:
         """Return absolute value of each element.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -863,9 +762,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -894,9 +790,6 @@ class Expr:
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -943,9 +836,6 @@ class Expr:
 
         Arguments:
             n: Number of positions to shift values by.
-
-        Returns:
-            A new expression.
 
         Notes:
             pandas may change the dtype here, for example when introducing missing
@@ -1005,9 +895,6 @@ class Expr:
                 (default), the data type is determined automatically based on the other
                 inputs.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1058,9 +945,6 @@ class Expr:
             upper_bound: Upper bound value. String literals are interpreted as column names.
             closed: Define which sides of the interval are closed (inclusive).
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1078,32 +962,10 @@ class Expr:
             |   4  5  False    |
             └──────────────────┘
         """
-
-        def func(
-            compliant_expr: CompliantExpr[Any, Any],
-            lb: CompliantExpr[Any, Any],
-            ub: CompliantExpr[Any, Any],
-        ) -> CompliantExpr[Any, Any]:
-            if closed == "left":
-                return (compliant_expr >= lb) & (compliant_expr < ub)
-            if closed == "right":
-                return (compliant_expr > lb) & (compliant_expr <= ub)
-            if closed == "none":
-                return (compliant_expr > lb) & (compliant_expr < ub)
-            return (compliant_expr >= lb) & (compliant_expr <= ub)
-
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx, func, self, lower_bound, upper_bound, str_as_lit=False
-            ),
-            combine_metadata(
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+        return self._with_nary(
+            lambda expr, lb, ub: expr.is_between(lb, ub, closed=closed),
+            lower_bound,
+            upper_bound,
         )
 
     def is_in(self, other: Any) -> Self:
@@ -1111,9 +973,6 @@ class Expr:
 
         Arguments:
             other: iterable
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1145,9 +1004,6 @@ class Expr:
 
         Arguments:
             predicates: Conditions to filter by (which get AND-ed together).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1191,13 +1047,9 @@ class Expr:
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1226,13 +1078,9 @@ class Expr:
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import duckdb
@@ -1270,9 +1118,6 @@ class Expr:
             value: Value or expression used to fill null values.
             strategy: Strategy used to fill null values.
             limit: Number of consecutive null values to fill when using the 'forward' or 'backward' strategy.
-
-        Returns:
-            A new expression.
 
         Notes:
             - pandas handles null values differently from other libraries.
@@ -1348,7 +1193,7 @@ class Expr:
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=extract_compliant(plx, value, str_as_lit=True),
+                value=plx.parse_into_expr(value, str_as_lit=True),
                 strategy=strategy,
                 limit=limit,
             ),
@@ -1357,17 +1202,48 @@ class Expr:
             else self._metadata,
         )
 
+    def fill_nan(self, value: float | None) -> Self:
+        """Fill floating point NaN values with given value.
+
+        Arguments:
+            value: Value used to fill NaN values.
+
+        Notes:
+            This function only fills `'NaN'` values, not null ones, except for pandas
+            which doesn't distinguish between them.
+            See [null_handling](../concepts/null_handling.md/) for reference.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (5.::DOUBLE, 50.::DOUBLE), ('NaN', null) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(nw.col("a", "b").fill_nan(0).name.suffix("_nans_filled"))
+            ┌───────────────────────────────────────────────────┐
+            |                Narwhals LazyFrame                 |
+            |---------------------------------------------------|
+            |┌────────┬────────┬───────────────┬───────────────┐|
+            |│   a    │   b    │ a_nans_filled │ b_nans_filled │|
+            |│ double │ double │    double     │    double     │|
+            |├────────┼────────┼───────────────┼───────────────┤|
+            |│    5.0 │   50.0 │           5.0 │          50.0 │|
+            |│    nan │   NULL │           0.0 │          NULL │|
+            |└────────┴────────┴───────────────┴───────────────┘|
+            └───────────────────────────────────────────────────┘
+        """
+        return self._with_elementwise(
+            lambda plx: self._to_compliant_expr(plx).fill_nan(value)
+        )
+
     # --- partial reduction ---
     def drop_nulls(self) -> Self:
         """Drop null values.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1410,9 +1286,6 @@ class Expr:
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
                 to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1467,9 +1340,6 @@ class Expr:
     def is_duplicated(self) -> Self:
         r"""Return a boolean mask indicating duplicated values.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1486,13 +1356,10 @@ class Expr:
             |3  1  c             True            False|
             └─────────────────────────────────────────┘
         """
-        return ~self.is_unique()
+        return self._with_window(lambda plx: self._to_compliant_expr(plx).is_duplicated())
 
     def is_unique(self) -> Self:
         r"""Return a boolean mask indicating unique values.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1515,13 +1382,9 @@ class Expr:
     def null_count(self) -> Self:
         r"""Count null values.
 
-        Returns:
-            A new expression.
-
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1548,9 +1411,6 @@ class Expr:
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1580,9 +1440,6 @@ class Expr:
         Info:
             For lazy backends, this operation must be followed by `Expr.over` with
             `order_by` specified, see [order-dependence](../concepts/order_dependence.md).
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1615,9 +1472,6 @@ class Expr:
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
 
-        Returns:
-            A new expression.
-
         Note:
             - pandas and Polars may have implementation differences for a given interpolation method.
             - [dask](https://docs.dask.org/en/stable/generated/dask.dataframe.Series.quantile.html) has
@@ -1649,9 +1503,6 @@ class Expr:
 
         Arguments:
             decimals: Number of decimals to round by.
-
-        Returns:
-            A new expression.
 
 
         Notes:
@@ -1686,9 +1537,6 @@ class Expr:
 
         Null values count towards the total.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1718,9 +1566,6 @@ class Expr:
             lower_bound: Lower bound value. String literals are treated as column names.
             upper_bound: Upper bound value. String literals are treated as column names.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1736,35 +1581,23 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
-        return self.__class__(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *exprs: exprs[0].clip(
-                    exprs[1] if lower_bound is not None else None,
-                    exprs[2] if upper_bound is not None else None,
-                ),
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
+        return self._with_nary(
+            lambda *exprs: exprs[0].clip(
+                exprs[1] if lower_bound is not None else None,
+                exprs[2] if upper_bound is not None else None,
             ),
-            combine_metadata(
-                self,
-                lower_bound,
-                upper_bound,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
+            lower_bound,
+            upper_bound,
         )
 
-    def mode(self) -> Self:
+    def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
 
-        Returns:
-            A new expression.
+        Arguments:
+            keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
+                is not deterministic for multimodal values.
 
         Examples:
             >>> import pandas as pd
@@ -1779,21 +1612,27 @@ class Expr:
             |       0  1       |
             └──────────────────┘
         """
-        return self._with_filtration(lambda plx: self._to_compliant_expr(plx).mode())
+        _supported_keep_values = ("all", "any")
+        if keep not in _supported_keep_values:  # pragma: no cover
+            msg = f"`keep` must be one of {_supported_keep_values}, found '{keep}'"
+            raise ValueError(msg)
+
+        def compliant_expr(plx: Any) -> Any:
+            return self._to_compliant_expr(plx).mode(keep=keep)
+
+        if keep == "any":
+            return self._with_aggregation(compliant_expr)
+        return self._with_filtration(compliant_expr)
 
     def is_finite(self) -> Self:
         """Returns boolean values indicating which original values are finite.
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/)
-            for reference.
+            See [null_handling](../concepts/null_handling.md/) for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
             nullable backends null values are kept as such.
-
-        Returns:
-            Expression of `Boolean` data type.
 
         Examples:
             >>> import polars as pl
@@ -1831,9 +1670,6 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1866,9 +1702,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1903,9 +1736,6 @@ class Expr:
         Arguments:
             reverse: reverse the operation
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1938,9 +1768,6 @@ class Expr:
 
         Arguments:
             reverse: reverse the operation
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -1988,9 +1815,6 @@ class Expr:
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2043,9 +1867,6 @@ class Expr:
                 `window_size`. If provided, it must be a strictly positive integer, and
                 less than or equal to `window_size`
             center: Set the labels at the center of the window.
-
-        Returns:
-            A new expression.
 
         Examples:
             >>> import pandas as pd
@@ -2105,9 +1926,6 @@ class Expr:
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2166,9 +1984,6 @@ class Expr:
             center: Set the labels at the center of the window.
             ddof: Delta Degrees of Freedom; the divisor for a length N window is N - ddof.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2225,9 +2040,6 @@ class Expr:
 
             descending: Rank in descending order.
 
-        Returns:
-            A new expression with rank data.
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -2266,9 +2078,6 @@ class Expr:
         Arguments:
             base: Given base, defaults to `e`
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2298,9 +2107,6 @@ class Expr:
     def exp(self) -> Self:
         r"""Compute the exponent.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2324,9 +2130,6 @@ class Expr:
     def sqrt(self) -> Self:
         r"""Compute the square root.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2346,6 +2149,81 @@ class Expr:
             └──────────────────┘
         """
         return self._with_elementwise(lambda plx: self._to_compliant_expr(plx).sqrt())
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float = 0.0,
+        rel_tol: float = 1e-09,
+        nans_equal: bool = False,
+    ) -> Self:
+        r"""Check if this expression is close, i.e. almost equal, to the other expression.
+
+        Two values `a` and `b` are considered close if the following condition holds:
+
+        $$
+        |a-b| \le max \{ \text{rel\_tol} \cdot max \{ |a|, |b| \}, \text{abs\_tol} \}
+        $$
+
+        Arguments:
+            other: Values to compare with.
+            abs_tol: Absolute tolerance. This is the maximum allowed absolute difference
+                between two values. Must be non-negative.
+            rel_tol: Relative tolerance. This is the maximum allowed difference between
+                two values, relative to the larger absolute value. Must be in the range
+                [0, 1).
+            nans_equal: Whether NaN values should be considered equal.
+
+        Notes:
+            The implementation of this method is symmetric and mirrors the behavior of
+            `math.isclose`. Specifically note that this behavior is different to
+            `numpy.isclose`.
+
+        Examples:
+            >>> import duckdb
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {
+            ...     "x": [1.0, float("inf"), 1.41, None, float("nan")],
+            ...     "y": [1.2, float("inf"), 1.40, None, float("nan")],
+            ... }
+            >>> _table = pa.table(data)
+            >>> df_native = duckdb.table("_table")
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     is_close=nw.col("x").is_close(
+            ...         nw.col("y"), abs_tol=0.1, nans_equal=True
+            ...     )
+            ... )
+            ┌──────────────────────────────┐
+            |      Narwhals LazyFrame      |
+            |------------------------------|
+            |┌────────┬────────┬──────────┐|
+            |│   x    │   y    │ is_close │|
+            |│ double │ double │ boolean  │|
+            |├────────┼────────┼──────────┤|
+            |│    1.0 │    1.2 │ false    │|
+            |│    inf │    inf │ true     │|
+            |│   1.41 │    1.4 │ true     │|
+            |│   NULL │   NULL │ NULL     │|
+            |│    nan │    nan │ true     │|
+            |└────────┴────────┴──────────┘|
+            └──────────────────────────────┘
+        """
+        if abs_tol < 0:
+            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
+            raise ComputeError(msg)
+
+        if not (0 <= rel_tol < 1):
+            msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"
+            raise ComputeError(msg)
+
+        kwargs = {"abs_tol": abs_tol, "rel_tol": rel_tol, "nans_equal": nans_equal}
+        return self._with_nary(
+            lambda *exprs: exprs[0].is_close(exprs[1], **kwargs), other
+        )
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

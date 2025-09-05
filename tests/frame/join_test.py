@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 import pytest
@@ -15,6 +15,21 @@ from tests.utils import (
     Constructor,
     assert_equal_data,
 )
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoLazyFrameT, JoinStrategy, NativeDataFrame
+
+
+def from_native_lazy(
+    native: IntoLazyFrameT | NativeDataFrame,
+) -> nw.LazyFrame[IntoLazyFrameT] | nw.LazyFrame[Any]:
+    """Every join test [needs to use `.lazy()` for typing]*.
+
+    *Unless both left/right frames are of the same concrete type.
+
+    [needs to use `.lazy()` for typing]: https://github.com/narwhals-dev/narwhals/pull/2944#discussion_r2286264815
+    """
+    return nw.from_native(native).lazy()
 
 
 @pytest.mark.parametrize(
@@ -93,8 +108,8 @@ def test_full_join(
     right_on: None | str | list[str],
     constructor: Constructor,
 ) -> None:
-    df_left = nw.from_native(constructor(df1))
-    df_right = nw.from_native(constructor(df2))
+    df_left = from_native_lazy(constructor(df1))
+    df_right = from_native_lazy(constructor(df2))
     result = df_left.join(
         df_right, on=on, left_on=left_on, right_on=right_on, how="full"
     ).sort("id", nulls_last=True)
@@ -109,8 +124,8 @@ def test_full_join_duplicate(
 
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
-    df_left = nw.from_native(constructor(df1)).lazy()
-    df_right = nw.from_native(constructor(df2)).lazy()
+    df_left = from_native_lazy(constructor(df1))
+    df_right = from_native_lazy(constructor(df2))
 
     exceptions: list[type[Exception]] = [nw.exceptions.NarwhalsError]
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
@@ -132,7 +147,7 @@ def test_inner_join_two_keys(constructor: Constructor) -> None:
         "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     df_right = df
     result = df.join(
         df_right,
@@ -161,7 +176,7 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
         "zor ro": [7.0, 8.0, 9.0],
         "idx": [0, 1, 2],
     }
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     df_right = df
     result = df.join(
         df_right, left_on="antananarivo", right_on="antananarivo", how="inner"
@@ -185,7 +200,7 @@ def test_cross_join(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     result = df.join(df, how="cross").sort("antananarivo", "antananarivo_right")
     expected = {
         "antananarivo": [1, 1, 1, 2, 2, 2, 3, 3, 3],
@@ -205,7 +220,7 @@ def test_suffix(
     constructor: Constructor, how: Literal["inner", "left"], suffix: str
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     df_right = df
     result = df.join(
         df_right,
@@ -223,7 +238,7 @@ def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     result = df.join(df, how="cross", suffix=suffix).sort(
         "antananarivo", f"antananarivo{suffix}"
     )
@@ -273,7 +288,7 @@ def test_anti_join(
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="anti", left_on=join_key, right_on=join_key)
     assert_equal_data(result, expected)
@@ -311,7 +326,7 @@ def test_semi_join(
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     other = df.filter(filter_expr)
     result = df.join(other, how="semi", left_on=join_key, right_on=join_key).sort(
         "antananarivo"
@@ -322,7 +337,7 @@ def test_semi_join(
 @pytest.mark.parametrize("how", ["right"])
 def test_join_not_implemented(constructor: Constructor, how: str) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
 
     with pytest.raises(
         NotImplementedError,
@@ -330,7 +345,12 @@ def test_join_not_implemented(constructor: Constructor, how: str) -> None:
             f"Only the following join strategies are supported: ('inner', 'left', 'full', 'cross', 'anti', 'semi'); found '{how}'."
         ),
     ):
-        df.join(df, left_on="antananarivo", right_on="antananarivo", how=how)  # type: ignore[arg-type]
+        df.join(
+            df,
+            left_on="antananarivo",
+            right_on="antananarivo",
+            how=how,  # type: ignore[arg-type]
+        )
 
 
 def test_left_join(constructor: Constructor) -> None:
@@ -344,8 +364,8 @@ def test_left_join(constructor: Constructor) -> None:
         "co": [4.0, 5.0, 7.0],
         "idx": [0.0, 1.0, 2.0],
     }
-    df_left = nw.from_native(constructor(data_left))
-    df_right = nw.from_native(constructor(data_right))
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
     result = df_left.join(df_right, left_on="bob", right_on="co", how="left")
     result = result.sort("idx")
     result = result.drop("idx_right")
@@ -370,8 +390,8 @@ def test_left_join(constructor: Constructor) -> None:
 def test_left_join_multiple_column(constructor: Constructor) -> None:
     data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
     data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
-    df_left = nw.from_native(constructor(data_left))
-    df_right = nw.from_native(constructor(data_right))
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
     result = df_left.join(
         df_right,
         left_on=["antananarivo", "bob"],
@@ -397,8 +417,8 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
         "d": [1.0, 4.0, 2.0],
         "idx": [0.0, 1.0, 2.0],
     }
-    df_left = nw.from_native(constructor(data_left))
-    df_right = nw.from_native(constructor(data_right))
+    df_left = from_native_lazy(constructor(data_left))
+    df_right = from_native_lazy(constructor(data_right))
     result = df_left.join(df_right, left_on="bob", right_on="c", how="left").sort("idx")
     result = result.drop("idx_right")
     expected: dict[str, list[Any]] = {
@@ -425,35 +445,35 @@ def test_left_join_overlapping_column(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
-def test_join_keys_exceptions(constructor: Constructor, how: str) -> None:
+def test_join_keys_exceptions(constructor: Constructor, how: JoinStrategy) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
 
     with pytest.raises(
         ValueError,
         match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
     ):
-        df.join(df, how=how)  # type: ignore[arg-type]
+        df.join(df, how=how)
     with pytest.raises(
         ValueError,
         match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
     ):
-        df.join(df, how=how, left_on="antananarivo")  # type: ignore[arg-type]
+        df.join(df, how=how, left_on="antananarivo")
     with pytest.raises(
         ValueError,
         match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
     ):
-        df.join(df, how=how, right_on="antananarivo")  # type: ignore[arg-type]
+        df.join(df, how=how, right_on="antananarivo")
     with pytest.raises(
         ValueError,
         match=f"If `on` is specified, `left_on` and `right_on` should be None for {how}.",
     ):
-        df.join(df, how=how, on="antananarivo", right_on="antananarivo")  # type: ignore[arg-type]
+        df.join(df, how=how, on="antananarivo", right_on="antananarivo")
 
     with pytest.raises(
         ValueError, match="`left_on` and `right_on` must have the same length."
     ):
-        df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")  # type: ignore[arg-type]
+        df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")
 
 
 @pytest.mark.parametrize(
@@ -493,10 +513,10 @@ def test_joinasof_numeric(
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(
+    df = from_native_lazy(
         constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
     ).sort("antananarivo")
-    df_right = nw.from_native(
+    df_right = from_native_lazy(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
     result = df.join_asof(
@@ -562,7 +582,7 @@ def test_joinasof_time(
         request.applymarker(pytest.mark.xfail)
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(
+    df = from_native_lazy(
         constructor(
             {
                 "datetime": [
@@ -574,7 +594,7 @@ def test_joinasof_time(
             }
         )
     ).sort("datetime")
-    df_right = nw.from_native(
+    df_right = from_native_lazy(
         constructor(
             {
                 "datetime": [
@@ -603,7 +623,7 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(
+    df = from_native_lazy(
         constructor(
             {
                 "antananarivo": [1, 5, 7, 10],
@@ -612,7 +632,7 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
             }
         )
     ).sort("antananarivo")
-    df_right = nw.from_native(
+    df_right = from_native_lazy(
         constructor(
             {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
         )
@@ -638,10 +658,10 @@ def test_joinasof_suffix(
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(
+    df = from_native_lazy(
         constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
     ).sort("antananarivo")
-    df_right = nw.from_native(
+    df_right = from_native_lazy(
         constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
     ).sort("antananarivo")
     result = df.join_asof(
@@ -656,7 +676,7 @@ def test_joinasof_not_implemented(
     constructor: Constructor, strategy: Literal["backward", "forward"]
 ) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
 
     with pytest.raises(
         NotImplementedError,
@@ -669,7 +689,7 @@ def test_joinasof_not_implemented(
 
 def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
 
     with pytest.raises(
         ValueError,
@@ -702,45 +722,37 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
         df.join_asof(df, right_on="antananarivo", on="antananarivo")
 
 
-def test_joinasof_by_exceptions(constructor: Constructor) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+ON = "antananarivo"
+BY = "bob"
+
+
+@pytest.mark.parametrize(
+    ("on", "by_left", "by_right", "by", "message"),
+    [
+        (ON, BY, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, BY, None, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, None, BY, None, r"not.+by_left.+or.+by_right.+need.+both"),
+        (ON, BY, None, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, None, BY, BY, r"If.+by.+by_left.+by_right.+should be None"),
+        (ON, [ON, BY], [ON], None, r"by_left.+by_right.+same.+length"),
+    ],
+)
+def test_joinasof_by_exceptions(
+    constructor: Constructor,
+    on: str | None,
+    by_left: str | list[str] | None,
+    by_right: str | list[str] | None,
+    by: str | list[str] | None,
+    message: str,
+) -> None:
+    data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by_right="bob", by="bob")
-
-    with pytest.raises(
-        ValueError,
-        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob")
-
-    with pytest.raises(
-        ValueError,
-        match="Can not specify only `by_left` or `by_right`, you need to specify both.",
-    ):
-        df.join_asof(df, on="antananarivo", by_right="bob")
-
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_left="bob", by="bob")
-
-    with pytest.raises(
-        ValueError, match="If `by` is specified, `by_left` and `by_right` should be None."
-    ):
-        df.join_asof(df, on="antananarivo", by_right="bob", by="bob")
-
-    with pytest.raises(
-        ValueError, match="`by_left` and `by_right` must have the same length."
-    ):
-        df.join_asof(
-            df,
-            on="antananarivo",
-            by_left=["antananarivo", "bob"],
-            by_right=["antananarivo"],
-        )
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(ValueError, match=message):
+            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
+    else:
+        with pytest.raises(ValueError, match=message):
+            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
 
 
 def test_join_duplicate_column_names(
@@ -778,7 +790,31 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    df = constructor({"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]})
-    dfn = nw.from_native(df)
-    with pytest.raises(exception):
-        dfn.join(dfn, on=["a"]).join(dfn, on=["a"]).lazy().collect()
+    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
+    df = nw.from_native(constructor(data))
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"]).collect()
+    else:
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"])
+
+
+def test_join_same_laziness(constructor: Constructor) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data_left = {"id": [1, 2, 3], "age": [25, 30, 35]}
+    data_right = {"id": [2, 3, 4], "active": [False, True, True]}
+    frame = nw.from_native(constructor(data_left))
+    df_pl = pl.DataFrame(data_right)
+    frame_pl: pl.DataFrame | pl.LazyFrame
+    if isinstance(frame, nw.DataFrame):
+        msg = r"Expected.+\.DataFrame.+got.+\.LazyFrame"
+        frame_pl = df_pl.lazy()
+    else:
+        msg = r"Expected.+\.LazyFrame.+got.+\.DataFrame"
+        frame_pl = df_pl
+    other = nw.from_native(frame_pl)
+    with pytest.raises(TypeError, match=msg):
+        frame.join(other, on="id")  # type: ignore[arg-type]

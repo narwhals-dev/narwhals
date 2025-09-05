@@ -7,13 +7,14 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 from narwhals.dependencies import get_pyarrow
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
 
     from narwhals._dask.dataframe import DaskLazyFrame, Incomplete
     from narwhals._dask.expr import DaskExpr
+    from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 else:
     try:
@@ -79,36 +80,45 @@ def validate_comparand(lhs: dx.Series, rhs: dx.Series) -> None:
         raise RuntimeError(msg)
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa: C901, PLR0912
+dtypes = Version.MAIN.dtypes
+dtypes_v1 = Version.V1.dtypes
+NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
+    dtypes.Float64: "float64",
+    dtypes.Float32: "float32",
+    dtypes.Boolean: "bool",
+    dtypes.Categorical: "category",
+    dtypes.Date: "date32[day][pyarrow]",
+    dtypes.Int8: "int8",
+    dtypes.Int16: "int16",
+    dtypes.Int32: "int32",
+    dtypes.Int64: "int64",
+    dtypes.UInt8: "uint8",
+    dtypes.UInt16: "uint16",
+    dtypes.UInt32: "uint32",
+    dtypes.UInt64: "uint64",
+    dtypes.Datetime: "datetime64[us]",
+    dtypes.Duration: "timedelta64[ns]",
+    dtypes_v1.Datetime: "datetime64[us]",
+    dtypes_v1.Duration: "timedelta64[ns]",
+}
+UNSUPPORTED_DTYPES = (
+    dtypes.List,
+    dtypes.Struct,
+    dtypes.Array,
+    dtypes.Time,
+    dtypes.Binary,
+)
+
+
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
     dtypes = version.dtypes
-    if isinstance_or_issubclass(dtype, dtypes.Float64):
-        return "float64"
-    if isinstance_or_issubclass(dtype, dtypes.Float32):
-        return "float32"
-    if isinstance_or_issubclass(dtype, dtypes.Int64):
-        return "int64"
-    if isinstance_or_issubclass(dtype, dtypes.Int32):
-        return "int32"
-    if isinstance_or_issubclass(dtype, dtypes.Int16):
-        return "int16"
-    if isinstance_or_issubclass(dtype, dtypes.Int8):
-        return "int8"
-    if isinstance_or_issubclass(dtype, dtypes.UInt64):
-        return "uint64"
-    if isinstance_or_issubclass(dtype, dtypes.UInt32):
-        return "uint32"
-    if isinstance_or_issubclass(dtype, dtypes.UInt16):
-        return "uint16"
-    if isinstance_or_issubclass(dtype, dtypes.UInt8):
-        return "uint8"
+    base_type = dtype.base_type()
+    if dask_type := NW_TO_DASK_DTYPES.get(base_type):
+        return dask_type
     if isinstance_or_issubclass(dtype, dtypes.String):
         if Implementation.PANDAS._backend_version() >= (2, 0, 0):
-            if get_pyarrow() is not None:
-                return "string[pyarrow]"
-            return "string[python]"  # pragma: no cover
+            return "string[pyarrow]" if get_pyarrow() else "string[python]"
         return "object"  # pragma: no cover
-    if isinstance_or_issubclass(dtype, dtypes.Boolean):
-        return "bool"
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
@@ -122,30 +132,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:  # noqa
             return pd.CategoricalDtype(dtype.categories, ordered=True)  # type: ignore[arg-type]
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
-
-    if isinstance_or_issubclass(dtype, dtypes.Categorical):
-        return "category"
-    if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        return "datetime64[us]"
-    if isinstance_or_issubclass(dtype, dtypes.Date):
-        return "date32[day][pyarrow]"
-    if isinstance_or_issubclass(dtype, dtypes.Duration):
-        return "timedelta64[ns]"
-    if isinstance_or_issubclass(dtype, dtypes.List):  # pragma: no cover
-        msg = "Converting to List dtype is not supported yet"
+    if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
+        msg = f"Converting to {base_type.__name__} dtype is not supported for Dask."
         raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
-        msg = "Converting to Struct dtype is not supported yet"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
-        msg = "Converting to Array dtype is not supported yet"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Time):  # pragma: no cover
-        msg = "Converting to Time dtype is not supported yet"
-        raise NotImplementedError(msg)
-    if isinstance_or_issubclass(dtype, dtypes.Binary):  # pragma: no cover
-        msg = "Converting to Binary dtype is not supported yet"
-        raise NotImplementedError(msg)
-
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
