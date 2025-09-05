@@ -360,6 +360,16 @@ def test_categorical_as_str(
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
+        15,
+        0,
+    ):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
+            "dictionary using function cast_dictionary"
+        )
+        pytest.skip(reason=reason)
+
     data = {
         "left": ["beluga", "dolphin", "narwhal", "orca"],
         "right": ["unicorn", "orca", "narwhal", "orca"],
