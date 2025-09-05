@@ -438,24 +438,20 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         Datetime(time_unit='ms', time_zone='Africa/Accra')
     """
 
-    _defaulted_time_unit: bool = False
-
     def __init__(
-        self, time_unit: TimeUnit | None = None, time_zone: str | timezone | None = None
+        self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
-        time_unit_: TimeUnit = "us" if time_unit is None else time_unit
-        self._defaulted_time_unit: bool = time_unit is None
-        if time_unit_ not in {"s", "ms", "us", "ns"}:
+        if time_unit not in {"s", "ms", "us", "ns"}:
             msg = (
                 "invalid `time_unit`"
-                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit_!r}."
+                f"\n\nExpected one of {{'ns','us','ms', 's'}}, got {time_unit!r}."
             )
             raise ValueError(msg)
 
         if isinstance(time_zone, timezone):
             time_zone = str(time_zone)
 
-        self.time_unit: TimeUnit = time_unit_
+        self.time_unit: TimeUnit = time_unit
         """Unit of time."""
         self.time_zone: str | None = time_zone
         """Time zone string, as defined in zoneinfo.

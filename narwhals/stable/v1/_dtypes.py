@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 class Datetime(NwDatetime):
     @inherit_doc(NwDatetime)
     def __init__(
-        self, time_unit: TimeUnit | None = None, time_zone: str | timezone | None = None
+        self, time_unit: TimeUnit = "us", time_zone: str | timezone | None = None
     ) -> None:
         super().__init__(time_unit, time_zone)
 

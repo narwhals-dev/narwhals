@@ -140,6 +140,28 @@ def test_timestamp_datetimes_tz_aware(
     assert_equal_data(result, {"a": expected})
 
 
+@pytest.mark.parametrize(("time_unit"), [("ns"), ("us"), ("s")])
+def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
+    constructor: Constructor, time_unit: Literal["ns", "us", "s"]
+) -> None:
+    not_pandas = "pandas" not in str(constructor)
+    post_v2 = PANDAS_VERSION >= (2,)
+    if not_pandas or post_v2:
+        pytest.skip("Testing specific warning for pandas<2.0.0")
+    datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    expr = nw.col("a").cast(nw.Datetime(time_unit))
+    df = nw.from_native(constructor(datetimes))
+    expected_to_raise = time_unit != "ns"
+    if expected_to_raise:
+        with pytest.warns(
+            UserWarning, match=f"The time unit '{time_unit}' has been specified"
+        ):
+            df.select(expr)
+    else:
+        df.select(expr)
+        assert True, "No warning raised"
+
+
 @pytest.mark.parametrize(
     ("time_unit", "expected"),
     [
