@@ -3,7 +3,7 @@
 If you find yourself being yelled at by a typechecker and ended up here - **do not fear!**
 
 ### (1) `Native(*Frame|Series)`
-Minimal `Protocol`(s) for matching *almost any* supported native type of that group:
+Minimal [`Protocol`]s for matching *almost any* supported native type of that group:
 
     class NativeThing(Protocol):
         def something_common(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -12,7 +12,7 @@ Note:
     This group is primarily a building block for more useful types.
 
 ### (2) `Into(*Frame|Series)`
-*Publicly* exported `TypeAlias`(s) of **(1)**:
+*Publicly* exported [`TypeAlias`]s of **(1)**:
 
     IntoThing: TypeAlias = NativeThing
 
@@ -24,7 +24,7 @@ Tip:
     Reach for these when there **isn't a need to preserve** the original native type.
 
 ### (3) `Into(*Frame|Series)T`
-*Publicly* exported `TypeVar`(s), bound to **(2)**:
+*Publicly* exported [`TypeVar`]s, bound to **(2)**:
 
     IntoThingT = TypeVar("IntoThingT", bound=IntoThing)
 
@@ -38,7 +38,7 @@ Putting it all together, we can now add a *narwhals-level* wrapper:
 
 ### (4) The funky ones (WIP)
 Everything so far has been focused on the idea of matching an *unknown* native object to
-a protocol used by a generic class:
+a [`Protocol`] used by a [generic class]:
 
     DataFrame[IntoDataFrameT]
     LazyFrame[IntoLazyFrameT]
@@ -64,6 +64,10 @@ They differ in *how many* native types are checked per-call.
 
 [structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
 [nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
+[`Protocol`]: https://typing.python.org/en/latest/spec/protocol.html
+[`TypeAlias`]: https://mypy.readthedocs.io/en/stable/kinds_of_types.html#type-aliases
+[`TypeVar`]: https://mypy.readthedocs.io/en/stable/generics.html#type-variables-with-upper-bounds
+[generic class]: https://docs.python.org/3/library/typing.html#user-defined-generic-types
 """
 
 from __future__ import annotations
