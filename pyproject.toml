@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.2.0"
+version = "2.3.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -75,6 +75,10 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "polars==1.32.2",
   "uv",
   "narwhals[ibis]",
+]
+typing-ci = [
+  "narwhals[dask,modin]",
+  {include-group = "typing"}
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers

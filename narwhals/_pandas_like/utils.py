@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
 
@@ -203,8 +203,10 @@ def rename(
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs, inplace=False)
-    return obj.rename(*args, **kwargs, copy=False, inplace=False)
+        result = obj.rename(*args, **kwargs, inplace=False)
+    else:
+        result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+    return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
 @functools.lru_cache(maxsize=16)
