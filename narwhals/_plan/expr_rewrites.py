@@ -5,15 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import expr_parsing as parse
-from narwhals._plan.common import (
-    NamedIR,
+from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
     is_function_expr,
     is_window_expr,
-    map_ir,
-    replace,
 )
+from narwhals._plan.common import NamedIR, map_ir, replace
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
 if TYPE_CHECKING:

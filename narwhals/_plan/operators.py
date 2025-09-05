@@ -3,8 +3,8 @@ from __future__ import annotations
 import operator as op
 from typing import TYPE_CHECKING
 
+from narwhals._plan._guards import is_function_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import is_function_expr
 from narwhals._plan.exceptions import (
     binary_expr_length_changing_error,
     binary_expr_multi_output_error,

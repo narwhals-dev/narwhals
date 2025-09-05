@@ -4,12 +4,8 @@ import builtins
 import typing as t
 
 from narwhals._plan import boolean, expr, expr_parsing as parse, functions as F
-from narwhals._plan.common import (
-    into_dtype,
-    is_non_nested_literal,
-    is_series,
-    py_to_narwhals_dtype,
-)
+from narwhals._plan._guards import is_non_nested_literal, is_series
+from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
 from narwhals._plan.expr import All, Len
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange

@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING, TypeVar
 
-from narwhals._plan.common import is_expr, is_iterable_reject
+from narwhals._plan._guards import is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
     invalid_into_expr_error,
     is_iterable_pandas_error,

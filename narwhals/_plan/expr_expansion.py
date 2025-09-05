@@ -43,8 +43,9 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from narwhals._plan import common, meta
+from narwhals._plan._guards import is_horizontal_reduction
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import ExprIR, NamedIR, SelectorIR, is_horizontal_reduction
+from narwhals._plan.common import ExprIR, NamedIR, SelectorIR
 from narwhals._plan.exceptions import (
     column_index_error,
     column_not_found_error,

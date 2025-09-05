@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan._guards import is_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import is_expr
 from narwhals._plan.dummy import Expr
 from narwhals._plan.expr_parsing import (
     parse_into_expr_ir,

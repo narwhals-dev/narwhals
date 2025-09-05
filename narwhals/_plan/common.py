@@ -8,6 +8,7 @@ from decimal import Decimal
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, overload
 
+from narwhals._plan._guards import is_function_expr, is_iterable_reject, is_literal
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.options import ExprIROptions, FEOptions, FunctionOptions
 from narwhals._plan.typing import (
@@ -19,11 +20,9 @@ from narwhals._plan.typing import (
     IRNamespaceT,
     MapIR,
     NamedOrExprIRT,
-    NativeSeriesT,
     NonNestedDTypeT,
     Seq,
 )
-from narwhals._utils import _hasattr_static
 from narwhals.dtypes import DType
 from narwhals.utils import Version
 
@@ -31,21 +30,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, Callable
 
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan import expr
-    from narwhals._plan.dummy import Expr, Selector, Series
-    from narwhals._plan.expr import (
-        AggExpr,
-        Alias,
-        BinaryExpr,
-        Cast,
-        Column,
-        FunctionExpr,
-        WindowExpr,
-    )
+    from narwhals._plan.dummy import Expr, Selector
+    from narwhals._plan.expr import Alias, Cast, Column, FunctionExpr
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.protocols import CompliantSeries, Ctx, FrameT_contra, R_co
+    from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
 
@@ -451,97 +441,6 @@ class Function(Immutable):
 class HorizontalFunction(
     Function, options=FunctionOptions.horizontal, config=FEOptions.namespaced()
 ): ...
-
-
-_NON_NESTED_LITERAL_TPS = (
-    int,
-    float,
-    str,
-    dt.date,
-    dt.time,
-    dt.timedelta,
-    bytes,
-    Decimal,
-)
-
-
-def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
-    return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
-
-
-def is_expr(obj: Any) -> TypeIs[Expr]:
-    from narwhals._plan.dummy import Expr
-
-    return isinstance(obj, Expr)
-
-
-def is_column(obj: Any) -> TypeIs[Expr]:
-    """Indicate if the given object is a basic/unaliased column.
-
-    https://github.com/pola-rs/polars/blob/a3d6a3a7863b4d42e720a05df69ff6b6f5fc551f/py-polars/polars/_utils/various.py#L164-L168.
-    """
-    return is_expr(obj) and obj.meta.is_column()
-
-
-def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
-    from narwhals._plan.dummy import Series
-
-    return isinstance(obj, Series)
-
-
-def is_compliant_series(
-    obj: CompliantSeries[NativeSeriesT] | Any,
-) -> TypeIs[CompliantSeries[NativeSeriesT]]:
-    return _hasattr_static(obj, "__narwhals_series__")
-
-
-def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
-    from narwhals._plan.dummy import Series
-
-    return isinstance(obj, (str, bytes, Series)) or is_compliant_series(obj)
-
-
-def is_window_expr(obj: Any) -> TypeIs[WindowExpr]:
-    from narwhals._plan.expr import WindowExpr
-
-    return isinstance(obj, WindowExpr)
-
-
-def is_function_expr(obj: Any) -> TypeIs[FunctionExpr[Any]]:
-    from narwhals._plan.expr import FunctionExpr
-
-    return isinstance(obj, FunctionExpr)
-
-
-def is_binary_expr(obj: Any) -> TypeIs[BinaryExpr]:
-    from narwhals._plan.expr import BinaryExpr
-
-    return isinstance(obj, BinaryExpr)
-
-
-def is_agg_expr(obj: Any) -> TypeIs[AggExpr]:
-    from narwhals._plan.expr import AggExpr
-
-    return isinstance(obj, AggExpr)
-
-
-def is_aggregation(obj: Any) -> TypeIs[AggExpr | FunctionExpr[Any]]:
-    """Superset of `ExprIR.is_scalar`, excludes literals & len."""
-    return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar)
-
-
-def is_literal(obj: Any) -> TypeIs[expr.Literal[Any]]:
-    from narwhals._plan import expr
-
-    return isinstance(obj, expr.Literal)
-
-
-def is_horizontal_reduction(obj: FunctionExpr[Any] | Any) -> TypeIs[FunctionExpr[Any]]:
-    return is_function_expr(obj) and obj.options.is_input_wildcard_expansion()
-
-
-def is_tuple_of(obj: Any, tp: type[T]) -> TypeIs[Seq[T]]:
-    return bool(isinstance(obj, tuple) and obj and isinstance(obj[0], tp))
 
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
