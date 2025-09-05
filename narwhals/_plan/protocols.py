@@ -6,14 +6,15 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version, _hasattr_static
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan import aggregation as agg, boolean, expr, functions as F
+    from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
     from narwhals._plan.dummy import BaseFrame, DataFrame, Series
-    from narwhals._plan.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatStr
@@ -182,39 +183,33 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
 
     @property
     def name(self) -> str: ...
-
     @classmethod
     def from_native(
         cls, native: Any, name: str = "", /, version: Version = Version.MAIN
     ) -> Self: ...
-
     def _with_native(self, native: Any, name: str, /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
-    def not_(
-        self, node: FunctionExpr[boolean.Not], frame: FrameT_contra, name: str
-    ) -> Self: ...
+    def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def fill_null(
         self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_between(
-        self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsBetween], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_finite(
-        self, node: FunctionExpr[boolean.IsFinite], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsFinite], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_nan(
-        self, node: FunctionExpr[boolean.IsNan], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsNan], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_null(
-        self, node: FunctionExpr[boolean.IsNull], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
     ) -> Self: ...
-    def binary_expr(
-        self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
+    def binary_expr(self, node: BinaryExpr, frame: FrameT_contra, name: str) -> Self: ...
     def ternary_expr(
         self, node: expr.TernaryExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
@@ -304,7 +299,6 @@ class CompliantScalar(
         dtype: IntoDType | None,
         version: Version,
     ) -> Self: ...
-
     def _with_evaluated(self, evaluated: Any, name: str) -> Self:
         """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
         cls = type(self)
@@ -506,14 +500,13 @@ class EagerNamespace(
     @overload
     def lit(
         self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[Any]],
+        node: expr.Literal[NonNestedLiteral | Series[Any]],
         frame: EagerDataFrameT,
         name: str,
     ) -> EagerExprT_co | EagerScalarT_co: ...
     def lit(
         self, node: expr.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
-
     def len(self, node: expr.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
@@ -543,7 +536,6 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     @property
     def columns(self) -> list[str]: ...
     def to_narwhals(self) -> BaseFrame[NativeFrameT]: ...
-
     @classmethod
     def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
         obj = cls.__new__(cls)
@@ -576,9 +568,7 @@ class CompliantDataFrame(
         *,
         schema: Mapping[str, DType] | Schema | None = None,
     ) -> Self: ...
-
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
-
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
     @overload
@@ -587,11 +577,9 @@ class CompliantDataFrame(
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-
     def __len__(self) -> int: ...
     def with_row_index(self, name: str) -> Self: ...
 
@@ -621,7 +609,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
 
     @property
     def dtype(self) -> DType: ...
-
     @property
     def name(self) -> str:
         return self._name
@@ -635,9 +622,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def from_native(
         cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self:
-        name = name or (
-            getattr(native, "name", name) if _hasattr_static(native, "name") else name
-        )
         obj = cls.__new__(cls)
         obj._native = native
         obj._name = name
@@ -648,7 +632,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def from_numpy(
         cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self: ...
-
     @classmethod
     def from_iterable(
         cls,
@@ -658,7 +641,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self: ...
-
     def _with_native(self, native: NativeSeriesT) -> Self:
         return self.from_native(native, self.name, version=self.version)
 
