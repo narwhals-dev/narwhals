@@ -9,7 +9,12 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
-from tests.utils import assert_equal_data, pyspark_session, sqlframe_session
+from tests.utils import (
+    PANDAS_VERSION,
+    assert_equal_data,
+    pyspark_session,
+    sqlframe_session,
+)
 
 if TYPE_CHECKING:
     from narwhals._typing import LazyAllowed, SparkLike
@@ -67,9 +72,20 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         "sqlframe",
     ],
 )
-def test_lazy(constructor_eager: ConstructorEager, backend: LazyAllowed) -> None:
+def test_lazy(
+    constructor_eager: ConstructorEager,
+    backend: LazyAllowed,
+    request: pytest.FixtureRequest,
+) -> None:
     impl = Implementation.from_backend(backend)
     pytest.importorskip(impl.name.lower())
+    if (
+        "pandas_constructor" in str(constructor_eager)
+        and impl.is_duckdb()
+        and PANDAS_VERSION >= (3,)
+    ):  # pragma: no cover
+        # https://github.com/duckdb/duckdb/issues/18297
+        request.applymarker(pytest.mark.xfail)
 
     is_spark_connect = os.environ.get("SPARK_CONNECT", None)
     if is_spark_connect is not None and impl.is_pyspark():  # pragma: no cover

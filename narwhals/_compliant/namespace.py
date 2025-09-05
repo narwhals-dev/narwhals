@@ -16,14 +16,14 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
-from narwhals._expression_parsing import combine_evaluate_output_names
+from narwhals._expression_parsing import combine_evaluate_output_names, is_expr, is_series
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
     not_implemented,
     passthrough_column_names,
 )
-from narwhals.dependencies import is_numpy_array_2d
+from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
 from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
     from narwhals._utils import Implementation, Version
+    from narwhals.expr import Expr
+    from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
         IntegerDType,
@@ -41,6 +43,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoSchema,
         NonNestedLiteral,
+        _1DArray,
         _2DArray,
     )
 
@@ -55,9 +58,24 @@ __all__ = [
 
 
 class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
+    # NOTE: `narwhals`
     _implementation: Implementation
     _version: Version
 
+    @property
+    def _expr(self) -> type[CompliantExprT]: ...
+    def parse_into_expr(
+        self, data: Expr | NonNestedLiteral | Any, /, *, str_as_lit: bool
+    ) -> CompliantExprT | NonNestedLiteral:
+        if is_expr(data):
+            expr = data._to_compliant_expr(self)
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
+        if isinstance(data, str) and not str_as_lit:
+            return self.col(data)
+        return data
+
+    # NOTE: `polars`
     def all(self) -> CompliantExprT:
         return self._expr.from_column_names(get_column_names, context=self)
 
@@ -105,8 +123,6 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     ) -> CompliantExprT: ...
     @property
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
-    @property
-    def _expr(self) -> type[CompliantExprT]: ...
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
 
 
@@ -181,6 +197,21 @@ class EagerNamespace(
             return self._series.from_native(data, context=self)
         msg = f"Unsupported type: {type(data).__name__!r}"
         raise TypeError(msg)
+
+    def parse_into_expr(
+        self,
+        data: Expr | Series[NativeSeriesT] | _1DArray | NonNestedLiteral,
+        /,
+        *,
+        str_as_lit: bool,
+    ) -> EagerExprT | NonNestedLiteral:
+        if not (is_series(data) or is_numpy_array(data)):
+            return super().parse_into_expr(data, str_as_lit=str_as_lit)
+        return self._expr._from_series(
+            data._compliant_series
+            if is_series(data)
+            else self._series.from_numpy(data, context=self)
+        )
 
     @overload
     def from_numpy(self, data: Into1DArray, /, schema: None = ...) -> EagerSeriesT: ...

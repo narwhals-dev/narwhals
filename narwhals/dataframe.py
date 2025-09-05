@@ -20,12 +20,14 @@ from narwhals._expression_parsing import (
     ExprKind,
     all_exprs_are_scalar_like,
     check_expressions_preserve_length,
+    is_into_expr_eager,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
     Implementation,
     Version,
+    _Implementation,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -38,15 +40,11 @@ from narwhals._utils import (
     is_list_of,
     is_sequence_like,
     is_slice_none,
+    qualified_type_name,
     supports_arrow_c_stream,
     zip_strict,
 )
-from narwhals.dependencies import (
-    get_polars,
-    is_numpy_array,
-    is_numpy_array_2d,
-    is_pyarrow_table,
-)
+from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidIntoExprError,
@@ -108,6 +106,31 @@ class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
 
+    implementation: _Implementation = _Implementation()
+    """Return [`narwhals.Implementation`][] of native frame.
+
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+        >>> df = nw.from_native(df_native)
+        >>> df.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> df.implementation.is_pandas()
+        True
+        >>> df.implementation.is_pandas_like()
+        True
+        >>> df.implementation.is_polars()
+        False
+    """
+
+    @property
+    @abstractmethod
+    def _compliant(self) -> Any: ...
+
     def __native_namespace__(self) -> ModuleType:
         return self._compliant_frame.__native_namespace__()  # type: ignore[no-any-return]
 
@@ -138,6 +161,12 @@ class BaseFrame(Generic[_FrameT]):
     @abstractmethod
     def _extract_compliant(self, arg: Any) -> Any:
         raise NotImplementedError
+
+    def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
+        if isinstance(other, type(self)):
+            return other._compliant_frame
+        msg = f"Expected `other` to be a {qualified_type_name(self)!r}, got: {qualified_type_name(other)!r}"
+        raise TypeError(msg)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
@@ -269,7 +298,7 @@ class BaseFrame(Generic[_FrameT]):
         left_on = [left_on] if isinstance(left_on, str) else left_on
         right_on = [right_on] if isinstance(right_on, str) else right_on
         compliant = self._compliant_frame
-        other = self._extract_compliant(other)
+        other = self._extract_compliant_frame(other)
 
         if how not in _supported_joins:
             msg = f"Only the following join strategies are supported: {_supported_joins}; found '{how}'."
@@ -357,7 +386,7 @@ class BaseFrame(Generic[_FrameT]):
 
         return self._with_compliant(
             self._compliant_frame.join_asof(
-                self._extract_compliant(other),
+                self._extract_compliant_frame(other),
                 left_on=left_on,
                 right_on=right_on,
                 by_left=by_left,
@@ -443,29 +472,14 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     _version: ClassVar[Version] = Version.MAIN
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
+    @property
+    def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
+        return self._compliant_frame
 
-        plx: EagerNamespaceAny = self.__narwhals_namespace__()
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
-        if isinstance(arg, Series):
-            return arg._compliant_series._to_expr()
-        if isinstance(arg, Expr):
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if isinstance(arg, str):
-            return plx.col(arg)
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        if is_numpy_array(arg):
-            return plx._series.from_numpy(arg, context=plx)._to_expr()
+    def _extract_compliant(self, arg: Any) -> Any:
+        if is_into_expr_eager(arg):
+            plx: EagerNamespaceAny = self.__narwhals_namespace__()
+            return plx.parse_into_expr(arg, str_as_lit=False)
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -667,29 +681,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
         )
         raise ValueError(msg)
-
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
-
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
-            >>> df = nw.from_native(df_native)
-            >>> df.implementation
-            <Implementation.PANDAS: 'pandas'>
-            >>> df.implementation.is_pandas()
-            True
-            >>> df.implementation.is_pandas_like()
-            True
-            >>> df.implementation.is_polars()
-            False
-        """
-        return self._compliant_frame._implementation
 
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
@@ -2292,52 +2283,44 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         ```
     """
 
+    @property
+    def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
+        return self._compliant_frame
+
     def _extract_compliant(self, arg: Any) -> Any:
         from narwhals.expr import Expr
         from narwhals.series import Series
 
-        if isinstance(arg, BaseFrame):
-            return arg._compliant_frame
         if isinstance(arg, Series):  # pragma: no cover
             msg = "Binary operations between Series and LazyFrame are not supported."
             raise TypeError(msg)
-        if isinstance(arg, str):  # pragma: no cover
-            plx = self.__narwhals_namespace__()
-            return plx.col(arg)
-        if isinstance(arg, Expr):
-            if arg._metadata.n_orderable_ops:
-                msg = (
-                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                    "`'date'` which orders your data, then replace:\n\n"
-                    "   nw.col('price').cum_sum()\n\n"
-                    " with:\n\n"
-                    "   nw.col('price').cum_sum().over(order_by='date')\n"
-                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                    "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
-                )
-                raise InvalidOperationError(msg)
-            if arg._metadata.is_filtration:
-                msg = (
-                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
-                    "followed by an aggregation.\n\n"
-                    "Hints:\n"
-                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
-                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
-                )
-                raise InvalidOperationError(msg)
-            return arg._to_compliant_expr(self.__narwhals_namespace__())
-        if get_polars() is not None and "polars" in str(type(arg)):  # pragma: no cover
-            msg = (
-                f"Expected Narwhals object, got: {type(arg)}.\n\n"
-                "Perhaps you:\n"
-                "- Forgot a `nw.from_native` somewhere?\n"
-                "- Used `pl.col` instead of `nw.col`?"
-            )
-            raise TypeError(msg)
-        raise InvalidIntoExprError.from_invalid_type(type(arg))  # pragma: no cover
+        if isinstance(arg, (Expr, str)):
+            if isinstance(arg, Expr):
+                if arg._metadata.n_orderable_ops:
+                    msg = (
+                        "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                        "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                        "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                        "`'date'` which orders your data, then replace:\n\n"
+                        "   nw.col('price').cum_sum()\n\n"
+                        " with:\n\n"
+                        "   nw.col('price').cum_sum().over(order_by='date')\n"
+                        "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                        "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
+                    )
+                    raise InvalidOperationError(msg)
+                if arg._metadata.is_filtration:
+                    msg = (
+                        "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                        "followed by an aggregation.\n\n"
+                        "Hints:\n"
+                        "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                        "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                        "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                    )
+                    raise InvalidOperationError(msg)
+            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -2354,22 +2337,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
-
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native frame.
-
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
-
-        Examples:
-            >>> import narwhals as nw
-            >>> import dask.dataframe as dd
-            >>> lf_native = dd.from_dict({"a": [1, 2]}, npartitions=1)
-            >>> nw.from_native(lf_native).implementation
-            <Implementation.DASK: 'dask'>
-        """
-        return self._compliant_frame._implementation
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"

@@ -45,6 +45,7 @@ CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
+ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 
 def _to_comparable_list(column_values: Any) -> Any:

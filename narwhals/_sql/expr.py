@@ -332,6 +332,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             implementation=context._implementation,
         )
 
+    def _is_multi_output_unnamed(self) -> bool:
+        """Return `True` for multi-output aggregations without names.
+
+        For example, column `'a'` only appears in the output as a grouping key:
+
+            df.group_by('a').agg(nw.all().sum())
+
+        It does not get included in:
+
+            nw.all().sum().
+        """
+        assert self._metadata is not None  # noqa: S101
+        return self._metadata.expansion_kind.is_multi_unnamed()
+
     # Binary
     def __eq__(self, other: Self) -> Self:  # type: ignore[override]
         return self._with_binary(lambda expr, other: expr.__eq__(other), other)

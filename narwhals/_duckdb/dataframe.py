@@ -13,6 +13,7 @@ from narwhals._duckdb.utils import (
     catch_duckdb_exception,
     col,
     evaluate_exprs,
+    join_column_names,
     lit,
     native_to_narwhals_dtype,
     window_expression,
@@ -396,7 +397,7 @@ class DuckDBLazyFrame(
                 .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
-        return self._with_native(self.native.unique(", ".join(self.columns)))
+        return self._with_native(self.native.unique(join_column_names(*self.columns)))
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -499,7 +500,7 @@ class DuckDBLazyFrame(
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = ", ".join(str(col(name)) for name in on_)
+        unpivot_on = join_column_names(*on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
@@ -507,8 +508,8 @@ class DuckDBLazyFrame(
             unpivot rel
             on {unpivot_on}
             into
-                name "{variable_name}"
-                value "{value_name}"
+                name {col(variable_name)}
+                value {col(value_name)}
             """
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
