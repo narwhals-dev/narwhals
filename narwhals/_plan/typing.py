@@ -94,3 +94,4 @@ Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
+OneOrIterable: TypeAlias = "T | t.Iterable[T]"

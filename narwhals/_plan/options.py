@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import pyarrow.compute as pc
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.typing import Accessor, Seq
+    from narwhals._plan.typing import Accessor, OneOrIterable, Seq
     from narwhals.typing import RankMethod
 
 DispatchOrigin: TypeAlias = Literal["expr", "__narwhals_namespace__"]
@@ -187,7 +187,7 @@ class SortMultipleOptions(Immutable):
 
     @staticmethod
     def parse(
-        *, descending: bool | Iterable[bool], nulls_last: bool | Iterable[bool]
+        *, descending: OneOrIterable[bool], nulls_last: OneOrIterable[bool]
     ) -> SortMultipleOptions:
         desc = (descending,) if isinstance(descending, bool) else tuple(descending)
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)

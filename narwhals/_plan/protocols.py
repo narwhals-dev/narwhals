@@ -18,12 +18,13 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
         IntoDType,
+        IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
         _1DArray,
@@ -31,7 +32,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
-OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 
@@ -555,11 +555,7 @@ class CompliantDataFrame(
 ):
     @classmethod
     def from_dict(
-        cls,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: Mapping[str, DType] | Schema | None = None,
+        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
     @overload

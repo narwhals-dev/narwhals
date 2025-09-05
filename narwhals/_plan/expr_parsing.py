@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals.typing import IntoDType
 
 T = TypeVar("T")
@@ -100,7 +100,7 @@ def parse_into_expr_ir(
 
 
 def parse_into_seq_of_expr_ir(
-    first_input: IntoExpr | Iterable[IntoExpr] = (),
+    first_input: OneOrIterable[IntoExpr] = (),
     *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
     **named_inputs: IntoExpr,
 ) -> Seq[ExprIR]:
@@ -109,7 +109,7 @@ def parse_into_seq_of_expr_ir(
 
 
 def parse_predicates_constraints_into_expr_ir(
-    first_predicate: IntoExprColumn | Iterable[IntoExprColumn] = (),
+    first_predicate: OneOrIterable[IntoExprColumn] = (),
     *more_predicates: IntoExprColumn | _RaisesInvalidIntoExprError,
     **constraints: IntoExpr,
 ) -> ExprIR:
@@ -125,9 +125,7 @@ def parse_predicates_constraints_into_expr_ir(
 
 
 def _parse_into_iter_expr_ir(
-    first_input: IntoExpr | Iterable[IntoExpr],
-    *more_inputs: IntoExpr,
-    **named_inputs: IntoExpr,
+    first_input: OneOrIterable[IntoExpr], *more_inputs: IntoExpr, **named_inputs: IntoExpr
 ) -> Iterator[ExprIR]:
     if not _is_empty_sequence(first_input):
         # NOTE: These need to be separated to introduce an intersection type
