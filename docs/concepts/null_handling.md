@@ -6,7 +6,7 @@ All dataframe tools, except for those which piggy-back off of pandas, make a cle
 distinction between NaN and null values. 
 
 !!! tip
-    **We recommend only handling null values in applicationsand leaving NaN values as an 
+    **We recommend only handling null values in applications and leaving NaN values as an 
     edge case resulting from users having performed undefined mathematical operations.**
 
 ## What's the difference?
@@ -20,7 +20,7 @@ Methods like `is_null`, `fill_null`, `drop_nulls`, and `null_count` should only 
 whereas `is_nan` and `fill_nan` should only deal with NaN values.
 
 In pandas however the concepts are muddied. Depending on the data type of the underlying data structure,
-`np.nan`, `pd.NaT`, `None` and `pd.NA` can all encode missing data.
+`np.nan`, `pd.NaT`, `None` and `pd.NA` can all encode missing data. (See e.g. [pandas missing value representation for numpy types](https://pandas.pydata.org/docs/user_guide/gotchas.html#missing-value-representation-for-numpy-types))
 
 Check how different tools distinguish them (or don't) in the following example:
 
