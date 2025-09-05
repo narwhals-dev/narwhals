@@ -13,6 +13,7 @@ from narwhals._duckdb.utils import (
     catch_duckdb_exception,
     col,
     evaluate_exprs,
+    join_column_names,
     lit,
     native_to_narwhals_dtype,
     window_expression,
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._duckdb.series import DuckDBInterchangeSeries
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
@@ -189,7 +190,7 @@ class DuckDBLazyFrame(
         selection = (name for name in self.columns if name not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: _LazyAllowedImpl | None = None) -> Self:
+    def lazy(self, backend: None = None, **_: None) -> Self:
         # The `backend`` argument has no effect but we keep it here for
         # backwards compatibility because in `narwhals.stable.v1`
         # function `.from_native()` will return a DataFrame for DuckDB.
@@ -396,7 +397,7 @@ class DuckDBLazyFrame(
                 .filter(col(name) == lit(1))
                 .select(StarExpression(exclude=[count_name, idx_name]))
             )
-        return self._with_native(self.native.unique(", ".join(self.columns)))
+        return self._with_native(self.native.unique(join_column_names(*self.columns)))
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
@@ -499,7 +500,7 @@ class DuckDBLazyFrame(
             msg = "`value_name` cannot be empty string for duckdb backend."
             raise NotImplementedError(msg)
 
-        unpivot_on = ", ".join(str(col(name)) for name in on_)
+        unpivot_on = join_column_names(*on_)
         rel = self.native  # noqa: F841
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
@@ -507,8 +508,8 @@ class DuckDBLazyFrame(
             unpivot rel
             on {unpivot_on}
             into
-                name "{variable_name}"
-                value "{value_name}"
+                name {col(variable_name)}
+                value {col(value_name)}
             """
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])

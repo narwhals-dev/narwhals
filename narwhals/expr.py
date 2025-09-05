@@ -9,7 +9,6 @@ from narwhals._expression_parsing import (
     ExprMetadata,
     apply_n_ary_operation,
     combine_metadata,
-    extract_compliant,
 )
 from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
 from narwhals.dtypes import _validate_dtype
@@ -1194,7 +1193,7 @@ class Expr:
 
         return self.__class__(
             lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=extract_compliant(plx, value, str_as_lit=True),
+                value=plx.parse_into_expr(value, str_as_lit=True),
                 strategy=strategy,
                 limit=limit,
             ),
@@ -1234,8 +1233,8 @@ class Expr:
             |└────────┴────────┴───────────────┴───────────────┘|
             └───────────────────────────────────────────────────┘
         """
-        return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).fill_nan(value), self._metadata
+        return self._with_elementwise(
+            lambda plx: self._to_compliant_expr(plx).fill_nan(value)
         )
 
     # --- partial reduction ---

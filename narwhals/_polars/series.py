@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
-    from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -138,7 +137,9 @@ INHERITED_METHODS = frozenset(
 
 
 class PolarsSeries:
-    _implementation = Implementation.POLARS
+    _implementation: Implementation = Implementation.POLARS
+    _native_series: pl.Series
+    _version: Version
 
     _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
         True: ["breakpoint", "count"],
@@ -146,7 +147,7 @@ class PolarsSeries:
     }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
-        self._native_series: pl.Series = series
+        self._native_series = series
         self._version = version
 
     @property
@@ -235,9 +236,6 @@ class PolarsSeries:
             return PolarsDataFrame.from_native(series, context=self)
         # scalar
         return series
-
-    def _to_expr(self) -> PolarsExpr:
-        return self.__narwhals_namespace__()._expr._from_series(self)
 
     def __getattr__(self, attr: str) -> Any:
         if attr not in INHERITED_METHODS:
@@ -509,7 +507,9 @@ class PolarsSeries:
         if self._backend_version < (1, 32, 0):
             name = self.name
             ns = self.__narwhals_namespace__()
-            other_expr = other._to_expr() if isinstance(other, PolarsSeries) else other
+            other_expr = (
+                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
+            )
             expr = ns.col(name).is_close(
                 other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
             )

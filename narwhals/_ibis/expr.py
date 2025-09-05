@@ -101,8 +101,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
         return expr.over(window)
 
-    def __narwhals_expr__(self) -> None: ...
-
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
 

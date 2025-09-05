@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import pandas as pd
 
@@ -202,8 +202,10 @@ def rename(
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() >= (3,)
     ):  # pragma: no cover
-        return obj.rename(*args, **kwargs, inplace=False)
-    return obj.rename(*args, **kwargs, copy=False, inplace=False)
+        result = obj.rename(*args, **kwargs, inplace=False)
+    else:
+        result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+    return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
 @functools.lru_cache(maxsize=16)
@@ -282,7 +284,7 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
 
 
 def object_native_to_narwhals_dtype(
-    series: PandasLikeSeries, version: Version, implementation: Implementation
+    series: PandasLikeSeries | None, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
     if implementation is Implementation.CUDF:
@@ -290,8 +292,9 @@ def object_native_to_narwhals_dtype(
         # objects, so we can just return String.
         return dtypes.String()
 
+    infer = pd.api.types.infer_dtype
     # Arbitrary limit of 100 elements to use to sniff dtype.
-    inferred_dtype = pd.api.types.infer_dtype(series.head(100), skipna=True)
+    inferred_dtype = "empty" if series is None else infer(series.head(100), skipna=True)
     if inferred_dtype == "string":
         return dtypes.String()
     if inferred_dtype == "empty" and version is not Version.V1:
@@ -332,7 +335,11 @@ def _cudf_categorical_to_list(
 
 
 def native_to_narwhals_dtype(
-    native_dtype: Any, version: Version, implementation: Implementation
+    native_dtype: Any,
+    version: Version,
+    implementation: Implementation,
+    *,
+    allow_object: bool = False,
 ) -> DType:
     str_dtype = str(native_dtype)
 
@@ -357,6 +364,8 @@ def native_to_narwhals_dtype(
         # Per conversations with their maintainers, they don't support arbitrary
         # objects, so we can just return String.
         return version.dtypes.String()
+    if allow_object:
+        return object_native_to_narwhals_dtype(None, version, implementation)
     msg = (
         "Unreachable code, object dtype should be handled separately"  # pragma: no cover
     )
