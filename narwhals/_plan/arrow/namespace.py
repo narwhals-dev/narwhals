@@ -7,9 +7,10 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.functions import lit
-from narwhals._plan.common import collect, is_tuple_of
+from narwhals._plan.common import collect
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
