@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
+from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import pytest
@@ -214,7 +214,7 @@ def test_to_datetime_tz_aware(
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
-    context = (
+    context: AbstractContextManager[Any] = (
         pytest.raises(NotImplementedError)
         if any(x in str(constructor) for x in ("duckdb", "ibis")) and format is None
         else does_not_raise()
