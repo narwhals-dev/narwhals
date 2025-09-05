@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing as t
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -10,9 +10,10 @@ from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.protocols import EagerDataFrame, namespace
 from narwhals._utils import Version
+from narwhals.schema import Schema
 
-if t.TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from typing_extensions import Self
 
@@ -24,7 +25,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
+    from narwhals.typing import IntoSchema
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
@@ -55,31 +56,23 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
 
     @classmethod
     def from_dict(
-        cls,
-        data: t.Mapping[str, t.Any],
-        /,
-        *,
-        schema: t.Mapping[str, DType] | Schema | None = None,
+        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self:
-        from narwhals.schema import Schema
-
         pa_schema = Schema(schema).to_arrow() if schema is not None else schema
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, version=Version.MAIN)
 
-    def iter_columns(self) -> t.Iterator[Series]:
+    def iter_columns(self) -> Iterator[Series]:
         for name, series in zip(self.columns, self.native.itercolumns()):
             yield Series.from_native(series, name, version=self.version)
 
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[True]) -> dict[str, Series]: ...
-    @t.overload
-    def to_dict(self, *, as_series: t.Literal[False]) -> dict[str, list[t.Any]]: ...
-    @t.overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, Series] | dict[str, list[t.Any]]: ...
-    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[t.Any]]:
+    @overload
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, Series]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]:
         it = self.iter_columns()
         if as_series:
             return {ser.name: ser for ser in it}
