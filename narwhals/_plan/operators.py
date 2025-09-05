@@ -65,9 +65,7 @@ class Operator(Immutable):
 
 
 def _is_filtration(ir: ExprIR) -> bool:
-    if not ir.is_scalar and is_function_expr(ir):
-        return not ir.options.is_elementwise()
-    return False
+    return not ir.is_scalar and is_function_expr(ir) and not ir.options.is_elementwise()
 
 
 class SelectorOperator(Operator, func=None):
