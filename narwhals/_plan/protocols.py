@@ -418,7 +418,7 @@ class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
         self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
     ) -> ConcatT2: ...
     def concat(
-        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], *, how: ConcatMethod
+        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
     ) -> ConcatT1 | ConcatT2: ...
 
 
@@ -428,7 +428,7 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
     # but that is only available privately
     def _concat_horizontal(self, items: Iterable[ConcatT1 | ConcatT2], /) -> ConcatT1: ...
     def _concat_vertical(
-        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], /
+        self, items: Iterable[ConcatT1 | ConcatT2], /
     ) -> ConcatT1 | ConcatT2: ...
 
 
@@ -497,13 +497,6 @@ class EagerNamespace(
     def lit(
         self, node: expr.Literal[Series[Any]], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
-    @overload
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral | Series[Any]],
-        frame: EagerDataFrameT,
-        name: str,
-    ) -> EagerExprT_co | EagerScalarT_co: ...
     def lit(
         self, node: expr.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
