@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
+from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
 import pytest
@@ -10,8 +10,10 @@ import pytest
 import narwhals as nw
 from narwhals._arrow.utils import parse_datetime_format
 from narwhals._pandas_like.utils import get_dtype_backend
+from narwhals.exceptions import ComputeError
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
@@ -212,11 +214,14 @@ def test_to_datetime_tz_aware(
     if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
-    context = (
+    context: AbstractContextManager[Any] = (
         pytest.raises(NotImplementedError)
         if any(x in str(constructor) for x in ("duckdb", "ibis")) and format is None
         else does_not_raise()
     )
+    if "polars" in str(constructor) and POLARS_VERSION >= (1, 33, 0) and format is None:
+        # Polars 1.33.0+ raises an error when parsing timezone-aware datetimes without specifying the timezone
+        context = pytest.raises(ComputeError)
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
     with context:
         result = df.with_columns(b=nw.col("a").str.to_datetime(format))
