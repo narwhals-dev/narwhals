@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import ExprIR, NamedIR, is_expr
+from narwhals._plan._guards import is_expr
+from narwhals._plan.common import ExprIR, NamedIR
 
 if TYPE_CHECKING:
     from typing_extensions import LiteralString

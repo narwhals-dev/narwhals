@@ -6,7 +6,8 @@ import pytest
 
 import narwhals as nw
 from narwhals._plan import demo as nwd, expr_parsing as parse, selectors as ndcs
-from narwhals._plan.common import ExprIR, NamedIR, is_expr
+from narwhals._plan._guards import is_expr
+from narwhals._plan.common import ExprIR, NamedIR
 from narwhals._plan.expr import WindowExpr
 from narwhals._plan.expr_rewrites import (
     rewrite_all,

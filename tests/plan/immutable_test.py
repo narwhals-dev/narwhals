@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from narwhals._plan.common import Immutable
+from narwhals._plan._immutable import Immutable
 
 
 class Empty(Immutable): ...

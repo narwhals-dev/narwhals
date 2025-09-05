@@ -6,23 +6,20 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan import common
 from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
+from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
     FunctionT,
     LeftSelectorT,
     LeftT,
-    LeftT2,
     LiteralT,
-    MapIR,
     OperatorT,
     RangeT,
     RightSelectorT,
     RightT,
-    RightT2,
     RollingT,
     SelectorOperatorT,
     SelectorT,
@@ -37,6 +34,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan.functions import MapBatches  # noqa: F401
     from narwhals._plan.literal import LiteralValue
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
+    from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals._plan.selectors import Selector
     from narwhals._plan.window import Window
     from narwhals.dtypes import DType
@@ -66,7 +64,7 @@ __all__ = [
     "SelectorIR",
     "Sort",
     "SortBy",
-    "Ternary",
+    "TernaryExpr",
     "WindowExpr",
     "col",
 ]
@@ -88,7 +86,7 @@ def index_columns(*indices: int) -> IndexColumns:
     return IndexColumns(indices=indices)
 
 
-class Alias(ExprIR):
+class Alias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "name")
     expr: ExprIR
     name: str
@@ -100,40 +98,17 @@ class Alias(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
 
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-
-class Column(ExprIR):
+class Column(ExprIR, config=ExprIROptions.namespaced("col")):
     __slots__ = ("name",)
     name: str
 
     def __repr__(self) -> str:
         return f"col({self.name!r})"
 
-    def with_name(self, name: str, /) -> Column:
-        return common.replace(self, name=name)
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
-
-class _ColumnSelection(ExprIR):
+class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):
     """Nodes which can resolve to `Column`(s) with a `Schema`."""
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class Columns(_ColumnSelection):
@@ -165,7 +140,7 @@ class All(_ColumnSelection):
         return "all()"
 
 
-class Exclude(_ColumnSelection):
+class Exclude(_ColumnSelection, child=("expr",)):
     __slots__ = ("expr", "names")
     expr: ExprIR
     """Default is `all()`."""
@@ -180,22 +155,8 @@ class Exclude(_ColumnSelection):
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
 
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-
-class Literal(ExprIR, t.Generic[LiteralT]):
+class Literal(ExprIR, t.Generic[LiteralT], config=ExprIROptions.namespaced("lit")):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L81."""
 
     __slots__ = ("value",)
@@ -219,9 +180,6 @@ class Literal(ExprIR, t.Generic[LiteralT]):
     def unwrap(self) -> LiteralT:
         return self.value.unwrap()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
     __slots__ = ("left", "op", "right")
@@ -238,40 +196,17 @@ class _BinaryOp(ExprIR, t.Generic[LeftT, OperatorT, RightT]):
 
 
 class BinaryExpr(
-    _BinaryOp[LeftT, OperatorT, RightT], t.Generic[LeftT, OperatorT, RightT]
+    _BinaryOp[LeftT, OperatorT, RightT],
+    t.Generic[LeftT, OperatorT, RightT],
+    child=("left", "right"),
 ):
     """Application of two exprs via an `Operator`."""
-
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.left.iter_left()
-        yield from self.right.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.right.iter_right()
-        yield from self.left.iter_right()
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.left.iter_output_name()
 
-    def with_left(self, left: LeftT2, /) -> BinaryExpr[LeftT2, OperatorT, RightT]:
-        changed = common.replace(self, left=left)
-        return t.cast("BinaryExpr[LeftT2, OperatorT, RightT]", changed)
 
-    def with_right(self, right: RightT2, /) -> BinaryExpr[LeftT, OperatorT, RightT2]:
-        changed = common.replace(self, right=right)
-        return t.cast("BinaryExpr[LeftT, OperatorT, RightT2]", changed)
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(
-            self.with_left(self.left.map_ir(function)).with_right(
-                self.right.map_ir(function)
-            )
-        )
-
-
-class Cast(ExprIR):
+class Cast(ExprIR, child=("expr",)):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
     expr: ExprIR
     dtype: DType
@@ -283,25 +218,11 @@ class Cast(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.cast({self.dtype!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
 
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-
-class Sort(ExprIR):
+class Sort(ExprIR, child=("expr",)):
     __slots__ = ("expr", "options")
     expr: ExprIR
     options: SortOptions
@@ -314,25 +235,11 @@ class Sort(ExprIR):
         direction = "desc" if self.options.descending else "asc"
         return f"{self.expr!r}.sort({direction})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
 
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-
-class SortBy(ExprIR):
+class SortBy(ExprIR, child=("expr", "by")):
     """https://github.com/narwhals-dev/narwhals/issues/2534."""
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
@@ -347,33 +254,11 @@ class SortBy(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.sort_by(by={self.by!r}, options={self.options!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        for e in self.by:
-            yield from e.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        for e in reversed(self.by):
-            yield from e.iter_right()
-        yield from self.expr.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        by = (ir.map_ir(function) for ir in self.by)
-        return function(self.with_expr(self.expr.map_ir(function)).with_by(by))
 
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-    def with_by(self, by: t.Iterable[ExprIR], /) -> Self:
-        return common.replace(self, by=collect(by))
-
-
-class FunctionExpr(ExprIR, t.Generic[FunctionT]):
+class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -392,15 +277,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
     def is_scalar(self) -> bool:
         return self.function.is_scalar
 
-    def with_options(self, options: FunctionOptions, /) -> Self:
-        return common.replace(self, options=self.options.with_flags(options.flags))
-
-    def with_input(self, input: t.Iterable[ExprIR], /) -> Self:  # noqa: A002
-        return common.replace(self, input=collect(input))
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_input(ir.map_ir(function) for ir in self.input))
-
     def __repr__(self) -> str:
         if self.input:
             first = self.input[0]
@@ -408,16 +284,6 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
                 return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
-
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        for e in self.input:
-            yield from e.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        for e in reversed(self.input):
-            yield from e.iter_right()
 
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         """When we have multiple inputs, we want the name of the left-most expression.
@@ -447,12 +313,24 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT]):
             raise function_expr_invalid_operation_error(function, parent)
         super().__init__(**dict(input=input, function=function, options=options, **kwds))
 
+    def dispatch(
+        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.function.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
+
 
 class RollingExpr(FunctionExpr[RollingT]): ...
 
 
-class AnonymousExpr(FunctionExpr["MapBatches"]):
+class AnonymousExpr(
+    FunctionExpr["MapBatches"], config=ExprIROptions.renamed("map_batches")
+):
     """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
+
+    def dispatch(
+        self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
+    ) -> R_co:
+        return self.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
 
 class RangeExpr(FunctionExpr[RangeT]):
@@ -484,7 +362,7 @@ class RangeExpr(FunctionExpr[RangeT]):
         return f"{self.function!r}({list(self.input)!r})"
 
 
-class Filter(ExprIR):
+class Filter(ExprIR, child=("expr", "by")):
     __slots__ = ("expr", "by")  # noqa: RUF023
     expr: ExprIR
     by: ExprIR
@@ -496,26 +374,13 @@ class Filter(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.filter({self.by!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield from self.by.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.by.iter_right()
-        yield from self.expr.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        expr, by = self.expr, self.by
-        changed = common.replace(self, expr=expr.map_ir(function), by=by.map_ir(function))
-        return function(changed)
 
-
-class WindowExpr(ExprIR):
+class WindowExpr(
+    ExprIR, child=("expr", "partition_by"), config=ExprIROptions.renamed("over")
+):
     """A fully specified `.over()`, that occurred after another expression.
 
     Related:
@@ -533,35 +398,15 @@ class WindowExpr(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        for e in self.partition_by:
-            yield from e.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        for e in reversed(self.partition_by):
-            yield from e.iter_right()
-        yield from self.expr.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.expr.iter_output_name()
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
-            ir.map_ir(function) for ir in self.partition_by
-        )
-        return function(over)
 
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-    def with_partition_by(self, partition_by: t.Iterable[ExprIR], /) -> Self:
-        return common.replace(self, partition_by=collect(partition_by))
-
-
-class OrderedWindowExpr(WindowExpr):
+class OrderedWindowExpr(
+    WindowExpr,
+    child=("expr", "partition_by", "order_by"),
+    config=ExprIROptions.renamed("over_ordered"),
+):
     __slots__ = ("expr", "partition_by", "order_by", "sort_options", "options")  # noqa: RUF023
     expr: ExprIR
     partition_by: Seq[ExprIR]
@@ -577,41 +422,18 @@ class OrderedWindowExpr(WindowExpr):
             args = f"partition_by={list(self.partition_by)!r}, order_by={list(order)!r}"
         return f"{self.expr!r}.over({args})"
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        for e in self.partition_by:
-            yield from e.iter_left()
-        for e in self.order_by:
-            yield from e.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        for e in reversed(self.order_by):
-            yield from e.iter_right()
-        for e in reversed(self.partition_by):
-            yield from e.iter_right()
-        yield from self.expr.iter_right()
-
     def iter_root_names(self) -> t.Iterator[ExprIR]:
         # NOTE: `order_by` is never considered in `polars`
         # To match that behavior for `root_names` - but still expand in all other cases
         # - this little escape hatch exists
         # https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/plans/iterator.rs#L76-L86
-        yield from super().iter_left()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        over = self.with_expr(self.expr.map_ir(function)).with_partition_by(
-            ir.map_ir(function) for ir in self.partition_by
-        )
-        over = over.with_order_by(ir.map_ir(function) for ir in self.order_by)
-        return function(over)
-
-    def with_order_by(self, order_by: t.Iterable[ExprIR], /) -> Self:
-        return common.replace(self, order_by=collect(order_by))
+        yield from self.expr.iter_left()
+        for e in self.partition_by:
+            yield from e.iter_left()
+        yield self
 
 
-class Len(ExprIR):
+class Len(ExprIR, config=ExprIROptions.namespaced()):
     @property
     def is_scalar(self) -> bool:
         return True
@@ -622,9 +444,6 @@ class Len(ExprIR):
 
     def __repr__(self) -> str:
         return "len()"
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
 
 class RootSelector(SelectorIR):
@@ -639,9 +458,6 @@ class RootSelector(SelectorIR):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return self.selector.matches_column(name, dtype)
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class BinarySelector(
     _BinaryOp[LeftSelectorT, SelectorOperatorT, RightSelectorT],
@@ -655,9 +471,6 @@ class BinarySelector(
         right = self.right.matches_column(name, dtype)
         return bool(self.op(left, right))
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
-
 
 class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     __slots__ = ("selector",)
@@ -669,14 +482,11 @@ class InvertSelector(SelectorIR, t.Generic[SelectorT]):
     def matches_column(self, name: str, dtype: DType) -> bool:
         return not self.selector.matches_column(name, dtype)
 
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self)
 
-
-class Ternary(ExprIR):
+class TernaryExpr(ExprIR, child=("truthy", "falsy", "predicate")):
     """When-Then-Otherwise."""
 
-    __slots__ = ("predicate", "truthy", "falsy")  # noqa: RUF023
+    __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
     predicate: ExprIR
     truthy: ExprIR
     falsy: ExprIR
@@ -690,24 +500,5 @@ class Ternary(ExprIR):
             f".when({self.predicate!r}).then({self.truthy!r}).otherwise({self.falsy!r})"
         )
 
-    def iter_left(self) -> t.Iterator[ExprIR]:
-        yield from self.truthy.iter_left()
-        yield from self.falsy.iter_left()
-        yield from self.predicate.iter_left()
-        yield self
-
-    def iter_right(self) -> t.Iterator[ExprIR]:
-        yield self
-        yield from self.predicate.iter_right()
-        yield from self.falsy.iter_right()
-        yield from self.truthy.iter_right()
-
     def iter_output_name(self) -> t.Iterator[ExprIR]:
         yield from self.truthy.iter_output_name()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        predicate = self.predicate.map_ir(function)
-        truthy = self.truthy.map_ir(function)
-        falsy = self.falsy.map_ir(function)
-        changed = common.replace(self, predicate=predicate, truthy=truthy, falsy=falsy)
-        return function(changed)

@@ -47,10 +47,8 @@ FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
 RollingT = TypeVar("RollingT", bound="RollingWindow", default="RollingWindow")
 RangeT = TypeVar("RangeT", bound="RangeFunction", default="RangeFunction")
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
-LeftT2 = TypeVar("LeftT2", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
-RightT2 = TypeVar("RightT2", bound="ExprIR", default="ExprIR")
 OperatorFn: TypeAlias = "t.Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT2 = TypeVar("ExprIRT2", bound="ExprIR", default="ExprIR")
@@ -96,3 +94,4 @@ Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
+OneOrIterable: TypeAlias = "T | t.Iterable[T]"

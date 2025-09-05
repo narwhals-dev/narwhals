@@ -3,17 +3,12 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import boolean, expr, expr_parsing as parse, functions as F
-from narwhals._plan.common import (
-    into_dtype,
-    is_non_nested_literal,
-    is_series,
-    py_to_narwhals_dtype,
-)
+from narwhals._plan import _guards, boolean, expr, expr_parsing as parse, functions as F
+from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
 from narwhals._plan.expr import All, Len
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange
-from narwhals._plan.strings import ConcatHorizontal
+from narwhals._plan.strings import ConcatStr
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
 
@@ -39,9 +34,9 @@ def nth(*indices: int | t.Sequence[int]) -> Expr:
 def lit(
     value: NonNestedLiteral | Series[NativeSeriesT], dtype: IntoDType | None = None
 ) -> Expr:
-    if is_series(value):
+    if _guards.is_series(value):
         return SeriesLiteral(value=value).to_literal().to_narwhals()
-    if not is_non_nested_literal(value):
+    if not _guards.is_non_nested_literal(value):
         msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
         raise TypeError(msg)
     if dtype is None:
@@ -121,7 +116,7 @@ def concat_str(
 ) -> Expr:
     it = parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return (
-        ConcatHorizontal(separator=separator, ignore_nulls=ignore_nulls)
+        ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
         .to_function_expr(*it)
         .to_narwhals()
     )

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
-from narwhals._plan.common import Immutable
+from narwhals._plan._guards import is_literal
+from narwhals._plan._immutable import Immutable
 from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 
 if TYPE_CHECKING:
@@ -74,31 +75,7 @@ class SeriesLiteral(LiteralValue["Series[NativeSeriesT]"]):
         return self.value
 
 
-def _is_scalar(
-    obj: ScalarLiteral[NonNestedLiteralT] | Any,
-) -> TypeIs[ScalarLiteral[NonNestedLiteralT]]:
-    return isinstance(obj, ScalarLiteral)
-
-
-def _is_series(
-    obj: SeriesLiteral[NativeSeriesT] | Any,
-) -> TypeIs[SeriesLiteral[NativeSeriesT]]:
-    return isinstance(obj, SeriesLiteral)
-
-
-def is_literal(obj: Literal[LiteralT] | Any) -> TypeIs[Literal[LiteralT]]:
-    from narwhals._plan.expr import Literal
-
-    return isinstance(obj, Literal)
-
-
 def is_literal_scalar(
     obj: Literal[NonNestedLiteralT] | Any,
 ) -> TypeIs[Literal[NonNestedLiteralT]]:
-    return is_literal(obj) and _is_scalar(obj.value)
-
-
-def is_literal_series(
-    obj: Literal[Series[NativeSeriesT]] | Any,
-) -> TypeIs[Literal[Series[NativeSeriesT]]]:
-    return is_literal(obj) and _is_series(obj.value)
+    return is_literal(obj) and isinstance(obj.value, ScalarLiteral)

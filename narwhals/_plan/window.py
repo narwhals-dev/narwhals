@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable, is_function_expr, is_window_expr
+from narwhals._plan._guards import is_function_expr, is_window_expr
+from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import (
     over_elementwise_error,
     over_nested_error,

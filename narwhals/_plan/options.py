@@ -4,15 +4,18 @@ import enum
 from itertools import repeat
 from typing import TYPE_CHECKING, Literal
 
-from narwhals._plan.common import Immutable
+from narwhals._plan._immutable import Immutable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import pyarrow.compute as pc
+    from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import Accessor, OneOrIterable, Seq
     from narwhals.typing import RankMethod
+
+DispatchOrigin: TypeAlias = Literal["expr", "__narwhals_namespace__"]
 
 
 class FunctionFlags(enum.Flag):
@@ -184,7 +187,7 @@ class SortMultipleOptions(Immutable):
 
     @staticmethod
     def parse(
-        *, descending: bool | Iterable[bool], nulls_last: bool | Iterable[bool]
+        *, descending: OneOrIterable[bool], nulls_last: OneOrIterable[bool]
     ) -> SortMultipleOptions:
         desc = (descending,) if isinstance(descending, bool) else tuple(descending)
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
@@ -263,3 +266,56 @@ def rolling_options(
         center=center,
         fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
     )
+
+
+class _BaseIROptions(Immutable):
+    __slots__ = ("origin", "override_name")
+    origin: DispatchOrigin
+    override_name: str
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="")
+
+    @classmethod
+    def renamed(cls, name: str, /) -> Self:
+        from narwhals._plan.common import replace
+
+        return replace(cls.default(), override_name=name)
+
+    @classmethod
+    def namespaced(cls, override_name: str = "", /) -> Self:
+        from narwhals._plan.common import replace
+
+        return replace(
+            cls.default(), origin="__narwhals_namespace__", override_name=override_name
+        )
+
+
+class ExprIROptions(_BaseIROptions):
+    __slots__ = (*_BaseIROptions.__slots__, "allow_dispatch")
+    allow_dispatch: bool
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="", allow_dispatch=True)
+
+    @staticmethod
+    def no_dispatch() -> ExprIROptions:
+        return ExprIROptions(origin="expr", override_name="", allow_dispatch=False)
+
+
+class FunctionExprOptions(_BaseIROptions):
+    __slots__ = (*_BaseIROptions.__slots__, "accessor_name")
+    accessor_name: Accessor | None
+    """Namespace accessor name, if any."""
+
+    @classmethod
+    def default(cls) -> Self:
+        return cls(origin="expr", override_name="", accessor_name=None)
+
+
+FEOptions = FunctionExprOptions
