@@ -58,8 +58,8 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
             fn = self._truncate(UNITS_DICT_TRUNCATE[unit])
         return self.compliant._with_callable(fn)
 
-    def offset_by(self, every: str) -> IbisExpr:
-        interval = Interval.parse_no_constraints(every)
+    def offset_by(self, by: str) -> IbisExpr:
+        interval = Interval.parse_no_constraints(by)
         unit = interval.unit
         if unit in {"y", "q", "mo", "d", "ns"}:
             msg = f"Offsetting by {unit} is not yet supported for ibis."

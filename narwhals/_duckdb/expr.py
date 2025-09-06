@@ -188,7 +188,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         if ddof == 0:
             return self._with_callable(lambda expr: F("stddev_pop", expr))
         if ddof == 1:
@@ -204,7 +204,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(_std)
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         if ddof == 0:
             return self._with_callable(lambda expr: F("var_pop", expr))
         if ddof == 1:

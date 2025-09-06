@@ -264,7 +264,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(_null_count)
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         F = self._F
         if ddof == 0:
             return self._with_callable(F.stddev_pop)
@@ -277,7 +277,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_callable(func)
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         F = self._F
         if ddof == 0:
             return self._with_callable(F.var_pop)
@@ -305,9 +305,9 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_is_finite)
 
-    def is_in(self, values: Sequence[Any]) -> Self:
+    def is_in(self, other: Sequence[Any]) -> Self:
         def _is_in(expr: Column) -> Column:
-            return expr.isin(values) if values else self._F.lit(False)
+            return expr.isin(other) if other else self._F.lit(False)
 
         return self._with_elementwise(_is_in)
 

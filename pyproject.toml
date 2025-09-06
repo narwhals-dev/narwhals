@@ -350,6 +350,7 @@ pythonPlatform = "All"
 # NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.9"
 reportMissingTypeArgument = "error"
+reportIncompatibleMethodOverride = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
