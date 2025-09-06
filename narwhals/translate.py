@@ -12,7 +12,15 @@ from narwhals._namespace import (
     is_native_polars,
     is_native_spark_like,
 )
-from narwhals._utils import Implementation, Version, has_native_namespace
+from narwhals._utils import (
+    Implementation,
+    Version,
+    discover_plugins,
+    has_native_namespace,
+    is_compliant_dataframe,
+    is_compliant_lazyframe,
+    is_compliant_series,
+)
 from narwhals.dependencies import (
     get_dask_expr,
     get_numpy,
@@ -314,23 +322,65 @@ def from_native(  # noqa: D417
     )
 
 
+def _translate_if_compliant(  # noqa: C901,PLR0911
+    compliant_object: Any,
+    *,
+    pass_through: bool = False,
+    eager_only: bool = False,
+    # Interchange-level was removed after v1
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
+    version: Version,
+) -> Any:
+    if is_compliant_dataframe(compliant_object):
+        if series_only:
+            if not pass_through:
+                msg = "Cannot only use `series_only` with dataframe"
+                raise TypeError(msg)
+            return compliant_object
+        return version.dataframe(
+            compliant_object.__narwhals_dataframe__()._with_version(version), level="full"
+        )
+    if is_compliant_lazyframe(compliant_object):
+        if series_only:
+            if not pass_through:
+                msg = "Cannot only use `series_only` with lazyframe"
+                raise TypeError(msg)
+            return compliant_object
+        if eager_only or eager_or_interchange_only:
+            if not pass_through:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
+                raise TypeError(msg)
+            return compliant_object
+        return version.lazyframe(
+            compliant_object.__narwhals_lazyframe__()._with_version(version), level="full"
+        )
+    if is_compliant_series(compliant_object):
+        if not allow_series:
+            if not pass_through:
+                msg = "Please set `allow_series=True` or `series_only=True`"
+                raise TypeError(msg)
+            return compliant_object
+        return version.series(
+            compliant_object.__narwhals_series__()._with_version(version), level="full"
+        )
+    # Object wasn't compliant, can't translate here.
+    return None
+
+
 def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     native_object: Any,
     *,
     pass_through: bool = False,
     eager_only: bool = False,
     # Interchange-level was removed after v1
-    eager_or_interchange_only: bool = False,
-    series_only: bool = False,
-    allow_series: bool | None = None,
+    eager_or_interchange_only: bool,
+    series_only: bool,
+    allow_series: bool | None,
     version: Version,
 ) -> Any:
     from narwhals._interchange.dataframe import supports_dataframe_interchange
-    from narwhals._utils import (
-        is_compliant_dataframe,
-        is_compliant_lazyframe,
-        is_compliant_series,
-    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
 
@@ -350,38 +400,18 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         raise ValueError(msg)
 
     # Extensions
-    if is_compliant_dataframe(native_object):
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with dataframe"
-                raise TypeError(msg)
-            return native_object
-        return version.dataframe(
-            native_object.__narwhals_dataframe__()._with_version(version), level="full"
+    if (
+        translated := _translate_if_compliant(
+            native_object,
+            pass_through=pass_through,
+            eager_only=eager_only,
+            eager_or_interchange_only=eager_or_interchange_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            version=version,
         )
-    if is_compliant_lazyframe(native_object):
-        if series_only:
-            if not pass_through:
-                msg = "Cannot only use `series_only` with lazyframe"
-                raise TypeError(msg)
-            return native_object
-        if eager_only or eager_or_interchange_only:
-            if not pass_through:
-                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
-                raise TypeError(msg)
-            return native_object
-        return version.lazyframe(
-            native_object.__narwhals_lazyframe__()._with_version(version), level="full"
-        )
-    if is_compliant_series(native_object):
-        if not allow_series:
-            if not pass_through:
-                msg = "Please set `allow_series=True` or `series_only=True`"
-                raise TypeError(msg)
-            return native_object
-        return version.series(
-            native_object.__narwhals_series__()._with_version(version), level="full"
-        )
+    ) is not None:
+        return translated
 
     # Polars
     if is_native_polars(native_object):
@@ -533,6 +563,20 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             )
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
+
+    for plugin in discover_plugins():
+        obj = plugin.load()
+        if obj.is_native_object(native_object):
+            compliant_object = obj.from_native(native_object, version)
+            return _translate_if_compliant(
+                compliant_object,
+                pass_through=pass_through,
+                eager_only=eager_only,
+                eager_or_interchange_only=eager_or_interchange_only,
+                series_only=series_only,
+                allow_series=allow_series,
+                version=version,
+            )
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
