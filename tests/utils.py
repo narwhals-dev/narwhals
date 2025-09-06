@@ -18,11 +18,12 @@ from narwhals.translate import from_native
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    import pytest
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame
+    from narwhals.typing import Frame, NativeDataFrame, NativeLazyFrame, TimeUnit
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -46,6 +47,13 @@ Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
+
+ID_PANDAS_LIKE = frozenset(
+    ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
+)
+_CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
+    ("constructor_eager", "constructor", "constructor_pandas_like")
+)
 
 
 def _to_comparable_list(column_values: Any) -> Any:
@@ -217,3 +225,20 @@ def maybe_collect(df: Frame) -> Frame:
     For example, Polars only errors when we call `collect` in the lazy case.
     """
     return df.collect() if isinstance(df, nw.LazyFrame) else df
+
+
+def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
+    """Replace `time_unit` with one that is supported by the requested backend."""
+    if _CONSTRUCTOR_FIXTURE_NAMES.isdisjoint(request.fixturenames):  # pragma: no cover
+        msg = (
+            f"`time_unit_compat` requires the test function to use a `constructor*` fixture.\n"
+            f"Hint:\n\n"
+            f"Try adding one of these as a parameter:\n    {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
+        )
+        raise NotImplementedError(msg)
+    request_id = request.node.callspec.id
+    if "duckdb" in request_id:
+        return "us"
+    if PANDAS_VERSION < (2,) and any(pd_name in request_id for pd_name in ID_PANDAS_LIKE):
+        return "ns"
+    return time_unit
