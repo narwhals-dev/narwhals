@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 import pytest
 
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import PANDAS_VERSION, pyspark_session, sqlframe_session
+from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -231,10 +231,6 @@ LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "ibis": ibis_lazy_constructor,
 }
 GPU_CONSTRUCTORS: dict[str, ConstructorEager] = {"cudf": cudf_constructor}
-
-ID_PANDAS_LIKE = frozenset(
-    ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
-)
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
