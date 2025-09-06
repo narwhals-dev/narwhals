@@ -16,8 +16,14 @@ Most data tools except pandas make a clear distinction between:
 - Null values, representing missing data.
 - NaN values, resulting from "illegal" mathematical operations like `0/0`.
 
-Methods like `is_null`, `fill_null`, `drop_nulls`, and `null_count` should only deal with null values,
-whereas `is_nan` and `fill_nan` should only deal with NaN values.
+In Narwhals, this is reflected in separate methods for Null/NaN values:
+
+| Operation | Null                                          | NaN                                                                                                                                                                                                                                              |
+| --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| is        | [`Expr.is_null`][narwhals.Expr.is_null]       | [`Expr.is_nan`][narwhals.Expr.is_nan]                                                                                                                                                                                                            |
+| fill      | [`Expr.fill_null`][narwhals.Expr.fill_null]   | [`Expr.fill_nan`][narwhals.Expr.fill_nan]                                                                                                                                                                                                        |
+| drop      | [`Expr.drop_nulls`][narwhals.Expr.drop_nulls] | *Not yet implemented (See [discussion](https://github.com/narwhals-dev/narwhals/issues/3031#issuecomment-3219910366))*<br>[`polars.Expr.drop_nans`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.drop_nans.html) |
+| count     | [`Expr.null_count`][narwhals.Expr.null_count] | *No upstream equivalent*                                                                                                                                                                                                                         |
 
 In pandas however the concepts are muddied. Depending on the data type of the underlying data structure,
 `np.nan`, `pd.NaT`, `None` and `pd.NA` can all encode missing data. (See e.g. [pandas missing value representation for numpy types](https://pandas.pydata.org/docs/user_guide/gotchas.html#missing-value-representation-for-numpy-types))
