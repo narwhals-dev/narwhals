@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from narwhals.typing import IntoSeries, NonNestedDType
-    from tests.utils import Constructor
+    from tests.utils import Constructor, ConstructorPandasLike
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])
@@ -558,3 +559,26 @@ def test_dtype_base_type_nested() -> None:
     assert nw.Array.base_type() is nw.Array(nw.String, 2).base_type()
     assert nw.Struct.base_type() is nw.Struct({"a": nw.Boolean}).base_type()
     assert nw.Enum.base_type() is nw.Enum(["beluga", "narwhal"]).base_type()
+
+
+@pytest.mark.parametrize(
+    ("dtype", "context"),
+    [
+        (nw.Datetime("ns"), does_not_warn()),
+        (nw.Datetime, does_not_warn()),
+        (nw.Datetime(), pytest.warns(UserWarning, match="time unit")),
+        (nw.Datetime("us"), pytest.warns(UserWarning, match="time unit 'us'")),
+        (nw.Datetime("s"), pytest.warns(UserWarning, match="time unit 's'")),
+    ],
+)
+def test_pandas_datetime_ignored_time_unit_warns(
+    constructor_pandas_like: ConstructorPandasLike,
+    dtype: nw.Datetime | type[nw.Datetime],
+    context: AbstractContextManager[Any],
+) -> None:
+    data = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
+    expr = nw.col("a").cast(dtype)
+    df = nw.from_native(constructor_pandas_like(data))
+    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
+    with ctx:
+        df.select(expr)
