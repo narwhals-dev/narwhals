@@ -10,6 +10,7 @@ from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
+    align_series_full_broadcast,
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
@@ -227,7 +228,31 @@ class DaskExpr(
         return self._binary_op("__truediv__", other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._binary_op("__floordiv__", other)
+        def _floordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (series.__floordiv__(other)).where(other != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            if isinstance(other, type(self)):
+                if len(other_ := other(df)) > 1:  # pragma: no cover
+                    msg = "Expected expression with single output, found multiple"
+                    raise ValueError(msg)
+                other_series = other_[0]
+            else:
+                other_series = other
+
+            return [_floordiv(df, series, other_series) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__floordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def __pow__(self, other: Any) -> Self:
         return self._binary_op("__pow__", other)
@@ -266,7 +291,23 @@ class DaskExpr(
         return self._reverse_binary_op("__rtruediv__", lambda a, b: a / b, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._reverse_binary_op("__rfloordiv__", lambda a, b: a // b, other)
+        def _rfloordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (other.__floordiv__(series)).where(series != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [_rfloordiv(df, series, other) for series in self(df)]
+
+        return self.__class__(
+            func,
+            depth=self._depth + 1,
+            function_name=self._function_name + "->__rfloordiv__",
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        ).alias("literal")
 
     def __rpow__(self, other: Any) -> Self:
         return self._reverse_binary_op("__rpow__", lambda a, b: a**b, other)
