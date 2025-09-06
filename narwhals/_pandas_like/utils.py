@@ -498,7 +498,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
-            if isinstance(dtype, dtypes.Datetime):
+            if isinstance(dtype, dtypes.Datetime) and dtype.time_unit != "ns":
                 msg = (
                     f"The time unit '{dtype.time_unit}' has been specified but is only "
                     f"available in pandas>2.0, found version {pd.__version__}."
