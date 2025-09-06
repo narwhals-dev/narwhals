@@ -460,8 +460,15 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Notes:
             This is a form of case transform where the first letter of each word is
-            capitalized, with the rest of the word in lowercase. Non-alphanumeric
-            characters define the word boundaries.
+            capitalized, with the rest of the word in lowercase.
+
+        Warning:
+            Different backends might follow different rules to determine what a "word" is:
+
+            - polars uses **non-alphanumeric** characters to define the word boundaries.
+            - pandas-like, pyarrow and dask use **non-alphabetic** characters to define
+                the word boundaries, matching the behavior of
+                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
 
         Examples:
             >>> import polars as pl
