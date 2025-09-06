@@ -51,6 +51,7 @@ ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 ID_PANDAS_LIKE = frozenset(
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
 )
+ID_CUDF = frozenset(("cudf",))
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
     ("constructor_eager", "constructor", "constructor_pandas_like")
 )
@@ -239,6 +240,7 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     request_id = request.node.callspec.id
     if "duckdb" in request_id:
         return "us"
-    if PANDAS_VERSION < (2,) and any(pd_name in request_id for pd_name in ID_PANDAS_LIKE):
+    pandas_like = ID_PANDAS_LIKE - ID_CUDF
+    if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
         return "ns"
     return time_unit
