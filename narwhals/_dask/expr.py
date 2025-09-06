@@ -73,8 +73,6 @@ class DaskExpr(
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)
 
-    def __narwhals_expr__(self) -> None: ...
-
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals._dask.namespace import DaskNamespace
 

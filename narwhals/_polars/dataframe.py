@@ -112,7 +112,9 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     unique: Method[Self]
     with_columns: Method[Self]
 
+    _native_frame: NativePolarsFrame
     _implementation = Implementation.POLARS
+    _version: Version
 
     def __init__(
         self,
@@ -121,7 +123,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         version: Version,
         validate_backend_version: bool = False,
     ) -> None:
-        self._native_frame: NativePolarsFrame = df
+        self._native_frame = df
         self._version = version
         if validate_backend_version:
             self._validate_backend_version()

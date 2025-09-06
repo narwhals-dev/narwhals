@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 class PolarsGroupBy:
     _compliant_frame: PolarsDataFrame
     _grouped: NativeGroupBy
-    _drop_null_keys: bool
-    _output_names: Sequence[str]
 
     @property
     def compliant(self) -> PolarsDataFrame:
@@ -52,8 +50,6 @@ class PolarsGroupBy:
 class PolarsLazyGroupBy:
     _compliant_frame: PolarsLazyFrame
     _grouped: NativeLazyGroupBy
-    _drop_null_keys: bool
-    _output_names: Sequence[str]
 
     @property
     def compliant(self) -> PolarsLazyFrame:
