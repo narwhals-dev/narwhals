@@ -93,7 +93,7 @@ if TYPE_CHECKING:
         Backend,
         IntoBackend,
         _ArrowImpl,
-        _CudfImpl,
+        _CuDFImpl,
         _DaskImpl,
         _DuckDBImpl,
         _EagerAllowedImpl,
@@ -2111,8 +2111,8 @@ class _Implementation:
     def __get__(self, instance: Narwhals[NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
     def __get__(self, instance: Narwhals[NativeModin], owner: Any) -> _ModinImpl: ...
-    @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
-    def __get__(self, instance: Narwhals[NativeCuDF], owner: Any) -> _CudfImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[NativeCuDF], owner: Any) -> _CuDFImpl: ...
     @overload
     def __get__(
         self, instance: Narwhals[NativePandasLike], owner: Any
