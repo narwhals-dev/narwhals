@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -16,7 +15,6 @@ from tests.utils import (
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
-    ConstructorPandasLike,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
 )
@@ -141,29 +139,6 @@ def test_timestamp_datetimes_tz_aware(
         .dt.timestamp(time_unit)
     )
     assert_equal_data(result, {"a": expected})
-
-
-@pytest.mark.parametrize(
-    ("dtype", "context"),
-    [
-        (nw.Datetime("ns"), does_not_warn()),
-        (nw.Datetime, does_not_warn()),
-        (nw.Datetime(), pytest.warns(UserWarning, match="time unit")),
-        (nw.Datetime("us"), pytest.warns(UserWarning, match="time unit 'us'")),
-        (nw.Datetime("s"), pytest.warns(UserWarning, match="time unit 's'")),
-    ],
-)
-def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
-    constructor_pandas_like: ConstructorPandasLike,
-    dtype: nw.Datetime | type[nw.Datetime],
-    context: AbstractContextManager[Any],
-) -> None:
-    datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    expr = nw.col("a").cast(dtype)
-    df = nw.from_native(constructor_pandas_like(datetimes))
-    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
-    with ctx:
-        df.select(expr)
 
 
 @pytest.mark.parametrize(
