@@ -96,7 +96,7 @@ def test_pyarrow_to_pandas_use_pyarrow(
 @pytest.mark.skipif(PANDAS_LT_1_5, reason="too old for pyarrow")
 @pytest.mark.parametrize("kwds", [{}, {"self_destruct": True}])
 @pytest.mark.parametrize(
-    ("data", "pandas_dtypes"),
+    ("data", "expected_dtypes"),
     [
         (
             {"a": [3.2, None, 42.0, 99], "b": [None, None, 10, 20]},
@@ -136,14 +136,14 @@ def test_pyarrow_to_pandas_use_pyarrow(
 def test_to_pandas_use_pyarrow(
     constructor_eager: ConstructorEager,
     data: dict[str, list[Any]],
-    pandas_dtypes: dict[str, Sequence[str]],
+    expected_dtypes: dict[str, Sequence[str]],
     kwds: dict[str, Any],
     request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("pyarrow")
     request.applymarker(
         pytest.mark.xfail(
-            is_pandas(constructor_eager) and bool(kwds),
+            is_pandas(request) and bool(kwds),
             reason="Only `convert_dtypes` behavior is supported for pandas-like",
             raises=InvalidOperationError,
         )
@@ -151,14 +151,7 @@ def test_to_pandas_use_pyarrow(
     request.applymarker(
         pytest.mark.xfail(
             PANDAS_LT_2
-            and is_pandas(
-                constructor_eager,
-                exclude={
-                    "pandas_pyarrow_constructor",
-                    "modin_pyarrow_constructor",
-                    "cudf_constructor",
-                },
-            ),
+            and is_pandas(request, exclude={"pandas[pyarrow]", "modin[pyarrow]", "cudf"}),
             reason="no `dtype_backend` arg in `convert_dtypes`",
             raises=TypeError,
         )
@@ -172,9 +165,9 @@ def test_to_pandas_use_pyarrow(
     request.applymarker(
         pytest.mark.xfail(
             bool(
-                is_pandas(constructor_eager)
+                is_pandas(request)
                 and pandas_unsupported.intersection(
-                    chain.from_iterable(pandas_dtypes.values())
+                    chain.from_iterable(expected_dtypes.values())
                 )
             ),
             reason="`date` converted to `object`",
@@ -183,7 +176,7 @@ def test_to_pandas_use_pyarrow(
     )
     frame = nw.from_native(constructor_eager(data))
     result = frame.to_pandas(use_pyarrow_extension_array=True, **kwds)
-    for column, dtypes in pandas_dtypes.items():
+    for column, dtypes in expected_dtypes.items():
         actual_name = result[column].dtype.name
         assert actual_name in dtypes
     assert_equal_data(result, data)

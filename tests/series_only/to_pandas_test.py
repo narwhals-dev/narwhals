@@ -88,7 +88,7 @@ def test_pyarrow_to_pandas_use_pyarrow(
 
 @pytest.mark.skipif(PANDAS_LT_1_5, reason="too old for pyarrow")
 @pytest.mark.parametrize(
-    ("data", "pandas_dtypes"),
+    ("data", "expected_dtypes"),
     [
         ([3.2, None, 1, 42.0, 99], ["double[pyarrow]"]),
         ([None, None, 10, 20], ["int64[pyarrow]"]),
@@ -104,28 +104,21 @@ def test_pyarrow_to_pandas_use_pyarrow(
 def test_to_pandas_use_pyarrow(
     constructor_eager: ConstructorEager,
     data: list[Any],
-    pandas_dtypes: Container[str],
+    expected_dtypes: Container[str],
     request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("pyarrow")
     request.applymarker(
         pytest.mark.xfail(
             PANDAS_LT_2
-            and is_pandas(
-                constructor_eager,
-                exclude={
-                    "pandas_pyarrow_constructor",
-                    "modin_pyarrow_constructor",
-                    "cudf_constructor",
-                },
-            ),
+            and is_pandas(request, exclude={"pandas[pyarrow]", "modin[pyarrow]", "cudf"}),
             reason="no `dtype_backend` arg in `convert_dtypes`",
             raises=TypeError,
         )
     )
     request.applymarker(
         pytest.mark.xfail(
-            ("date32[day][pyarrow]" in pandas_dtypes and is_pandas(constructor_eager)),
+            ("date32[day][pyarrow]" in expected_dtypes and is_pandas(request)),
             reason="`date` converted to `object`",
             raises=AssertionError,
         )
@@ -135,5 +128,5 @@ def test_to_pandas_use_pyarrow(
     series = nw.from_native(constructor_eager(expected)).get_column(name)
     result = series.to_pandas(use_pyarrow_extension_array=True)
     actual_name = result.dtype.name
-    assert actual_name in pandas_dtypes
+    assert actual_name in expected_dtypes
     assert_equal_data(nw.from_native(result, series_only=True).to_frame(), expected)

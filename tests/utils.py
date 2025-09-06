@@ -16,7 +16,7 @@ from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import pytest
     from pyspark.sql import SparkSession
@@ -58,32 +58,15 @@ ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
-ID_PANDAS_LIKE = frozenset(
+IDPandasLike: TypeAlias = Literal[
+    "pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf"
+]
+ID_PANDAS_LIKE = frozenset[IDPandasLike](
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
 )
-ID_CUDF = frozenset(("cudf",))
+ID_CUDF = frozenset[IDPandasLike](("cudf",))
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
     ("constructor_eager", "constructor", "constructor_pandas_like")
-)
-
-NamePandasLikePyArrow: TypeAlias = Literal[
-    "pandas_pyarrow_constructor", "modin_pyarrow_constructor"
-]
-NamePandasLikeNullable: TypeAlias = Literal[
-    NamePandasLikePyArrow, "pandas_nullable_constructor", "cudf_constructor"
-]
-NamePandasLikeNotNullable: TypeAlias = Literal["pandas_constructor", "modin_constructor"]
-NamePandasLike: TypeAlias = Literal[NamePandasLikeNotNullable, NamePandasLikeNullable]
-
-_NAME_PANDAS_LIKE = frozenset[NamePandasLike](
-    (
-        "pandas_constructor",
-        "pandas_nullable_constructor",
-        "pandas_pyarrow_constructor",
-        "modin_constructor",
-        "modin_pyarrow_constructor",
-        "cudf_constructor",
-    )
 )
 
 
@@ -241,17 +224,6 @@ def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
 
 
-def is_pandas(
-    constructor: Constructor, *, exclude: Container[NamePandasLike] = ()
-) -> bool:
-    """Return True if constructor is pandas-like.
-
-    Optionally, pass `exclude=<subset>` to treat those constructors as not pandas-like.
-    """
-    name = constructor.__name__
-    return name in _NAME_PANDAS_LIKE and (not exclude or name not in exclude)
-
-
 def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
     """Checks if the pandas-like constructor uses pyarrow backend."""
     return constructor.__name__ in {
@@ -269,15 +241,21 @@ def maybe_collect(df: Frame) -> Frame:
     return df.collect() if isinstance(df, nw.LazyFrame) else df
 
 
-def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
-    """Replace `time_unit` with one that is supported by the requested backend."""
+def _ensure_test_has_constructor(
+    request: pytest.FixtureRequest, /, utility_name: str
+) -> None:
     if _CONSTRUCTOR_FIXTURE_NAMES.isdisjoint(request.fixturenames):  # pragma: no cover
         msg = (
-            f"`time_unit_compat` requires the test function to use a `constructor*` fixture.\n"
+            f"`{utility_name}` requires the test function to use a `constructor*` fixture.\n"
             f"Hint:\n\n"
             f"Try adding one of these as a parameter:\n    {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
         )
         raise NotImplementedError(msg)
+
+
+def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
+    """Replace `time_unit` with one that is supported by the requested backend."""
+    _ensure_test_has_constructor(request, "time_unit_compat")
     request_id = request.node.callspec.id
     if "duckdb" in request_id:
         return "us"
@@ -285,3 +263,15 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
         return "ns"
     return time_unit
+
+
+def is_pandas(
+    request: pytest.FixtureRequest, /, exclude: Iterable[IDPandasLike] = ()
+) -> bool:
+    """Return True if requested backend is pandas-like.
+
+    Optionally, pass `exclude=<subset>` to treat those constructors as not pandas-like.
+    """
+    _ensure_test_has_constructor(request, "is_pandas")
+    request_id = request.node.callspec.id
+    return any(name in request_id for name in ID_PANDAS_LIKE.difference(exclude))
