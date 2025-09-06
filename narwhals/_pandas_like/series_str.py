@@ -82,11 +82,14 @@ class PandasLikeSeriesStringNamespace(
     def to_date(self, format: str | None) -> PandasLikeSeries:
         return self.to_datetime(format=format).dt.date()
 
-    def to_uppercase(self) -> PandasLikeSeries:
-        return self.with_native(self.native.str.upper())
-
     def to_lowercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.lower())
+
+    def to_titlecase(self) -> PandasLikeSeries:
+        return self.with_native(self.native.str.title())
+
+    def to_uppercase(self) -> PandasLikeSeries:
+        return self.with_native(self.native.str.upper())
 
     def zfill(self, width: int) -> PandasLikeSeries:
         return self.with_native(self.native.str.zfill(width))

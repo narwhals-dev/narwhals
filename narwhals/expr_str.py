@@ -482,3 +482,37 @@ class ExprStringNamespace(Generic[ExprT]):
         return self._expr._with_elementwise(
             lambda plx: self._expr._to_compliant_expr(plx).str.zfill(width)
         )
+
+    def to_titlecase(self) -> ExprT:
+        """Modify strings to their titlecase equivalent.
+
+        Notes:
+            This is a form of case transform where the first letter of each word is
+            capitalized, with the rest of the word in lowercase. Non-alphanumeric
+            characters define the word boundaries.
+
+        Examples:
+            >>> df = pl.DataFrame(
+            ...     {
+            ...         "quotes": [
+            ...             "'e.t. phone home'",
+            ...             "you talkin' to me?",
+            ...             "to infinity,and BEYOND!",
+            ...         ]
+            ...     }
+            ... )
+            >>> df.with_columns(quotes_title=pl.col("quotes").str.to_titlecase())
+            shape: (3, 2)
+            ┌─────────────────────────┬─────────────────────────┐
+            │ quotes                  ┆ quotes_title            │
+            │ ---                     ┆ ---                     │
+            │ str                     ┆ str                     │
+            ╞═════════════════════════╪═════════════════════════╡
+            │ 'e.t. phone home'       ┆ 'E.T. Phone Home'       │
+            │ you talkin' to me?      ┆ You Talkin' To Me?      │
+            │ to infinity,and BEYOND! ┆ To Infinity,And Beyond! │
+            └─────────────────────────┴─────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_titlecase()
+        )

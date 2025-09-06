@@ -72,11 +72,14 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
     def to_date(self, format: str | None) -> ArrowSeries:
         return self.to_datetime(format=format).dt.date()
 
-    def to_uppercase(self) -> ArrowSeries:
-        return self.with_native(pc.utf8_upper(self.native))
-
     def to_lowercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_lower(self.native))
+
+    def to_titlecase(self) -> ArrowSeries:
+        return self.with_native(pc.utf8_title(self.native))
+
+    def to_uppercase(self) -> ArrowSeries:
+        return self.with_native(pc.utf8_upper(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
         binary_join: Incomplete = pc.binary_join_element_wise
