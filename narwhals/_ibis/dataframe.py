@@ -205,7 +205,7 @@ class IbisLazyFrame(
             )
         return self._cached_columns
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, **_: Any) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
         return self.native.to_pandas()
 
