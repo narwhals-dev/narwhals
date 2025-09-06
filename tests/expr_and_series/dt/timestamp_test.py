@@ -144,11 +144,13 @@ def test_timestamp_datetimes_tz_aware(
 
 
 @pytest.mark.parametrize(
-    ("time_unit", "context"),
+    ("dtype", "context"),
     [
-        ("ns", does_not_warn()),
-        ("us", pytest.warns(UserWarning, match="time unit 'us'")),
-        ("s", pytest.warns(UserWarning, match="time unit 's'")),
+        (nw.Datetime("ns"), does_not_warn()),
+        (nw.Datetime, does_not_warn()),
+        (nw.Datetime(), pytest.warns(UserWarning, match="time unit")),
+        (nw.Datetime("us"), pytest.warns(UserWarning, match="time unit 'us'")),
+        (nw.Datetime("s"), pytest.warns(UserWarning, match="time unit 's'")),
     ],
 )
 @pytest.mark.skipif(
@@ -156,11 +158,10 @@ def test_timestamp_datetimes_tz_aware(
 )
 def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
     constructor_pandas_like: ConstructorPandasLike,
-    time_unit: Literal["ns", "us", "s"],
+    dtype: nw.Datetime | type[nw.Datetime],
     context: AbstractContextManager[Any],
 ) -> None:
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    dtype = nw.Datetime(time_unit)
     expr = nw.col("a").cast(dtype)
     df = nw.from_native(constructor_pandas_like(datetimes))
     with context:
