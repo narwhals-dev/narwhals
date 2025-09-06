@@ -392,6 +392,41 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.to_date(format=format)
         )
 
+    def to_titlecase(self) -> SeriesT:
+        """Modify strings to their titlecase equivalent.
+
+        Notes:
+            This is a form of case transform where the first letter of each word is
+            capitalized, with the rest of the word in lowercase. Non-alphanumeric
+            characters define the word boundaries.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> s_native = pa.chunked_array(
+            ...     [
+            ...         [
+            ...             "'e.t. phone home'",
+            ...             "you talkin' to me?",
+            ...             "to infinity,and BEYOND!",
+            ...         ]
+            ...     ]
+            ... )
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.to_titlecase().to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                "'E.T. Phone Home'",
+                "You Talkin' To Me?",
+                "To Infinity,And Beyond!"
+              ]
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.to_titlecase()
+        )
+
     def zfill(self, width: int) -> SeriesT:
         r"""Pad strings with zeros on the left.
 
@@ -412,34 +447,4 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
-        )
-
-    def to_titlecase(self) -> SeriesT:
-        """Modify strings to their titlecase equivalent.
-
-        Notes:
-            This is a form of case transform where the first letter of each word is
-            capitalized, with the rest of the word in lowercase. Non-alphanumeric
-            characters define the word boundaries.
-
-        Examples:
-            >>> s = pl.Series(
-            ...     "quotes",
-            ...     [
-            ...         "'e.t. phone home'",
-            ...         "you talkin' to me?",
-            ...         "to infinity,and BEYOND!",
-            ...     ],
-            ... )
-            >>> s.str.to_titlecase()
-            shape: (3,)
-            Series: 'quotes' [str]
-            [
-                "'E.T. Phone Home'"
-                "You Talkin' To Me?"
-                "To Infinity,And Beyond!"
-            ]
-        """
-        return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.to_titlecase()
         )

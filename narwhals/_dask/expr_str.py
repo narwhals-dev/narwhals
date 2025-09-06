@@ -103,6 +103,11 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
             format=format,
         )
 
+    def to_uppercase(self) -> DaskExpr:
+        return self.compliant._with_callable(
+            lambda expr: expr.str.upper(), "to_uppercase"
+        )
+
     def to_lowercase(self) -> DaskExpr:
         return self.compliant._with_callable(
             lambda expr: expr.str.lower(), "to_lowercase"
@@ -111,11 +116,6 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def to_titlecase(self) -> DaskExpr:
         return self.compliant._with_callable(
             lambda expr: expr.str.title(), "to_titlecase"
-        )
-
-    def to_uppercase(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.str.upper(), "to_uppercase"
         )
 
     def zfill(self, width: int) -> DaskExpr:
