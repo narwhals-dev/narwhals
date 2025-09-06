@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -15,12 +16,14 @@ from tests.utils import (
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
+    ConstructorPandasLike,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
 )
 
 if TYPE_CHECKING:
     from narwhals.typing import IntoSeriesT
+
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
@@ -140,26 +143,28 @@ def test_timestamp_datetimes_tz_aware(
     assert_equal_data(result, {"a": expected})
 
 
-@pytest.mark.parametrize(("time_unit"), [("ns"), ("us"), ("s")])
+@pytest.mark.parametrize(
+    ("time_unit", "context"),
+    [
+        ("ns", does_not_warn()),
+        ("us", pytest.warns(UserWarning, match="time unit 'us'")),
+        ("s", pytest.warns(UserWarning, match="time unit 's'")),
+    ],
+)
+@pytest.mark.skipif(
+    PANDAS_VERSION >= (2,), reason="Testing specific warning for pandas<2.0.0"
+)
 def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
-    constructor: Constructor, time_unit: Literal["ns", "us", "s"]
+    constructor_pandas_like: ConstructorPandasLike,
+    time_unit: Literal["ns", "us", "s"],
+    context: AbstractContextManager[Any],
 ) -> None:
-    not_pandas = "pandas" not in str(constructor)
-    post_v2 = PANDAS_VERSION >= (2,)
-    if not_pandas or post_v2:
-        pytest.skip("Testing specific warning for pandas<2.0.0")
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    expr = nw.col("a").cast(nw.Datetime(time_unit))
-    df = nw.from_native(constructor(datetimes))
-    expected_to_raise = time_unit != "ns"
-    if expected_to_raise:
-        with pytest.warns(
-            UserWarning, match=f"The time unit '{time_unit}' has been specified"
-        ):
-            df.select(expr)
-    else:
+    dtype = nw.Datetime(time_unit)
+    expr = nw.col("a").cast(dtype)
+    df = nw.from_native(constructor_pandas_like(datetimes))
+    with context:
         df.select(expr)
-        assert True, "No warning raised"
 
 
 @pytest.mark.parametrize(
