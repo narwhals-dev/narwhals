@@ -284,7 +284,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: Self,
+        other: BaseFrame[_FrameT],
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -335,7 +335,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: BaseFrame[_FrameT],
         *,
         left_on: str | None,
         right_on: str | None,
@@ -1111,7 +1111,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
@@ -1800,7 +1800,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def join(
         self,
-        other: Self,
+        other: BaseFrame[DataFrameT],
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
         *,
@@ -1846,7 +1846,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: BaseFrame[DataFrameT],
         *,
         left_on: str | None = None,
         right_on: str | None = None,
@@ -3052,7 +3052,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def join(
         self,
-        other: Self,
+        other: BaseFrame[LazyFrameT],
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
         *,
@@ -3107,7 +3107,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: BaseFrame[LazyFrameT],
         *,
         left_on: str | None = None,
         right_on: str | None = None,

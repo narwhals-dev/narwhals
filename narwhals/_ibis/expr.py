@@ -79,7 +79,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self,
         expr: ir.Value,
         partition_by: Sequence[str | ir.Value] = (),
-        order_by: Sequence[str | ir.Column] = (),
+        order_by: Sequence[str | ir.Value] = (),
         rows_start: int | None = None,
         rows_end: int | None = None,
         *,
@@ -96,7 +96,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             rows_between = {}
         window = ibis.window(
             group_by=partition_by,
-            order_by=self._sort(*order_by, descending=descending, nulls_last=nulls_last),
+            order_by=self._sort(
+                *cast("Sequence[ir.Column]", order_by),
+                descending=descending,
+                nulls_last=nulls_last,
+            ),
             **rows_between,
         )
         return expr.over(window)
@@ -217,7 +221,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=self._version,
         )
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         def _std(expr: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return expr.std(how="pop")
@@ -230,7 +234,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._with_callable(lambda expr: _std(expr, ddof))
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         def _var(expr: ir.NumericColumn, ddof: int) -> ir.Value:
             if ddof == 0:
                 return expr.var(how="pop")
