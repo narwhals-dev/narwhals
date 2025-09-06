@@ -153,9 +153,6 @@ def test_timestamp_datetimes_tz_aware(
         (nw.Datetime("s"), pytest.warns(UserWarning, match="time unit 's'")),
     ],
 )
-@pytest.mark.skipif(
-    PANDAS_VERSION >= (2,), reason="Testing specific warning for pandas<2.0.0"
-)
 def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
     constructor_pandas_like: ConstructorPandasLike,
     dtype: nw.Datetime | type[nw.Datetime],
@@ -164,7 +161,8 @@ def test_timestamp_for_pandas_v1_raises_warning_when_time_unit_is_ignored(
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     expr = nw.col("a").cast(dtype)
     df = nw.from_native(constructor_pandas_like(datetimes))
-    with context:
+    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
+    with ctx:
         df.select(expr)
 
 
