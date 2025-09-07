@@ -601,7 +601,10 @@ def apply_n_ary_operation(
 ) -> CompliantExprAny:
     parse = plx.parse_into_expr
     compliant_exprs = (parse(into, str_as_lit=str_as_lit) for into in comparands)
-    kinds = [ExprKind.from_into_expr(x, str_as_lit=str_as_lit) for x in compliant_exprs]
+    kinds = [
+        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
+        for comparand in comparands
+    ]
 
     broadcast = any(not kind.is_scalar_like for kind in kinds)
     compliant_exprs = (
