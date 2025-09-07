@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     )
 
     PS = ParamSpec("PS")
+    Incomplete: TypeAlias = Any
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
@@ -284,7 +285,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: BaseFrame[_FrameT],
+        other: Incomplete,
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -335,7 +336,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: BaseFrame[_FrameT],
+        other: Incomplete,
         *,
         left_on: str | None,
         right_on: str | None,
@@ -1800,7 +1801,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def join(
         self,
-        other: BaseFrame[DataFrameT],
+        other: Self,
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
         *,
@@ -1846,7 +1847,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def join_asof(
         self,
-        other: BaseFrame[DataFrameT],
+        other: Self,
         *,
         left_on: str | None = None,
         right_on: str | None = None,
@@ -3052,7 +3053,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def join(
         self,
-        other: BaseFrame[LazyFrameT],
+        other: Self,
         on: str | list[str] | None = None,
         how: JoinStrategy = "inner",
         *,
@@ -3107,7 +3108,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def join_asof(
         self,
-        other: BaseFrame[LazyFrameT],
+        other: Self,
         *,
         left_on: str | None = None,
         right_on: str | None = None,
