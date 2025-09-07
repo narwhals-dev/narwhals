@@ -21,8 +21,9 @@ if TYPE_CHECKING:
 
 class _Node:
     # TODO @dangotbanned: Utilize the spec to build an iteration pattern
-    def __init__(self, **kwds: Any) -> None:
-        self._kwds = kwds
+    def __init__(self, *, nested: bool, include_root_names: bool) -> None:
+        self._nested = nested
+        self._include_root_names = include_root_names
 
     def __set_name__(self, owner: type[Any], name: str) -> None:
         # https://docs.python.org/3/howto/descriptor.html#customized-names
@@ -31,7 +32,10 @@ class _Node:
         self._name_instance: str = f"_{name}"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}: {self._name_owner}.{self._name}\n  {self._kwds!r}"
+        return (
+            f"{type(self).__name__}: {self._name_owner}.{self._name}\n"
+            f"  nested={self._nested}\n  include_root_names={self._include_root_names!r}"
+        )
 
     def __get__(self, instance: object | None, owner: type[Any] | None) -> Any:
         return self if instance is None else getattr(instance, self._name_instance)
