@@ -34,11 +34,13 @@ def test_fill_null(constructor: Constructor) -> None:
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
-    data = {"a": [0.5, None, 2.0, 3.0, 4.5]}
+    data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
     df = nw.from_native(constructor(data))
 
-    result = df.select(nw.col("a").fill_null(nw.col("a").mean()))
-    expected = {"a": [0.5, 2.5, 2.0, 3.0, 4.5]}
+    result = df.select(
+        nw.col("a").fill_null(nw.col("a").mean()), nw.col("b").fill_null("a")
+    )
+    expected = {"a": [0.5, 2.5, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", "a", "yy"]}
     assert_equal_data(result, expected)
 
 
