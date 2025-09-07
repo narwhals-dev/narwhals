@@ -566,9 +566,9 @@ def test_dtype_base_type_nested() -> None:
     [
         (nw.Datetime("ns"), does_not_warn()),
         (nw.Datetime, does_not_warn()),
-        (nw.Datetime(), pytest.warns(UserWarning, match="time unit")),
-        (nw.Datetime("us"), pytest.warns(UserWarning, match="time unit='us'")),
-        (nw.Datetime("s"), pytest.warns(UserWarning, match="time unit='s'")),
+        (nw.Datetime(), pytest.warns(UserWarning, match="time_unit")),
+        (nw.Datetime("us"), pytest.warns(UserWarning, match="time_unit='us'")),
+        (nw.Datetime("s"), pytest.warns(UserWarning, match="time_unit='s'")),
     ],
 )
 def test_pandas_datetime_ignored_time_unit_warns(
