@@ -504,7 +504,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
                 changelog_url = "https://pandas.pydata.org/docs/dev/whatsnew/v2.0.0.html#construction-with-datetime64-or-timedelta64-dtype-with-unsupported-resolution"
                 msg = (
                     f"`nw.Datetime(time_unit={dtype.time_unit!r})` is only {available}\n"
-                    "Narwhals has fallen back to using `time unit='ns'` to avoid an error.\n\n"
+                    "Narwhals has fallen back to using `time_unit='ns'` to avoid an error.\n\n"
                     "Hint: to avoid this warning, consider either:\n"
                     f"- Upgrading pandas: {changelog_url}\n"
                     f"- Using a bare `nw.Datetime`, if this precision is not important"
