@@ -64,7 +64,8 @@ class PolarsExpr:
 
     @classmethod
     def _from_series(cls, series: PolarsSeries) -> PolarsExpr:
-        return series._to_expr()
+        # Polars can treat Series as Expr, so just pass down `series.native`.
+        return PolarsExpr(series.native, version=series._version)  # type: ignore[arg-type]
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
