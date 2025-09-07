@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._polars.series import PolarsSeries
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, ModeKeepStrategy, NumericLiteral
 
@@ -60,6 +61,10 @@ class PolarsExpr:
     def __init__(self, expr: pl.Expr, version: Version) -> None:
         self._native_expr = expr
         self._version = version
+
+    @classmethod
+    def _from_series(cls, series: PolarsSeries) -> Self:
+        return series._to_expr()
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
