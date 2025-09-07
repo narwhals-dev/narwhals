@@ -783,6 +783,5 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     @property
     def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
-    # Not implemented
-    drop_nulls: Any = not_implemented()
-    unique: Any = not_implemented()
+    drop_nulls = not_implemented()  # type: ignore[misc]
+    unique = not_implemented()  # type: ignore[misc]

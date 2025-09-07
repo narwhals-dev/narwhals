@@ -910,9 +910,9 @@ class LazyExpr(  # type: ignore[misc]
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
 
-    ewm_mean: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
-    map_batches: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
-    replace_strict: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
+    ewm_mean = not_implemented()  # type: ignore[misc]
+    map_batches = not_implemented()  # type: ignore[misc]
+    replace_strict = not_implemented()  # type: ignore[misc]
 
     cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
