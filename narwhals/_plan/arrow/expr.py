@@ -7,10 +7,9 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.functions import lit
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
-from narwhals._plan.common import ExprIR, NamedIR, into_dtype
+from narwhals._plan.common import ExprIR, NamedIR
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch, namespace
 from narwhals._utils import (
     Implementation,
@@ -247,13 +246,13 @@ class ArrowExpr(  # type: ignore[misc]
     def first(self, node: First, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[0] if len(prev) else lit(None, native.type)
+        result = native[0] if len(prev) else fn.lit(None, native.type)
         return self._with_native(result, name)
 
     def last(self, node: Last, frame: Frame, name: str) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
-        result = native[height - 1] if (height := len(prev)) else lit(None, native.type)
+        result = native[len_ - 1] if (len_ := len(prev)) else fn.lit(None, native.type)
         return self._with_native(result, name)
 
     def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
@@ -400,11 +399,9 @@ class ArrowScalar(
         version: Version = Version.MAIN,
     ) -> Self:
         dtype_pa: pa.DataType | None = None
-        if dtype:
-            dtype = into_dtype(dtype)
-            if not isinstance(dtype, version.dtypes.Unknown):
-                dtype_pa = narwhals_to_native_dtype(dtype, version)
-        return cls.from_native(lit(value, dtype_pa), name, version)
+        if dtype and dtype != version.dtypes.Unknown:
+            dtype_pa = narwhals_to_native_dtype(dtype, version)
+        return cls.from_native(fn.lit(value, dtype_pa), name, version)
 
     @classmethod
     def from_series(cls, series: Series) -> Self:

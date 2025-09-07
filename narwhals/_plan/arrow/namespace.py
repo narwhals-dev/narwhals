@@ -9,7 +9,6 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.functions import lit
 from narwhals._plan.common import collect
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
@@ -96,7 +95,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         def func(node: FunctionExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
-                it = (pc.fill_null(native, lit(fill)) for native in it)
+                it = (pc.fill_null(native, fn.lit(fill)) for native in it)
             result = reduce(fn_native, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
@@ -134,7 +133,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     ) -> Expr | Scalar:
         int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
-        filled = (pc.fill_null(native, lit(0)) for native in inputs)
+        filled = (pc.fill_null(native, fn.lit(0)) for native in inputs)
         # NOTE: `mypy` doesn't like that `add` is overloaded
         sum_not_null = reduce(
             fn.add,  # type: ignore[arg-type]
