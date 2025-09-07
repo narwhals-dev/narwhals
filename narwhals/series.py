@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, ove
 from narwhals._utils import (
     Implementation,
     Version,
+    _Implementation,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -77,6 +78,10 @@ class Series(Generic[IntoSeriesT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+
+    @property
+    def _compliant(self) -> CompliantSeries[IntoSeriesT]:
+        return self._compliant_series
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -226,33 +231,26 @@ class Series(Generic[IntoSeriesT]):
         )
         raise ValueError(msg)
 
-    @property
-    def implementation(self) -> Implementation:
-        """Return implementation of native Series.
+    implementation: _Implementation = _Implementation()
+    """Return [`narwhals.Implementation`][] of native Series.
 
-        This can be useful when you need to use special-casing for features outside of
-        Narwhals' scope - for example, when dealing with pandas' Period Dtype.
+    This can be useful when you need to use special-casing for features outside of
+    Narwhals' scope - for example, when dealing with pandas' Period Dtype.
 
-        Examples:
-            >>> import narwhals as nw
-            >>> import pandas as pd
-
-            >>> s_native = pd.Series([1, 2, 3])
-            >>> s = nw.from_native(s_native, series_only=True)
-
-            >>> s.implementation
-            <Implementation.PANDAS: 'pandas'>
-
-            >>> s.implementation.is_pandas()
-            True
-
-            >>> s.implementation.is_pandas_like()
-            True
-
-            >>> s.implementation.is_polars()
-            False
-        """
-        return self._compliant_series._implementation
+    Examples:
+        >>> import narwhals as nw
+        >>> import pandas as pd
+        >>> s_native = pd.Series([1, 2, 3])
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> s.implementation
+        <Implementation.PANDAS: 'pandas'>
+        >>> s.implementation.is_pandas()
+        True
+        >>> s.implementation.is_pandas_like()
+        True
+        >>> s.implementation.is_polars()
+        False
+    """
 
     def __bool__(self) -> NoReturn:
         msg = (

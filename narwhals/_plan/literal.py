@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
+from narwhals._plan._guards import is_literal
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import is_literal
 from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 
 if TYPE_CHECKING:
