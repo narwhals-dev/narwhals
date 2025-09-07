@@ -298,14 +298,14 @@ class DaskExpr(
     def max(self) -> Self:
         return self._with_callable(lambda expr: expr.max().to_series(), "max")
 
-    def std(self, ddof: int) -> Self:
+    def std(self, *, ddof: int) -> Self:
         return self._with_callable(
             lambda expr: expr.std(ddof=ddof).to_series(),
             "std",
             scalar_kwargs={"ddof": ddof},
         )
 
-    def var(self, ddof: int) -> Self:
+    def var(self, *, ddof: int) -> Self:
         return self._with_callable(
             lambda expr: expr.var(ddof=ddof).to_series(),
             "var",
@@ -682,20 +682,8 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
-    arg_max: not_implemented = not_implemented()
-    arg_min: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    rank: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
+    rank = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
     struct: not_implemented = not_implemented()  # type: ignore[assignment]

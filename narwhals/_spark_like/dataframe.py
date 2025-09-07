@@ -385,6 +385,7 @@ class SparkLikeLazyFrame(
     def join(
         self,
         other: Self,
+        *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
