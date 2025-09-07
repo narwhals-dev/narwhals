@@ -28,7 +28,12 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, qualified_type_name, zip_strict
+from narwhals._utils import (
+    _StoresCompliant,
+    not_implemented,
+    qualified_type_name,
+    zip_strict,
+)
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
@@ -904,6 +909,12 @@ class LazyExpr(  # type: ignore[misc]
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
+
+    ewm_mean: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
+    map_batches: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
+    replace_strict: not_implemented = not_implemented()  # pyright: ignore[reportIncompatibleMethodOverride]
+
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 
 class _ExprNamespace(  # type: ignore[misc]

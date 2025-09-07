@@ -682,12 +682,8 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
-    ewm_mean = not_implemented()
-    map_batches = not_implemented()
     rank = not_implemented()
-    replace_strict = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
     struct: not_implemented = not_implemented()  # type: ignore[assignment]
