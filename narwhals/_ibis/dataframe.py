@@ -336,29 +336,17 @@ class IbisLazyFrame(
         return self._with_native(self.native.distinct(on=subset))
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if isinstance(descending, bool):
-            descending = [descending for _ in range(len(by))]
+        from narwhals._ibis.expr import IbisExpr
 
-        sort_cols: list[Any] = []
-
-        for i in range(len(by)):
-            direction_fn = ibis.desc if descending[i] else ibis.asc
-            col = direction_fn(by[i], nulls_first=not nulls_last)
-            sort_cols.append(col)
-
-        return self._with_native(self.native.order_by(*sort_cols))
+        cols = IbisExpr._sort(*by, descending=descending, nulls_last=nulls_last)
+        return self._with_native(self.native.order_by(*cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        if isinstance(reverse, bool):
-            reverse = [reverse] * len(list(by))
-        sort_cols = []
+        from narwhals._ibis.expr import IbisExpr
 
-        for is_reverse, by_col in zip_strict(reverse, by):
-            direction_fn = ibis.asc if is_reverse else ibis.desc
-            col = direction_fn(by_col, nulls_first=False)
-            sort_cols.append(cast("ir.Column", col))
-
-        return self._with_native(self.native.order_by(*sort_cols).head(k))
+        desc = not reverse if isinstance(reverse, bool) else [not el for el in reverse]
+        cols = IbisExpr._sort(*by, descending=desc, nulls_last=True)
+        return self._with_native(self.native.order_by(*cols).head(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns

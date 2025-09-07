@@ -181,7 +181,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
 
     def join(
         self,
-        other: Self,
+        other: PolarsBaseFrame[NativePolarsFrame],
         *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
@@ -569,7 +569,7 @@ class PolarsDataFrame(
 
     def join(
         self,
-        other: Self,
+        other: PolarsBaseFrame[pl.DataFrame],
         *,
         how: JoinStrategy,
         left_on: Sequence[str] | None,
