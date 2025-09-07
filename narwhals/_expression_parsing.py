@@ -144,7 +144,7 @@ class ExprKind(Enum):
         return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
 
     @classmethod
-    def from_compliant_expr(cls, obj: CompliantExprAny) -> ExprKind:
+    def from_expr(cls, obj: Expr) -> ExprKind:
         meta = obj._metadata
         assert meta is not None  # noqa: S101
         if meta.is_literal:
@@ -160,7 +160,7 @@ class ExprKind(Enum):
         cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
     ) -> ExprKind:
         if is_expr(obj):
-            return cls.from_compliant_expr(obj)
+            return cls.from_expr(obj)
         if (
             is_narwhals_series(obj)
             or is_numpy_array(obj)
@@ -601,10 +601,7 @@ def apply_n_ary_operation(
 ) -> CompliantExprAny:
     parse = plx.parse_into_expr
     compliant_exprs = (parse(into, str_as_lit=str_as_lit) for into in comparands)
-    kinds = [
-        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
-        for comparand in comparands
-    ]
+    kinds = [ExprKind.from_into_expr(x, str_as_lit=str_as_lit) for x in compliant_exprs]
 
     broadcast = any(not kind.is_scalar_like for kind in kinds)
     compliant_exprs = (

@@ -153,15 +153,13 @@ class BaseFrame(Generic[_FrameT]):
         out_kinds = []
         ns = self.__narwhals_namespace__()
         for expr in flatten(exprs):
-            compliant_expr = self._parse_into_expr(expr)._to_compliant_expr(ns)
-            out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_compliant_expr(compliant_expr))
+            parsed_expr = self._parse_into_expr(expr)
+            out_exprs.append(parsed_expr._to_compliant_expr(ns))
+            out_kinds.append(ExprKind.from_expr(parsed_expr))
         for alias, expr in named_exprs.items():
-            compliant_expr = (
-                self._parse_into_expr(expr).alias(alias)._to_compliant_expr(ns)
-            )
-            out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_compliant_expr(compliant_expr))
+            parsed_expr = self._parse_into_expr(expr).alias(alias)
+            out_exprs.append(parsed_expr._to_compliant_expr(ns))
+            out_kinds.append(ExprKind.from_expr(parsed_expr))
         return out_exprs, out_kinds
 
     @abstractmethod

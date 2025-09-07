@@ -63,7 +63,7 @@ class PolarsExpr:
         self._version = version
 
     @classmethod
-    def _from_series(cls, series: PolarsSeries) -> Self:
+    def _from_series(cls, series: PolarsSeries) -> PolarsExpr:
         return series._to_expr()
 
     @property
