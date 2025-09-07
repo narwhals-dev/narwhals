@@ -146,7 +146,6 @@ class ExprKind(Enum):
     @classmethod
     def from_expr(cls, obj: Expr) -> ExprKind:
         meta = obj._metadata
-        assert meta is not None  # noqa: S101
         if meta.is_literal:
             return ExprKind.LITERAL
         if meta.is_scalar_like:
