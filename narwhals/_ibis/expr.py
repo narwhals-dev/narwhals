@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 import ibis
@@ -10,7 +9,17 @@ from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
-from narwhals._ibis.utils import is_floating, lit, narwhals_to_native_dtype
+from narwhals._ibis.utils import (
+    IntoColumn,
+    asc_nulls_first,
+    asc_nulls_last,
+    desc_nulls_first,
+    desc_nulls_last,
+    extend_bool,
+    is_floating,
+    lit,
+    narwhals_to_native_dtype,
+)
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, not_implemented, zip_strict
 
@@ -79,7 +88,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self,
         expr: ir.Value,
         partition_by: Sequence[str | ir.Value] = (),
-        order_by: Sequence[str | ir.Value] = (),
+        order_by: Sequence[IntoColumn] = (),
         rows_start: int | None = None,
         rows_end: int | None = None,
         *,
@@ -94,13 +103,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             rows_between = {"preceding": -rows_start}
         else:
             rows_between = {}
+        desc = descending or False
+        last = nulls_last or False
         window = ibis.window(
             group_by=partition_by,
-            order_by=self._sort(
-                *cast("Sequence[ir.Column]", order_by),
-                descending=descending,
-                nulls_last=nulls_last,
-            ),
+            order_by=self._sort(*order_by, descending=desc, nulls_last=last),
             **rows_between,
         )
         return expr.over(window)
@@ -114,24 +121,23 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         # Ibis does its own broadcasting.
         return self
 
+    @staticmethod
     def _sort(
-        self,
-        *cols: ir.Column | str,
-        descending: Sequence[bool] | None = None,
-        nulls_last: Sequence[bool] | None = None,
+        *cols: IntoColumn,
+        descending: Sequence[bool] | bool = False,
+        nulls_last: Sequence[bool] | bool = False,
     ) -> Iterator[ir.Column]:
-        descending = descending or [False] * len(cols)
-        nulls_last = nulls_last or [False] * len(cols)
+        n = len(cols)
+        descending = extend_bool(descending, n)
+        nulls_last = extend_bool(nulls_last, n)
         mapping = {
-            (False, False): partial(ibis.asc, nulls_first=True),
-            (False, True): partial(ibis.asc, nulls_first=False),
-            (True, False): partial(ibis.desc, nulls_first=True),
-            (True, True): partial(ibis.desc, nulls_first=False),
+            (False, False): asc_nulls_first,
+            (False, True): asc_nulls_last,
+            (True, False): desc_nulls_first,
+            (True, True): desc_nulls_last,
         }
-        yield from (
-            cast("ir.Column", mapping[(_desc, _nulls_last)](col))
-            for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last)
-        )
+        for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last):
+            yield mapping[(_desc, _nulls_last)](col)
 
     @classmethod
     def from_column_names(
@@ -293,7 +299,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         def _rank(expr: ir.Column) -> ir.Value:
-            order_by = next(self._sort(expr, descending=[descending], nulls_last=[True]))
+            order_by = next(self._sort(expr, descending=descending, nulls_last=True))
             window = ibis.window(order_by=order_by)
 
             if method == "dense":
