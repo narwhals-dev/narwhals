@@ -307,6 +307,7 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
+  'PANDAS_VERSION < \('
 ]
 
 [tool.mypy]
@@ -350,6 +351,7 @@ pythonPlatform = "All"
 # NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.9"
 reportMissingTypeArgument = "error"
+reportIncompatibleMethodOverride = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
