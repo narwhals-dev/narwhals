@@ -160,7 +160,7 @@ class BaseFrame(Generic[_FrameT]):
             ),
         )
         for expr in all_exprs:
-            out_exprs.append(expr._to_compliant_expr(ns))
+            out_exprs.append(ns.parse_into_expr(expr, str_as_lit=False))
             out_kinds.append(ExprKind.from_expr(expr))
         return out_exprs, out_kinds
 
