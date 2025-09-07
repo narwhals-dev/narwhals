@@ -1199,7 +1199,7 @@ class Expr:
                 ),
                 self,
                 value,
-                str_as_lit=False,
+                str_as_lit=True,
             ),
             self._metadata.with_orderable_window()
             if strategy is not None
