@@ -144,8 +144,9 @@ class ExprKind(Enum):
         return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
 
     @classmethod
-    def from_expr(cls, obj: Expr) -> ExprKind:
+    def from_compliant_expr(cls, obj: CompliantExprAny) -> ExprKind:
         meta = obj._metadata
+        assert meta is not None  # noqa: S101
         if meta.is_literal:
             return ExprKind.LITERAL
         if meta.is_scalar_like:
@@ -159,7 +160,7 @@ class ExprKind(Enum):
         cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
     ) -> ExprKind:
         if is_expr(obj):
-            return cls.from_expr(obj)
+            return cls.from_compliant_expr(obj)
         if (
             is_narwhals_series(obj)
             or is_numpy_array(obj)

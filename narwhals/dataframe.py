@@ -19,8 +19,9 @@ from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
     check_expressions_preserve_length,
-    is_into_expr_eager,
+    is_expr,
     is_scalar_like,
+    is_series,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
 from narwhals._utils import (
@@ -43,14 +44,14 @@ from narwhals._utils import (
     supports_arrow_c_stream,
     zip_strict,
 )
-from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
+from narwhals.dependencies import is_numpy_array_1d, is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidIntoExprError,
     InvalidOperationError,
     PerformanceWarning,
 )
-from narwhals.functions import _from_dict_no_backend, _is_into_schema
+from narwhals.functions import _from_dict_no_backend, _is_into_schema, col, new_series
 from narwhals.schema import Schema
 from narwhals.series import Series
 from narwhals.translate import to_native
@@ -67,9 +68,10 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
-    from narwhals._compliant.typing import CompliantExprAny, EagerNamespaceAny
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
+    from narwhals.expr import Expr
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -87,6 +89,7 @@ if TYPE_CHECKING:
         SingleIndexSelector,
         SizeUnit,
         UniqueKeepStrategy,
+        _1DArray,
         _2DArray,
     )
 
@@ -148,18 +151,21 @@ class BaseFrame(Generic[_FrameT]):
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
         out_kinds = []
+        ns = self.__narwhals_namespace__()
         for expr in flatten(exprs):
-            compliant_expr = self._extract_compliant(expr)
+            compliant_expr = self._parse_into_expr(expr)._to_compliant_expr(ns)
             out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_compliant_expr(compliant_expr))
         for alias, expr in named_exprs.items():
-            compliant_expr = self._extract_compliant(expr).alias(alias)
+            compliant_expr = (
+                self._parse_into_expr(expr).alias(alias)._to_compliant_expr(ns)
+            )
             out_exprs.append(compliant_expr)
-            out_kinds.append(ExprKind.from_into_expr(expr, str_as_lit=False))
+            out_kinds.append(ExprKind.from_compliant_expr(compliant_expr))
         return out_exprs, out_kinds
 
     @abstractmethod
-    def _extract_compliant(self, arg: Any) -> Any:
+    def _parse_into_expr(self, arg: Any) -> Expr:
         raise NotImplementedError
 
     def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
@@ -476,10 +482,15 @@ class DataFrame(BaseFrame[DataFrameT]):
     def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
         return self._compliant_frame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        if is_into_expr_eager(arg):
-            plx: EagerNamespaceAny = self.__narwhals_namespace__()
-            return plx.parse_into_expr(arg, str_as_lit=False)
+    def _parse_into_expr(self, arg: Expr | Series[Any] | _1DArray | str) -> Expr:
+        if isinstance(arg, str):
+            return col(arg)
+        if is_numpy_array_1d(arg):
+            return new_series("", arg, backend=self.implementation)._to_expr()
+        if is_series(arg):
+            return arg._to_expr()
+        if is_expr(arg):
+            return arg
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
@@ -2287,39 +2298,34 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
         return self._compliant_frame
 
-    def _extract_compliant(self, arg: Any) -> Any:
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Binary operations between Series and LazyFrame are not supported."
-            raise TypeError(msg)
-        if isinstance(arg, (Expr, str)):
-            if isinstance(arg, Expr):
-                if arg._metadata.n_orderable_ops:
-                    msg = (
-                        "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
-                        "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
-                        "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
-                        "`'date'` which orders your data, then replace:\n\n"
-                        "   nw.col('price').cum_sum()\n\n"
-                        " with:\n\n"
-                        "   nw.col('price').cum_sum().over(order_by='date')\n"
-                        "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                        "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
-                    )
-                    raise InvalidOperationError(msg)
-                if arg._metadata.is_filtration:
-                    msg = (
-                        "Length-changing expressions are not supported for use in LazyFrame, unless\n"
-                        "followed by an aggregation.\n\n"
-                        "Hints:\n"
-                        "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
-                        "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
-                        "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
-                    )
-                    raise InvalidOperationError(msg)
-            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
+    def _parse_into_expr(self, arg: Expr | str) -> Expr:
+        if isinstance(arg, str):
+            return col(arg)
+        if is_expr(arg):
+            if arg._metadata.n_orderable_ops:
+                msg = (
+                    "Order-dependent expressions are not supported for use in LazyFrame.\n\n"
+                    "Hint: To make the expression valid, use `.over` with `order_by` specified.\n\n"
+                    "For example, if you wrote `nw.col('price').cum_sum()` and you have a column\n"
+                    "`'date'` which orders your data, then replace:\n\n"
+                    "   nw.col('price').cum_sum()\n\n"
+                    " with:\n\n"
+                    "   nw.col('price').cum_sum().over(order_by='date')\n"
+                    "                            ^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                    "See https://narwhals-dev.github.io/narwhals/concepts/order_dependence/."
+                )
+                raise InvalidOperationError(msg)
+            if arg._metadata.is_filtration:
+                msg = (
+                    "Length-changing expressions are not supported for use in LazyFrame, unless\n"
+                    "followed by an aggregation.\n\n"
+                    "Hints:\n"
+                    "- Instead of `lf.select(nw.col('a').head())`, use `lf.select('a').head()\n"
+                    "- Instead of `lf.select(nw.col('a').drop_nulls()).select(nw.sum('a'))`,\n"
+                    "  use `lf.select(nw.col('a').drop_nulls().sum())\n"
+                )
+                raise InvalidOperationError(msg)
+            return arg
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     @property
