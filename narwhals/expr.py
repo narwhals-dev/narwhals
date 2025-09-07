@@ -1192,10 +1192,14 @@ class Expr:
             raise ValueError(msg)
 
         return self.__class__(
-            lambda plx: self._to_compliant_expr(plx).fill_null(
-                value=plx.parse_into_expr(value, str_as_lit=True),
-                strategy=strategy,
-                limit=limit,
+            lambda plx: apply_n_ary_operation(
+                plx,
+                lambda *exprs: exprs[0].fill_null(
+                    exprs[1], strategy=strategy, limit=limit
+                ),
+                self,
+                value,
+                str_as_lit=False,
             ),
             self._metadata.with_orderable_window()
             if strategy is not None

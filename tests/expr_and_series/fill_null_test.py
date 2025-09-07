@@ -33,6 +33,15 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_fill_null_w_aggregate(constructor: Constructor) -> None:
+    data = {"a": [0.5, None, 2.0, 3.0, 4.5]}
+    df = nw.from_native(constructor(data))
+
+    result = df.select(nw.col("a").fill_null(nw.col("a").mean()))
+    expected = {"a": [0.5, 2.5, 2.0, 3.0, 4.5]}
+    assert_equal_data(result, expected)
+
+
 def test_fill_null_pandas_downcast() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
