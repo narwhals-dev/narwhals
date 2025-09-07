@@ -109,13 +109,6 @@ class CompliantExpr(
     def broadcast(
         self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
     ) -> Self: ...
-    @staticmethod
-    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
-        def fn(df: CompliantFrameT) -> Sequence[str]:
-            column_names = df.columns
-            return [column_names[i] for i in indices]
-
-        return fn
 
     # NOTE: `polars`
     def all(self) -> Self: ...
@@ -152,6 +145,14 @@ class ImplExpr(
     CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[CompliantFrameT]:
+        def fn(df: CompliantFrameT) -> Sequence[str]:
+            column_names = df.columns
+            return [column_names[i] for i in indices]
+
+        return fn
+
     def _evaluate_aliases(self, frame: CompliantFrameT, /) -> Sequence[str]:
         # NOTE: Ignore intermittent [False Negative]
         # Argument of type "CompliantFrameT@ImplExpr" cannot be assigned to parameter of type "CompliantFrameT@ImplExpr"
