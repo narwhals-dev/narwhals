@@ -28,7 +28,12 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, qualified_type_name, zip_strict
+from narwhals._utils import (
+    _StoresCompliant,
+    not_implemented,
+    qualified_type_name,
+    zip_strict,
+)
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 
 if TYPE_CHECKING:
@@ -168,8 +173,14 @@ class DepthTrackingExpr(
     _depth: int
     _function_name: str
 
+    # NOTE: pyright bug?
+    # Method "from_column_names" overrides class "CompliantExpr" in an incompatible manner
+    # Parameter 2 type mismatch: base parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]", override parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]"
+    #   Type "EvalNames[CompliantFrameT@DepthTrackingExpr]" is not assignable to type "EvalNames[CompliantFrameT@DepthTrackingExpr]"
+    #     Parameter 1: type "CompliantFrameT@DepthTrackingExpr" is incompatible with type "CompliantFrameT@DepthTrackingExpr"
+    #       Type "CompliantFrameT@DepthTrackingExpr" is not assignable to type "CompliantFrameT@DepthTrackingExpr"
     @classmethod
-    def from_column_names(
+    def from_column_names(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls: type[Self],
         evaluate_column_names: EvalNames[CompliantFrameT],
         /,
@@ -898,6 +909,12 @@ class LazyExpr(  # type: ignore[misc]
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
+
+    ewm_mean = not_implemented()  # type: ignore[misc]
+    map_batches = not_implemented()  # type: ignore[misc]
+    replace_strict = not_implemented()  # type: ignore[misc]
+
+    cat: not_implemented = not_implemented()  # type: ignore[assignment]
 
 
 class _ExprNamespace(  # type: ignore[misc]

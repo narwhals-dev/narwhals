@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     )
 
     PS = ParamSpec("PS")
+    Incomplete: TypeAlias = Any
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
@@ -284,7 +285,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: Self,
+        other: Incomplete,
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -335,7 +336,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: Incomplete,
         *,
         left_on: str | None,
         right_on: str | None,
@@ -1111,7 +1112,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
