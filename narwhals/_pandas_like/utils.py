@@ -502,7 +502,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
                 msg = (
                     f"The time unit '{dtype.time_unit}' has been specified but is only "
                     f"available in pandas>2.0, found version {pd.__version__}."
-                    "To avoid an error, Narwhal's has therefore fallen back to using "
+                    "To avoid an error, Narwhals has therefore fallen back to using "
                     "'ns' as a time unit.\n"
                     "To avoid this warning, consider upgrading pandas or otherwise "
                     "specifying 'ns' time units."
