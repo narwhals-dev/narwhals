@@ -606,7 +606,7 @@ def read_csv(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
+        native_frame = native_namespace.read_csv(normalize_path(source), **kwargs)
     elif impl is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
@@ -676,6 +676,7 @@ def scan_csv(
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeDataFrame | NativeLazyFrame
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, **kwargs)
     elif implementation in {
@@ -695,7 +696,6 @@ def scan_csv(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-        source = normalize_path(source)
         csv_reader = session.read.format("csv")
         native_frame = (
             csv_reader.load(source)
@@ -762,6 +762,7 @@ def read_parquet(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
+        source = normalize_path(source)
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif impl is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
@@ -859,10 +860,7 @@ def scan_parquet(
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeDataFrame | NativeLazyFrame
-
-    # NOTE: Add to this if/when other failures show up
-    if implementation is Implementation.DUCKDB:
-        source = normalize_path(source)
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {
@@ -877,12 +875,11 @@ def scan_parquet(
     elif implementation is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
-        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
+        native_frame = pq.read_table(source, **kwargs)
     elif implementation.is_spark_like():
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-        source = normalize_path(source)
         pq_reader = session.read.format("parquet")
         native_frame = (
             pq_reader.load(source)
