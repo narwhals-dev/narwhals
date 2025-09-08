@@ -90,10 +90,9 @@ class DuckDBNamespace(
         if how == "diagonal":
             res = first.native
             for _item in native_items[1:]:
+                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
                 res = duckdb.sql("""
-                    from res select *
-                    union all by name
-                    from _item select *
+                    from res select * union all by name from _item select *
                 """)
             return first._with_native(res)
         res = reduce(lambda x, y: x.union(y), native_items)
