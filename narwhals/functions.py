@@ -695,7 +695,7 @@ def scan_csv(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
+        source = normalize_path(source)
         csv_reader = session.read.format("csv")
         native_frame = (
             csv_reader.load(source)
@@ -882,7 +882,7 @@ def scan_parquet(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
+        source = normalize_path(source)
         pq_reader = session.read.format("parquet")
         native_frame = (
             pq_reader.load(source)
