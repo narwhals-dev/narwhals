@@ -16,12 +16,14 @@ from narwhals._constants import (
     SECONDS_PER_DAY,
     US_PER_SECOND,
 )
+from narwhals._exceptions import issue_warning
 from narwhals._utils import (
     Implementation,
     Version,
     _DeferredIterable,
     check_columns_exist,
     isinstance_or_issubclass,
+    requires,
 )
 from narwhals.exceptions import ShapeError
 
@@ -493,10 +495,21 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
         return into_pd_type[dtype_backend]
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
-        # Pandas does not support "ms" or "us" time units before version 2.0
         if is_pandas_or_modin(implementation) and PANDAS_VERSION < (
             2,
         ):  # pragma: no cover
+            if isinstance(dtype, dtypes.Datetime) and dtype.time_unit != "ns":
+                found = requires._unparse_version(PANDAS_VERSION)
+                available = f"available in 'pandas>=2.0', found version {found!r}."
+                changelog_url = "https://pandas.pydata.org/docs/dev/whatsnew/v2.0.0.html#construction-with-datetime64-or-timedelta64-dtype-with-unsupported-resolution"
+                msg = (
+                    f"`nw.Datetime(time_unit={dtype.time_unit!r})` is only {available}\n"
+                    "Narwhals has fallen back to using `time_unit='ns'` to avoid an error.\n\n"
+                    "Hint: to avoid this warning, consider either:\n"
+                    f"- Upgrading pandas: {changelog_url}\n"
+                    f"- Using a bare `nw.Datetime`, if this precision is not important"
+                )
+                issue_warning(msg, UserWarning)
             dt_time_unit = "ns"
         else:
             dt_time_unit = dtype.time_unit
