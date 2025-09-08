@@ -8,6 +8,7 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
+    import os
     from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
@@ -438,6 +439,8 @@ Examples:
 IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
+
+FileSource: TypeAlias = "str | os.PathLike[str]"
 
 
 # Annotations for `__getitem__` methods

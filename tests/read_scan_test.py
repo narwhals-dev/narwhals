@@ -26,10 +26,9 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
+    from narwhals.typing import FileSource
 
 IOSourceKind: TypeAlias = Literal["str", "Path"]
-FileSource: TypeAlias = "str | Path"
-
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
@@ -40,7 +39,8 @@ spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
 
 
 def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
-    return {"str": str(source), "Path": source}[which]
+    mapping: Mapping[IOSourceKind, FileSource] = {"str": str(source), "Path": source}
+    return mapping[which]
 
 
 @pytest.fixture(scope="module", params=["str", "Path"])
