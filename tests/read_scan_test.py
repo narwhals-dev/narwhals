@@ -97,10 +97,10 @@ def test_read_csv_kwargs(csv_path: FileSource) -> None:
 
 
 @lazy_core_backend
-def test_read_csv_raise_with_lazy(csv_path: FileSource, backend: _LazyOnly) -> None:
+def test_read_csv_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_csv(csv_path, backend=backend)  # type: ignore[arg-type]
+        nw.read_csv("unused.csv", backend=backend)  # type: ignore[arg-type]
 
 
 def test_scan_csv(csv_path: FileSource, constructor: Constructor) -> None:
@@ -131,12 +131,10 @@ def test_read_parquet_kwargs(parquet_path: FileSource) -> None:
 
 
 @lazy_core_backend
-def test_read_parquet_raise_with_lazy(
-    parquet_path: FileSource, backend: _LazyOnly
-) -> None:
+def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
-        nw.read_parquet(parquet_path, backend=backend)  # type: ignore[arg-type]
+        nw.read_parquet("unused.parquet", backend=backend)  # type: ignore[arg-type]
 
 
 @skipif_pandas_lt_1_5
@@ -160,9 +158,9 @@ def test_scan_parquet_kwargs(parquet_path: FileSource) -> None:
 @spark_like_backend
 @pytest.mark.parametrize("scan_method", ["scan_csv", "scan_parquet"])
 def test_scan_fail_spark_like_without_session(
-    parquet_path: FileSource, backend: _SparkLike, scan_method: str
+    backend: _SparkLike, scan_method: str
 ) -> None:
     pytest.importorskip(backend)
     pattern = re.compile(r"spark.+backend.+require.+session", re.IGNORECASE)
     with pytest.raises(ValueError, match=pattern):
-        getattr(nw, scan_method)(parquet_path, backend=backend)
+        getattr(nw, scan_method)("unused.csv", backend=backend)
