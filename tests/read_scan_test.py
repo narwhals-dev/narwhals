@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 import pytest
@@ -20,9 +20,16 @@ import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from pathlib import Path
     from types import ModuleType
 
+    from typing_extensions import TypeAlias
+
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
+
+IOSourceKind: TypeAlias = Literal["str", "Path"]
+FileSource: TypeAlias = "str | Path"
+
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
@@ -32,20 +39,26 @@ lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlfr
 spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
 
 
-@pytest.fixture(scope="module")
-def csv_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
+    return {"str": str(source), "Path": source}[which]
+
+
+@pytest.fixture(scope="module", params=["str", "Path"])
+def csv_path(
+    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> FileSource:
     fp = tmp_path_factory.mktemp("data") / "file.csv"
-    filepath = str(fp)
-    pl.DataFrame(data).write_csv(filepath)
-    return filepath
+    pl.DataFrame(data).write_csv(fp)
+    return _into_file_source(fp, request.param)
 
 
-@pytest.fixture(scope="module")
-def parquet_path(tmp_path_factory: pytest.TempPathFactory) -> str:
+@pytest.fixture(scope="module", params=["str", "Path"])
+def parquet_path(
+    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> FileSource:
     fp = tmp_path_factory.mktemp("data") / "file.parquet"
-    filepath = str(fp)
-    pl.DataFrame(data).write_parquet(filepath)
-    return filepath
+    pl.DataFrame(data).write_parquet(fp)
+    return _into_file_source(fp, request.param)
 
 
 def assert_equal_eager(result: nw.DataFrame[Any]) -> None:
@@ -62,23 +75,23 @@ def native_namespace(cb: Constructor, /) -> ModuleType:
     return nw.get_native_namespace(nw.from_native(cb(data)))  # type: ignore[no-any-return]
 
 
-def test_read_csv(csv_path: str, eager_backend: EagerAllowed) -> None:
+def test_read_csv(csv_path: FileSource, eager_backend: EagerAllowed) -> None:
     assert_equal_eager(nw.read_csv(csv_path, backend=eager_backend))
 
 
 @skipif_pandas_lt_1_5
-def test_read_csv_kwargs(csv_path: str) -> None:
+def test_read_csv_kwargs(csv_path: FileSource) -> None:
     assert_equal_eager(nw.read_csv(csv_path, backend=pd, engine="pyarrow"))
 
 
 @lazy_core_backend
-def test_read_csv_raise_with_lazy(csv_path: str, backend: _LazyOnly) -> None:
+def test_read_csv_raise_with_lazy(csv_path: FileSource, backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
         nw.read_csv(csv_path, backend=backend)  # type: ignore[arg-type]
 
 
-def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
+def test_scan_csv(csv_path: FileSource, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True, "header": True}
@@ -91,29 +104,31 @@ def test_scan_csv(csv_path: str, constructor: Constructor) -> None:
 
 
 @skipif_pandas_lt_1_5
-def test_scan_csv_kwargs(csv_path: str) -> None:
+def test_scan_csv_kwargs(csv_path: FileSource) -> None:
     assert_equal_data(nw.scan_csv(csv_path, backend=pd, engine="pyarrow"), data)
 
 
 @skipif_pandas_lt_1_5
-def test_read_parquet(parquet_path: str, eager_backend: EagerAllowed) -> None:
+def test_read_parquet(parquet_path: FileSource, eager_backend: EagerAllowed) -> None:
     assert_equal_eager(nw.read_parquet(parquet_path, backend=eager_backend))
 
 
 @skipif_pandas_lt_1_5
-def test_read_parquet_kwargs(parquet_path: str) -> None:
+def test_read_parquet_kwargs(parquet_path: FileSource) -> None:
     assert_equal_eager(nw.read_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
 @lazy_core_backend
-def test_read_parquet_raise_with_lazy(parquet_path: str, backend: _LazyOnly) -> None:
+def test_read_parquet_raise_with_lazy(
+    parquet_path: FileSource, backend: _LazyOnly
+) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="Expected eager backend, found"):
         nw.read_parquet(parquet_path, backend=backend)  # type: ignore[arg-type]
 
 
 @skipif_pandas_lt_1_5
-def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
+def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
     kwargs: dict[str, Any]
     if "sqlframe" in str(constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
@@ -126,14 +141,14 @@ def test_scan_parquet(parquet_path: str, constructor: Constructor) -> None:
 
 
 @skipif_pandas_lt_1_5
-def test_scan_parquet_kwargs(parquet_path: str) -> None:
+def test_scan_parquet_kwargs(parquet_path: FileSource) -> None:
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=pd, engine="pyarrow"))
 
 
 @spark_like_backend
 @pytest.mark.parametrize("scan_method", ["scan_csv", "scan_parquet"])
 def test_scan_fail_spark_like_without_session(
-    parquet_path: str, backend: _SparkLike, scan_method: str
+    parquet_path: FileSource, backend: _SparkLike, scan_method: str
 ) -> None:
     pytest.importorskip(backend)
     pattern = re.compile(r"spark.+backend.+require.+session", re.IGNORECASE)
