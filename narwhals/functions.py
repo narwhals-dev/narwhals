@@ -765,7 +765,7 @@ def read_parquet(
     elif impl is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
-        native_frame = pq.read_table(source, **kwargs)
+        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
     elif impl in {
         Implementation.PYSPARK,
         Implementation.DASK,
@@ -872,7 +872,7 @@ def scan_parquet(
     elif implementation is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
-        native_frame = pq.read_table(source, **kwargs)
+        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
     elif implementation.is_spark_like():
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
