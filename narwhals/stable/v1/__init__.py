@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
 from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import is_expr
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -203,9 +204,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
+    def to_dict(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
@@ -233,17 +234,13 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     def _dataframe(self) -> type[DataFrame[Any]]:
         return DataFrame
 
-    def _extract_compliant(self, arg: Any) -> Any:
+    def _parse_into_expr(self, arg: Expr | str) -> Expr:  # type: ignore[override]
         # After v1, we raise when passing order-dependent, length-changing,
         # or filtration expressions to LazyFrame
-        from narwhals.expr import Expr
-        from narwhals.series import Series
-
-        if isinstance(arg, Series):  # pragma: no cover
-            msg = "Mixing Series with LazyFrame is not supported."
-            raise TypeError(msg)
-        if isinstance(arg, (Expr, str)):
-            return self.__narwhals_namespace__().parse_into_expr(arg, str_as_lit=False)
+        if isinstance(arg, str):
+            return col(arg)
+        if is_expr(arg):
+            return arg
         raise InvalidIntoExprError.from_invalid_type(type(arg))
 
     def collect(

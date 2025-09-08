@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
 
 from narwhals._utils import is_compliant_expr, zip_strict
-from narwhals.dependencies import is_narwhals_series, is_numpy_array, is_numpy_array_1d
+from narwhals.dependencies import is_narwhals_series, is_numpy_array
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -44,13 +43,6 @@ def is_series(obj: Any) -> TypeIs[Series[Any]]:
     from narwhals.series import Series
 
     return isinstance(obj, Series)
-
-
-def is_into_expr_eager(obj: Any) -> TypeIs[Expr | Series[Any] | str | _1DArray]:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-
-    return isinstance(obj, (Series, Expr, str)) or is_numpy_array_1d(obj)
 
 
 def combine_evaluate_output_names(
@@ -582,14 +574,6 @@ def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> No
     ):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise InvalidOperationError(msg)
-
-
-def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
-    # Raise if any argument in `args` isn't an aggregation or literal.
-    # For Series input, we don't raise (yet), we let such checks happen later,
-    # as this function works lazily and so can't evaluate lengths.
-    exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.is_scalar_like for x in exprs)
 
 
 def apply_n_ary_operation(
