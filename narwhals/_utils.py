@@ -116,6 +116,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         CompliantSeries,
         DTypes,
+        FileSource,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -2150,7 +2151,7 @@ class _Implementation:
         return self if instance is None else instance._compliant._implementation
 
 
-def normalize_path(source: str | os.PathLike[str], /) -> str:
+def normalize_path(source: FileSource, /) -> str:
     if isinstance(source, str):
         return source
     from pathlib import Path
