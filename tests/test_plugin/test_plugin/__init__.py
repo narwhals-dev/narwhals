@@ -11,12 +11,14 @@ if TYPE_CHECKING:
     )
     from test_plugin.namespace import DictNamespace
 
-
     from narwhals.utils import Version
 
-def __narwhals_namespace__(version:Version):
+
+def __narwhals_namespace__(version: Version):
     from test_plugin.namespace import DictNamespace
+
     return DictNamespace(version=version)
-    
+
+
 def is_native_object(obj: Any) -> TypeIs[DictFrame]:
     return isinstance(obj, dict)
