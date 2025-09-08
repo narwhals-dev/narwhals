@@ -25,8 +25,7 @@ In Narwhals, this is reflected in separate methods for Null/NaN values:
 | drop      | [`Expr.drop_nulls`][narwhals.Expr.drop_nulls] | *Not yet implemented (See [discussion](https://github.com/narwhals-dev/narwhals/issues/3031#issuecomment-3219910366))*<br>[`polars.Expr.drop_nans`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.drop_nans.html) |
 | count     | [`Expr.null_count`][narwhals.Expr.null_count] | *No upstream equivalent*                                                                                                                                                                                                                         |
 
-In pandas however the concepts are muddied. Depending on the data type of the underlying data structure,
-`np.nan`, `pd.NaT`, `None` and `pd.NA` can all encode missing data. (See e.g. [pandas missing value representation for numpy types](https://pandas.pydata.org/docs/user_guide/gotchas.html#missing-value-representation-for-numpy-types))
+In pandas however the concepts are muddied, as different sentinel values represent *missing* [depending on the data type](https://pandas.pydata.org/docs/user_guide/missing_data.html).
 
 Check how different tools distinguish them (or don't) in the following example:
 
