@@ -441,6 +441,13 @@ IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
 FileSource: TypeAlias = "str | os.PathLike[str]"
+"""Path to a file.
+
+Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+
+[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
+[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+"""
 
 
 # Annotations for `__getitem__` methods
