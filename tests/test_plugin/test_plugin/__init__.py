@@ -18,12 +18,5 @@ def __narwhals_namespace__(version:Version):
     from test_plugin.namespace import DictNamespace
     return DictNamespace(version=version)
     
-# here need to implement __narwhals_namespace__ instead!
-# def from_native(native_object: DictFrame, version: Version) -> DictLazyFrame:
-#     from test_plugin.dataframe import DictLazyFrame
-
-#     return DictLazyFrame(native_object, version=version)
-
-
 def is_native_object(obj: Any) -> TypeIs[DictFrame]:
     return isinstance(obj, dict)
