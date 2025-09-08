@@ -93,7 +93,7 @@ class Series(Generic[IntoSeriesT]):
 
     def _to_expr(self) -> Expr:
         md = ExprMetadata.selector_single()
-        return Expr(lambda plx: plx._expr._from_series(self._compliant), md)
+        return Expr(lambda _plx: self._compliant._to_expr(), md)
 
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
