@@ -52,9 +52,10 @@ def assert_series_equal(
 
     Examples:
         >>> import pandas as pd
+        >>> import narwhals as nw
         >>> from narwhals.testing import assert_series_equal
-        >>> s1 = pd.Series([1, 2, 3])
-        >>> s2 = pd.Series([1, 5, 3])
+        >>> s1 = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
+        >>> s2 = nw.from_native(pd.Series([1, 5, 3]), series_only=True)
         >>> assert_series_equal(s1, s2)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
