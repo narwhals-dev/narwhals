@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
     from narwhals.typing import FileSource
 
-IOSourceKind: TypeAlias = Literal["str", "Path"]
+IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
@@ -38,12 +38,24 @@ lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlfr
 spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
 
 
+class MockPathLike:
+    def __init__(self, path: Path) -> None:
+        self._super_secret: Path = path
+
+    def __fspath__(self) -> str:
+        return self._super_secret.__fspath__()
+
+
 def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
-    mapping: Mapping[IOSourceKind, FileSource] = {"str": str(source), "Path": source}
+    mapping: Mapping[IOSourceKind, FileSource] = {
+        "str": str(source),
+        "Path": source,
+        "PathLike": MockPathLike(source),
+    }
     return mapping[which]
 
 
-@pytest.fixture(scope="module", params=["str", "Path"])
+@pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
 def csv_path(
     tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
 ) -> FileSource:
@@ -52,7 +64,7 @@ def csv_path(
     return _into_file_source(fp, request.param)
 
 
-@pytest.fixture(scope="module", params=["str", "Path"])
+@pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
 def parquet_path(
     tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
 ) -> FileSource:
