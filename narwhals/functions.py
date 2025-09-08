@@ -21,6 +21,7 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
+    normalize_path,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -858,6 +859,10 @@ def scan_parquet(
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeDataFrame | NativeLazyFrame
+
+    # NOTE: Add to this if/when other failures show up
+    if implementation is Implementation.DUCKDB:
+        source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {

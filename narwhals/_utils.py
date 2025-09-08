@@ -2148,3 +2148,11 @@ class _Implementation:
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
     def __get__(self, instance: Narwhals[Any] | None, owner: Any) -> Any:
         return self if instance is None else instance._compliant._implementation
+
+
+def normalize_path(source: str | os.PathLike[str], /) -> str:
+    if isinstance(source, str):
+        return source
+    from pathlib import Path
+
+    return str(Path(source))
