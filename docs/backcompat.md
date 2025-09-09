@@ -98,6 +98,7 @@ Here are exceptions to our backwards compatibility policy:
 - We may consider making some type hints more precise.
 - Anything labelled "unstable".
 - We may sometimes need to bump the minimum versions of supported backends.
+- We will drop support for old python versions, roughly in sync with [devguide](https://devguide.python.org/versions/)
 
 In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
