@@ -2064,7 +2064,7 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
 
 
 @cache
-def discover_plugins() -> EntryPoints:
+def discover_entrypoints() -> EntryPoints:
     import sys
     from importlib.metadata import entry_points as eps
 

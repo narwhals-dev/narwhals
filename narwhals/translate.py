@@ -15,7 +15,7 @@ from narwhals._namespace import (
 from narwhals._utils import (
     Implementation,
     Version,
-    discover_plugins,
+    discover_entrypoints,
     has_native_namespace,
     is_compliant_dataframe,
     is_compliant_lazyframe,
@@ -564,10 +564,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    for plugin in discover_plugins():
-        obj = plugin.load()
-        if obj.is_native_object(native_object):
-            compliant_namespace = obj.__narwhals_namespace__(version=version)
+    for entry_point in discover_entrypoints():
+        plugin = entry_point.load()
+        if plugin.is_native_object(native_object):
+            compliant_namespace = plugin.__narwhals_namespace__(version=version)
             compliant_object = compliant_namespace.from_native(native_object)
             return _translate_if_compliant(
                 compliant_object,
