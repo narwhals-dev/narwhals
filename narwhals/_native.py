@@ -36,7 +36,7 @@ Putting it all together, we can now add a *narwhals-level* wrapper:
     class Thing(Generic[IntoThingT]):
         def to_native(self) -> IntoThingT: ...
 
-### (4) The funky ones (WIP)
+### (4) `Native<Backend>`
 Everything so far has been focused on the idea of matching an *unknown* native object to
 a [`Protocol`] used by a [generic class]:
 
@@ -44,23 +44,24 @@ a [`Protocol`] used by a [generic class]:
     LazyFrame[IntoLazyFrameT]
     Series[IntoSeriesT]
 
-A unique problem arises when we want to describe different behaviors, depending on what
-`Into*T` actually is.
+If we want to describe a set of more specific types (e.g. in [`@overload`s]), then these protocols/aliases are the right tool.
 
-TODO @dangotbanned: finish/shorten/scrap this section
+For common and easily-installed backends, aliases are composed of the native type(s):
 
-#### Notes
-- Previous comments
-  - NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
-  - Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
-- Related `@overload` content
-  - https://github.com/pola-rs/polars/pull/8011#discussion_r1158657862
+    NativePolars: TypeAlias = pl.DataFrame | pl.LazyFrame | pl.Series
 
+Otherwise, we need to define a [`Protocol`] which the native type(s) can match against *when* installed:
 
-### (5) Type guards (WIP)
-Using the types from **(4)**, these guards are *mostly* the same as those found in `nw.dependencies`.
+    class NativeDask(NativeLazyFrame, Protocol):
+        _partition_type: type[pd.DataFrame]
 
-They differ in *how many* native types are checked per-call.
+Important:
+    The goal is to be as minimal as possible, while still being *specific-enough* to **not** match something else.
+
+### (5) `is_native_<backend>`
+[Type guards] for **(4)**, *similar* to those found in `nw.dependencies`.
+
+They differ by checking **all** native types/protocols in a single-call and using ``Native<Backend>`` aliases.
 
 [structural]: https://typing.python.org/en/latest/spec/glossary.html#term-structural
 [nominal]: https://typing.python.org/en/latest/spec/glossary.html#term-nominal
@@ -68,6 +69,8 @@ They differ in *how many* native types are checked per-call.
 [`TypeAlias`]: https://mypy.readthedocs.io/en/stable/kinds_of_types.html#type-aliases
 [`TypeVar`]: https://mypy.readthedocs.io/en/stable/generics.html#type-variables-with-upper-bounds
 [generic class]: https://docs.python.org/3/library/typing.html#user-defined-generic-types
+[`@overload`s]: https://typing.python.org/en/latest/spec/overload.html
+[Type guards]: https://typing.python.org/en/latest/spec/narrowing.html
 """
 
 from __future__ import annotations
@@ -223,10 +226,7 @@ class _ModinSeries(_BasePandasLikeSeries, Protocol):
     _pandas_class: type[pd.Series[Any]]
 
 
-# NOTE: Using `pyspark.sql.DataFrame` creates false positives in overloads when not installed
 class _PySparkDataFrame(NativeLazyFrame, Protocol):
-    # Arbitrary method that `sqlframe` doesn't have and unlikely to appear anywhere else
-    # https://github.com/apache/spark/blob/8530444e25b83971da4314c608aa7d763adeceb3/python/pyspark/sql/dataframe.py#L4875
     def dropDuplicatesWithinWatermark(self, *arg: Any, **kwargs: Any) -> Any: ...  # noqa: N802
 
 
