@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from test_plugin.dataframe import DictFrame, DictLazyFrame
 
 from narwhals._compliant import CompliantNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals.utils import Version
@@ -16,3 +17,19 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
 
     def from_native(self, native_object: DictFrame) -> DictLazyFrame:
         return DictLazyFrame(native_object, version=self._version)
+
+    _expr: Any = not_implemented()
+    _implementation: Any = not_implemented()
+    len: Any = not_implemented()
+    lit: Any = not_implemented()
+    all_horizontal: Any = not_implemented()
+    any_horizontal: Any = not_implemented()
+    sum_horizontal: Any = not_implemented()
+    mean_horizontal: Any = not_implemented()
+    min_horizontal: Any = not_implemented()
+    max_horizontal: Any = not_implemented()
+    concat: Any = not_implemented()
+    when: Any = not_implemented()
+    concat_str: Any = not_implemented()
+    selectors: Any = not_implemented()
+    coalesce: Any = not_implemented()

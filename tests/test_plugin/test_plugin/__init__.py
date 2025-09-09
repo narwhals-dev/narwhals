@@ -4,19 +4,17 @@ from typing import TYPE_CHECKING, Any
 
 from typing_extensions import TypeIs
 
-# from narwhals.utils import Version
-
 if TYPE_CHECKING:
     from test_plugin.dataframe import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
         DictFrame,
-        DictLazyFrame,
     )
-    from test_plugin.namespace import DictNamespace
 
     from narwhals.utils import Version
+    from tests.test_plugin.test_plugin.namespace import DictNamespace
 
 
-def __narwhals_namespace__(version: Version):
+# @mp: is the return type here correct?
+def __narwhals_namespace__(version: Version) -> DictNamespace:  # noqa: N807
     from test_plugin.namespace import DictNamespace
 
     return DictNamespace(version=version)
