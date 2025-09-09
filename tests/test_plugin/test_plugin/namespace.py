@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from test_plugin.dataframe import DictFrame, DictLazyFrame
+from test_plugin.dataframe import DictFrame, DictLazyFrame # type: ignore
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._utils import not_implemented

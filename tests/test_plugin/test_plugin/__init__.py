@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
 
 def __narwhals_namespace__(version: Version) -> DictNamespace:  # noqa: N807
-    from test_plugin.namespace import DictNamespace
+    from test_plugin.namespace import DictNamespace # type: ignore
 
-    return DictNamespace(version=version)
+    return DictNamespace(version=version) # type: ignore
 
 
 def is_native_object(obj: Any) -> TypeIs[DictFrame]:
