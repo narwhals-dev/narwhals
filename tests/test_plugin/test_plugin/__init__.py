@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from tests.test_plugin.test_plugin.namespace import DictNamespace
 
 
-# @mp: is the return type here correct?
 def __narwhals_namespace__(version: Version) -> DictNamespace:  # noqa: N807
     from test_plugin.namespace import DictNamespace
 
