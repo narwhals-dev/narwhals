@@ -364,7 +364,7 @@ def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
     df = nw.from_native(constructor(df_native))
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
-        df.group_by("b").agg(nw.col("a").abs())
+        df.group_by("b").agg(nw.col("a").shift(1))
 
 
 def test_double_same_aggregation(
