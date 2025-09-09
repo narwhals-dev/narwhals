@@ -4,7 +4,6 @@ import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
 
-from narwhals._expression_parsing import ExprMetadata
 from narwhals._utils import (
     Implementation,
     Version,
@@ -21,7 +20,6 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from narwhals.expr import Expr
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -90,10 +88,6 @@ class Series(Generic[IntoSeriesT]):
         from narwhals.dataframe import DataFrame
 
         return DataFrame
-
-    def _to_expr(self) -> Expr:
-        md = ExprMetadata.selector_single()
-        return Expr(lambda _plx: self._compliant._to_expr(), md)
 
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]

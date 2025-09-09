@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from narwhals._utils import tupleify
+from narwhals._expression_parsing import all_exprs_are_scalar_like
+from narwhals._utils import flatten, tupleify
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import DataFrameT
 
@@ -71,8 +72,8 @@ class GroupBy(Generic[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
-        compliant_aggs, kinds = self._df._flatten_and_extract(*aggs, **named_aggs)
-        if not all(x.is_scalar_like for x in kinds):
+        flat_aggs = tuple(flatten(aggs))
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -80,6 +81,14 @@ class GroupBy(Generic[DataFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
+        plx = self._df.__narwhals_namespace__()
+        compliant_aggs = (
+            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(
+                value.alias(key)._to_compliant_expr(plx)
+                for key, value in named_aggs.items()
+            ),
+        )
         return self._df._with_compliant(self._grouped.agg(*compliant_aggs))
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
@@ -157,8 +166,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
             |└─────┴─────┴─────┘|
             └───────────────────┘
         """
-        compliant_aggs, kinds = self._df._flatten_and_extract(*aggs, **named_aggs)
-        if not all(x.is_scalar_like for x in kinds):
+        flat_aggs = tuple(flatten(aggs))
+        if not all_exprs_are_scalar_like(*flat_aggs, **named_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -166,4 +175,12 @@ class LazyGroupBy(Generic[LazyFrameT]):
                 "but `df.group_by('a').agg(nw.col('b'))` is not."
             )
             raise InvalidOperationError(msg)
+        plx = self._df.__narwhals_namespace__()
+        compliant_aggs = (
+            *(x._to_compliant_expr(plx) for x in flat_aggs),
+            *(
+                value.alias(key)._to_compliant_expr(plx)
+                for key, value in named_aggs.items()
+            ),
+        )
         return self._df._with_compliant(self._grouped.agg(*compliant_aggs))
