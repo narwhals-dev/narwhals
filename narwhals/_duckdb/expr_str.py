@@ -30,8 +30,11 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
 
     def to_titlecase(self) -> DuckDBExpr:
-        if (version := self.compliant._backend_version) < (1, 3):
-            msg = f"`str.to_titlecase` is only available in 'duckdb>=1.3', found version {version!r}."
+        if (version := self.compliant._backend_version) < (1, 3):  # pragma: no cover
+            msg = (
+                "`Expr.str.to_titlecase` is only available in 'duckdb>=1.3', "
+                f"found version {version!r}."
+            )
             raise NotImplementedError(msg)
 
         from duckdb import SQLExpression
