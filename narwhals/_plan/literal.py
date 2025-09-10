@@ -39,7 +39,7 @@ class LiteralValue(Immutable, Generic[LiteralT]):
 
 
 class ScalarLiteral(LiteralValue[NonNestedLiteralT]):
-    __slots__ = ("dtype", "value")
+    __slots__ = ("dtype", "value")  # pyright: ignore[reportIncompatibleMethodOverride]
     value: NonNestedLiteralT
     dtype: DType
 
