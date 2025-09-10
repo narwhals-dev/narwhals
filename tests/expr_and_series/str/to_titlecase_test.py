@@ -28,11 +28,11 @@ expected = {
 def test_str_to_titlecase(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark", "sqlframe")):
+    if any(x in str(constructor) for x in ("ibis", "pyspark", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
 
     expected_ = deepcopy(expected)
-    if "polars" in str(constructor):
+    if "polars" in str(constructor) or "duckdb" in str(constructor):
         expected_["a"][-1] = "With123numbers"
 
     df = nw.from_native(constructor(data))

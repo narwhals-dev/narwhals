@@ -5,7 +5,6 @@ from typing import Any, Generic
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._sql.typing import SQLExprT
-from narwhals._utils import not_implemented
 
 
 class SQLExprStringNamespace(
@@ -137,5 +136,3 @@ class SQLExprStringNamespace(
         # can't use `_with_elementwise` due to `when` operator.
         # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
         return self.compliant._with_callable(func)
-
-    to_titlecase: not_implemented = not_implemented()

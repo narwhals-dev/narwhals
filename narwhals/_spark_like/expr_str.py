@@ -34,3 +34,22 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
         )
 
     replace = not_implemented()
+    to_titlecase = not_implemented()
+    """The following attempt is _very_ close to replicate polars behavior:
+
+    ```py
+    def to_titlecase(self) -> SparkLikeExpr:
+        def _to_titlecase(expr: Column) -> Column:
+            F = self.compliant._F
+            lower_expr = F.lower(expr)
+            extract_expr = F.regexp_extract_all(lower_expr, regexp=r"[a-z0-9]+[^a-z0-9]*")
+            capitalized_expr = F.transform(extract_expr, f=F.initcap)
+            return F.array_join(capitalized_expr, delimiter="")
+
+        return self.compliant._with_elementwise(_to_titlecase)
+    ```
+    However:
+
+    * for pyspark: ColumnNotFoundError is raised
+    * for sqlframe: `regexp_extract_all` is not implemented
+    """
