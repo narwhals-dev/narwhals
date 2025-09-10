@@ -1,13 +1,27 @@
 from __future__ import annotations
 
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, Literal
 
 from narwhals.dependencies import is_narwhals_series
+
+if TYPE_CHECKING:
+    from typing_extensions import Never, TypeAlias
+
+SeriesDetail: TypeAlias = Literal[
+    "implementation mismatch",
+    "length mismatch",
+    "dtype mismatch",
+    "name mismatch",
+    "null value mismatch",
+    "exact value mismatch",
+    "values not within tolerance",
+    "nested value mismatch",
+]
 
 
 def raise_assertion_error(
     objects: str, detail: str, left: Any, right: Any, *, cause: Exception | None = None
-) -> NoReturn:
+) -> Never:
     """Raise a detailed assertion error."""
     __tracebackhide__ = True
 
@@ -20,3 +34,9 @@ def raise_assertion_error(
         f"[right]:{trailing_right}{right}"
     )
     raise AssertionError(msg) from cause
+
+
+def raise_series_assertion_error(
+    detail: SeriesDetail, left: Any, right: Any, *, cause: Exception | None = None
+) -> Never:
+    raise_assertion_error("Series", detail, left, right, cause=cause)

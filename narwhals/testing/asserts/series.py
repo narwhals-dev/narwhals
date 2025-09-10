@@ -7,7 +7,7 @@ from narwhals._utils import qualified_type_name, zip_strict
 from narwhals.dependencies import is_narwhals_series
 from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
 from narwhals.functions import new_series
-from narwhals.testing.asserts.utils import raise_assertion_error
+from narwhals.testing.asserts.utils import raise_series_assertion_error
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -121,19 +121,19 @@ def _check_metadata(
     """Check metadata information: implementation, length, dtype, and names."""
     left_impl, right_impl = left.implementation, right.implementation
     if left_impl != right_impl:
-        raise_assertion_error("Series", "implementation mismatch", left_impl, right_impl)
+        raise_series_assertion_error("implementation mismatch", left_impl, right_impl)
 
     left_len, right_len = len(left), len(right)
     if left_len != right_len:
-        raise_assertion_error("Series", "length mismatch", left_len, right_len)
+        raise_series_assertion_error("length mismatch", left_len, right_len)
 
     left_dtype, right_dtype = left.dtype, right.dtype
     if check_dtypes and left_dtype != right_dtype:
-        raise_assertion_error("Series", "dtype mismatch", left_dtype, right_dtype)
+        raise_series_assertion_error("dtype mismatch", left_dtype, right_dtype)
 
     left_name, right_name = left.name, right.name
     if check_names and left_name != right_name:
-        raise_assertion_error("Series", "name mismatch", left_name, right_name)
+        raise_series_assertion_error("name mismatch", left_name, right_name)
 
 
 def _check_null_values(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]:
@@ -142,8 +142,8 @@ def _check_null_values(left: SeriesT, right: SeriesT) -> tuple[SeriesT, SeriesT]
     left_null_mask, right_null_mask = left.is_null(), right.is_null()
 
     if left_null_count != right_null_count or (left_null_mask != right_null_mask).any():
-        raise_assertion_error(
-            "Series", "null value mismatch", left_null_count, right_null_count
+        raise_series_assertion_error(
+            "null value mismatch", left_null_count, right_null_count
         )
 
     return left.filter(~left_null_mask), right.filter(~right_null_mask)
@@ -211,7 +211,7 @@ def _check_exact_values(
         is_not_equal_mask = left != right
 
     if is_not_equal_mask.any():
-        raise_assertion_error("Series", "exact value mismatch", left, right)
+        raise_series_assertion_error("exact value mismatch", left, right)
 
 
 def _check_approximate_values(
@@ -223,8 +223,7 @@ def _check_approximate_values(
     )
 
     if is_not_close_mask.any():
-        raise_assertion_error(
-            "Series",
+        raise_series_assertion_error(
             "values not within tolerance",
             left.filter(is_not_close_mask),
             right.filter(is_not_close_mask),
@@ -249,7 +248,7 @@ def _check_list_like(
                 new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
             )
     except AssertionError:
-        raise_assertion_error("Series", "nested value mismatch", left_vals, right_vals)
+        raise_series_assertion_error("nested value mismatch", left_vals, right_vals)
 
 
 def _check_struct(
@@ -271,7 +270,7 @@ def _check_struct(
                 right_vals.struct.field(right_field.name),
             )
     except AssertionError:
-        raise_assertion_error("Series", "exact value mismatch", left_vals, right_vals)
+        raise_series_assertion_error("exact value mismatch", left_vals, right_vals)
 
 
 def _check_categorical(
