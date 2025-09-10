@@ -5,7 +5,7 @@ from copy import deepcopy
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
     "a": [
@@ -25,11 +25,15 @@ expected = {
 }
 
 
-def test_str_to_titlecase(
+def test_str_to_titlecase_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(x in str(constructor) for x in ("ibis", "pyspark", "sqlframe")):
         request.applymarker(pytest.mark.xfail)
+
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        reason = "version too old, duckdb 1.3 required for SQLExpression."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     expected_ = deepcopy(expected)
     if "polars" in str(constructor) or "duckdb" in str(constructor):
