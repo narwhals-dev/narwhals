@@ -49,10 +49,6 @@ class PolarsExpr:
     def from_column_indices(cls, *_: Any, **__: Any) -> Self:
         raise NotImplementedError
 
-    @staticmethod
-    def _eval_names_indices(*_: Any) -> Any:
-        raise NotImplementedError
-
     def __narwhals_expr__(self) -> Self:  # pragma: no cover
         return self
 

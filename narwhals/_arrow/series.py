@@ -373,12 +373,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             return self._with_native(self.native)
         return self._with_native(pa.concat_arrays(arrays))
 
-    def std(self, ddof: int, *, _return_py_scalar: bool = True) -> float:
+    def std(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
             pc.stddev(self.native, ddof=ddof), _return_py_scalar
         )
 
-    def var(self, ddof: int, *, _return_py_scalar: bool = True) -> float:
+    def var(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
             pc.variance(self.native, ddof=ddof), _return_py_scalar
         )

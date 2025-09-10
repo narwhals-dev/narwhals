@@ -14,6 +14,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    time_unit_compat,
 )
 
 if TYPE_CHECKING:
@@ -223,13 +224,10 @@ def test_cast_datetime_tz_aware(
     expected = {
         "date": ["2024-01-01 01:00:00", "2024-01-02 01:00:00", "2024-01-03 01:00:00"]
     }
-
+    dtype = nw.Datetime(time_unit_compat("ms", request), time_zone="Europe/Rome")
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("date")
-        .cast(nw.Datetime("ms", time_zone="Europe/Rome"))
-        .cast(nw.String())
-        .str.slice(offset=0, length=19)
+        nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
 
@@ -254,13 +252,10 @@ def test_cast_datetime_utc(
     expected = {
         "date": ["2024-01-01 00:00:00", "2024-01-02 00:00:00", "2024-01-03 00:00:00"]
     }
-
+    dtype = nw.Datetime(time_unit_compat("us", request), time_zone="UTC")
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("date")
-        .cast(nw.Datetime("us", time_zone="UTC"))
-        .cast(nw.String())
-        .str.slice(offset=0, length=19)
+        nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )
     assert_equal_data(result, expected)
 
