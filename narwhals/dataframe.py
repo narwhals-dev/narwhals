@@ -18,7 +18,6 @@ from typing import (
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
-    all_exprs_are_scalar_like,
     check_expressions_preserve_length,
     is_into_expr_eager,
     is_scalar_like,
@@ -92,6 +91,7 @@ if TYPE_CHECKING:
     )
 
     PS = ParamSpec("PS")
+    Incomplete: TypeAlias = Any
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
@@ -222,7 +222,7 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
+        if compliant_exprs and all(is_scalar_like(kind) for kind in kinds):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
@@ -285,7 +285,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: Self,
+        other: Incomplete,
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -336,7 +336,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: Incomplete,
         *,
         left_on: str | None,
         right_on: str | None,
@@ -1112,7 +1112,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True

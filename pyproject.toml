@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = []
 requires-python = ">=3.9"
 authors = [
@@ -309,6 +309,7 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
+  'PANDAS_VERSION < \('
 ]
 
 [tool.mypy]
@@ -352,6 +353,7 @@ pythonPlatform = "All"
 # NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
 # pythonVersion = "3.9"
 reportMissingTypeArgument = "error"
+reportIncompatibleMethodOverride = "error"
 reportMissingImports = "none"
 reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"

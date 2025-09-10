@@ -203,9 +203,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
+    def to_dict(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
