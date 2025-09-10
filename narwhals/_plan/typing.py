@@ -46,6 +46,15 @@ __all__ = [
 FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
 RollingT = TypeVar("RollingT", bound="RollingWindow", default="RollingWindow")
 RangeT = TypeVar("RangeT", bound="RangeFunction", default="RangeFunction")
+FunctionT_co = TypeVar(
+    "FunctionT_co", bound="Function", default="Function", covariant=True
+)
+RollingT_co = TypeVar(
+    "RollingT_co", bound="RollingWindow", default="RollingWindow", covariant=True
+)
+RangeT_co = TypeVar(
+    "RangeT_co", bound="RangeFunction", default="RangeFunction", covariant=True
+)
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")

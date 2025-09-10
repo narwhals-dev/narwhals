@@ -12,15 +12,15 @@ from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
-    FunctionT,
+    FunctionT_co,
     LeftSelectorT,
     LeftT,
     LiteralT,
     OperatorT,
-    RangeT,
+    RangeT_co,
     RightSelectorT,
     RightT,
-    RollingT,
+    RollingT_co,
     SelectorOperatorT,
     SelectorT,
     Seq,
@@ -258,7 +258,8 @@ class SortBy(ExprIR, child=("expr", "by")):
         yield from self.expr.iter_output_name()
 
 
-class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
+# mypy: disable-error-code="misc"
+class FunctionExpr(ExprIR, t.Generic[FunctionT_co], child=("input",)):
     """**Representing `Expr::Function`**.
 
     https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L114-L120
@@ -267,7 +268,13 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
 
     __slots__ = ("function", "input", "options")
     input: Seq[ExprIR]
-    function: FunctionT
+    # NOTE: mypy being mypy - the top error can't be silenced 🤦‍♂️
+    # narwhals/_plan/expr.py: error: Cannot use a covariant type variable as a parameter  [misc]
+    # narwhals/_plan/expr.py:272:15: error: Cannot use a covariant type variable as a parameter  [misc]
+    #         function: FunctionT_co  # noqa: ERA001
+    #                   ^
+    # Found 2 errors in 1 file (checked 476 source files)
+    function: FunctionT_co
     """Operation applied to each element of `input`."""
 
     options: FunctionOptions
@@ -304,7 +311,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
         self,
         *,
         input: Seq[ExprIR],  # noqa: A002
-        function: FunctionT,
+        function: FunctionT_co,
         options: FunctionOptions,
         **kwds: t.Any,
     ) -> None:
@@ -319,7 +326,7 @@ class FunctionExpr(ExprIR, t.Generic[FunctionT], child=("input",)):
         return self.function.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
 
-class RollingExpr(FunctionExpr[RollingT]): ...
+class RollingExpr(FunctionExpr[RollingT_co]): ...
 
 
 class AnonymousExpr(
@@ -333,7 +340,7 @@ class AnonymousExpr(
         return self.__expr_ir_dispatch__(ctx, t.cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
 
-class RangeExpr(FunctionExpr[RangeT]):
+class RangeExpr(FunctionExpr[RangeT_co]):
     """E.g. `int_range(...)`.
 
     Special-cased as it is only allowed scalar inputs, and is row_separable.
@@ -343,7 +350,7 @@ class RangeExpr(FunctionExpr[RangeT]):
         self,
         *,
         input: Seq[ExprIR],  # noqa: A002
-        function: RangeT,
+        function: RangeT_co,
         options: FunctionOptions,
         **kwds: t.Any,
     ) -> None:
