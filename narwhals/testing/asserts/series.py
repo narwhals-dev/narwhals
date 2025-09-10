@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.series import Series
     from narwhals.typing import IntoSeriesT, SeriesT
 
-    CheckFn: TypeAlias = Callable[[SeriesT, SeriesT], None]
+    CheckFn: TypeAlias = Callable[[Series[Any], Series[Any]], None]
 
 
 def assert_series_equal(
@@ -236,7 +236,7 @@ def _check_list_like(
     right_vals: SeriesT,
     left_dtype: List | Array,
     right_dtype: List | Array,
-    check_fn: CheckFn[SeriesT],
+    check_fn: CheckFn,
 ) -> None:
     # Check row by row after transforming each array/list into a new series.
     # Notice that order within the array/list must be the same, regardless of
@@ -245,8 +245,8 @@ def _check_list_like(
     try:
         for left_val, right_val in zip_strict(left_vals, right_vals):
             check_fn(
-                new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),  # type: ignore[arg-type]
-                new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),  # type: ignore[arg-type]
+                new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),
+                new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
             )
     except AssertionError:
         raise_assertion_error("Series", "nested value mismatch", left_vals, right_vals)
@@ -257,7 +257,7 @@ def _check_struct(
     right_vals: SeriesT,
     left_dtype: Struct,
     right_dtype: Struct,
-    check_fn: CheckFn[SeriesT],
+    check_fn: CheckFn,
 ) -> None:
     # Check field by field as a separate column.
     # Notice that for struct's polars raises if:
