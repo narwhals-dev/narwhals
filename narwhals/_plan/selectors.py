@@ -9,16 +9,18 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Immutable, flatten_hash_safe
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._utils import Version, _parse_time_unit_and_time_zone
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
     from datetime import timezone
     from typing import TypeVar
 
     from narwhals._plan import dummy
     from narwhals._plan.expr import RootSelector
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
@@ -50,9 +52,7 @@ class ByDType(Selector):
     dtypes: frozenset[DType | type[DType]]
 
     @staticmethod
-    def from_dtypes(
-        *dtypes: DType | type[DType] | Iterable[DType | type[DType]],
-    ) -> ByDType:
+    def from_dtypes(*dtypes: OneOrIterable[DType | type[DType]]) -> ByDType:
         return ByDType(dtypes=frozenset(flatten_hash_safe(dtypes)))
 
     def __repr__(self) -> str:
@@ -95,8 +95,8 @@ class Datetime(Selector):
 
     @staticmethod
     def from_time_unit_and_time_zone(
-        time_unit: TimeUnit | Iterable[TimeUnit] | None,
-        time_zone: str | timezone | Iterable[str | timezone | None] | None,
+        time_unit: OneOrIterable[TimeUnit] | None,
+        time_zone: OneOrIterable[str | timezone | None],
         /,
     ) -> Datetime:
         units, zones = _parse_time_unit_and_time_zone(time_unit, time_zone)
@@ -125,11 +125,10 @@ class Matches(Selector):
         return Matches(pattern=re.compile(pattern))
 
     @staticmethod
-    def from_names(*names: str | Iterable[str]) -> Matches:
+    def from_names(*names: OneOrIterable[str]) -> Matches:
         """Implements `cs.by_name` to support `__r<op>__` with column selections."""
         it: Iterator[str] = flatten_hash_safe(names)
-        pattern = f"^({'|'.join(re.escape(name) for name in it)})$"
-        return Matches.from_string(pattern)
+        return Matches.from_string(f"^({'|'.join(re.escape(name) for name in it)})$")
 
     def __repr__(self) -> str:
         return f"ncs.matches(pattern={self.pattern.pattern!r})"
@@ -158,13 +157,11 @@ def all() -> dummy.Selector:
     return All().to_selector().to_narwhals()
 
 
-def by_dtype(
-    *dtypes: DType | type[DType] | Iterable[DType | type[DType]],
-) -> dummy.Selector:
+def by_dtype(*dtypes: OneOrIterable[DType | type[DType]]) -> dummy.Selector:
     return ByDType.from_dtypes(*dtypes).to_selector().to_narwhals()
 
 
-def by_name(*names: str | Iterable[str]) -> dummy.Selector:
+def by_name(*names: OneOrIterable[str]) -> dummy.Selector:
     return Matches.from_names(*names).to_selector().to_narwhals()
 
 
@@ -177,8 +174,8 @@ def categorical() -> dummy.Selector:
 
 
 def datetime(
-    time_unit: TimeUnit | Iterable[TimeUnit] | None = None,
-    time_zone: str | timezone | Iterable[str | timezone | None] | None = ("*", None),
+    time_unit: OneOrIterable[TimeUnit] | None = None,
+    time_zone: OneOrIterable[str | timezone | None] = ("*", None),
 ) -> dummy.Selector:
     return (
         Datetime.from_time_unit_and_time_zone(time_unit, time_zone)

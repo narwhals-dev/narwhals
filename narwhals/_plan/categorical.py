@@ -1,23 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
-from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
     from narwhals._plan.dummy import Expr
 
 
+# fmt: off
 class CategoricalFunction(Function, accessor="cat"): ...
-
-
-class GetCategories(CategoricalFunction, options=FunctionOptions.groupwise): ...
-
-
+class GetCategories(CategoricalFunction): ...
+# fmt: on
 class IRCatNamespace(IRNamespace):
-    def get_categories(self) -> GetCategories:
-        return GetCategories()
+    get_categories: ClassVar = GetCategories
 
 
 class ExprCatNamespace(ExprNamespace[IRCatNamespace]):

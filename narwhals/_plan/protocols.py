@@ -1,27 +1,30 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence, Sized
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
+from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._plan import aggregation as agg, boolean, expr, functions as F, strings
-from narwhals._plan.common import ExprIR, Function, NamedIR, flatten_hash_safe
+from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Version, _hasattr_static
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._plan import aggregation as agg, boolean, expr, functions as F
+    from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
     from narwhals._plan.dummy import BaseFrame, DataFrame, Series
-    from narwhals._plan.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
+    from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
-    from narwhals.schema import Schema
     from narwhals.typing import (
         ConcatMethod,
         Into1DArray,
         IntoDType,
+        IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
         _1DArray,
@@ -29,7 +32,6 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 R_co = TypeVar("R_co", covariant=True)
-OneOrIterable: TypeAlias = "T | Iterable[T]"
 LengthT = TypeVar("LengthT")
 NativeT_co = TypeVar("NativeT_co", covariant=True, default=Any)
 
@@ -68,6 +70,22 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 
 LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
 LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
+
+Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co, NamespaceAny]"
+"""Type of an unknown expression dispatch context.
+
+- `FrameT_contra`: Compliant data/lazyframe
+- `R_co`: Upper bound return type of the context
+"""
+
+
+class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
+
+def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+    """Return the compliant namespace."""
+    return obj.__narwhals_namespace__()
 
 
 # NOTE: Unlike the version in `nw._utils`, here `.version` it is public
@@ -143,130 +161,11 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    _DISPATCH: ClassVar[Mapping[type[ExprIR], Callable[[Any, ExprIR, Any, str], Any]]] = {
-        expr.Column: lambda self, node, frame, name: self.__narwhals_namespace__().col(
-            node, frame, name
-        ),
-        expr.Literal: lambda self, node, frame, name: self.__narwhals_namespace__().lit(
-            node, frame, name
-        ),
-        expr.Len: lambda self, node, frame, name: self.__narwhals_namespace__().len(
-            node, frame, name
-        ),
-        expr.Cast: lambda self, node, frame, name: self.cast(node, frame, name),
-        expr.Sort: lambda self, node, frame, name: self.sort(node, frame, name),
-        expr.SortBy: lambda self, node, frame, name: self.sort_by(node, frame, name),
-        expr.Filter: lambda self, node, frame, name: self.filter(node, frame, name),
-        agg.First: lambda self, node, frame, name: self.first(node, frame, name),
-        agg.Last: lambda self, node, frame, name: self.last(node, frame, name),
-        agg.ArgMin: lambda self, node, frame, name: self.arg_min(node, frame, name),
-        agg.ArgMax: lambda self, node, frame, name: self.arg_max(node, frame, name),
-        agg.Sum: lambda self, node, frame, name: self.sum(node, frame, name),
-        agg.NUnique: lambda self, node, frame, name: self.n_unique(node, frame, name),
-        agg.Std: lambda self, node, frame, name: self.std(node, frame, name),
-        agg.Var: lambda self, node, frame, name: self.var(node, frame, name),
-        agg.Quantile: lambda self, node, frame, name: self.quantile(node, frame, name),
-        agg.Count: lambda self, node, frame, name: self.count(node, frame, name),
-        agg.Max: lambda self, node, frame, name: self.max(node, frame, name),
-        agg.Mean: lambda self, node, frame, name: self.mean(node, frame, name),
-        agg.Median: lambda self, node, frame, name: self.median(node, frame, name),
-        agg.Min: lambda self, node, frame, name: self.min(node, frame, name),
-        expr.BinaryExpr: lambda self, node, frame, name: self.binary_expr(
-            node, frame, name
-        ),
-        expr.RollingExpr: lambda self, node, frame, name: self.rolling_expr(
-            node, frame, name
-        ),
-        expr.AnonymousExpr: lambda self, node, frame, name: self.map_batches(
-            node, frame, name
-        ),
-        expr.FunctionExpr: lambda self, node, frame, name: self._dispatch_function(
-            node, frame, name
-        ),
-        # NOTE: Keeping it simple for now
-        # When adding other `*_range` functions, this should instead map to `range_expr`
-        expr.RangeExpr: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().int_range(node, frame, name),
-        expr.OrderedWindowExpr: lambda self, node, frame, name: self.over_ordered(
-            node, frame, name
-        ),
-        expr.WindowExpr: lambda self, node, frame, name: self.over(node, frame, name),
-        expr.Ternary: lambda self, node, frame, name: self.ternary_expr(
-            node, frame, name
-        ),
-    }
-    _DISPATCH_FUNCTION: ClassVar[
-        Mapping[type[Function], Callable[[Any, FunctionExpr, Any, str], Any]]
-    ] = {
-        boolean.AnyHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().any_horizontal(node, frame, name),
-        boolean.AllHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().all_horizontal(node, frame, name),
-        F.SumHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().sum_horizontal(node, frame, name),
-        F.MinHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().min_horizontal(node, frame, name),
-        F.MaxHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().max_horizontal(node, frame, name),
-        F.MeanHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().mean_horizontal(node, frame, name),
-        strings.ConcatHorizontal: lambda self,
-        node,
-        frame,
-        name: self.__narwhals_namespace__().concat_str(node, frame, name),
-        F.Pow: lambda self, node, frame, name: self.pow(node, frame, name),
-        F.FillNull: lambda self, node, frame, name: self.fill_null(node, frame, name),
-        boolean.IsBetween: lambda self, node, frame, name: self.is_between(
-            node, frame, name
-        ),
-        boolean.IsFinite: lambda self, node, frame, name: self.is_finite(
-            node, frame, name
-        ),
-        boolean.IsNan: lambda self, node, frame, name: self.is_nan(node, frame, name),
-        boolean.IsNull: lambda self, node, frame, name: self.is_null(node, frame, name),
-        boolean.Not: lambda self, node, frame, name: self.not_(node, frame, name),
-        boolean.Any: lambda self, node, frame, name: self.any(node, frame, name),
-        boolean.All: lambda self, node, frame, name: self.all(node, frame, name),
-    }
-
-    def _dispatch(self, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        if (method := self._DISPATCH.get(node.__class__)) and (
-            result := method(self, node, frame, name)
-        ):
-            return result  # type: ignore[no-any-return]
-        msg = f"Support for {node.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
-        raise NotImplementedError(msg)
-
-    def _dispatch_function(
-        self, node: FunctionExpr, frame: FrameT_contra, name: str
-    ) -> R_co:
-        fn = node.function
-        if (method := self._DISPATCH_FUNCTION.get(fn.__class__)) and (
-            result := method(self, node, frame, name)
-        ):
-            return result  # type: ignore[no-any-return]
-        msg = f"Support for {fn.__class__.__name__!r} is not yet implemented, got:\n{node!r}"
-        raise NotImplementedError(msg)
-
     @classmethod
     def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
         obj._version = frame.version
-        return obj._dispatch(node, frame, name)
+        return node.dispatch(obj, frame, name)
 
     @classmethod
     def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
@@ -284,41 +183,35 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
 
     @property
     def name(self) -> str: ...
-
     @classmethod
     def from_native(
         cls, native: Any, name: str = "", /, version: Version = Version.MAIN
     ) -> Self: ...
-
     def _with_native(self, native: Any, name: str, /) -> Self:
         return self.from_native(native, name or self.name, self.version)
 
     # series & scalar
     def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
-    def not_(
-        self, node: FunctionExpr[boolean.Not], frame: FrameT_contra, name: str
-    ) -> Self: ...
+    def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def fill_null(
         self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_between(
-        self, node: FunctionExpr[boolean.IsBetween], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsBetween], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_finite(
-        self, node: FunctionExpr[boolean.IsFinite], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsFinite], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_nan(
-        self, node: FunctionExpr[boolean.IsNan], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsNan], frame: FrameT_contra, name: str
     ) -> Self: ...
     def is_null(
-        self, node: FunctionExpr[boolean.IsNull], frame: FrameT_contra, name: str
+        self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
     ) -> Self: ...
-    def binary_expr(
-        self, node: expr.BinaryExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
+    def binary_expr(self, node: BinaryExpr, frame: FrameT_contra, name: str) -> Self: ...
     def ternary_expr(
-        self, node: expr.Ternary, frame: FrameT_contra, name: str
+        self, node: expr.TernaryExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
     def over(self, node: expr.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
     # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
@@ -406,7 +299,6 @@ class CompliantScalar(
         dtype: IntoDType | None,
         version: Version,
     ) -> Self: ...
-
     def _with_evaluated(self, evaluated: Any, name: str) -> Self:
         """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
         cls = type(self)
@@ -526,7 +418,7 @@ class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
         self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
     ) -> ConcatT2: ...
     def concat(
-        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], *, how: ConcatMethod
+        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
     ) -> ConcatT1 | ConcatT2: ...
 
 
@@ -536,7 +428,7 @@ class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # 
     # but that is only available privately
     def _concat_horizontal(self, items: Iterable[ConcatT1 | ConcatT2], /) -> ConcatT1: ...
     def _concat_vertical(
-        self, items: Iterable[ConcatT1] | Iterable[ConcatT2], /
+        self, items: Iterable[ConcatT1 | ConcatT2], /
     ) -> ConcatT1 | ConcatT2: ...
 
 
@@ -571,7 +463,7 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
         self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def concat_str(
-        self, node: FunctionExpr[strings.ConcatHorizontal], frame: FrameT, name: str
+        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def int_range(
         self, node: RangeExpr[IntRange], frame: FrameT, name: str
@@ -605,17 +497,9 @@ class EagerNamespace(
     def lit(
         self, node: expr.Literal[Series[Any]], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
-    @overload
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[Any]],
-        frame: EagerDataFrameT,
-        name: str,
-    ) -> EagerExprT_co | EagerScalarT_co: ...
     def lit(
         self, node: expr.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
-
     def len(self, node: expr.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
@@ -645,7 +529,6 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     @property
     def columns(self) -> list[str]: ...
     def to_narwhals(self) -> BaseFrame[NativeFrameT]: ...
-
     @classmethod
     def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
         obj = cls.__new__(cls)
@@ -672,15 +555,9 @@ class CompliantDataFrame(
 ):
     @classmethod
     def from_dict(
-        cls,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: Mapping[str, DType] | Schema | None = None,
+        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
-
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
-
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
     @overload
@@ -689,11 +566,9 @@ class CompliantDataFrame(
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-
     def __len__(self) -> int: ...
     def with_row_index(self, name: str) -> Self: ...
 
@@ -704,12 +579,10 @@ class EagerDataFrame(
 ):
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     def select(self, irs: Seq[NamedIR]) -> Self:
-        ns = self.__narwhals_namespace__()
-        return ns._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        ns = self.__narwhals_namespace__()
-        return ns._concat_horizontal(self._evaluate_irs(irs))
+        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
 
 class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
@@ -725,7 +598,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
 
     @property
     def dtype(self) -> DType: ...
-
     @property
     def name(self) -> str:
         return self._name
@@ -739,9 +611,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def from_native(
         cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self:
-        name = name or (
-            getattr(native, "name", name) if _hasattr_static(native, "name") else name
-        )
         obj = cls.__new__(cls)
         obj._native = native
         obj._name = name
@@ -752,7 +621,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def from_numpy(
         cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self: ...
-
     @classmethod
     def from_iterable(
         cls,
@@ -762,7 +630,6 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self: ...
-
     def _with_native(self, native: NativeSeriesT) -> Self:
         return self.from_native(native, self.name, version=self.version)
 

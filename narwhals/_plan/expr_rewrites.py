@@ -5,14 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import expr_parsing as parse
-from narwhals._plan.common import (
-    NamedIR,
+from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
     is_function_expr,
     is_window_expr,
-    map_ir,
 )
+from narwhals._plan.common import NamedIR, map_ir, replace
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
 if TYPE_CHECKING:
@@ -59,7 +58,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     ):
         func = window.expr
         parent, *args = func.input
-        return func.with_input((window.with_expr(parent), *args))
+        return replace(func, input=(replace(window, expr=parent), *args))
     return window
 
 
@@ -84,6 +83,5 @@ def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
         and (is_aggregation(window.expr.right))
     ):
         binary_expr = window.expr
-        rhs = window.expr.right
-        return binary_expr.with_right(window.with_expr(rhs))
+        return replace(binary_expr, right=replace(window, expr=binary_expr.right))
     return window

@@ -3,21 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import common
-from narwhals._plan.common import ExprIR, ExprNamespace, Immutable, IRNamespace
+from narwhals._plan._immutable import Immutable
+from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from typing_extensions import Self
-
     from narwhals._compliant.typing import AliasName
     from narwhals._plan.dummy import Expr
-    from narwhals._plan.typing import MapIR
 
 
-class KeepName(ExprIR):
+class KeepName(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr",)
-    expr: ExprIR
+    expr: common.ExprIR
 
     @property
     def is_scalar(self) -> bool:
@@ -26,24 +22,10 @@ class KeepName(ExprIR):
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
 
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
-
-
-class RenameAlias(ExprIR):
+class RenameAlias(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
-    expr: ExprIR
+    expr: common.ExprIR
     function: AliasName
 
     @property
@@ -52,20 +34,6 @@ class RenameAlias(ExprIR):
 
     def __repr__(self) -> str:
         return f".rename_alias({self.expr!r})"
-
-    def iter_left(self) -> Iterator[ExprIR]:
-        yield from self.expr.iter_left()
-        yield self
-
-    def iter_right(self) -> Iterator[ExprIR]:
-        yield self
-        yield from self.expr.iter_right()
-
-    def map_ir(self, function: MapIR, /) -> ExprIR:
-        return function(self.with_expr(self.expr.map_ir(function)))
-
-    def with_expr(self, expr: ExprIR, /) -> Self:
-        return common.replace(self, expr=expr)
 
 
 class Prefix(Immutable):
@@ -84,7 +52,7 @@ class Suffix(Immutable):
         return f"{name}{self.suffix}"
 
 
-class IRNameNamespace(IRNamespace):
+class IRNameNamespace(common.IRNamespace):
     def keep(self) -> KeepName:
         return KeepName(expr=self._ir)
 
@@ -104,7 +72,7 @@ class IRNameNamespace(IRNamespace):
         return self.map(str.upper)
 
 
-class ExprNameNamespace(ExprNamespace[IRNameNamespace]):
+class ExprNameNamespace(common.ExprNamespace[IRNameNamespace]):
     @property
     def _ir_namespace(self) -> type[IRNameNamespace]:
         return IRNameNamespace

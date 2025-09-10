@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._plan.common import Immutable, is_expr
+from narwhals._plan._guards import is_expr
+from narwhals._plan._immutable import Immutable
 from narwhals._plan.dummy import Expr
 from narwhals._plan.expr_parsing import (
     parse_into_expr_ir,
@@ -10,11 +11,9 @@ from narwhals._plan.expr_parsing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import Ternary
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, Seq
+    from narwhals._plan.expr import TernaryExpr
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 
 class When(Immutable):
@@ -39,7 +38,7 @@ class Then(Immutable, Expr):
     statement: ExprIR
 
     def when(
-        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
         condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
@@ -84,7 +83,7 @@ class ChainedThen(Immutable, Expr):
     statements: Seq[ExprIR]
 
     def when(
-        self, *predicates: IntoExprColumn | Iterable[IntoExprColumn], **constraints: Any
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
         condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
@@ -96,10 +95,8 @@ class ChainedThen(Immutable, Expr):
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
         otherwise = parse_into_expr_ir(statement)
-        it_conditions = reversed(self.conditions)
-        it_statements = reversed(self.statements)
-        for e in it_conditions:
-            otherwise = ternary_expr(e, next(it_statements), otherwise)
+        for cond, stmt in zip(reversed(self.conditions), reversed(self.statements)):
+            otherwise = ternary_expr(cond, stmt, otherwise)
         return otherwise
 
     @property
@@ -116,7 +113,7 @@ class ChainedThen(Immutable, Expr):
         return super().__eq__(value)
 
 
-def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> Ternary:
-    from narwhals._plan.expr import Ternary
+def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
+    from narwhals._plan.expr import TernaryExpr
 
-    return Ternary(predicate=predicate, truthy=truthy, falsy=falsy)
+    return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

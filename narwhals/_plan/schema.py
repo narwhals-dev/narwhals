@@ -7,7 +7,8 @@ from itertools import chain, repeat
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
-from narwhals._plan.common import _IMMUTABLE_HASH_NAME, Immutable, NamedIR
+from narwhals._plan._immutable import _IMMUTABLE_HASH_NAME, Immutable
+from narwhals._plan.common import NamedIR
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
@@ -95,8 +96,7 @@ class FrozenSchema(Immutable):
 
     @staticmethod
     def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
-        clone = MappingProxyType(dict(items))
-        return FrozenSchema._from_mapping(clone)
+        return FrozenSchema._from_mapping(MappingProxyType(dict(items)))
 
     def items(self) -> ItemsView[str, DType]:
         return self._mapping.items()

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
 
 
-class RangeFunction(Function):
+class RangeFunction(Function, config=FEOptions.namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
         from narwhals._plan.expr import RangeExpr
 

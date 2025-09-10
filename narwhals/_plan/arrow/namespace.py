@@ -7,9 +7,9 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.arrow.functions import lit
-from narwhals._plan.common import collect, is_tuple_of
+from narwhals._plan.common import collect
 from narwhals._plan.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
@@ -20,79 +20,64 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan import expr, functions as F
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame
-    from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
-    from narwhals._plan.arrow.series import ArrowSeries
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
+    from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
+    from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.dummy import Series
+    from narwhals._plan.dummy import Series as NwSeries
     from narwhals._plan.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatHorizontal
+    from narwhals._plan.strings import ConcatStr
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 
-class ArrowNamespace(
-    EagerNamespace["ArrowDataFrame", "ArrowSeries", "ArrowExpr", "ArrowScalar"]
-):
+class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     def __init__(self, version: Version = Version.MAIN) -> None:
         self._version = version
 
     @property
-    def _expr(self) -> type[ArrowExpr]:
+    def _expr(self) -> type[Expr]:
         from narwhals._plan.arrow.expr import ArrowExpr
 
         return ArrowExpr
 
     @property
-    def _scalar(self) -> type[ArrowScalar]:
+    def _scalar(self) -> type[Scalar]:
         from narwhals._plan.arrow.expr import ArrowScalar
 
         return ArrowScalar
 
     @property
-    def _series(self) -> type[ArrowSeries]:
+    def _series(self) -> type[Series]:
         from narwhals._plan.arrow.series import ArrowSeries
 
         return ArrowSeries
 
     @property
-    def _dataframe(self) -> type[ArrowDataFrame]:
+    def _dataframe(self) -> type[Frame]:
         from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
         return ArrowDataFrame
 
-    def col(self, node: expr.Column, frame: ArrowDataFrame, name: str) -> ArrowExpr:
+    def col(self, node: expr.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(
             frame.native.column(node.name), name, version=frame.version
         )
 
     @overload
     def lit(
-        self, node: expr.Literal[NonNestedLiteral], frame: ArrowDataFrame, name: str
-    ) -> ArrowScalar: ...
-
+        self, node: expr.Literal[NonNestedLiteral], frame: Frame, name: str
+    ) -> Scalar: ...
     @overload
     def lit(
-        self,
-        node: expr.Literal[Series[ChunkedArrayAny]],
-        frame: ArrowDataFrame,
-        name: str,
-    ) -> ArrowExpr: ...
-
-    @overload
+        self, node: expr.Literal[NwSeries[ChunkedArrayAny]], frame: Frame, name: str
+    ) -> Expr: ...
     def lit(
         self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
-        frame: ArrowDataFrame,
+        node: expr.Literal[NonNestedLiteral] | expr.Literal[NwSeries[ChunkedArrayAny]],
+        frame: Frame,
         name: str,
-    ) -> ArrowExpr | ArrowScalar: ...
-
-    def lit(
-        self,
-        node: expr.Literal[NonNestedLiteral] | expr.Literal[Series[ChunkedArrayAny]],
-        frame: ArrowDataFrame,
-        name: str,
-    ) -> ArrowExpr | ArrowScalar:
+    ) -> Expr | Scalar:
         if is_literal_scalar(node):
             return self._scalar.from_python(
                 node.unwrap(), name, dtype=node.dtype, version=frame.version
@@ -106,13 +91,11 @@ class ArrowNamespace(
     # https://github.com/narwhals-dev/narwhals/pull/2719
     def _horizontal_function(
         self, fn_native: Callable[[Any, Any], Any], /, fill: NonNestedLiteral = None
-    ) -> Callable[[FunctionExpr[Any], ArrowDataFrame, str], ArrowExpr | ArrowScalar]:
-        def func(
-            node: FunctionExpr[Any], frame: ArrowDataFrame, name: str
-        ) -> ArrowExpr | ArrowScalar:
+    ) -> Callable[[FunctionExpr[Any], Frame, str], Expr | Scalar]:
+        def func(node: FunctionExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
             it = (self._expr.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
-                it = (pc.fill_null(native, lit(fill)) for native in it)
+                it = (pc.fill_null(native, fn.lit(fill)) for native in it)
             result = reduce(fn_native, it)
             if isinstance(result, pa.Scalar):
                 return self._scalar.from_native(result, name, self.version)
@@ -121,36 +104,36 @@ class ArrowNamespace(
         return func
 
     def any_horizontal(
-        self, node: FunctionExpr[AnyHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[AnyHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         return self._horizontal_function(fn.or_)(node, frame, name)
 
     def all_horizontal(
-        self, node: FunctionExpr[AllHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[AllHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         return self._horizontal_function(fn.and_)(node, frame, name)
 
     def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[F.SumHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         return self._horizontal_function(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[F.MinHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         return self._horizontal_function(fn.min_horizontal)(node, frame, name)
 
     def max_horizontal(
-        self, node: FunctionExpr[F.MaxHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[F.MaxHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         return self._horizontal_function(fn.max_horizontal)(node, frame, name)
 
     def mean_horizontal(
-        self, node: FunctionExpr[F.MeanHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[F.MeanHorizontal], frame: Frame, name: str
+    ) -> Expr | Scalar:
         int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
-        filled = (pc.fill_null(native, lit(0)) for native in inputs)
+        filled = (pc.fill_null(native, fn.lit(0)) for native in inputs)
         # NOTE: `mypy` doesn't like that `add` is overloaded
         sum_not_null = reduce(
             fn.add,  # type: ignore[arg-type]
@@ -162,8 +145,8 @@ class ArrowNamespace(
         return self._expr.from_native(result, name, self.version)
 
     def concat_str(
-        self, node: FunctionExpr[ConcatHorizontal], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr | ArrowScalar:
+        self, node: FunctionExpr[ConcatStr], frame: Frame, name: str
+    ) -> Expr | Scalar:
         exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))
         separator = node.function.separator
@@ -173,9 +156,7 @@ class ArrowNamespace(
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
-    def int_range(
-        self, node: RangeExpr[IntRange], frame: ArrowDataFrame, name: str
-    ) -> ArrowExpr:
+    def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start_: PythonLiteral
         end_: PythonLiteral
         start, end = node.function.unwrap_input(node)
@@ -209,21 +190,12 @@ class ArrowNamespace(
         raise InvalidOperationError(msg)
 
     @overload
-    def concat(
-        self, items: Iterable[ArrowDataFrame], *, how: ConcatMethod
-    ) -> ArrowDataFrame: ...
-
+    def concat(self, items: Iterable[Frame], *, how: ConcatMethod) -> Frame: ...
     @overload
+    def concat(self, items: Iterable[Series], *, how: Literal["vertical"]) -> Series: ...
     def concat(
-        self, items: Iterable[ArrowSeries], *, how: Literal["vertical"]
-    ) -> ArrowSeries: ...
-
-    def concat(
-        self,
-        items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries],
-        *,
-        how: ConcatMethod,
-    ) -> ArrowDataFrame | ArrowSeries:
+        self, items: Iterable[Frame | Series], *, how: ConcatMethod
+    ) -> Frame | Series:
         if how == "vertical":
             return self._concat_vertical(items)
         if how == "horizontal":
@@ -232,20 +204,16 @@ class ArrowNamespace(
         first = next(it)
         if self._is_series(first):
             raise TypeError(first)
-        dfs = cast("Sequence[ArrowDataFrame]", (first, *it))
+        dfs = cast("Sequence[Frame]", (first, *it))
         return self._concat_diagonal(dfs)
 
-    def _concat_diagonal(self, items: Iterable[ArrowDataFrame]) -> ArrowDataFrame:
+    def _concat_diagonal(self, items: Iterable[Frame]) -> Frame:
         return self._dataframe.from_native(
             fn.concat_vertical_table(df.native for df in items), self.version
         )
 
-    def _concat_horizontal(
-        self, items: Iterable[ArrowDataFrame | ArrowSeries]
-    ) -> ArrowDataFrame:
-        def gen(
-            objs: Iterable[ArrowDataFrame | ArrowSeries],
-        ) -> Iterator[tuple[ChunkedArrayAny, str]]:
+    def _concat_horizontal(self, items: Iterable[Frame | Series]) -> Frame:
+        def gen(objs: Iterable[Frame | Series]) -> Iterator[tuple[ChunkedArrayAny, str]]:
             for item in objs:
                 if self._is_series(item):
                     yield item.native, item.name
@@ -256,9 +224,7 @@ class ArrowNamespace(
         native = pa.Table.from_arrays(arrays, list(names))
         return self._dataframe.from_native(native, self.version)
 
-    def _concat_vertical(
-        self, items: Iterable[ArrowDataFrame] | Iterable[ArrowSeries]
-    ) -> ArrowDataFrame | ArrowSeries:
+    def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
         collected = collect(items)
         if is_tuple_of(collected, self._series):
             sers = collected

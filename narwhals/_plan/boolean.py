@@ -4,8 +4,8 @@ from __future__ import annotations
 # - Any
 import typing as t
 
-from narwhals._plan.common import Function
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan.common import Function, HorizontalFunction
+from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._typing_compat import TypeVar
 
 if t.TYPE_CHECKING:
@@ -21,22 +21,22 @@ OtherT = TypeVar("OtherT")
 ExprT = TypeVar("ExprT", bound="ExprIR", default="ExprIR")
 
 
-class BooleanFunction(Function): ...
-
-
+# fmt: off
+class BooleanFunction(Function, options=FunctionOptions.elementwise): ...
 class All(BooleanFunction, options=FunctionOptions.aggregation): ...
-
-
-class AllHorizontal(BooleanFunction, options=FunctionOptions.horizontal): ...
-
-
+class AllHorizontal(HorizontalFunction, BooleanFunction): ...
 class Any(BooleanFunction, options=FunctionOptions.aggregation): ...
-
-
-class AnyHorizontal(BooleanFunction, options=FunctionOptions.horizontal): ...
-
-
-class IsBetween(BooleanFunction, options=FunctionOptions.elementwise):
+class AnyHorizontal(HorizontalFunction, BooleanFunction): ...
+class IsDuplicated(BooleanFunction, options=FunctionOptions.length_preserving): ...
+class IsFinite(BooleanFunction): ...
+class IsFirstDistinct(BooleanFunction, options=FunctionOptions.length_preserving): ...
+class IsLastDistinct(BooleanFunction, options=FunctionOptions.length_preserving): ...
+class IsNan(BooleanFunction): ...
+class IsNull(BooleanFunction): ...
+class IsUnique(BooleanFunction, options=FunctionOptions.length_preserving): ...
+class Not(BooleanFunction, config=FEOptions.renamed("not_")): ...
+# fmt: on
+class IsBetween(BooleanFunction):
     """N-ary (expr, lower_bound, upper_bound)."""
 
     __slots__ = ("closed",)
@@ -47,16 +47,7 @@ class IsBetween(BooleanFunction, options=FunctionOptions.elementwise):
         return expr, lower_bound, upper_bound
 
 
-class IsDuplicated(BooleanFunction, options=FunctionOptions.length_preserving): ...
-
-
-class IsFinite(BooleanFunction, options=FunctionOptions.elementwise): ...
-
-
-class IsFirstDistinct(BooleanFunction, options=FunctionOptions.length_preserving): ...
-
-
-class IsIn(BooleanFunction, t.Generic[OtherT], options=FunctionOptions.elementwise):
+class IsIn(BooleanFunction, t.Generic[OtherT]):
     __slots__ = ("other",)
     other: OtherT
 
@@ -90,19 +81,3 @@ class IsInExpr(IsIn[ExprT], t.Generic[ExprT]):
             "You should provide an iterable instead."
         )
         raise NotImplementedError(msg)
-
-
-class IsLastDistinct(BooleanFunction, options=FunctionOptions.length_preserving): ...
-
-
-class IsNan(BooleanFunction, options=FunctionOptions.elementwise): ...
-
-
-class IsNull(BooleanFunction, options=FunctionOptions.elementwise): ...
-
-
-class IsUnique(BooleanFunction, options=FunctionOptions.length_preserving): ...
-
-
-class Not(BooleanFunction, options=FunctionOptions.elementwise):
-    """`__invert__`."""

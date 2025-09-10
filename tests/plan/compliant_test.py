@@ -11,7 +11,7 @@ import pyarrow as pa
 
 import narwhals as nw
 from narwhals._plan import demo as nwd, selectors as ndcs
-from narwhals._plan.common import is_expr
+from narwhals._plan._guards import is_expr
 from narwhals._plan.dummy import DataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
