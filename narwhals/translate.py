@@ -15,6 +15,7 @@ from narwhals._namespace import (
 from narwhals._utils import (
     Implementation,
     Version,
+    _is_native_plugin,
     discover_entrypoints,
     has_native_namespace,
     is_compliant_dataframe,
@@ -566,7 +567,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     for entry_point in discover_entrypoints():
         plugin = entry_point.load()
-        if plugin.is_native_object(native_object):
+        if _is_native_plugin(native_object, plugin):
             compliant_namespace = plugin.__narwhals_namespace__(version=version)
             compliant_object = compliant_namespace.from_native(native_object)
             return _translate_if_compliant(

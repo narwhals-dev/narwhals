@@ -51,6 +51,7 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOper
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
+    from importlib.metadata import EntryPoints
     from types import ModuleType
 
     import pandas as pd
@@ -2068,15 +2069,15 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
-# @cache
-# def discover_entrypoints() -> EntryPoints:
-#     import sys
-#     from importlib.metadata import entry_points as eps
+@cache
+def discover_entrypoints() -> EntryPoints:
+    import sys
+    from importlib.metadata import entry_points as eps
 
-#     group = "narwhals.plugins"
-#     if sys.version_info < (3, 10):
-#         return cast("EntryPoints", eps().get(group, ()))
-#     return eps(group=group)
+    group = "narwhals.plugins"
+    if sys.version_info < (3, 10):
+        return cast("EntryPoints", eps().get(group, ()))
+    return eps(group=group)
 
 
 # @mp: should the protocol be defined in namespace?
@@ -2089,7 +2090,7 @@ class Plugin2(Protocol):
 @cache
 def _might_be(cls: type, type_: str) -> bool:
     try:
-        return any(f"{type_}." in str(o) for o in cls.mro())
+        return any(type_ in o.__module__.split(".") for o in cls.mro())
     except TypeError:
         return False
 
@@ -2097,6 +2098,7 @@ def _might_be(cls: type, type_: str) -> bool:
 def _is_native_plugin(native_object: Any, plugin: Plugin2) -> bool:
     pkg = plugin.NATIVE_PACKAGE
     return sys.modules.get(pkg) is not None and _might_be(type(native_object), pkg)
+
 
 class Compliant(
     _StoresNative[NativeT_co], _StoresImplementation, Protocol[NativeT_co]
