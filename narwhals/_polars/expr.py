@@ -407,7 +407,7 @@ class PolarsExprStringNamespace(
         if backend_version < (1, 5):  # pragma: no cover
             native_result = (
                 native_expr.str.to_lowercase()
-                .str.extract_all(r"[a-z0-9]+[^A-Za-z0-9]*")
+                .str.extract_all(r"[a-z0-9]*[^a-z0-9]*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )

@@ -25,7 +25,10 @@ expected = {
         "__Dunder__Score_A1_.2B ?Three",
     ]
 }
-REPLACEMENTS = {"With123Numbers": "With123numbers"}
+REPLACEMENTS = {
+    "With123Numbers": "With123numbers",
+    "__Dunder__Score_A1_.2B ?Three": "__Dunder__Score_A1_.2b ?Three",
+}
 
 
 def test_str_to_titlecase_expr(
