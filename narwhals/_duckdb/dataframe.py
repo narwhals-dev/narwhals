@@ -412,10 +412,10 @@ class DuckDBLazyFrame(
                 nulls_last=nulls_last,
             )
         return self._with_native(
-            self.native.select(StarExpression(), expr.alias(tmp_name))
-            .filter(col(tmp_name) == lit(1))
-            .select(StarExpression(exclude=[tmp_name]))
-        )
+            self.native.select(StarExpression(), expr.alias(tmp_name)).filter(
+                col(tmp_name) == lit(1)
+            )
+        ).drop([tmp_name], strict=False)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):
