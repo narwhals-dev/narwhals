@@ -381,6 +381,8 @@ class SparkLikeLazyFrame(
             window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])
         elif order_by:
             window = window.orderBy(*[self._F.asc_nulls_first(x) for x in order_by])
+        else:
+            window = window.orderBy(self._F.lit(1))
         if keep == "none":
             expr = self._F.count("*").over(window)
         else:
