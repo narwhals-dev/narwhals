@@ -26,8 +26,8 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
-    from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 

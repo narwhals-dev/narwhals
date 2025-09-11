@@ -20,9 +20,9 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr, RangeExpr
+    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatStr
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import (

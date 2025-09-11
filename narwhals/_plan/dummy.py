@@ -11,6 +11,7 @@ from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expressions import aggregation as agg, boolean, expr, functions as F
+from narwhals._plan.expressions.window import Over
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -20,7 +21,6 @@ from narwhals._plan.options import (
 )
 from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
-from narwhals._plan.window import Over
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -30,10 +30,13 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Never, Self
 
-    from narwhals._plan.categorical import ExprCatNamespace
     from narwhals._plan.common import ExprIR, Function, NamedIR
+    from narwhals._plan.expressions.categorical import ExprCatNamespace
+    from narwhals._plan.expressions.lists import ExprListNamespace
     from narwhals._plan.expressions.name import ExprNameNamespace
-    from narwhals._plan.lists import ExprListNamespace
+    from narwhals._plan.expressions.strings import ExprStringNamespace
+    from narwhals._plan.expressions.struct import ExprStructNamespace
+    from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.protocols import (
         CompliantBaseFrame,
@@ -41,9 +44,6 @@ if TYPE_CHECKING:
         CompliantSeries,
     )
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.strings import ExprStringNamespace
-    from narwhals._plan.struct import ExprStructNamespace
-    from narwhals._plan.temporal import ExprDateTimeNamespace
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -573,31 +573,31 @@ class Expr:
 
     @property
     def cat(self) -> ExprCatNamespace:
-        from narwhals._plan.categorical import ExprCatNamespace
+        from narwhals._plan.expressions.categorical import ExprCatNamespace
 
         return ExprCatNamespace(_expr=self)
 
     @property
     def struct(self) -> ExprStructNamespace:
-        from narwhals._plan.struct import ExprStructNamespace
+        from narwhals._plan.expressions.struct import ExprStructNamespace
 
         return ExprStructNamespace(_expr=self)
 
     @property
     def dt(self) -> ExprDateTimeNamespace:
-        from narwhals._plan.temporal import ExprDateTimeNamespace
+        from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
 
         return ExprDateTimeNamespace(_expr=self)
 
     @property
     def list(self) -> ExprListNamespace:
-        from narwhals._plan.lists import ExprListNamespace
+        from narwhals._plan.expressions.lists import ExprListNamespace
 
         return ExprListNamespace(_expr=self)
 
     @property
     def str(self) -> ExprStringNamespace:
-        from narwhals._plan.strings import ExprStringNamespace
+        from narwhals._plan.expressions.strings import ExprStringNamespace
 
         return ExprStringNamespace(_expr=self)
 

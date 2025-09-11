@@ -14,7 +14,7 @@ from narwhals._plan.expr_rewrites import (
     rewrite_elementwise_over,
 )
 from narwhals._plan.expressions.expr import WindowExpr
-from narwhals._plan.window import Over
+from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
