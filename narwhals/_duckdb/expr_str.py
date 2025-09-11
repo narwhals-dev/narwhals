@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._duckdb.utils import F, col, lit
+from narwhals._duckdb.utils import F, col, concat_str, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented
 
@@ -36,21 +36,20 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
                 f"found version {version!r}."
             )
             raise NotImplementedError(msg)
-        from duckdb import LambdaExpression
+        from narwhals._duckdb.utils import lambda_expr
 
         def _to_titlecase(expr: Expression) -> Expression:
-            lower_expr = F("lower", expr)
             extract_expr = F(
-                "regexp_extract_all", lower_expr, lit(r"[a-z0-9]*[^a-z0-9]*")
+                "regexp_extract_all", F("lower", expr), lit(r"[a-z0-9]*[^a-z0-9]*")
             )
-            capitalize = F(
-                "||",
-                F("upper", F("left", col("s"), lit(1))),
-                F("substr", col("s"), lit(2)),
+            s = col("s")
+            capitalize = lambda_expr(
+                s,
+                concat_str(
+                    F("upper", F("array_extract", s, lit(1))), F("substring", s, lit(2))
+                ),
             )
-            capitalized_expr = F(
-                "list_transform", extract_expr, LambdaExpression("s", capitalize)
-            )
+            capitalized_expr = F("list_transform", extract_expr, capitalize)
             return F("list_aggregate", capitalized_expr, lit("string_agg"), lit(""))
 
         return self.compliant._with_elementwise(_to_titlecase)
