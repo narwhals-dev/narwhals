@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 import duckdb.typing as duckdb_dtypes
 from duckdb.typing import DuckDBPyType
 
-from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass, zip_strict
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
     from duckdb import DuckDBPyRelation, Expression
 
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
 
+BACKEND_VERSION = Implementation.DUCKDB._backend_version()
+"""Static backend version for `duckdb`."""
 
 UNITS_DICT = {
     "y": "year",
@@ -48,6 +50,16 @@ when = duckdb.CaseExpression
 
 F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
+
+sql_expr: Callable[[str], Expression]
+"""Alias for [`duckdb.SQLExpression`].
+
+Important:
+    Requires [`duckdb>=1.3.0`]
+
+[`duckdb.SQLExpression`]: https://duckdb.org/docs/stable/clients/python/expression#sql-expression
+[`duckdb>=1.3.0`]: https://github.com/duckdb/duckdb/pull/16424
+"""
 
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
@@ -324,11 +336,8 @@ def window_expression(
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
-    try:
-        from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-        raise NotImplementedError(msg) from exc
+    from narwhals._duckdb.utils import sql_expr
+
     pb = generate_partition_by_sql(*partition_by)
     descending = descending or [False] * len(order_by)
     nulls_last = nulls_last or [False] * len(order_by)
@@ -344,7 +353,7 @@ def window_expression(
         rows = ""
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
-    return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+    return sql_expr(f"{func} over ({pb} {ob} {rows})")
 
 
 def catch_duckdb_exception(
@@ -368,3 +377,26 @@ def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
     return F(name, *args)
+
+
+def _import_duckdb_sql_expression() -> Callable[[str], Expression]:
+    if BACKEND_VERSION >= (1, 3):
+        from duckdb import SQLExpression
+
+        global sql_expr  # noqa: PLW0603
+
+        sql_expr = SQLExpression
+        return sql_expr
+    else:  # pragma: no cover  # noqa: RET505
+        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg)
+
+
+if not TYPE_CHECKING:  # NOTE: See https://github.com/pola-rs/polars/pull/24340
+
+    def __getattr__(name: str) -> Any:
+        if name == "sql_expr":
+            return _import_duckdb_sql_expression()
+
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
