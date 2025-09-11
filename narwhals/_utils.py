@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto
@@ -50,7 +51,6 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOper
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
-    from importlib.metadata import EntryPoints
     from types import ModuleType
 
     import pandas as pd
@@ -73,7 +73,12 @@ if TYPE_CHECKING:
         CompliantSeriesT,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
+    from narwhals._compliant.typing import (
+        CompliantNamespaceAny,
+        EvalNames,
+        NativeDataFrameT,
+        NativeLazyFrameT,
+    )
     from narwhals._namespace import (
         Namespace,
         _NativeArrow,
@@ -2063,16 +2068,35 @@ def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     return deep_attrgetter(name_1, *nested)(obj)
 
 
+# @cache
+# def discover_entrypoints() -> EntryPoints:
+#     import sys
+#     from importlib.metadata import entry_points as eps
+
+#     group = "narwhals.plugins"
+#     if sys.version_info < (3, 10):
+#         return cast("EntryPoints", eps().get(group, ()))
+#     return eps(group=group)
+
+
+# @mp: should the protocol be defined in namespace?
+class Plugin2(Protocol):
+    NATIVE_PACKAGE: LiteralString
+
+    def __narwhals_namespace__(self, version: Version) -> CompliantNamespaceAny: ...
+
+
 @cache
-def discover_entrypoints() -> EntryPoints:
-    import sys
-    from importlib.metadata import entry_points as eps
+def _might_be(cls: type, type_: str) -> bool:
+    try:
+        return any(f"{type_}." in str(o) for o in cls.mro())
+    except TypeError:
+        return False
 
-    group = "narwhals.plugins"
-    if sys.version_info < (3, 10):
-        return cast("EntryPoints", eps().get(group, ()))
-    return eps(group=group)
 
+def _is_native_plugin(native_object: Any, plugin: Plugin2) -> bool:
+    pkg = plugin.NATIVE_PACKAGE
+    return sys.modules.get(pkg) is not None and _might_be(type(native_object), pkg)
 
 class Compliant(
     _StoresNative[NativeT_co], _StoresImplementation, Protocol[NativeT_co]
