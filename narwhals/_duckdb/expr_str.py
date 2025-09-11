@@ -42,11 +42,12 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
             extract_expr = F(
                 "regexp_extract_all", F("lower", expr), lit(r"[a-z0-9]*[^a-z0-9]*")
             )
-            s = col("s")
+            elem = col("_")
             capitalize = lambda_expr(
-                s,
+                elem,
                 concat_str(
-                    F("upper", F("array_extract", s, lit(1))), F("substring", s, lit(2))
+                    F("upper", F("array_extract", elem, lit(1))),
+                    F("substring", elem, lit(2)),
                 ),
             )
             capitalized_expr = F("list_transform", extract_expr, capitalize)
