@@ -34,12 +34,12 @@ REPLACEMENTS = {
 def test_str_to_titlecase_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
-
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
         reason = "version too old, duckdb 1.2 required for LambdaExpression."
-        request.applymarker(pytest.mark.xfail(reason=reason))
+        pytest.skip(reason=reason)
+
+    if "ibis" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     if "sqlframe" in str(constructor):
         reason = "https://github.com/eakmanrq/sqlframe/issues/505"

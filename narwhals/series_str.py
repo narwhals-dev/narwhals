@@ -402,7 +402,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Warning:
             Different backends might follow different rules to determine what a "word" is:
 
-            - polars uses **non-alphanumeric** characters to define the word boundaries.
+            - duckdb, polars and spark-like uses **non-alphanumeric** characters to
+                define the word boundaries.
             - pandas-like, pyarrow and dask use **non-alphabetic** characters to define
                 the word boundaries, matching the behavior of
                 [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
