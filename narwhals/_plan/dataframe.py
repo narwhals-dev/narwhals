@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import expr_expansion, expr_parsing as parse
+from narwhals._plan import _parse, expr_expansion
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expr import _parse_sort_by
 from narwhals._plan.series import Series
@@ -69,7 +69,7 @@ class BaseFrame(Generic[NativeFrameT]):
     ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
         """Temp, while these parts aren't connected, this is easier for testing."""
         irs, schema_frozen, output_names = expr_expansion.prepare_projection(
-            parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
         )
         named_irs = expr_expansion.into_named_irs(irs, output_names)
         return schema_frozen.project(named_irs, context)

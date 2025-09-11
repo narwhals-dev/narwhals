@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan import expr_parsing as parse, functions as nwd
+from narwhals._plan import _parse, functions as nwd
 from narwhals._plan._guards import is_expr
 from narwhals._plan.common import ExprIR, NamedIR
 from narwhals._plan.expr_rewrites import (
@@ -44,8 +44,8 @@ def schema_2() -> dict[str, DType]:
 
 def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> WindowExpr:
     return WindowExpr(
-        expr=parse.parse_into_expr_ir(into_expr),
-        partition_by=parse.parse_into_seq_of_expr_ir(*partition_by),
+        expr=_parse.parse_into_expr_ir(into_expr),
+        partition_by=_parse.parse_into_seq_of_expr_ir(*partition_by),
         options=Over(),
     )
 

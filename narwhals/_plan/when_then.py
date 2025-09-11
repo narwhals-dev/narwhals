@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan._guards import is_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.expr import Expr
-from narwhals._plan.expr_parsing import (
+from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_predicates_constraints_into_expr_ir,
 )
+from narwhals._plan.expr import Expr
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR

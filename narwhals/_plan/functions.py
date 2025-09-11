@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, expr_parsing as parse
+from narwhals._plan import _guards, _parse
 from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
 from narwhals._plan.expressions import boolean, expr, functions as F
 from narwhals._plan.expressions.expr import All, Len
@@ -81,32 +81,32 @@ def sum(*columns: str) -> Expr:
 
 
 def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return F.SumHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MinHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(*exprs)
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
     return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
 
 
@@ -116,7 +116,7 @@ def concat_str(
     separator: str = "",
     ignore_nulls: bool = False,
 ) -> Expr:
-    it = parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
     return (
         ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
         .to_function_expr(*it)
@@ -136,7 +136,7 @@ def when(
         nw._plan.Expr(main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
-    condition = parse.parse_predicates_constraints_into_expr_ir(
+    condition = _parse.parse_predicates_constraints_into_expr_ir(
         *predicates, **constraints
     )
     return When._from_ir(condition)
@@ -158,6 +158,6 @@ def int_range(
         raise NotImplementedError(msg)
     return (
         IntRange(step=step, dtype=into_dtype(dtype))
-        .to_function_expr(*parse.parse_into_seq_of_expr_ir(start, end))
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )

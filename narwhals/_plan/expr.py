@@ -4,8 +4,12 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
-from narwhals._plan import expr_parsing as parse
 from narwhals._plan._guards import is_column, is_expr, is_series
+from narwhals._plan._parse import (
+    parse_into_expr_ir,
+    parse_into_seq_of_expr_ir,
+    parse_predicates_constraints_into_expr_ir,
+)
 from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions import (
     aggregation as agg,
@@ -56,7 +60,7 @@ def _parse_sort_by(
     descending: OneOrIterable[bool] = False,
     nulls_last: OneOrIterable[bool] = False,
 ) -> tuple[Seq[ExprIR], SortMultipleOptions]:
-    sort_by = parse.parse_into_seq_of_expr_ir(by, *more_by)
+    sort_by = parse_into_seq_of_expr_ir(by, *more_by)
     if length_changing := next((e for e in sort_by if e.is_scalar), None):
         msg = f"All expressions sort keys must preserve length, but got:\n{length_changing!r}"
         raise InvalidOperationError(msg)
@@ -158,9 +162,9 @@ class Expr:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
         if partition_by:
-            partition = parse.parse_into_seq_of_expr_ir(*partition_by)
+            partition = parse_into_seq_of_expr_ir(*partition_by)
         if order_by is not None:
-            by = parse.parse_into_seq_of_expr_ir(order_by)
+            by = parse_into_seq_of_expr_ir(order_by)
             options = SortOptions(descending=descending, nulls_last=nulls_last)
             node = Over().to_ordered_window_expr(self._ir, partition, by, options)
         else:
@@ -186,7 +190,7 @@ class Expr:
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        by = parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        by = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(expr.Filter(expr=self._ir, by=by))
 
     def _with_unary(self, function: Function, /) -> Self:
@@ -238,7 +242,7 @@ class Expr:
         limit: int | None = None,
     ) -> Self:
         if strategy is None:
-            ir = parse.parse_into_expr_ir(value, str_as_lit=True)
+            ir = parse_into_expr_ir(value, str_as_lit=True)
             return self._from_ir(F.FillNull().to_function_expr(self._ir, ir))
         return self._with_unary(F.FillNullWithStrategy(strategy=strategy, limit=limit))
 
@@ -263,11 +267,8 @@ class Expr:
         lower_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
         upper_bound: IntoExprColumn | NumericLiteral | TemporalLiteral | None = None,
     ) -> Self:
-        return self._from_ir(
-            F.Clip().to_function_expr(
-                self._ir, *parse.parse_into_seq_of_expr_ir(lower_bound, upper_bound)
-            )
-        )
+        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+        return self._from_ir(F.Clip().to_function_expr(self._ir, *it))
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumCount(reverse=reverse))
@@ -430,7 +431,7 @@ class Expr:
         upper_bound: IntoExpr,
         closed: ClosedInterval = "both",
     ) -> Self:
-        it = parse.parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
         return self._from_ir(
             boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
@@ -453,7 +454,7 @@ class Expr:
         str_as_lit: bool = False,
         reflect: bool = False,
     ) -> Self:
-        other_ir = parse.parse_into_expr_ir(other, str_as_lit=str_as_lit)
+        other_ir = parse_into_expr_ir(other, str_as_lit=str_as_lit)
         args = (self._ir, other_ir) if not reflect else (other_ir, self._ir)
         return self._from_ir(op().to_binary_expr(*args))
 
@@ -530,12 +531,11 @@ class Expr:
         return self._with_binary(ops.ExclusiveOr, other, reflect=True)
 
     def __pow__(self, exponent: IntoExprColumn | float) -> Self:
-        exp = parse.parse_into_expr_ir(exponent)
+        exp = parse_into_expr_ir(exponent)
         return self._from_ir(F.Pow().to_function_expr(self._ir, exp))
 
     def __rpow__(self, base: IntoExprColumn | float) -> Self:
-        base_ = parse.parse_into_expr_ir(base)
-        return self._from_ir(F.Pow().to_function_expr(base_, self._ir))
+        return self._from_ir(F.Pow().to_function_expr(parse_into_expr_ir(base), self._ir))
 
     def __invert__(self) -> Self:
         return self._with_unary(boolean.Not())

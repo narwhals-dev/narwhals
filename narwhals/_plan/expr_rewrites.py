@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan import expr_parsing as parse
 from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
     is_function_expr,
     is_window_expr,
 )
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import NamedIR, map_ir, replace
 from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
@@ -31,9 +31,7 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    out_irs, _, names = prepare_projection(
-        parse.parse_into_seq_of_expr_ir(*exprs), schema
-    )
+    out_irs, _, names = prepare_projection(parse_into_seq_of_expr_ir(*exprs), schema)
     named_irs = into_named_irs(out_irs, names)
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
