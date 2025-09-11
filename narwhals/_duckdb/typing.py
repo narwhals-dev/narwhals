@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
+from duckdb import Expression
+
+from narwhals.typing import NonNestedLiteral
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from duckdb import Expression
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import TypeAlias
 
 
 class WindowExpressionKwargs(TypedDict, total=False):
@@ -188,5 +191,10 @@ FunctionExperimentalSpark: TypeAlias = Literal[
 ]
 """Function names used in `duckdb.experimental.spark.sql`."""
 
-FunctionName: TypeAlias = Union[FunctionInUse, FunctionExperimentalSpark, "LiteralString"]
-"""Every function name *allowed* in `duckdb.FunctionExpression(...)`."""
+FunctionName: TypeAlias = Union[FunctionInUse, FunctionExperimentalSpark]
+"""Every function name *allowed* in `duckdb.FunctionExpression(...)`.
+
+Not really, but it is a start!
+"""
+
+IntoNativeExpr: TypeAlias = Union[Expression, NonNestedLiteral]
