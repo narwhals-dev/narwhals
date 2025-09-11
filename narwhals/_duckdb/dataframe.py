@@ -388,33 +388,33 @@ class DuckDBLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        idx_name = generate_temporary_column_name(8, self.columns)
-        count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-        name = count_name if keep == "none" else idx_name
+        tmp_name = generate_temporary_column_name(8, self.columns)
         if order_by and keep == "last":
             descending = [True] * len(order_by)
             nulls_last = [True] * len(order_by)
         else:
             descending = None
             nulls_last = None
-        idx_expr = window_expression(
-            F("row_number"),
-            subset_,
-            order_by or (),
-            descending=descending,
-            nulls_last=nulls_last,
-        ).alias(idx_name)
-        count_expr = window_expression(
-            F("count", StarExpression()),
-            subset_,
-            order_by or (),
-            descending=descending,
-            nulls_last=nulls_last,
-        ).alias(count_name)
+        if keep == "none":
+            expr = window_expression(
+                F("count", StarExpression()),
+                subset_,
+                order_by or (),
+                descending=descending,
+                nulls_last=nulls_last,
+            )
+        else:
+            expr = window_expression(
+                F("row_number"),
+                subset_,
+                order_by or (),
+                descending=descending,
+                nulls_last=nulls_last,
+            )
         return self._with_native(
-            self.native.select(StarExpression(), idx_expr, count_expr)
-            .filter(col(name) == lit(1))
-            .select(StarExpression(exclude=[count_name, idx_name]))
+            self.native.select(StarExpression(), expr.alias(tmp_name))
+            .filter(col(tmp_name) == lit(1))
+            .select(StarExpression(exclude=[tmp_name]))
         )
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:

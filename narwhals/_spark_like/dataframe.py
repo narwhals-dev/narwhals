@@ -375,26 +375,21 @@ class SparkLikeLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        idx_name = generate_temporary_column_name(8, self.columns)
-        count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
+        tmp_name = generate_temporary_column_name(8, self.columns)
         window = self._Window.partitionBy(subset_)
         if order_by and keep == "last":
             window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])
         elif order_by:
             window = window.orderBy(*[self._F.asc_nulls_first(x) for x in order_by])
-        count_expr = self._F.count("*").over(window)
-        idx_expr = self._F.row_number().over(window)
         if keep == "none":
-            condition = self._F.col(count_name) == self._F.lit(1)
-            cols = {count_name: count_expr}
-        elif keep == "any":
-            condition = self._F.col(idx_name) == self._F.lit(1)
-            cols = {idx_name: idx_expr}
+            expr = self._F.count("*").over(window)
         else:
-            idx_name = generate_temporary_column_name(8, [*self.columns, count_name])
-            condition = self._F.col(idx_name) == self._F.lit(1)
-            cols = {idx_name: idx_expr, count_name: count_expr}
-        df = self.native.withColumns(cols).filter(condition).drop(*list(cols.keys()))
+            expr = self._F.row_number().over(window)
+        df = (
+            self.native.withColumn(tmp_name, expr)
+            .filter(self._F.col(tmp_name) == self._F.lit(1))
+            .drop(tmp_name)
+        )
         return self._with_native(df)
 
     def join(
