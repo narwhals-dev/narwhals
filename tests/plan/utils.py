@@ -8,7 +8,7 @@ from narwhals._plan.common import ExprIR, NamedIR
 if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 def _unwrap_ir(obj: Expr | ExprIR | NamedIR) -> ExprIR:

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._duration import IntervalUnit
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]

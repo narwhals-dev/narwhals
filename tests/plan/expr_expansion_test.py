@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.dummy import Expr, Selector
+    from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
 

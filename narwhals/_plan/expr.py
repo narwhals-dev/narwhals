@@ -1,5 +1,3 @@
-"""Mock version of current narwhals API."""
-
 from __future__ import annotations
 
 import math

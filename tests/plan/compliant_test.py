@@ -22,7 +22,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
     from narwhals.typing import PythonLiteral
 
 

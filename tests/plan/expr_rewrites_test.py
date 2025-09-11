@@ -20,7 +20,7 @@ from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.dummy import Expr, Selector
+    from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.expressions.expr import Alias, Cast, Column, FunctionExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
@@ -153,9 +153,9 @@ class ExprIR(Immutable):
         return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
-        from narwhals._plan import dummy
+        from narwhals._plan import expr
 
-        tp = dummy.Expr if version is Version.MAIN else dummy.ExprV1
+        tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
     @property
@@ -281,11 +281,11 @@ class ExprIR(Immutable):
 
 class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan import dummy
+        from narwhals._plan import expr
 
         if version is Version.MAIN:
-            return dummy.Selector._from_ir(self)
-        return dummy.SelectorV1._from_ir(self)
+            return expr.Selector._from_ir(self)
+        return expr.SelectorV1._from_ir(self)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.

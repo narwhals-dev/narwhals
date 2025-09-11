@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan import expr_expansion, expr_parsing as parse
 from narwhals._plan.contexts import ExprContext
-from narwhals._plan.dummy import _parse_sort_by
+from narwhals._plan.expr import _parse_sort_by
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
