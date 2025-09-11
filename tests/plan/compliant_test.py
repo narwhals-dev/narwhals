@@ -14,7 +14,7 @@ import pyarrow as pa
 import narwhals as nw
 from narwhals._plan import functions as nwd
 from narwhals._plan._guards import is_expr
-from narwhals._plan.dummy import DataFrame
+from narwhals._plan.dataframe import DataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data

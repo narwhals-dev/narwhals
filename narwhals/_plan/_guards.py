@@ -44,6 +44,12 @@ def _expr(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
     return expr
 
 
+def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
+    from narwhals._plan import series
+
+    return series
+
+
 def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
     return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
 
@@ -58,7 +64,7 @@ def is_column(obj: Any) -> TypeIs[Expr]:
 
 
 def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
-    return isinstance(obj, _dummy().Series)
+    return isinstance(obj, _series().Series)
 
 
 def is_compliant_series(
@@ -68,7 +74,7 @@ def is_compliant_series(
 
 
 def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
-    return isinstance(obj, (str, bytes, _dummy().Series)) or is_compliant_series(obj)
+    return isinstance(obj, (str, bytes, _series().Series)) or is_compliant_series(obj)
 
 
 def is_window_expr(obj: Any) -> TypeIs[expr.WindowExpr]:

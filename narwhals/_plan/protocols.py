@@ -11,7 +11,7 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import BaseFrame, DataFrame
+    from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import (
         aggregation as agg,
         boolean,
