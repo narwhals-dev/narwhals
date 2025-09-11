@@ -15,6 +15,7 @@ from narwhals._utils import (
     Version,
     not_implemented,
     parse_columns_to_drop,
+    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
@@ -109,7 +110,7 @@ class IbisLazyFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native.to_pyarrow(),
+                to_pyarrow_table(self.native.to_pyarrow()),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
