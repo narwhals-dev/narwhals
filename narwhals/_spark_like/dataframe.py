@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -366,21 +366,32 @@ class SparkLikeLazyFrame(
         )
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset and (error := self._check_columns_exist(subset)):
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
             raise error
-        subset = list(subset) if subset else None
-        if keep == "none":
-            tmp = generate_temporary_column_name(8, self.columns)
-            window = self._Window.partitionBy(subset or self.columns)
-            df = (
-                self.native.withColumn(tmp, self._F.count("*").over(window))
-                .filter(self._F.col(tmp) == self._F.lit(1))
-                .drop(self._F.col(tmp))
-            )
-            return self._with_native(df)
-        return self._with_native(self.native.dropDuplicates(subset=subset))
+        idx_name = generate_temporary_column_name(8, self.columns)
+        count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
+        name = count_name if keep == "none" else idx_name
+        window = self._Window.partitionBy(subset_)
+        if order_by and keep == "last":
+            window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])
+        elif order_by:
+            window = window.orderBy(*[self._F.asc_nulls_first(x) for x in order_by])
+        idx_expr = self._F.row_number().over(window)
+        count_expr = self._F.count("*").over(window)
+        name = count_name if keep == "none" else idx_name
+        df = (
+            self.native.withColumns({idx_name: idx_expr, count_name: count_expr})
+            .filter(self._F.col(name) == self._F.lit(1))
+            .drop(count_name, idx_name)
+        )
+        return self._with_native(df)
 
     def join(
         self,

@@ -79,7 +79,6 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
-        LazyUniqueKeepStrategy,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -1536,6 +1535,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this dataframe.
 
@@ -1551,6 +1551,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import pandas as pd
@@ -1568,7 +1569,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset, keep=keep, maintain_order=maintain_order)
+            self._compliant_frame.unique(
+                subset, keep=keep, maintain_order=maintain_order, order_by=order_by
+            )
         )
 
     def filter(
@@ -2739,18 +2742,22 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         self,
         subset: str | list[str] | None = None,
         *,
-        keep: LazyUniqueKeepStrategy = "any",
+        keep: UniqueKeepStrategy = "any",
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'any', 'none'}
+            keep: {'any', 'none', 'first', 'last}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
                 * 'none': Don't keep duplicate rows.
+                * 'first': Keep the first row. Requires `order_by` to be specified.
+                * 'last': Keep the last row. Requires `order_by` to be specified.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import duckdb
@@ -2769,16 +2776,19 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        if keep not in {"any", "none"}:
+        if keep not in {"any", "none", "first", "last"}:
+            msg = f"Expected {'any', 'none', 'first', 'last'}, got: {keep}"
+            raise ValueError(msg)
+        if keep in {"first", "last"} and not order_by:
             msg = (
                 "narwhals.LazyFrame makes no assumptions about row order, so only "
-                f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
+                "'first' and 'last' are only supported if `order_by` is passed."
             )
-            raise ValueError(msg)
+            raise InvalidOperationError(msg)
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset=subset, keep=keep)
+            self._compliant_frame.unique(subset=subset, keep=keep, order_by=order_by)
         )
 
     def filter(

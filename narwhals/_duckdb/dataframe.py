@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 
 class DuckDBLazyFrame(
@@ -379,25 +379,43 @@ class DuckDBLazyFrame(
         return self.schema
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset_ := subset if keep == "any" else (subset or self.columns):
-            # Sanitise input
-            if error := self._check_columns_exist(subset_):
-                raise error
-            idx_name = generate_temporary_column_name(8, self.columns)
-            count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-            name = count_name if keep == "none" else idx_name
-            idx_expr = window_expression(F("row_number"), subset_).alias(idx_name)
-            count_expr = window_expression(
-                F("count", StarExpression()), subset_, ()
-            ).alias(count_name)
-            return self._with_native(
-                self.native.select(StarExpression(), idx_expr, count_expr)
-                .filter(col(name) == lit(1))
-                .select(StarExpression(exclude=[count_name, idx_name]))
-            )
-        return self._with_native(self.native.unique(join_column_names(*self.columns)))
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
+            raise error
+        idx_name = generate_temporary_column_name(8, self.columns)
+        count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
+        name = count_name if keep == "none" else idx_name
+        if order_by and keep == "last":
+            descending = [True] * len(order_by)
+            nulls_last = [True] * len(order_by)
+        else:
+            descending = None
+            nulls_last = None
+        idx_expr = window_expression(
+            F("row_number"),
+            subset_,
+            order_by or (),
+            descending=descending,
+            nulls_last=nulls_last,
+        ).alias(idx_name)
+        count_expr = window_expression(
+            F("count", StarExpression()),
+            subset_,
+            order_by or (),
+            descending=descending,
+            nulls_last=nulls_last,
+        ).alias(count_name)
+        return self._with_native(
+            self.native.select(StarExpression(), idx_expr, count_expr)
+            .filter(col(name) == lit(1))
+            .select(StarExpression(exclude=[count_name, idx_name]))
+        )
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):

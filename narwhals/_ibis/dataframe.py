@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -319,8 +319,15 @@ class IbisLazyFrame(
         }
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
+        if order_by:  # requires https://github.com/ibis-project/ibis/issues/11608.
+            msg = "`unique` with `order_by` is not yet supported in Ibis"
+            raise NotImplementedError(msg)
         if subset_ := subset if keep == "any" else (subset or self.columns):
             # Sanitise input
             if any(x not in self.columns for x in subset_):
