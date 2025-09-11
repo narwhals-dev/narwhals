@@ -256,7 +256,7 @@ class DuckDBLazyFrame(
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self.native.arrow()
+        return self.lazy().collect(Implementation.PYARROW).native
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
