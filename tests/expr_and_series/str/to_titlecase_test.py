@@ -34,15 +34,19 @@ REPLACEMENTS = {
 def test_str_to_titlecase_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("ibis", "pyspark", "sqlframe")):
+    if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         reason = "version too old, duckdb 1.3 required for SQLExpression."
         request.applymarker(pytest.mark.xfail(reason=reason))
 
+    if "sqlframe" in str(constructor):
+        reason = "https://github.com/eakmanrq/sqlframe/issues/505"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     expected_ = deepcopy(expected)
-    if "polars" in str(constructor) or "duckdb" in str(constructor):
+    if any(x in str(constructor) for x in ("duckdb", "polars", "pyspark")):
         expected_ = {"a": [REPLACEMENTS.get(el, el) for el in expected_["a"]]}
 
     df = nw.from_native(constructor(data))
