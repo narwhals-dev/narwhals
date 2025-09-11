@@ -35,8 +35,8 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
-    def to_titlecase(self) -> SparkLikeExpr:
-        if self.compliant._implementation.is_sqlframe():  # pragma: no cover
+    def to_titlecase(self) -> SparkLikeExpr:  # pragma: no cover
+        if self.compliant._implementation.is_sqlframe():
             msg = (
                 "`Expr.str.to_titlecase` is not implemented for "
                 f"{self.compliant._implementation}"
