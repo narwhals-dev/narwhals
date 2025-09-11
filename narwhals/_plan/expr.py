@@ -6,9 +6,9 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.common import ExprIR, SelectorIR, collect
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
+from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.name import KeepName, RenameAlias
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (

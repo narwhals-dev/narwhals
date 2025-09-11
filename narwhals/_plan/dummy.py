@@ -7,7 +7,6 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan import (
-    aggregation as agg,
     boolean,
     expr,
     expr_expansion,
@@ -18,6 +17,7 @@ from narwhals._plan import (
 from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
+from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,

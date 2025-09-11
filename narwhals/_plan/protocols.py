@@ -11,10 +11,11 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan import aggregation as agg, boolean, expr, functions as F
+    from narwhals._plan import boolean, expr, functions as F
     from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
     from narwhals._plan.dummy import BaseFrame, DataFrame, Series
     from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
+    from narwhals._plan.expressions import aggregation as agg
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatStr
