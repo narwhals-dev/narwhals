@@ -77,8 +77,8 @@ repos:
             narwhals/stable/v./_?dtypes.py|
             narwhals/.*__init__.py|
             narwhals/.*typing\.py|
-            narwhals/_plan/demo\.py|
-            narwhals/_plan/ranges\.py|
+            narwhals/_plan/functions\.py|
+            narwhals/_plan/expressions/ranges\.py|
             narwhals/_plan/schema\.py
           )
     - id: pull-request-target
