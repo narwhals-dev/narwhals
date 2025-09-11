@@ -37,8 +37,8 @@ def test_str_to_titlecase_expr(
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        reason = "version too old, duckdb 1.3 required for SQLExpression."
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
+        reason = "version too old, duckdb 1.2 required for LambdaExpression."
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "sqlframe" in str(constructor):
