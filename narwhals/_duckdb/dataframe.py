@@ -187,7 +187,7 @@ class DuckDBLazyFrame(
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
-        selection = (name for name in self.columns if name not in columns_to_drop)
+        selection = [col(name) for name in self.columns if name not in columns_to_drop]
         return self._with_native(self.native.select(*selection))
 
     def lazy(self, backend: None = None, **_: None) -> Self:
