@@ -2153,6 +2153,6 @@ class _Implementation:
 def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     import pyarrow as pa  # ignore-banned-import
 
-    if isinstance(tbl, pa.RecordBatchReader):
+    if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
         return pa.Table.from_batches(tbl)
     return tbl
