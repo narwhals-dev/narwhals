@@ -11,9 +11,10 @@ from narwhals._utils import _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import Expr, Series
+    from narwhals._plan.dummy import Expr
     from narwhals._plan.expressions import expr
     from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import NativeSeriesT, Seq
     from narwhals.typing import NonNestedLiteral
 

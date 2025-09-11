@@ -22,12 +22,12 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
-    from narwhals._plan.dummy import Series as NwSeries
     from narwhals._plan.expressions import expr, functions as F
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.expressions.strings import ConcatStr
+    from narwhals._plan.series import Series as NwSeries
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 

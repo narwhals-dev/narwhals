@@ -12,11 +12,12 @@ import pytest
 import narwhals as nw
 import narwhals._plan.functions as nwd
 from narwhals._plan.common import ExprIR, Function
-from narwhals._plan.dummy import Expr, Series
+from narwhals._plan.dummy import Expr
 from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import boolean, expr, functions as F, operators as ops
 from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr, RangeExpr
 from narwhals._plan.expressions.literal import SeriesLiteral
+from narwhals._plan.series import Series
 from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,

@@ -11,7 +11,7 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan.dummy import BaseFrame, DataFrame, Series
+    from narwhals._plan.dummy import BaseFrame, DataFrame
     from narwhals._plan.expressions import (
         aggregation as agg,
         boolean,
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -608,7 +609,7 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
         return self._name
 
     def to_narwhals(self) -> Series[NativeSeriesT]:
-        from narwhals._plan.dummy import Series
+        from narwhals._plan.series import Series
 
         return Series[NativeSeriesT]._from_compliant(self)
 

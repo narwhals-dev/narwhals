@@ -14,7 +14,8 @@ from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
 
 if t.TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr, Series
+    from narwhals._plan.dummy import Expr
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
     from narwhals.dtypes import IntegerType
     from narwhals.typing import IntoDType, NonNestedLiteral

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan import expr_expansion, expr_parsing as parse
@@ -26,9 +26,10 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
+from narwhals._plan.series import Series
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
 from narwhals._utils import Version, generate_repr
-from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table
+from narwhals.dependencies import is_pyarrow_table
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.schema import Schema
 
@@ -44,20 +45,14 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.struct import ExprStructNamespace
     from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.protocols import (
-        CompliantBaseFrame,
-        CompliantDataFrame,
-        CompliantSeries,
-    )
+    from narwhals._plan.protocols import CompliantBaseFrame, CompliantDataFrame
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
         IntoDType,
         NativeFrame,
-        NativeSeries,
         NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -834,53 +829,3 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
     def __len__(self) -> int:
         return len(self._compliant)
-
-
-class Series(Generic[NativeSeriesT]):
-    _compliant: CompliantSeries[NativeSeriesT]
-    _version: ClassVar[Version] = Version.MAIN
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @property
-    def dtype(self) -> DType:
-        return self._compliant.dtype
-
-    @property
-    def name(self) -> str:
-        return self._compliant.name
-
-    # NOTE: Gave up on trying to get typing working for now
-    @classmethod
-    def from_native(
-        cls, native: NativeSeries, name: str = "", /
-    ) -> Series[pa.ChunkedArray[Any]]:
-        if is_pyarrow_chunked_array(native):
-            from narwhals._plan.arrow.series import ArrowSeries
-
-            return ArrowSeries.from_native(
-                native, name, version=cls._version
-            ).to_narwhals()
-
-        raise NotImplementedError(type(native))
-
-    @classmethod
-    def _from_compliant(cls, compliant: CompliantSeries[NativeSeriesT], /) -> Self:
-        obj = cls.__new__(cls)
-        obj._compliant = compliant
-        return obj
-
-    def to_native(self) -> NativeSeriesT:
-        return self._compliant.native
-
-    def to_list(self) -> list[Any]:
-        return self._compliant.to_list()
-
-    def __iter__(self) -> Iterator[Any]:
-        yield from self.to_native()
-
-
-class SeriesV1(Series[NativeSeriesT]):
-    _version: ClassVar[Version] = Version.V1
