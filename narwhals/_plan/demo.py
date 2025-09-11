@@ -3,9 +3,9 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, boolean, expr_parsing as parse, functions as F
+from narwhals._plan import _guards, expr_parsing as parse
 from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
-from narwhals._plan.expressions import expr
+from narwhals._plan.expressions import boolean, expr, functions as F
 from narwhals._plan.expressions.expr import All, Len
 from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.ranges import IntRange

@@ -11,7 +11,7 @@ if t.TYPE_CHECKING:
     from narwhals._plan import operators as ops
     from narwhals._plan.common import ExprIR, Function, IRNamespace, NamedIR, SelectorIR
     from narwhals._plan.dummy import Expr, Series
-    from narwhals._plan.functions import RollingWindow
+    from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.ranges import RangeFunction
     from narwhals.typing import (
         NativeDataFrame,

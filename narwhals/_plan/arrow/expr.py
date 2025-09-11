@@ -26,11 +26,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
-    from narwhals._plan import boolean
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.boolean import All, IsBetween, IsFinite, IsNan, IsNull, Not
-    from narwhals._plan.expressions import expr
+    from narwhals._plan.expressions import boolean, expr
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -47,6 +45,14 @@ if TYPE_CHECKING:
         Sum,
         Var,
     )
+    from narwhals._plan.expressions.boolean import (
+        All,
+        IsBetween,
+        IsFinite,
+        IsNan,
+        IsNull,
+        Not,
+    )
     from narwhals._plan.expressions.expr import (
         AnonymousExpr,
         BinaryExpr,
@@ -56,7 +62,7 @@ if TYPE_CHECKING:
         TernaryExpr,
         WindowExpr,
     )
-    from narwhals._plan.functions import FillNull, Pow
+    from narwhals._plan.expressions.functions import FillNull, Pow
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"

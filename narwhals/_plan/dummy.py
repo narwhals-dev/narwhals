@@ -6,17 +6,11 @@ import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import (
-    boolean,
-    expr_expansion,
-    expr_parsing as parse,
-    functions as F,
-    operators as ops,
-)
+from narwhals._plan import expr_expansion, expr_parsing as parse, operators as ops
 from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
-from narwhals._plan.expressions import aggregation as agg, expr
+from narwhals._plan.expressions import aggregation as agg, boolean, expr, functions as F
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,

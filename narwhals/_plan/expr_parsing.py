@@ -164,7 +164,7 @@ def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
 
 
 def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    from narwhals._plan.boolean import AllHorizontal
+    from narwhals._plan.expressions.boolean import AllHorizontal
 
     first = next(predicates, None)
     if not first:
