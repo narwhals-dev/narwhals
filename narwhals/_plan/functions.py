@@ -129,7 +129,7 @@ def when(
     """Start a `when-then-otherwise` expression.
 
     Examples:
-        >>> from narwhals._plan import demo as nwd
+        >>> from narwhals._plan import functions as nwd
 
         >>> nwd.when(nwd.col("y") == "b").then(1)
         nw._plan.Expr(main):

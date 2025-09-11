@@ -180,7 +180,7 @@ class ExprIR(Immutable):
         """Yield nodes root->leaf.
 
         Examples:
-            >>> from narwhals._plan import demo as nwd
+            >>> from narwhals._plan import functions as nwd
             >>>
             >>> a = nwd.col("a")
             >>> b = a.alias("b")
@@ -215,7 +215,7 @@ class ExprIR(Immutable):
             Identical to `iter_left` for root nodes.
 
         Examples:
-            >>> from narwhals._plan import demo as nwd
+            >>> from narwhals._plan import functions as nwd
             >>>
             >>> a = nwd.col("a")
             >>> b = a.alias("b")

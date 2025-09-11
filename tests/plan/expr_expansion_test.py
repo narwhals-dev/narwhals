@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable
 import pytest
 
 import narwhals as nw
-from narwhals._plan import demo as nwd
+from narwhals._plan import functions as nwd
 from narwhals._plan.expr_expansion import (
     prepare_projection,
     replace_selector,

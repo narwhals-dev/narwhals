@@ -51,7 +51,7 @@ class IRMetaNamespace(IRNamespace):
         """Get the output name of this expression.
 
         Examples:
-            >>> from narwhals._plan import demo as nwd
+            >>> from narwhals._plan import functions as nwd
             >>>
             >>> a = nwd.col("a")
             >>> b = a.alias("b")

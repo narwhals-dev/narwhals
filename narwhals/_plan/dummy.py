@@ -567,9 +567,9 @@ class Expr:
         """Specialized expressions for modifying the name of existing expressions.
 
         Examples:
-            >>> from narwhals._plan import demo as nw
+            >>> from narwhals._plan import functions as nwd
             >>>
-            >>> renamed = nw.col("a", "b").name.suffix("_changed")
+            >>> renamed = nwd.col("a", "b").name.suffix("_changed")
             >>> str(renamed._ir)
             "RenameAlias(expr=Columns(names=[a, b]), function=Suffix(suffix='_changed'))"
         """
