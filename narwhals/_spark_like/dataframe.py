@@ -22,6 +22,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -184,7 +185,7 @@ class SparkLikeLazyFrame(
             pa_schema = self._to_arrow_schema()
             return pa.Table.from_pandas(self.native.toPandas(), schema=pa_schema)
         else:
-            return self.native.toArrow()
+            return to_pyarrow_table(self.native.toArrow())
 
     def _iter_columns(self) -> Iterator[Column]:
         for col in self.columns:

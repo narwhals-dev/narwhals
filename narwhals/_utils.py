@@ -2151,6 +2151,14 @@ class _Implementation:
         return self if instance is None else instance._compliant._implementation
 
 
+def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
+    import pyarrow as pa  # ignore-banned-import
+
+    if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
+        return pa.Table.from_batches(tbl)
+    return tbl
+
+
 def normalize_path(source: FileSource, /) -> str:
     if isinstance(source, str):
         return source

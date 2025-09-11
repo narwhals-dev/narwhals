@@ -27,6 +27,7 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     requires,
+    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.dependencies import get_duckdb
@@ -138,7 +139,7 @@ class DuckDBLazyFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native.arrow(),
+                to_pyarrow_table(self.native.arrow()),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -255,7 +256,7 @@ class DuckDBLazyFrame(
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self.native.arrow()
+        return self.lazy().collect(Implementation.PYARROW).native  # type: ignore[no-any-return]
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
