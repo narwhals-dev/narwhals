@@ -135,10 +135,18 @@ class DuckDBLazyFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
+            import pyarrow as pa  # ignore-banned-import
+
             from narwhals._arrow.dataframe import ArrowDataFrame
 
+            res = self.native.arrow()
+            pa_native = (
+                pa.Table.from_batches(res)
+                if isinstance(res, pa.RecordBatchReader)
+                else res
+            )
             return ArrowDataFrame(
-                self.native.arrow(),
+                pa_native,
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
