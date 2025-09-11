@@ -39,9 +39,9 @@ if TYPE_CHECKING:
 
     from narwhals._plan.categorical import ExprCatNamespace
     from narwhals._plan.common import ExprIR, Function, NamedIR
+    from narwhals._plan.expressions.name import ExprNameNamespace
     from narwhals._plan.lists import ExprListNamespace
     from narwhals._plan.meta import IRMetaNamespace
-    from narwhals._plan.name import ExprNameNamespace
     from narwhals._plan.protocols import (
         CompliantBaseFrame,
         CompliantDataFrame,
@@ -574,7 +574,7 @@ class Expr:
             >>> str(renamed._ir)
             "RenameAlias(expr=Columns(names=[a, b]), function=Suffix(suffix='_changed'))"
         """
-        from narwhals._plan.name import ExprNameNamespace
+        from narwhals._plan.expressions.name import ExprNameNamespace
 
         return ExprNameNamespace(_expr=self)
 
