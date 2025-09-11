@@ -51,7 +51,7 @@ from narwhals._plan.exceptions import (
     column_not_found_error,
     duplicate_error,
 )
-from narwhals._plan.expr import (
+from narwhals._plan.expressions.expr import (
     Alias,
     All,
     Columns,

@@ -25,8 +25,8 @@ if TYPE_CHECKING:
     import polars as pl
 
     from narwhals._plan.common import ExprIR, Function
-    from narwhals._plan.expr import FunctionExpr, WindowExpr
     from narwhals._plan.expressions.aggregation import AggExpr
+    from narwhals._plan.expressions.expr import FunctionExpr, WindowExpr
     from narwhals._plan.operators import Operator
     from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import IntoExpr, Seq

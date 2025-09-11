@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     from narwhals._plan import dummy
-    from narwhals._plan.expr import RootSelector
+    from narwhals._plan.expressions.expr import RootSelector
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
@@ -31,7 +31,7 @@ dtypes = Version.MAIN.dtypes
 
 class Selector(Immutable):
     def to_selector(self) -> RootSelector:
-        from narwhals._plan.expr import RootSelector
+        from narwhals._plan.expressions.expr import RootSelector
 
         return RootSelector(selector=self)
 

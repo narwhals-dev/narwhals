@@ -11,8 +11,8 @@ from narwhals._utils import _hasattr_static
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan import expr
     from narwhals._plan.dummy import Expr, Series
+    from narwhals._plan.expressions import expr
     from narwhals._plan.protocols import CompliantSeries
     from narwhals._plan.typing import NativeSeriesT, Seq
     from narwhals.typing import NonNestedLiteral
@@ -38,7 +38,7 @@ def _dummy(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
 
 
 def _expr(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
-    from narwhals._plan import expr
+    from narwhals._plan.expressions import expr
 
     return expr
 

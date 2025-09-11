@@ -12,7 +12,7 @@ from narwhals._plan.expr_parsing import (
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import TernaryExpr
+    from narwhals._plan.expressions.expr import TernaryExpr
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 
@@ -114,6 +114,6 @@ class ChainedThen(Immutable, Expr):
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
-    from narwhals._plan.expr import TernaryExpr
+    from narwhals._plan.expressions.expr import TernaryExpr
 
     return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)

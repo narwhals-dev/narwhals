@@ -12,7 +12,7 @@ from narwhals._plan.exceptions import (
 
 if TYPE_CHECKING:
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import OrderedWindowExpr, WindowExpr
+    from narwhals._plan.expressions.expr import OrderedWindowExpr, WindowExpr
     from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import Seq
     from narwhals.exceptions import InvalidOperationError
@@ -43,7 +43,7 @@ class Over(Window):
         return None
 
     def to_window_expr(self, expr: ExprIR, partition_by: Seq[ExprIR], /) -> WindowExpr:
-        from narwhals._plan.expr import WindowExpr
+        from narwhals._plan.expressions.expr import WindowExpr
 
         if err := self._validate_over(expr, partition_by):
             raise err
@@ -57,7 +57,7 @@ class Over(Window):
         sort_options: SortOptions,
         /,
     ) -> OrderedWindowExpr:
-        from narwhals._plan.expr import OrderedWindowExpr
+        from narwhals._plan.expressions.expr import OrderedWindowExpr
 
         if err := self._validate_over(expr, partition_by, order_by, sort_options):
             raise err

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.dummy import Expr, Selector
-    from narwhals._plan.expr import Alias, Cast, Column, FunctionExpr
+    from narwhals._plan.expressions.expr import Alias, Cast, Column, FunctionExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -266,12 +266,12 @@ class ExprIR(Immutable):
         return IRMetaNamespace(_ir=self)
 
     def cast(self, dtype: DType) -> Cast:
-        from narwhals._plan.expr import Cast
+        from narwhals._plan.expressions.expr import Cast
 
         return Cast(expr=self, dtype=dtype)
 
     def alias(self, name: str) -> Alias:
-        from narwhals._plan.expr import Alias
+        from narwhals._plan.expressions.expr import Alias
 
         return Alias(expr=self, name=name)
 
@@ -319,7 +319,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         Intended to be used in `with_columns` from a `FrozenSchema`'s keys.
         """
-        from narwhals._plan.expr import col
+        from narwhals._plan.expressions.expr import col
 
         return NamedIR(expr=col(name), name=name)
 
@@ -353,7 +353,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/properties.rs#L16-L44
         """
-        from narwhals._plan import expr
+        from narwhals._plan.expressions import expr
 
         ir = self.expr
         if is_function_expr(ir):
@@ -414,7 +414,7 @@ class Function(Immutable):
         return self.function_options.returns_scalar()
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
-        from narwhals._plan.expr import FunctionExpr
+        from narwhals._plan.expressions.expr import FunctionExpr
 
         return FunctionExpr(input=inputs, function=self, options=self.function_options)
 

@@ -19,13 +19,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan import expr, functions as F
+    from narwhals._plan import functions as F
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.boolean import AllHorizontal, AnyHorizontal
     from narwhals._plan.dummy import Series as NwSeries
-    from narwhals._plan.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.expressions import expr
+    from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
     from narwhals._plan.ranges import IntRange
     from narwhals._plan.strings import ConcatStr
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral

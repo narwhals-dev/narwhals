@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import AnonymousExpr, FunctionExpr, RollingExpr
+    from narwhals._plan.expressions.expr import AnonymousExpr, FunctionExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals._plan.typing import Seq, Udf
     from narwhals.dtypes import DType
@@ -31,7 +31,7 @@ class RollingWindow(Function, options=FunctionOptions.length_preserving):
     options: RollingOptionsFixedWindow
 
     def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
-        from narwhals._plan.expr import RollingExpr
+        from narwhals._plan.expressions.expr import RollingExpr
 
         options = self.function_options
         return RollingExpr(input=inputs, function=self, options=options)
@@ -176,7 +176,7 @@ class MapBatches(Function):
         return options
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
-        from narwhals._plan.expr import AnonymousExpr
+        from narwhals._plan.expressions.expr import AnonymousExpr
 
         options = self.function_options
         return AnonymousExpr(input=inputs, function=self, options=options)

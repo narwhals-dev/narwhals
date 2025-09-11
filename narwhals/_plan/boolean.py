@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
 
     from narwhals._plan.common import ExprIR
     from narwhals._plan.dummy import Series
-    from narwhals._plan.expr import FunctionExpr, Literal  # noqa: F401
+    from narwhals._plan.expressions.expr import FunctionExpr, Literal  # noqa: F401
     from narwhals._plan.typing import NativeSeriesT, Seq  # noqa: F401
     from narwhals.typing import ClosedInterval
 
