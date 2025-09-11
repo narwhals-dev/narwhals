@@ -7,9 +7,9 @@ from narwhals._plan import _guards, expr_parsing as parse
 from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
 from narwhals._plan.expressions import boolean, expr, functions as F
 from narwhals._plan.expressions.expr import All, Len
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._plan.expressions.strings import ConcatStr
-from narwhals._plan.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.when_then import When
 from narwhals._utils import Version, flatten
 

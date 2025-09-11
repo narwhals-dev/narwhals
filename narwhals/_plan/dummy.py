@@ -6,11 +6,18 @@ import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import expr_expansion, expr_parsing as parse, operators as ops
+from narwhals._plan import expr_expansion, expr_parsing as parse
 from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan.common import into_dtype
 from narwhals._plan.contexts import ExprContext
-from narwhals._plan.expressions import aggregation as agg, boolean, expr, functions as F
+from narwhals._plan.expressions import (
+    aggregation as agg,
+    boolean,
+    expr,
+    functions as F,
+    operators as ops,
+)
+from narwhals._plan.expressions.selectors import by_name
 from narwhals._plan.expressions.window import Over
 from narwhals._plan.options import (
     EWMOptions,
@@ -19,7 +26,6 @@ from narwhals._plan.options import (
     SortOptions,
     rolling_options,
 )
-from narwhals._plan.selectors import by_name
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_pyarrow_chunked_array, is_pyarrow_table

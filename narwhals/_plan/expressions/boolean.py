@@ -68,7 +68,7 @@ class IsInSeq(IsIn["Seq[t.Any]"]):
 class IsInSeries(IsIn["Literal[Series[NativeSeriesT]]"]):
     @classmethod
     def from_series(cls, other: Series[NativeSeriesT], /) -> IsInSeries[NativeSeriesT]:
-        from narwhals._plan.literal import SeriesLiteral
+        from narwhals._plan.expressions.literal import SeriesLiteral
 
         return IsInSeries(other=SeriesLiteral(value=other).to_literal())
 

@@ -4,13 +4,15 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from narwhals._plan.expressions import selectors as ndcs
+
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
 import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, selectors as ndcs
+from narwhals._plan import demo as nwd
 from narwhals._plan._guards import is_expr
 from narwhals._plan.dummy import DataFrame
 from narwhals._utils import Version

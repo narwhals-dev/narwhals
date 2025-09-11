@@ -182,7 +182,7 @@ def is_column(ir: ExprIR) -> TypeIs[Column]:
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
     from narwhals._plan.expressions import expr
-    from narwhals._plan.literal import is_literal_scalar
+    from narwhals._plan.expressions.literal import is_literal_scalar
 
     return (
         isinstance(ir, expr.Literal)

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, expr_parsing as parse, selectors as ndcs
+from narwhals._plan import demo as nwd, expr_parsing as parse
 from narwhals._plan._guards import is_expr
 from narwhals._plan.common import ExprIR, NamedIR
 from narwhals._plan.expr_rewrites import (
@@ -13,6 +13,7 @@ from narwhals._plan.expr_rewrites import (
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
+from narwhals._plan.expressions import selectors as ndcs
 from narwhals._plan.expressions.expr import WindowExpr
 from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
