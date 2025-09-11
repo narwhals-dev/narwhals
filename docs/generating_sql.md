@@ -24,7 +24,7 @@ There are several ways to find out.
 
 ## Via DuckDB
 
-You can also generate SQL directly from DuckDB.
+You can generate SQL directly from DuckDB.
 
 ```python exec="1" source="above" session="generating-sql" result="sql"
 import duckdb
