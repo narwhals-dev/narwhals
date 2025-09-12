@@ -123,10 +123,6 @@ class SeriesNever(TypedDict, total=False):
     allow_series: Literal[False] | None
 
 
-class PassThrough(TypedDict):
-    pass_through: Literal[True]
-
-
 class SeriesAllow(TypedDict):
     pass_through: NotRequired[bool]
     eager_only: NotRequired[bool]
