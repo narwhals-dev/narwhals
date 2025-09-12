@@ -101,21 +101,6 @@ def to_native(
     return narwhals_object
 
 
-# Upper bound
-class FromNativeFlags(TypedDict, total=False):
-    pass_through: bool
-    eager_only: bool
-    series_only: bool
-    allow_series: bool | None
-
-
-class DefaultFlags(TypedDict, total=False):
-    pass_through: Literal[False]
-    eager_only: Literal[False]
-    series_only: Literal[False]
-    allow_series: None
-
-
 class SeriesNever(TypedDict, total=False):
     pass_through: bool
     eager_only: bool
