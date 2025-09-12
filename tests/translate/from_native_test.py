@@ -454,6 +454,170 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
         nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
 
 
+def test_from_native_lazyframe_exhaustive() -> None:  # noqa: PLR0914, PLR0915
+    pytest.importorskip("polars")
+    pytest.importorskip("typing_extensions")
+
+    import polars as pl
+    from typing_extensions import assert_type
+
+    pl_ldf = pl.LazyFrame(data)
+
+    pl_1 = nw.from_native(pl_ldf)
+    pl_2 = nw.from_native(pl_ldf, pass_through=False)
+    pl_3 = nw.from_native(pl_ldf, pass_through=True)
+    pl_4 = nw.from_native(pl_ldf, eager_only=False)
+    pl_5 = nw.from_native(pl_ldf, series_only=False)
+    pl_6 = nw.from_native(pl_ldf, allow_series=False)
+    pl_7 = nw.from_native(pl_ldf, allow_series=None)
+    pl_8 = nw.from_native(pl_ldf, allow_series=True)
+    pl_9 = nw.from_native(pl_ldf, pass_through=False, eager_only=False)
+    pl_10 = nw.from_native(pl_ldf, pass_through=True, eager_only=False)
+    pl_11 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False
+    )
+    pl_12 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, series_only=False)
+    pl_13 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=False
+    )
+    pl_14 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, allow_series=False
+    )
+    pl_15 = nw.from_native(
+        pl_ldf,
+        pass_through=False,
+        eager_only=False,
+        series_only=False,
+        allow_series=False,
+    )
+    pl_16 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=False
+    )
+    pl_17 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=None
+    )
+    pl_18 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, allow_series=None)
+    pl_19 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False, allow_series=None
+    )
+    pl_20 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=None
+    )
+    pl_21 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, allow_series=True
+    )
+    pl_21 = nw.from_native(pl_ldf, pass_through=True, eager_only=False, allow_series=True)
+    pl_21 = nw.from_native(
+        pl_ldf, pass_through=False, eager_only=False, series_only=False, allow_series=True
+    )
+    pl_22 = nw.from_native(
+        pl_ldf, pass_through=True, eager_only=False, series_only=False, allow_series=True
+    )
+    pl_23 = nw.from_native(pl_ldf, eager_only=False, series_only=False)
+    pl_24 = nw.from_native(pl_ldf, eager_only=False, allow_series=False)
+    pl_25 = nw.from_native(
+        pl_ldf, eager_only=False, series_only=False, allow_series=False
+    )
+    pl_26 = nw.from_native(pl_ldf, eager_only=False, allow_series=None)
+    pl_27 = nw.from_native(pl_ldf, eager_only=False, series_only=False, allow_series=None)
+    pl_28 = nw.from_native(pl_ldf, eager_only=False, allow_series=True)
+    pl_29 = nw.from_native(pl_ldf, eager_only=False, series_only=False, allow_series=True)
+    pl_30 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=None
+    )
+    pl_31 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=False
+    )
+    pl_32 = nw.from_native(
+        pl_ldf, pass_through=False, series_only=False, allow_series=True
+    )
+    pl_33 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=None
+    )
+    pl_34 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=False
+    )
+    pl_35 = nw.from_native(
+        pl_ldf, pass_through=True, series_only=False, allow_series=True
+    )
+    pls = (
+        pl_1,
+        pl_2,
+        pl_3,
+        pl_4,
+        pl_5,
+        pl_6,
+        pl_7,
+        pl_8,
+        pl_9,
+        pl_10,
+        pl_11,
+        pl_12,
+        pl_13,
+        pl_14,
+        pl_15,
+        pl_16,
+        pl_17,
+        pl_18,
+        pl_19,
+        pl_20,
+        pl_21,
+        pl_22,
+        pl_23,
+        pl_24,
+        pl_25,
+        pl_26,
+        pl_27,
+        pl_28,
+        pl_29,
+        pl_30,
+        pl_31,
+        pl_32,
+        pl_33,
+        pl_34,
+        pl_35,
+    )
+
+    assert_type(pl_1, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_2, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_3, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_4, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_5, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_6, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_7, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_8, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_9, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_10, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_11, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_12, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_13, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_14, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_15, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_16, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_17, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_18, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_19, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_20, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_21, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_22, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_23, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_24, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_25, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_26, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_27, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_28, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_29, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_30, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_31, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_32, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_33, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_34, nw.LazyFrame[pl.LazyFrame])
+    assert_type(pl_35, nw.LazyFrame[pl.LazyFrame])
+
+    for ldf in pls:
+        assert isinstance(ldf, nw.LazyFrame)
+
+
 def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
