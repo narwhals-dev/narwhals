@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import string
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,9 +11,12 @@ from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_form
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import Incomplete
+    from narwhals._compliant.typing import Accessor
 
 
 class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
+    _accessor: ClassVar[Accessor] = "str"
+
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 

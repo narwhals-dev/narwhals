@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
+    from narwhals._compliant.typing import Accessor
     from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
 
 
 class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
+    _accessor: ClassVar[Accessor] = "dt"
     _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
         "ns": NS_PER_SECOND,
         "us": US_PER_SECOND,
