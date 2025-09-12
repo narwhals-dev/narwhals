@@ -89,7 +89,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
         and result._compliant_frame._implementation.is_spark_like()
     )
     if is_duckdb:
-        result = from_native(result.to_native().arrow())
+        result = from_native(result.collect("pyarrow"))
     if is_ibis:
         result = from_native(result.to_native().to_pyarrow())
     if hasattr(result, "collect"):
