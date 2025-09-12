@@ -453,14 +453,17 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
         nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
 
 
-def test_from_native_eager_only_series_only_allow() -> None:
+def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
 
     pl_ser = pl.Series([1, 2, 3])
     pd_ser = pd.Series([1, 2, 3])
+    pa_ser = pa.chunked_array([pa.array([1])])
 
     s01 = nw.from_native(pl_ser, series_only=True)
     s02 = nw.from_native(pl_ser, allow_series=True)
@@ -489,3 +492,17 @@ def test_from_native_eager_only_series_only_allow() -> None:
     assert isinstance(s14, nw.Series)
     assert isinstance(s15, nw.Series)
     assert isinstance(s16, nw.Series)
+
+    s21 = nw.from_native(pa_ser, series_only=True)
+    s22 = nw.from_native(pa_ser, allow_series=True)
+    s23 = nw.from_native(pa_ser, eager_only=True, series_only=True)
+    s24 = nw.from_native(pa_ser, eager_only=True, series_only=True, allow_series=True)
+    s25 = nw.from_native(pa_ser, eager_only=True, allow_series=True)
+    s26 = nw.from_native(pa_ser, series_only=True, allow_series=True)
+
+    assert isinstance(s21, nw.Series)
+    assert isinstance(s22, nw.Series)
+    assert isinstance(s23, nw.Series)
+    assert isinstance(s24, nw.Series)
+    assert isinstance(s25, nw.Series)
+    assert isinstance(s26, nw.Series)
