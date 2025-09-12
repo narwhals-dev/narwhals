@@ -158,6 +158,13 @@ class EagerLazySeriesAllow(TypedDict):
     allow_series: Literal[True]
 
 
+class PassThroughUnknown(TypedDict):
+    pass_through: Literal[True]
+    eager_only: NotRequired[bool]
+    series_only: NotRequired[bool]
+    allow_series: NotRequired[bool | None]
+
+
 @overload
 def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
 
@@ -202,31 +209,13 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
     **kwds: Unpack[EagerLazySeriesAllow],
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
+
+
+@overload
+def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 
 
 # All params passed in as variables
