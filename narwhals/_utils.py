@@ -2086,6 +2086,7 @@ class Plugin2(Protocol):
     NATIVE_PACKAGE: LiteralString
 
     def __narwhals_namespace__(self, version: Version) -> CompliantNamespaceAny: ...
+    def is_native(self, native_object: object, /) -> bool: ...
 
 
 @cache
@@ -2098,7 +2099,11 @@ def _might_be(cls: type, type_: str) -> bool:
 
 def _is_native_plugin(native_object: Any, plugin: Plugin2) -> bool:
     pkg = plugin.NATIVE_PACKAGE
-    return sys.modules.get(pkg) is not None and _might_be(type(native_object), pkg)
+    return (
+        sys.modules.get(pkg) is not None
+        and _might_be(type(native_object), pkg)
+        and plugin.is_native(native_object)
+    )
 
 
 class Compliant(
