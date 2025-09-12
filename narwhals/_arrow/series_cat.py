@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import pyarrow as pa
 
 from narwhals._arrow.utils import ArrowSeriesNamespace
+from narwhals._compliant.any_namespace import CatNamespace
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import Incomplete
-    from narwhals._compliant.typing import Accessor
 
 
-class ArrowSeriesCatNamespace(ArrowSeriesNamespace):
-    _accessor: ClassVar[Accessor] = "cat"
-
+class ArrowSeriesCatNamespace(ArrowSeriesNamespace, CatNamespace["ArrowSeries"]):
     def get_categories(self) -> ArrowSeries:
         # NOTE: Should be `list[pa.DictionaryArray]`, but `DictionaryArray` has no attributes
         chunks: Incomplete = self.native.chunks

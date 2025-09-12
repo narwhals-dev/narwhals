@@ -6,6 +6,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import UNITS_DICT, ArrowSeriesNamespace, floordiv_compat, lit
+from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
     MS_PER_MINUTE,
     MS_PER_SECOND,
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import ChunkedArrayAny, ScalarAny
-    from narwhals._compliant.typing import Accessor
     from narwhals.dtypes import Datetime
     from narwhals.typing import TimeUnit
 
@@ -37,8 +37,9 @@ if TYPE_CHECKING:
     IntoRhs: TypeAlias = int
 
 
-class ArrowSeriesDateTimeNamespace(ArrowSeriesNamespace):
-    _accessor: ClassVar[Accessor] = "dt"
+class ArrowSeriesDateTimeNamespace(
+    ArrowSeriesNamespace, DateTimeNamespace["ArrowSeries"]
+):
     _TIMESTAMP_DATE_FACTOR: ClassVar[Mapping[TimeUnit, int]] = {
         "ns": NS_PER_SECOND,
         "us": US_PER_SECOND,

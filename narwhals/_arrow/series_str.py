@@ -1,22 +1,20 @@
 from __future__ import annotations
 
 import string
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
+from narwhals._compliant.any_namespace import StringNamespace
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import Incomplete
-    from narwhals._compliant.typing import Accessor
 
 
-class ArrowSeriesStringNamespace(ArrowSeriesNamespace):
-    _accessor: ClassVar[Accessor] = "str"
-
+class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSeries"]):
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
