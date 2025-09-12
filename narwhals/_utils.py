@@ -72,6 +72,7 @@ if TYPE_CHECKING:
         CompliantSeriesT,
         NativeSeriesT_co,
     )
+    from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
     from narwhals._namespace import (
         Namespace,
@@ -163,7 +164,7 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-_IntoContext: TypeAlias = "_FullContext | _StoresCompliant[_FullContext]"
+_IntoContext: TypeAlias = "_FullContext | NamespaceAccessor[_FullContext]"
 _IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
 _Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
@@ -184,7 +185,7 @@ class _StoresNative(Protocol[NativeT_co]):
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):
+class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
     """Provides access to a compliant object.
 
     Compliant objects have types like:
@@ -1671,7 +1672,9 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def has_compliant(obj: _StoresCompliant[_T] | Any) -> TypeIs[_StoresCompliant[_T]]:
+def is_namespace_accessor(
+    obj: NamespaceAccessor[_FullContext] | Any,
+) -> TypeIs[NamespaceAccessor[_FullContext]]:
     return _hasattr_static(obj, "compliant")
 
 
@@ -1910,6 +1913,11 @@ class requires:  # noqa: N801
 
     _min_version: tuple[int, ...]
     _hint: str
+    _wrapped_name: str
+    """(Unqualified) decorated method name.
+
+    When used in a namespace accessor, it will be prefixed by the property name.
+    """
 
     @classmethod
     def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
@@ -1929,7 +1937,10 @@ class requires:  # noqa: N801
         return ".".join(f"{d}" for d in backend_version)
 
     def _unwrap_context(self, instance: _IntoContext) -> _FullContext:
-        if has_compliant(instance):
+        if is_namespace_accessor(instance):
+            # NOTE: Should only need to do this once per class (the first time the method is called)
+            if "." not in self._wrapped_name:
+                self._wrapped_name = f"{instance._accessor}.{self._wrapped_name}"
             return instance.compliant
         return instance
 

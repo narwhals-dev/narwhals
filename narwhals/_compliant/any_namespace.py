@@ -17,6 +17,7 @@ __all__ = [
     "DateTimeNamespace",
     "ListNamespace",
     "NameNamespace",
+    "NamespaceAccessor",
     "StringNamespace",
     "StructNamespace",
 ]

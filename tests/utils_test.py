@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._utils import _SupportsVersion
     from narwhals.series import Series
 
@@ -495,6 +496,8 @@ def test_deprecate_native_namespace() -> None:
 
 def test_requires() -> None:
     class SomeAccesssor:
+        _accessor: ClassVar[Accessor] = "str"
+
         def __init__(self, compliant: ProbablyCompliant) -> None:
             self._compliant: ProbablyCompliant = compliant
 
@@ -533,7 +536,7 @@ def test_requires() -> None:
             return self.native * n
 
         @property
-        def some(self) -> SomeAccesssor:
+        def str(self) -> SomeAccesssor:
             return SomeAccesssor(self)
 
     v_05 = ProbablyCompliant("123", (0, 5))
@@ -564,14 +567,14 @@ def test_requires() -> None:
     with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")
 
-    waddled = v_201.some.waddle()
+    waddled = v_201.str.waddle()
     assert waddled == "waddle<123>waddle"
-    assert v_05.some.waddle() == waddled
-    noped = v_201.some.nope()
+    assert v_05.str.waddle() == waddled
+    noped = v_201.str.nope()
     assert noped == "nooooooooooooooooooooooooooo"
-    match = r"`some\.nope`.+\'polars>=1.8.0\'.+found.+\'0.5\'"
+    match = r"`str\.nope`.+\'polars>=1.8.0\'.+found.+\'0.5\'"
     with pytest.raises(NotImplementedError, match=match):
-        v_05.some.nope()
+        v_05.str.nope()
 
 
 def test_deferred_iterable() -> None:
