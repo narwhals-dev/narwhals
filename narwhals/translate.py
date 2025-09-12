@@ -101,42 +101,42 @@ def to_native(
     return narwhals_object
 
 
-class SeriesNever(TypedDict, total=False):
+class ExcludeSeries(TypedDict, total=False):
     pass_through: bool
     eager_only: bool
     series_only: Literal[False]
     allow_series: Literal[False] | None
 
 
-class SeriesAllow(TypedDict, total=False):
+class AllowSeries(TypedDict, total=False):
     pass_through: bool
     eager_only: bool
     series_only: Literal[False]
     allow_series: Required[Literal[True]]
 
 
-class SeriesOnly(TypedDict, total=False):
+class OnlySeries(TypedDict, total=False):
     pass_through: bool
     eager_only: bool
     series_only: Required[Literal[True]]
     allow_series: bool | None
 
 
-class EagerOnly(TypedDict, total=False):
+class OnlyEager(TypedDict, total=False):
     pass_through: bool
     eager_only: Required[Literal[True]]
     series_only: bool
     allow_series: bool | None
 
 
-class LazyAllow(TypedDict, total=False):
+class AllowLazy(TypedDict, total=False):
     pass_through: bool
     eager_only: Literal[False]
     series_only: Literal[False]
     allow_series: bool | None
 
 
-class EagerLazySeriesAllow(TypedDict, total=False):
+class AllowAny(TypedDict, total=False):
     pass_through: bool
     eager_only: Literal[False]
     series_only: Literal[False]
@@ -164,38 +164,37 @@ def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT, **kwds: Unpack[SeriesNever]
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoSeriesT, **kwds: Unpack[SeriesOnly]
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoSeriesT, **kwds: Unpack[SeriesAllow]
+    native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> Series[IntoSeriesT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoLazyFrameT, **kwds: Unpack[LazyAllow]
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[SeriesAllow]
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    **kwds: Unpack[EagerLazySeriesAllow],
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 
 
