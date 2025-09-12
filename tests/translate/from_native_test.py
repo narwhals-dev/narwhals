@@ -19,7 +19,8 @@ for each attempted `@overload` match.
 
 from __future__ import annotations
 
-# mypy: disallow-any-generics=false
+# Using pyright's assert type instead
+# mypy: disallow-any-generics=false, disable-error-code="assert-type"
 from contextlib import nullcontext as does_not_raise
 from importlib.util import find_spec
 from itertools import chain
@@ -457,13 +458,15 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, P
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
+    pytest.importorskip("typing_extensions")
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    from typing_extensions import assert_type
 
     pl_ser = pl.Series([1, 2, 3])
-    pd_ser = pd.Series([1, 2, 3])
-    pa_ser = pa.chunked_array([pa.array([1])])
+    pd_ser = cast("pd.Series[Any]", pd.Series([1, 2, 3]))
+    pa_ser = cast("pa.ChunkedArray[Any]", pa.chunked_array([pa.array([1])]))  # type: ignore[redundant-cast]
 
     pl_1 = nw.from_native(pl_ser, series_only=True)
     pl_2 = nw.from_native(pl_ser, allow_series=True)
@@ -479,19 +482,20 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, P
     )
     pl_11 = nw.from_native(pl_ser, eager_only=True, allow_series=True, pass_through=True)
     pl_12 = nw.from_native(pl_ser, series_only=True, allow_series=True, pass_through=True)
+    pls = pl_1, pl_2, pl_3, pl_4, pl_5, pl_6, pl_7, pl_8, pl_9, pl_10, pl_11, pl_12
 
-    assert isinstance(pl_1, nw.Series)
-    assert isinstance(pl_2, nw.Series)
-    assert isinstance(pl_3, nw.Series)
-    assert isinstance(pl_4, nw.Series)
-    assert isinstance(pl_5, nw.Series)
-    assert isinstance(pl_6, nw.Series)
-    assert isinstance(pl_7, nw.Series)
-    assert isinstance(pl_8, nw.Series)
-    assert isinstance(pl_9, nw.Series)
-    assert isinstance(pl_10, nw.Series)
-    assert isinstance(pl_11, nw.Series)
-    assert isinstance(pl_12, nw.Series)
+    assert_type(pl_1, nw.Series[pl.Series])
+    assert_type(pl_2, nw.Series[pl.Series])
+    assert_type(pl_3, nw.Series[pl.Series])
+    assert_type(pl_4, nw.Series[pl.Series])
+    assert_type(pl_5, nw.Series[pl.Series])
+    assert_type(pl_6, nw.Series[pl.Series])
+    assert_type(pl_7, nw.Series[pl.Series])
+    assert_type(pl_8, nw.Series[pl.Series])
+    assert_type(pl_9, nw.Series[pl.Series])
+    assert_type(pl_10, nw.Series[pl.Series])
+    assert_type(pl_11, nw.Series[pl.Series])
+    assert_type(pl_12, nw.Series[pl.Series])
 
     pd_1 = nw.from_native(pd_ser, series_only=True)
     pd_2 = nw.from_native(pd_ser, allow_series=True)
@@ -507,19 +511,20 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, P
     )
     pd_11 = nw.from_native(pd_ser, eager_only=True, allow_series=True, pass_through=True)
     pd_12 = nw.from_native(pd_ser, series_only=True, allow_series=True, pass_through=True)
+    pds = pd_1, pd_2, pd_3, pd_4, pd_5, pd_6, pd_7, pd_8, pd_9, pd_10, pd_11, pd_12
 
-    assert isinstance(pd_1, nw.Series)
-    assert isinstance(pd_2, nw.Series)
-    assert isinstance(pd_3, nw.Series)
-    assert isinstance(pd_4, nw.Series)
-    assert isinstance(pd_5, nw.Series)
-    assert isinstance(pd_6, nw.Series)
-    assert isinstance(pd_7, nw.Series)
-    assert isinstance(pd_8, nw.Series)
-    assert isinstance(pd_9, nw.Series)
-    assert isinstance(pd_10, nw.Series)
-    assert isinstance(pd_11, nw.Series)
-    assert isinstance(pd_12, nw.Series)
+    assert_type(pd_1, nw.Series["pd.Series[Any]"])
+    assert_type(pd_2, nw.Series["pd.Series[Any]"])
+    assert_type(pd_3, nw.Series["pd.Series[Any]"])
+    assert_type(pd_4, nw.Series["pd.Series[Any]"])
+    assert_type(pd_5, nw.Series["pd.Series[Any]"])
+    assert_type(pd_6, nw.Series["pd.Series[Any]"])
+    assert_type(pd_7, nw.Series["pd.Series[Any]"])
+    assert_type(pd_8, nw.Series["pd.Series[Any]"])
+    assert_type(pd_9, nw.Series["pd.Series[Any]"])
+    assert_type(pd_10, nw.Series["pd.Series[Any]"])
+    assert_type(pd_11, nw.Series["pd.Series[Any]"])
+    assert_type(pd_12, nw.Series["pd.Series[Any]"])
 
     pa_1 = nw.from_native(pa_ser, series_only=True)
     pa_2 = nw.from_native(pa_ser, allow_series=True)
@@ -535,16 +540,20 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, P
     )
     pa_11 = nw.from_native(pa_ser, eager_only=True, allow_series=True, pass_through=True)
     pa_12 = nw.from_native(pa_ser, series_only=True, allow_series=True, pass_through=True)
+    pas = pa_1, pa_2, pa_3, pa_4, pa_5, pa_6, pa_7, pa_8, pa_9, pa_10, pa_11, pa_12
 
-    assert isinstance(pa_1, nw.Series)
-    assert isinstance(pa_2, nw.Series)
-    assert isinstance(pa_3, nw.Series)
-    assert isinstance(pa_4, nw.Series)
-    assert isinstance(pa_5, nw.Series)
-    assert isinstance(pa_6, nw.Series)
-    assert isinstance(pa_7, nw.Series)
-    assert isinstance(pa_8, nw.Series)
-    assert isinstance(pa_9, nw.Series)
-    assert isinstance(pa_10, nw.Series)
-    assert isinstance(pa_11, nw.Series)
-    assert isinstance(pa_12, nw.Series)
+    assert_type(pa_1, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_2, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_3, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_4, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_5, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_6, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_7, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_8, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_9, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_10, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_11, nw.Series["pa.ChunkedArray[Any]"])
+    assert_type(pa_12, nw.Series["pa.ChunkedArray[Any]"])
+
+    for series in chain(pls, pds, pas):
+        assert isinstance(series, nw.Series)
