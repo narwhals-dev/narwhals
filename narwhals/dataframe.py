@@ -2762,7 +2762,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 3), (1, 4) df(a, b)")
             >>> nw.from_native(lf_native).unique("a").sort("a", descending=True)
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2771,8 +2771,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             |│   a   │   b   │ |
             |│ int32 │ int32 │ |
             |├───────┼───────┤ |
-            |│     3 │     4 │ |
-            |│     1 │     1 │ |
+            |│     1 │     3 │ |
             |└───────┴───────┘ |
             └──────────────────┘
         """

@@ -44,9 +44,6 @@ def test_unique_first_last(
     expected: dict[str, list[float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11608
-        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/12073
         request.applymarker(pytest.mark.xfail)
@@ -72,11 +69,7 @@ def test_unique_first_last_no_subset(
     constructor: Constructor,
     keep: Literal["first", "last"],
     expected: dict[str, list[float]],
-    request: pytest.FixtureRequest,
 ) -> None:
-    if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11608
-        request.applymarker(pytest.mark.xfail)
     data = {"i": [0, 1, 1, 2], "b": [4, 4, 4, 6]}
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
