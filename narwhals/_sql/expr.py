@@ -783,19 +783,5 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     @property
     def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
-    # Not implemented
-
-    arg_max: not_implemented = not_implemented()
-    arg_min: not_implemented = not_implemented()
-    arg_true: not_implemented = not_implemented()
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
-    drop_nulls: not_implemented = not_implemented()
-    ewm_mean: not_implemented = not_implemented()
-    gather_every: not_implemented = not_implemented()
-    head: not_implemented = not_implemented()
-    map_batches: not_implemented = not_implemented()
-    replace_strict: not_implemented = not_implemented()
-    sort: not_implemented = not_implemented()
-    tail: not_implemented = not_implemented()
-    sample: not_implemented = not_implemented()
-    unique: not_implemented = not_implemented()
+    drop_nulls = not_implemented()  # type: ignore[misc]
+    unique = not_implemented()  # type: ignore[misc]

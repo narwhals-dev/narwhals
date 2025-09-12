@@ -93,7 +93,7 @@ if TYPE_CHECKING:
         Backend,
         IntoBackend,
         _ArrowImpl,
-        _CudfImpl,
+        _CuDFImpl,
         _DaskImpl,
         _DuckDBImpl,
         _EagerAllowedImpl,
@@ -116,6 +116,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         CompliantSeries,
         DTypes,
+        FileSource,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -2111,8 +2112,8 @@ class _Implementation:
     def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
     def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
-    @overload  # TODO @dangotbanned: Rename `_typing` `*Cudf*` aliases to `*CuDF*`
-    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CudfImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CuDFImpl: ...
     @overload
     def __get__(
         self, instance: Narwhals[_NativePandasLike], owner: Any
@@ -2148,3 +2149,19 @@ class _Implementation:
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
     def __get__(self, instance: Narwhals[Any] | None, owner: Any) -> Any:
         return self if instance is None else instance._compliant._implementation
+
+
+def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
+    import pyarrow as pa  # ignore-banned-import
+
+    if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
+        return pa.Table.from_batches(tbl)
+    return tbl
+
+
+def normalize_path(source: FileSource, /) -> str:
+    if isinstance(source, str):
+        return source
+    from pathlib import Path
+
+    return str(Path(source))
