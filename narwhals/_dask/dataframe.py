@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -237,7 +237,11 @@ class DaskLazyFrame(
         return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
         if subset and (error := self._check_columns_exist(subset)):
             raise error
@@ -250,7 +254,11 @@ class DaskLazyFrame(
             result = self.native.merge(unique, on=subset, how="inner")
         else:
             mapped_keep = {"any": "first"}.get(keep, keep)
-            result = self.native.drop_duplicates(subset=subset, keep=mapped_keep)
+            if order_by:
+                native = self.sort(*order_by, descending=False, nulls_last=False).native
+            else:
+                native = self.native
+            result = native.drop_duplicates(subset=subset, keep=mapped_keep)
         return self._with_native(result)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:

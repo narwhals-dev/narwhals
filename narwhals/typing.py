@@ -339,13 +339,6 @@ UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
 - *"last"*: Keep last unique row.
 """
 
-LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
-"""Which of the duplicate rows to keep.
-
-- *"any"*: Does not give any guarantee of which row is kept.
-- *"none"*: Don't keep duplicate rows.
-"""
-
 ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 """Which of the mode's to keep.
 
