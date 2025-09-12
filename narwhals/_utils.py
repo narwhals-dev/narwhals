@@ -116,6 +116,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         CompliantSeries,
         DTypes,
+        FileSource,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -2156,3 +2157,11 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
         return pa.Table.from_batches(tbl)
     return tbl
+
+
+def normalize_path(source: FileSource, /) -> str:
+    if isinstance(source, str):
+        return source
+    from pathlib import Path
+
+    return str(Path(source))
