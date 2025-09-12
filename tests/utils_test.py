@@ -16,7 +16,6 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 import narwhals as nw
 from narwhals._utils import (
     Implementation,
-    Version,
     _DeferredIterable,
     check_columns_exist,
     deprecate_native_namespace,
@@ -512,7 +511,6 @@ def test_requires() -> None:
 
     class ProbablyCompliant:
         _implementation: Implementation = Implementation.POLARS
-        _version: Version = Version.MAIN
 
         def __init__(self, native_obj: str, backend_version: tuple[int, ...]) -> None:
             self._native_obj: str = native_obj
