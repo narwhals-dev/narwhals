@@ -152,56 +152,36 @@ class PassThroughUnknown(TypedDict, total=False):
 
 @overload
 def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
-
-
 @overload
 def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
-
-
 @overload
 def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
-
-
 @overload
 def from_native(
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
-
-
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
-
-
 # All params passed in as variables
 @overload
 def from_native(
@@ -212,8 +192,6 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-
-
 def from_native(  # noqa: D417
     native_object: IntoLazyFrameT
     | IntoDataFrameT
