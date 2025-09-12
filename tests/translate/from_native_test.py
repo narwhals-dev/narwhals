@@ -435,26 +435,57 @@ def test_pyspark_connect_deps_2517(constructor: Constructor) -> None:  # pragma:
     nw.from_native(spark.createDataFrame([(1,)], ["a"]))
 
 
-@pytest.mark.parametrize(
-    ("eager_only", "pass_through", "context"),
-    [
-        (False, False, does_not_raise()),
-        (False, True, does_not_raise()),
-        (True, True, does_not_raise()),
-        (True, False, pytest.raises(TypeError, match="Cannot only use")),
-    ],
-)
-def test_eager_only_pass_through_main(
-    constructor: Constructor, *, eager_only: bool, pass_through: bool, context: Any
-) -> None:
+def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
         pytest.skip(reason="Non lazy or polars")
 
     df = constructor(data)
 
-    with context:
-        res = nw.from_native(df, eager_only=eager_only, pass_through=pass_through)  # type: ignore[call-overload]
-        if eager_only and pass_through:
-            assert not isinstance(res, nw.LazyFrame)
-        else:
-            assert isinstance(res, nw.LazyFrame)
+    r1 = nw.from_native(df, eager_only=False, pass_through=False)
+    r2 = nw.from_native(df, eager_only=False, pass_through=True)
+    r3 = nw.from_native(df, eager_only=True, pass_through=True)
+
+    assert isinstance(r1, nw.LazyFrame)
+    assert isinstance(r2, nw.LazyFrame)
+    assert not isinstance(r3, nw.LazyFrame)
+
+    with pytest.raises(TypeError, match=r"Cannot.+use.+eager_only"):
+        nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
+
+
+def test_from_native_eager_only_series_only_allow() -> None:
+    pytest.importorskip("polars")
+    pytest.importorskip("pandas")
+    import pandas as pd
+    import polars as pl
+
+    pl_ser = pl.Series([1, 2, 3])
+    pd_ser = pd.Series([1, 2, 3])
+
+    s01 = nw.from_native(pl_ser, series_only=True)
+    s02 = nw.from_native(pl_ser, allow_series=True)
+    s03 = nw.from_native(pl_ser, eager_only=True, series_only=True)
+    s04 = nw.from_native(pl_ser, eager_only=True, series_only=True, allow_series=True)
+    s05 = nw.from_native(pl_ser, eager_only=True, allow_series=True)
+    s06 = nw.from_native(pl_ser, series_only=True, allow_series=True)
+
+    assert isinstance(s01, nw.Series)
+    assert isinstance(s02, nw.Series)
+    assert isinstance(s03, nw.Series)
+    assert isinstance(s04, nw.Series)
+    assert isinstance(s05, nw.Series)
+    assert isinstance(s06, nw.Series)
+
+    s11 = nw.from_native(pd_ser, series_only=True)
+    s12 = nw.from_native(pd_ser, allow_series=True)
+    s13 = nw.from_native(pd_ser, eager_only=True, series_only=True)
+    s14 = nw.from_native(pd_ser, eager_only=True, series_only=True, allow_series=True)
+    s15 = nw.from_native(pd_ser, eager_only=True, allow_series=True)
+    s16 = nw.from_native(pd_ser, series_only=True, allow_series=True)
+
+    assert isinstance(s11, nw.Series)
+    assert isinstance(s12, nw.Series)
+    assert isinstance(s13, nw.Series)
+    assert isinstance(s14, nw.Series)
+    assert isinstance(s15, nw.Series)
+    assert isinstance(s16, nw.Series)

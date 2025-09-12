@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, TypeVar, overload
 
 from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._namespace import (
@@ -30,6 +30,8 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from typing_extensions import NotRequired, Unpack
+
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -99,6 +101,60 @@ def to_native(
     return narwhals_object
 
 
+# Upper bound
+class FromNativeFlags(TypedDict, total=False):
+    pass_through: bool
+    eager_only: bool
+    series_only: bool
+    allow_series: bool | None
+
+
+class DefaultFlags(TypedDict, total=False):
+    pass_through: Literal[False]
+    eager_only: Literal[False]
+    series_only: Literal[False]
+    allow_series: None
+
+
+class SeriesNever(TypedDict, total=False):
+    pass_through: bool
+    eager_only: bool
+    series_only: Literal[False]
+    allow_series: Literal[False] | None
+
+
+class PassThrough(TypedDict):
+    pass_through: Literal[True]
+
+
+class SeriesAllow(TypedDict):
+    pass_through: NotRequired[bool]
+    eager_only: NotRequired[bool]
+    series_only: NotRequired[Literal[False]]
+    allow_series: Literal[True]
+
+
+class SeriesOnly(TypedDict):
+    pass_through: NotRequired[bool]
+    eager_only: NotRequired[bool]
+    series_only: Literal[True]
+    allow_series: NotRequired[bool | None]
+
+
+class EagerOnly(TypedDict):
+    pass_through: NotRequired[bool]
+    eager_only: Literal[True]
+    series_only: NotRequired[bool]
+    allow_series: NotRequired[bool | None]
+
+
+class LazyAllow(TypedDict):
+    pass_through: NotRequired[bool]
+    eager_only: NotRequired[Literal[False]]
+    series_only: NotRequired[Literal[False]]
+    allow_series: NotRequired[bool | None]
+
+
 @overload
 def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
 
@@ -113,24 +169,32 @@ def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+    native_object: IntoDataFrameT, **kwds: Unpack[SeriesNever]
+) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
+    native_object: IntoSeriesT, **kwds: Unpack[SeriesOnly]
+) -> Series[IntoSeriesT]: ...
+
+
+@overload
+def from_native(
+    native_object: IntoSeriesT, **kwds: Unpack[SeriesAllow]
+) -> Series[IntoSeriesT]: ...
+
+
+@overload
+def from_native(
+    native_object: IntoLazyFrameT, **kwds: Unpack[LazyAllow]
+) -> LazyFrame[IntoLazyFrameT]: ...
+
+
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[SeriesAllow]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 
 
 @overload
@@ -142,17 +206,6 @@ def from_native(
     series_only: Literal[False] = ...,
     allow_series: None = ...,
 ) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
 
 
 @overload
@@ -179,50 +232,6 @@ def from_native(
 
 @overload
 def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> LazyFrame[IntoLazyFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
     native_object: IntoFrame | IntoSeries,
     *,
     pass_through: Literal[False] = ...,
@@ -230,17 +239,6 @@ def from_native(
     series_only: Literal[False] = ...,
     allow_series: Literal[True],
 ) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
 
 
 # All params passed in as variables
