@@ -163,8 +163,9 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-_ContextT = TypeVar("_ContextT", bound="_FullContext")
-_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
+_IntoContext: TypeAlias = "_FullContext | _StoresCompliant[_FullContext]"
+_IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
+_Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
@@ -183,7 +184,7 @@ class _StoresNative(Protocol[NativeT_co]):
         ...
 
 
-class _StoresCompliant(Protocol[CompliantT_co]):  # noqa: PYI046
+class _StoresCompliant(Protocol[CompliantT_co]):
     """Provides access to a compliant object.
 
     Compliant objects have types like:
@@ -223,12 +224,11 @@ class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
     """
 
 
-class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
-    """Provides 3 attributes.
+class _FullContext(_StoresImplementation, _StoresBackendVersion, Protocol):
+    """Provides 2 attributes.
 
     - `_implementation`
     - `_backend_version`
-    - `_version`
     """
 
 
@@ -1671,6 +1671,10 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
+def has_compliant(obj: _StoresCompliant[_T] | Any) -> TypeIs[_StoresCompliant[_T]]:
+    return _hasattr_static(obj, "compliant")
+
+
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     """Return True if `impl` allows eager operations."""
     return impl in {
@@ -1924,23 +1928,31 @@ class requires:  # noqa: N801
     def _unparse_version(backend_version: tuple[int, ...], /) -> str:
         return ".".join(f"{d}" for d in backend_version)
 
-    def _ensure_version(self, instance: _FullContext, /) -> None:
-        if instance._backend_version >= self._min_version:
+    def _unwrap_context(self, instance: _IntoContext) -> _FullContext:
+        if has_compliant(instance):
+            return instance.compliant
+        return instance
+
+    def _ensure_version(self, instance: _IntoContext, /) -> None:
+        context = self._unwrap_context(instance)
+        if context._backend_version >= self._min_version:
             return
         method = self._wrapped_name
-        backend = instance._implementation
+        backend = context._implementation
         minimum = self._unparse_version(self._min_version)
-        found = self._unparse_version(instance._backend_version)
+        found = self._unparse_version(context._backend_version)
         msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
 
-    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+    def __call__(
+        self, fn: _Method[_IntoContextT, P, R], /
+    ) -> _Method[_IntoContextT, P, R]:
         self._wrapped_name = fn.__name__
 
         @wraps(fn)
-        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+        def wrapper(instance: _IntoContextT, *args: P.args, **kwds: P.kwargs) -> R:
             self._ensure_version(instance)
             return fn(instance, *args, **kwds)
 

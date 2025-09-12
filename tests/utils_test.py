@@ -506,7 +506,7 @@ def test_requires() -> None:
         def waddle(self) -> str:
             return f"waddle<{self.compliant.native}>waddle"
 
-        @requires.backend_version((1, 8, 0))  # type: ignore[type-var]
+        @requires.backend_version((1, 8, 0))
         def nope(self) -> str:
             return "nooooooooooooooooooooooooooo"
 
