@@ -453,7 +453,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
         nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
 
 
-def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
+def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, PLR0915
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -471,6 +471,14 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     pl_4 = nw.from_native(pl_ser, eager_only=True, series_only=True, allow_series=True)
     pl_5 = nw.from_native(pl_ser, eager_only=True, allow_series=True)
     pl_6 = nw.from_native(pl_ser, series_only=True, allow_series=True)
+    pl_7 = nw.from_native(pl_ser, series_only=True, pass_through=True)
+    pl_8 = nw.from_native(pl_ser, allow_series=True, pass_through=True)
+    pl_9 = nw.from_native(pl_ser, eager_only=True, series_only=True, pass_through=True)
+    pl_10 = nw.from_native(
+        pl_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pl_11 = nw.from_native(pl_ser, eager_only=True, allow_series=True, pass_through=True)
+    pl_12 = nw.from_native(pl_ser, series_only=True, allow_series=True, pass_through=True)
 
     assert isinstance(pl_1, nw.Series)
     assert isinstance(pl_2, nw.Series)
@@ -478,6 +486,12 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     assert isinstance(pl_4, nw.Series)
     assert isinstance(pl_5, nw.Series)
     assert isinstance(pl_6, nw.Series)
+    assert isinstance(pl_7, nw.Series)
+    assert isinstance(pl_8, nw.Series)
+    assert isinstance(pl_9, nw.Series)
+    assert isinstance(pl_10, nw.Series)
+    assert isinstance(pl_11, nw.Series)
+    assert isinstance(pl_12, nw.Series)
 
     pd_1 = nw.from_native(pd_ser, series_only=True)
     pd_2 = nw.from_native(pd_ser, allow_series=True)
@@ -485,6 +499,14 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     pd_4 = nw.from_native(pd_ser, eager_only=True, series_only=True, allow_series=True)
     pd_5 = nw.from_native(pd_ser, eager_only=True, allow_series=True)
     pd_6 = nw.from_native(pd_ser, series_only=True, allow_series=True)
+    pd_7 = nw.from_native(pd_ser, series_only=True, pass_through=True)
+    pd_8 = nw.from_native(pd_ser, allow_series=True, pass_through=True)
+    pd_9 = nw.from_native(pd_ser, eager_only=True, series_only=True, pass_through=True)
+    pd_10 = nw.from_native(
+        pd_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pd_11 = nw.from_native(pd_ser, eager_only=True, allow_series=True, pass_through=True)
+    pd_12 = nw.from_native(pd_ser, series_only=True, allow_series=True, pass_through=True)
 
     assert isinstance(pd_1, nw.Series)
     assert isinstance(pd_2, nw.Series)
@@ -492,6 +514,12 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     assert isinstance(pd_4, nw.Series)
     assert isinstance(pd_5, nw.Series)
     assert isinstance(pd_6, nw.Series)
+    assert isinstance(pd_7, nw.Series)
+    assert isinstance(pd_8, nw.Series)
+    assert isinstance(pd_9, nw.Series)
+    assert isinstance(pd_10, nw.Series)
+    assert isinstance(pd_11, nw.Series)
+    assert isinstance(pd_12, nw.Series)
 
     pa_1 = nw.from_native(pa_ser, series_only=True)
     pa_2 = nw.from_native(pa_ser, allow_series=True)
@@ -499,6 +527,14 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     pa_4 = nw.from_native(pa_ser, eager_only=True, series_only=True, allow_series=True)
     pa_5 = nw.from_native(pa_ser, eager_only=True, allow_series=True)
     pa_6 = nw.from_native(pa_ser, series_only=True, allow_series=True)
+    pa_7 = nw.from_native(pa_ser, series_only=True, pass_through=True)
+    pa_8 = nw.from_native(pa_ser, allow_series=True, pass_through=True)
+    pa_9 = nw.from_native(pa_ser, eager_only=True, series_only=True, pass_through=True)
+    pa_10 = nw.from_native(
+        pa_ser, eager_only=True, series_only=True, allow_series=True, pass_through=True
+    )
+    pa_11 = nw.from_native(pa_ser, eager_only=True, allow_series=True, pass_through=True)
+    pa_12 = nw.from_native(pa_ser, series_only=True, allow_series=True, pass_through=True)
 
     assert isinstance(pa_1, nw.Series)
     assert isinstance(pa_2, nw.Series)
@@ -506,3 +542,9 @@ def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914
     assert isinstance(pa_4, nw.Series)
     assert isinstance(pa_5, nw.Series)
     assert isinstance(pa_6, nw.Series)
+    assert isinstance(pa_7, nw.Series)
+    assert isinstance(pa_8, nw.Series)
+    assert isinstance(pa_9, nw.Series)
+    assert isinstance(pa_10, nw.Series)
+    assert isinstance(pa_11, nw.Series)
+    assert isinstance(pa_12, nw.Series)
