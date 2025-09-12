@@ -454,7 +454,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
         nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
 
 
-def test_from_native_eager_only_series_only_allow() -> None:  # noqa: PLR0914, PLR0915
+def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
