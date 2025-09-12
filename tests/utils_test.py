@@ -495,6 +495,21 @@ def test_deprecate_native_namespace() -> None:
 
 
 def test_requires() -> None:
+    class SomeAccesssor:
+        def __init__(self, compliant: ProbablyCompliant) -> None:
+            self._compliant: ProbablyCompliant = compliant
+
+        @property
+        def compliant(self) -> ProbablyCompliant:
+            return self._compliant
+
+        def waddle(self) -> str:
+            return f"waddle<{self.compliant.native}>waddle"
+
+        @requires.backend_version((1, 8, 0))  # type: ignore[type-var]
+        def nope(self) -> str:
+            return "nooooooooooooooooooooooooooo"
+
     class ProbablyCompliant:
         _implementation: Implementation = Implementation.POLARS
         _version: Version = Version.MAIN
@@ -518,6 +533,10 @@ def test_requires() -> None:
         @requires.backend_version((3, 0, 0))
         def repeat(self, n: int) -> str:
             return self.native * n
+
+        @property
+        def some(self) -> SomeAccesssor:
+            return SomeAccesssor(self)
 
     v_05 = ProbablyCompliant("123", (0, 5))
     v_201 = ProbablyCompliant("123", (2, 0, 1))
@@ -546,6 +565,15 @@ def test_requires() -> None:
     )
     with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")
+
+    waddled = v_201.some.waddle()
+    assert waddled == "waddle<123>waddle"
+    assert v_05.some.waddle() == waddled
+    noped = v_201.some.nope()
+    assert noped == "nooooooooooooooooooooooooooo"
+    match = r"`some\.nope`.+\'polars>=1.8.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
+        v_05.some.nope()
 
 
 def test_deferred_iterable() -> None:
