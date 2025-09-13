@@ -63,10 +63,6 @@ def is_column(obj: Any) -> TypeIs[Expr]:
     return is_expr(obj) and obj.meta.is_column()
 
 
-def is_column_ir(obj: Any) -> TypeIs[ir.Column]:
-    return isinstance(obj, _ir().Column)
-
-
 def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
     return isinstance(obj, _series().Series)
 

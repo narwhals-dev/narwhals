@@ -10,15 +10,15 @@ from functools import lru_cache
 from itertools import chain
 from typing import TYPE_CHECKING, Literal, overload
 
-from narwhals._plan._guards import is_column_ir, is_literal
+from narwhals._plan import expressions as ir
+from narwhals._plan._guards import is_literal
 from narwhals._plan.common import IRNamespace
+from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-
-    from narwhals._plan.expressions import ExprIR
 
 
 class IRMetaNamespace(IRNamespace):
@@ -28,7 +28,7 @@ class IRMetaNamespace(IRNamespace):
         return any(_has_multiple_outputs(e) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:
-        return is_column_ir(self._ir)
+        return isinstance(self._ir, ir.Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
         return all(
@@ -76,22 +76,20 @@ class IRMetaNamespace(IRNamespace):
         return list(_expr_to_leaf_column_names_iter(self._ir))
 
 
-def _expr_to_leaf_column_names_iter(expr: ExprIR, /) -> Iterator[str]:
+def _expr_to_leaf_column_names_iter(expr: ir.ExprIR, /) -> Iterator[str]:
     for e in _expr_to_leaf_column_exprs_iter(expr):
         result = _expr_to_leaf_column_name(e)
         if isinstance(result, str):
             yield result
 
 
-def _expr_to_leaf_column_exprs_iter(expr: ExprIR, /) -> Iterator[ExprIR]:
-    from narwhals._plan import expressions as ir
-
+def _expr_to_leaf_column_exprs_iter(expr: ir.ExprIR, /) -> Iterator[ir.ExprIR]:
     for outer in expr.iter_root_names():
         if isinstance(outer, (ir.Column, ir.All)):
             yield outer
 
 
-def _expr_to_leaf_column_name(expr: ExprIR, /) -> str | ComputeError:
+def _expr_to_leaf_column_name(expr: ir.ExprIR, /) -> str | ComputeError:
     leaves = list(_expr_to_leaf_column_exprs_iter(expr))
     if not len(leaves) <= 1:
         msg = "found more than one root column name"
@@ -100,8 +98,6 @@ def _expr_to_leaf_column_name(expr: ExprIR, /) -> str | ComputeError:
         msg = "no root column name found"
         return ComputeError(msg)
     leaf = leaves[0]
-    from narwhals._plan import expressions as ir
-
     if isinstance(leaf, ir.Column):
         return leaf.name
     if isinstance(leaf, ir.All):
@@ -111,14 +107,12 @@ def _expr_to_leaf_column_name(expr: ExprIR, /) -> str | ComputeError:
     return ComputeError(msg)
 
 
-def root_names_unique(exprs: Iterable[ExprIR], /) -> set[str]:
+def root_names_unique(exprs: Iterable[ir.ExprIR], /) -> set[str]:
     return set(chain.from_iterable(_expr_to_leaf_column_names_iter(e) for e in exprs))
 
 
 @lru_cache(maxsize=32)
-def _expr_output_name(expr: ExprIR, /) -> str | ComputeError:
-    from narwhals._plan import expressions as ir
-
+def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
     for e in expr.iter_output_name():
         if isinstance(e, (ir.Column, ir.Alias, ir.Literal, ir.Len)):
             return e.name
@@ -135,7 +129,7 @@ def _expr_output_name(expr: ExprIR, /) -> str | ComputeError:
     return ComputeError(msg)
 
 
-def get_single_leaf_name(expr: ExprIR, /) -> str | ComputeError:
+def get_single_leaf_name(expr: ir.ExprIR, /) -> str | ComputeError:
     """Find the name at the start of an expression.
 
     Normal iteration would just return the first root column it found.
@@ -144,8 +138,6 @@ def get_single_leaf_name(expr: ExprIR, /) -> str | ComputeError:
 
     [`polars_plan::utils::get_single_leaf`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168
     """
-    from narwhals._plan import expressions as ir
-
     for e in expr.iter_right():
         if isinstance(e, (ir.WindowExpr, ir.SortBy, ir.Filter)):
             return get_single_leaf_name(e.expr)
@@ -158,13 +150,11 @@ def get_single_leaf_name(expr: ExprIR, /) -> str | ComputeError:
     return ComputeError(msg)
 
 
-def _has_multiple_outputs(expr: ExprIR, /) -> bool:
-    from narwhals._plan import expressions as ir
-
+def _has_multiple_outputs(expr: ir.ExprIR, /) -> bool:
     return isinstance(expr, (ir.Columns, ir.IndexColumns, ir.SelectorIR, ir.All))
 
 
-def has_expr_ir(expr: ExprIR, *matches: type[ExprIR]) -> bool:
+def has_expr_ir(expr: ir.ExprIR, *matches: type[ir.ExprIR]) -> bool:
     """Return True if any node in the tree is in type `matches`.
 
     Based on [`polars_plan::utils::has_expr`]
@@ -174,10 +164,7 @@ def has_expr_ir(expr: ExprIR, *matches: type[ExprIR]) -> bool:
     return any(isinstance(e, matches) for e in expr.iter_right())
 
 
-def _is_literal(expr: ExprIR, /, *, allow_aliasing: bool) -> bool:
-    from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions.literal import is_literal_scalar
-
+def _is_literal(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
     return (
         is_literal(expr)
         or (allow_aliasing and isinstance(expr, ir.Alias))
@@ -189,9 +176,7 @@ def _is_literal(expr: ExprIR, /, *, allow_aliasing: bool) -> bool:
     )
 
 
-def _is_column_selection(expr: ExprIR, /, *, allow_aliasing: bool) -> bool:
-    from narwhals._plan import expressions as ir
-
+def _is_column_selection(expr: ir.ExprIR, /, *, allow_aliasing: bool) -> bool:
     return isinstance(expr, (ir.Column, ir._ColumnSelection, ir.SelectorIR)) or (
         allow_aliasing and isinstance(expr, (ir.Alias, ir.KeepName, ir.RenameAlias))
     )
