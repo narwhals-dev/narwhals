@@ -1,9 +1,10 @@
-"""Post-`expr_expansion` rewrites, in a similar style."""
+"""Post-`_expansion` rewrites, in a similar style."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan._expansion import into_named_irs, prepare_projection
 from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
@@ -12,7 +13,6 @@ from narwhals._plan._guards import (
 )
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import NamedIR, map_ir, replace
-from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

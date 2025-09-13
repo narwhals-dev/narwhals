@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import _parse, expr_expansion
+from narwhals._plan import _expansion, _parse
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expr import _parse_sort_by
 from narwhals._plan.series import Series
@@ -69,10 +69,10 @@ class BaseFrame(Generic[NativeFrameT]):
         /,
     ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
         """Temp, while these parts aren't connected, this is easier for testing."""
-        irs, schema_frozen, output_names = expr_expansion.prepare_projection(
+        irs, schema_frozen, output_names = _expansion.prepare_projection(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
         )
-        named_irs = expr_expansion.into_named_irs(irs, output_names)
+        named_irs = _expansion.into_named_irs(irs, output_names)
         return schema_frozen.project(named_irs, context)
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
@@ -93,8 +93,8 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        irs, _, output_names = expr_expansion.prepare_projection(sort, self.schema)
-        named_irs = expr_expansion.into_named_irs(irs, output_names)
+        irs, _, output_names = _expansion.prepare_projection(sort, self.schema)
+        named_irs = _expansion.into_named_irs(irs, output_names)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
 
