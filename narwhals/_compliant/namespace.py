@@ -167,7 +167,7 @@ class LazyNamespace(
         msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
         raise TypeError(msg)
 
-    int_range: not_implemented = not_implemented()
+    int_range = not_implemented()  # type: ignore[misc]
 
 
 class EagerNamespace(
