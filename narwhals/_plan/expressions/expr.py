@@ -6,7 +6,7 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan.common import ExprIR, SelectorIR, collect
+from narwhals._plan.common import ExprIR, SelectorIR, flatten_hash_safe
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
@@ -23,7 +23,6 @@ from narwhals._plan.typing import (
     SelectorT,
     Seq,
 )
-from narwhals._utils import flatten
 from narwhals.exceptions import InvalidOperationError
 
 if t.TYPE_CHECKING:
@@ -143,8 +142,8 @@ class Exclude(_ColumnSelection, child=("expr",)):
 
     @staticmethod
     def from_names(expr: ExprIR, *names: str | t.Iterable[str]) -> Exclude:
-        flat = flatten(names)
-        return Exclude(expr=expr, names=collect(flat))
+        flat: t.Iterator[str] = flatten_hash_safe(names)
+        return Exclude(expr=expr, names=tuple(flat))
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.exclude({list(self.names)!r})"

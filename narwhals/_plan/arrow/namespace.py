@@ -9,7 +9,6 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.common import collect
 from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
@@ -225,7 +224,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._dataframe.from_native(native, self.version)
 
     def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
-        collected = collect(items)
+        collected = items if isinstance(items, tuple) else tuple(items)
         if is_tuple_of(collected, self._series):
             sers = collected
             chunked = fn.concat_vertical_chunked(ser.native for ser in sers)

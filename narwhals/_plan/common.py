@@ -472,11 +472,6 @@ def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDT
     return dtype
 
 
-def collect(iterable: Seq[T] | Iterable[T], /) -> Seq[T]:
-    """Collect `iterable` into a `tuple`, *iff* it is not one already."""
-    return iterable if isinstance(iterable, tuple) else tuple(iterable)
-
-
 def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
     return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
