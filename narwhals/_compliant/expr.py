@@ -904,10 +904,6 @@ class EagerExpr(
 class LazyExpr(  # type: ignore[misc]
     ImplExpr[CompliantLazyFrameT, NativeExprT], Protocol[CompliantLazyFrameT, NativeExprT]
 ):
-    # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2526#issuecomment-3019303816
-    first: not_implemented = not_implemented()
-    last: not_implemented = not_implemented()
-
     def _with_alias_output_names(self, func: AliasNames | None, /) -> Self: ...
     def alias(self, name: str) -> Self:
         def fn(names: Sequence[str]) -> Sequence[str]:
@@ -922,6 +918,9 @@ class LazyExpr(  # type: ignore[misc]
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
 
+    # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2526#issuecomment-3019303816
+    first = not_implemented()  # type: ignore[misc]
+    last = not_implemented()  # type: ignore[misc]
     ewm_mean = not_implemented()  # type: ignore[misc]
     map_batches = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
