@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
 
-class IRMetaNamespace(IRNamespace):
+class MetaNamespace(IRNamespace):
     """Methods to modify and traverse existing expressions."""
 
     def has_multiple_outputs(self) -> bool:

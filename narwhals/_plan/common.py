@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.expressions.expr import Alias, Cast, Column, FunctionExpr
-    from narwhals._plan.meta import IRMetaNamespace
+    from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
@@ -263,10 +263,10 @@ class ExprIR(Immutable):
         yield from self.iter_right()
 
     @property
-    def meta(self) -> IRMetaNamespace:
-        from narwhals._plan.meta import IRMetaNamespace
+    def meta(self) -> MetaNamespace:
+        from narwhals._plan.meta import MetaNamespace
 
-        return IRMetaNamespace(_ir=self)
+        return MetaNamespace(_ir=self)
 
     def cast(self, dtype: DType) -> Cast:
         from narwhals._plan.expressions.expr import Cast

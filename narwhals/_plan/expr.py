@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.strings import ExprStringNamespace
     from narwhals._plan.expressions.struct import ExprStructNamespace
     from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
-    from narwhals._plan.meta import IRMetaNamespace
+    from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals.typing import (
         ClosedInterval,
@@ -540,10 +540,10 @@ class Expr:
         return self._with_unary(boolean.Not())
 
     @property
-    def meta(self) -> IRMetaNamespace:
-        from narwhals._plan.meta import IRMetaNamespace
+    def meta(self) -> MetaNamespace:
+        from narwhals._plan.meta import MetaNamespace
 
-        return IRMetaNamespace.from_expr(self)
+        return MetaNamespace.from_expr(self)
 
     @property
     def name(self) -> ExprNameNamespace:
