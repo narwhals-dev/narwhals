@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
@@ -302,10 +303,10 @@ def test_narwhalify_backends_cross() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pd.DataFrame(data), pl.DataFrame(data))
 
 
