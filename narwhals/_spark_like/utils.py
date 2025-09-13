@@ -285,10 +285,18 @@ def strptime_to_pyspark_format(format: str | None) -> str | None:
     return pyspark_format.replace("T", " ")
 
 
-def true_divide(F: Any, left: Column, right: Column) -> Column:
+def true_divide(F: ModuleType, left: Column, right: Column) -> Column:
     # PySpark before 3.5 doesn't have `try_divide`, SQLFrame doesn't have it.
     divide = getattr(F, "try_divide", operator.truediv)
-    return divide(left, right)
+    zero = F.lit(0)
+
+    safe_case = divide(left, right)  # Dividend is not zero
+    unsafe_case = (  # Dividend is zero, the result depends on the numerator
+        F.when(left == zero, F.lit(float("nan")))
+        .when(left > zero, F.lit(float("inf")))
+        .when(left < zero, F.lit(float("-inf")))
+    )
+    return F.when(right != zero, safe_case).when(right == zero, unsafe_case)
 
 
 def catch_pyspark_sql_exception(

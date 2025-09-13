@@ -251,6 +251,17 @@ class PolarsSeries:
     def __len__(self) -> int:
         return len(self.native)
 
+    def __rfloordiv__(self, other: Any) -> PolarsSeries:
+        if self._backend_version < (1, 10, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            return (
+                self.to_frame()
+                .select((ns.col(name).__rfloordiv__(other)).alias(name))
+                .get_column(name)
+            )
+        return self._with_native(self.native.__rfloordiv__(extract_native(other)))
+
     @property
     def name(self) -> str:
         return self.native.name
@@ -664,7 +675,6 @@ class PolarsSeries:
     __pow__: Method[Self]
     __radd__: Method[Self]
     __rand__: Method[Self]
-    __rfloordiv__: Method[Self]
     __rmod__: Method[Self]
     __rmul__: Method[Self]
     __ror__: Method[Self]
