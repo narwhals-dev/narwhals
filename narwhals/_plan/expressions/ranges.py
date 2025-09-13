@@ -8,13 +8,13 @@ from narwhals._plan.options import FEOptions, FunctionOptions
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expr import RangeExpr
+    from narwhals._plan.expressions.expr import RangeExpr
     from narwhals.dtypes import IntegerType
 
 
 class RangeFunction(Function, config=FEOptions.namespaced()):
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
-        from narwhals._plan.expr import RangeExpr
+        from narwhals._plan.expressions.expr import RangeExpr
 
         return RangeExpr(input=inputs, function=self, options=self.function_options)
 

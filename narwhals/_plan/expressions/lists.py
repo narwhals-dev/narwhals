@@ -6,7 +6,7 @@ from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 # fmt: off

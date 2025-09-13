@@ -6,7 +6,7 @@ from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 class StructFunction(Function, accessor="struct"): ...

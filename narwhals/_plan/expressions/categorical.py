@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 from narwhals._plan.common import ExprNamespace, Function, IRNamespace
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 # fmt: off

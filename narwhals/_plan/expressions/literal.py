@@ -9,8 +9,8 @@ from narwhals._plan.typing import LiteralT, NativeSeriesT, NonNestedLiteralT
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._plan.dummy import Series
-    from narwhals._plan.expr import Literal
+    from narwhals._plan.expressions.expr import Literal
+    from narwhals._plan.series import Series
     from narwhals.dtypes import DType
 
 
@@ -30,7 +30,7 @@ class LiteralValue(Immutable, Generic[LiteralT]):
         return False
 
     def to_literal(self) -> Literal[LiteralT]:
-        from narwhals._plan.expr import Literal
+        from narwhals._plan.expressions.expr import Literal
 
         return Literal(value=self)
 

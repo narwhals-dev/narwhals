@@ -5,21 +5,22 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, expr_parsing as parse, selectors as ndcs
+from narwhals._plan import _parse, functions as nwd
 from narwhals._plan._guards import is_expr
-from narwhals._plan.common import ExprIR, NamedIR
-from narwhals._plan.expr import WindowExpr
-from narwhals._plan.expr_rewrites import (
+from narwhals._plan._rewrites import (
     rewrite_all,
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
-from narwhals._plan.window import Over
+from narwhals._plan.common import ExprIR, NamedIR
+from narwhals._plan.expressions import selectors as ndcs
+from narwhals._plan.expressions.expr import WindowExpr
+from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 
@@ -43,8 +44,8 @@ def schema_2() -> dict[str, DType]:
 
 def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> WindowExpr:
     return WindowExpr(
-        expr=parse.parse_into_expr_ir(into_expr),
-        partition_by=parse.parse_into_seq_of_expr_ir(*partition_by),
+        expr=_parse.parse_into_expr_ir(into_expr),
+        partition_by=_parse.parse_into_seq_of_expr_ir(*partition_by),
         options=Over(),
     )
 

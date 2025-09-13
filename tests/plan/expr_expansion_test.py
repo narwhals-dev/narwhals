@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Callable
 import pytest
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, selectors as ndcs
-from narwhals._plan.expr import Alias, Columns
-from narwhals._plan.expr_expansion import (
+from narwhals._plan import functions as nwd
+from narwhals._plan._expansion import (
     prepare_projection,
     replace_selector,
     rewrite_special_aliases,
 )
-from narwhals._plan.expr_parsing import parse_into_seq_of_expr_ir
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan.expressions import Alias, Columns, selectors as ndcs
 from narwhals._plan.schema import freeze_schema
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
 from tests.plan.utils import assert_expr_ir_equal
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.dummy import Expr, Selector
+    from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
 

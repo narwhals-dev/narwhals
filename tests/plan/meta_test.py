@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-import narwhals._plan.demo as nwd
+import narwhals._plan.functions as nwd
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 pytest.importorskip("polars")
 import polars as pl

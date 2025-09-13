@@ -4,15 +4,17 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from narwhals._plan.expressions import selectors as ndcs
+
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
 import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, selectors as ndcs
+from narwhals._plan import functions as nwd
 from narwhals._plan._guards import is_expr
-from narwhals._plan.dummy import DataFrame
+from narwhals._plan.dataframe import DataFrame
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
@@ -20,7 +22,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
     from narwhals.typing import PythonLiteral
 
 

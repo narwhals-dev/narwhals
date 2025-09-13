@@ -8,7 +8,7 @@ from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 class KeepName(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):

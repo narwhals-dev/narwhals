@@ -12,8 +12,8 @@ if t.TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.common import ExprIR
-    from narwhals._plan.dummy import Series
-    from narwhals._plan.expr import FunctionExpr, Literal  # noqa: F401
+    from narwhals._plan.expressions.expr import FunctionExpr, Literal  # noqa: F401
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import NativeSeriesT, Seq  # noqa: F401
     from narwhals.typing import ClosedInterval
 
@@ -68,7 +68,7 @@ class IsInSeq(IsIn["Seq[t.Any]"]):
 class IsInSeries(IsIn["Literal[Series[NativeSeriesT]]"]):
     @classmethod
     def from_series(cls, other: Series[NativeSeriesT], /) -> IsInSeries[NativeSeriesT]:
-        from narwhals._plan.literal import SeriesLiteral
+        from narwhals._plan.expressions.literal import SeriesLiteral
 
         return IsInSeries(other=SeriesLiteral(value=other).to_literal())
 

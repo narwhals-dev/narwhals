@@ -13,7 +13,7 @@ from narwhals._arrow.utils import (
     chunked_array as _chunked_array,
     floordiv_compat as floordiv,
 )
-from narwhals._plan import operators as ops
+from narwhals._plan.expressions import operators as ops
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:

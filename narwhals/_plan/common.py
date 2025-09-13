@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.dummy import Expr, Selector
-    from narwhals._plan.expr import Alias, Cast, Column, FunctionExpr
+    from narwhals._plan.expr import Expr, Selector
+    from narwhals._plan.expressions.expr import Alias, Cast, Column, FunctionExpr
     from narwhals._plan.meta import IRMetaNamespace
     from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -153,9 +153,9 @@ class ExprIR(Immutable):
         return self.__expr_ir_dispatch__(ctx, cast("Self", self), frame, name)  # type: ignore[no-any-return]
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
-        from narwhals._plan import dummy
+        from narwhals._plan import expr
 
-        tp = dummy.Expr if version is Version.MAIN else dummy.ExprV1
+        tp = expr.Expr if version is Version.MAIN else expr.ExprV1
         return tp._from_ir(self)
 
     @property
@@ -180,7 +180,7 @@ class ExprIR(Immutable):
         """Yield nodes root->leaf.
 
         Examples:
-            >>> from narwhals._plan import demo as nwd
+            >>> from narwhals._plan import functions as nwd
             >>>
             >>> a = nwd.col("a")
             >>> b = a.alias("b")
@@ -215,7 +215,7 @@ class ExprIR(Immutable):
             Identical to `iter_left` for root nodes.
 
         Examples:
-            >>> from narwhals._plan import demo as nwd
+            >>> from narwhals._plan import functions as nwd
             >>>
             >>> a = nwd.col("a")
             >>> b = a.alias("b")
@@ -266,12 +266,12 @@ class ExprIR(Immutable):
         return IRMetaNamespace(_ir=self)
 
     def cast(self, dtype: DType) -> Cast:
-        from narwhals._plan.expr import Cast
+        from narwhals._plan.expressions.expr import Cast
 
         return Cast(expr=self, dtype=dtype)
 
     def alias(self, name: str) -> Alias:
-        from narwhals._plan.expr import Alias
+        from narwhals._plan.expressions.expr import Alias
 
         return Alias(expr=self, name=name)
 
@@ -281,11 +281,11 @@ class ExprIR(Immutable):
 
 class SelectorIR(ExprIR, config=ExprIROptions.no_dispatch()):
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan import dummy
+        from narwhals._plan import expr
 
         if version is Version.MAIN:
-            return dummy.Selector._from_ir(self)
-        return dummy.SelectorV1._from_ir(self)
+            return expr.Selector._from_ir(self)
+        return expr.SelectorV1._from_ir(self)
 
     def matches_column(self, name: str, dtype: DType) -> bool:
         """Return True if we can select this column.
@@ -319,7 +319,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         Intended to be used in `with_columns` from a `FrozenSchema`'s keys.
         """
-        from narwhals._plan.expr import col
+        from narwhals._plan.expressions.expr import col
 
         return NamedIR(expr=col(name), name=name)
 
@@ -353,7 +353,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         [`polars_plan::plans::aexpr::properties::AExpr.is_elementwise_top_level`]: https://github.com/pola-rs/polars/blob/2c7a3e77f0faa37c86a3745db4ef7707ae50c72e/crates/polars-plan/src/plans/aexpr/properties.rs#L16-L44
         """
-        from narwhals._plan import expr
+        from narwhals._plan.expressions import expr
 
         ir = self.expr
         if is_function_expr(ir):
@@ -414,7 +414,7 @@ class Function(Immutable):
         return self.function_options.returns_scalar()
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
-        from narwhals._plan.expr import FunctionExpr
+        from narwhals._plan.expressions.expr import FunctionExpr
 
         return FunctionExpr(input=inputs, function=self, options=self.function_options)
 
