@@ -128,9 +128,9 @@ def when(
     """Start a `when-then-otherwise` expression.
 
     Examples:
-        >>> from narwhals._plan import functions as nwd
+        >>> from narwhals import _plan as nw
 
-        >>> nwd.when(nwd.col("y") == "b").then(1)
+        >>> nw.when(nw.col("y") == "b").then(1)
         nw._plan.Expr(main):
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """

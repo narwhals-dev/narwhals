@@ -49,9 +49,9 @@ class MetaNamespace(IRNamespace):
         """Get the output name of this expression.
 
         Examples:
-            >>> from narwhals._plan import functions as nwd
+            >>> from narwhals import _plan as nw
             >>>
-            >>> a = nwd.col("a")
+            >>> a = nw.col("a")
             >>> b = a.alias("b")
             >>> c = b.min().alias("c")
             >>>
