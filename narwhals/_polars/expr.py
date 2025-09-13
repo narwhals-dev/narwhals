@@ -340,6 +340,8 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
+    first: Method[Self]
+    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]

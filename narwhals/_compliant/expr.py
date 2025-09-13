@@ -124,6 +124,8 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
+    def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -867,6 +869,12 @@ class EagerExpr(
             nans_equal=nans_equal,
         )
 
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
+
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:
         return EagerExprCatNamespace(self)
@@ -910,6 +918,9 @@ class LazyExpr(  # type: ignore[misc]
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
 
+    # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2526#issuecomment-3019303816
+    first = not_implemented()  # type: ignore[misc]
+    last = not_implemented()  # type: ignore[misc]
     ewm_mean = not_implemented()  # type: ignore[misc]
     map_batches = not_implemented()  # type: ignore[misc]
     replace_strict = not_implemented()  # type: ignore[misc]
