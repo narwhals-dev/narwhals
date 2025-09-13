@@ -75,15 +75,11 @@ class BaseFrame(Generic[NativeFrameT]):
         return schema_frozen.project(named_irs, context)
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, schema_projected = self._project(
-            exprs, named_exprs, ExprContext.SELECT
-        )
+        named_irs, _ = self._project(exprs, named_exprs, ExprContext.SELECT)
         return self._from_compliant(self._compliant.select(named_irs))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, schema_projected = self._project(
-            exprs, named_exprs, ExprContext.WITH_COLUMNS
-        )
+        named_irs, _ = self._project(exprs, named_exprs, ExprContext.WITH_COLUMNS)
         return self._from_compliant(self._compliant.with_columns(named_irs))
 
     def sort(
@@ -96,9 +92,7 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        irs, schema_frozen, output_names = expr_expansion.prepare_projection(
-            sort, self.schema
-        )
+        irs, _, output_names = expr_expansion.prepare_projection(sort, self.schema)
         named_irs = expr_expansion.into_named_irs(irs, output_names)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
