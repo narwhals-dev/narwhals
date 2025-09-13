@@ -103,9 +103,7 @@ class PolarsNamespace:
             return self.col(data)
         return self.lit(data.to_native() if is_series(data) else data, None)
 
-    def is_native(
-        self, obj: Any
-    ) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:  # pragma: no cover
+    def is_native(self, obj: Any) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
         return isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series))
 
     @overload
