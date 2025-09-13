@@ -12,7 +12,7 @@ import pytest
 import narwhals as nw
 import narwhals._plan.functions as nwd
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.common import ExprIR, Function
+from narwhals._plan.common import ExprIR
 from narwhals._plan.expr import Expr
 from narwhals._plan.expressions import boolean, expr, functions as F, operators as ops
 from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr, RangeExpr
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
+    from narwhals._plan._function import Function
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OperatorFn, Seq
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 # - Any
 import typing as t
 
-from narwhals._plan.common import Function, HorizontalFunction
+from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.options import FEOptions, FunctionOptions
 from narwhals._typing_compat import TypeVar
 

@@ -32,7 +32,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
-    from narwhals._plan.common import Function
+    from narwhals._plan._function import Function
     from narwhals._plan.expressions.categorical import ExprCatNamespace
     from narwhals._plan.expressions.lists import ExprListNamespace
     from narwhals._plan.expressions.name import ExprNameNamespace

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan.common import Function, HorizontalFunction
+from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 from narwhals._plan.options import FunctionFlags, FunctionOptions
 

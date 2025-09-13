@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     import polars as pl
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.common import Function
+    from narwhals._plan._function import Function
     from narwhals._plan.expressions.operators import Operator
     from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import IntoExpr, Seq

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from narwhals._plan.common import ExprNamespace, Function, IRNamespace
+from narwhals._plan._function import Function
+from narwhals._plan.common import ExprNamespace, IRNamespace
 from narwhals._plan.options import FunctionOptions
 
 if TYPE_CHECKING:
