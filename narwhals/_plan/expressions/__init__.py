@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from narwhals._plan.common import ExprIR, SelectorIR  # prob should move into package?
+from narwhals._plan.expressions import aggregation, functions, operators, selectors
 from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.expressions.expr import (
     Alias,
@@ -67,8 +68,12 @@ __all__ = [
     "TernaryExpr",
     "WindowExpr",
     "_ColumnSelection",
+    "aggregation",
     "col",
     "cols",
+    "functions",
     "index_columns",
     "nth",
+    "operators",
+    "selectors",
 ]
