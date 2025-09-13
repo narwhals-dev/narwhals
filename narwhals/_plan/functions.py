@@ -3,8 +3,7 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, _parse, expressions as ir
-from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
+from narwhals._plan import _guards, _parse, common, expressions as ir
 from narwhals._plan.expressions import boolean, functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
@@ -41,9 +40,9 @@ def lit(
         msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
         raise TypeError(msg)
     if dtype is None:
-        dtype = py_to_narwhals_dtype(value, Version.MAIN)
+        dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
     else:
-        dtype = into_dtype(dtype)
+        dtype = common.into_dtype(dtype)
     return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
@@ -156,7 +155,7 @@ def int_range(
         msg = f"{eager=}"
         raise NotImplementedError(msg)
     return (
-        IntRange(step=step, dtype=into_dtype(dtype))
+        IntRange(step=step, dtype=common.into_dtype(dtype))
         .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
         .to_narwhals()
     )

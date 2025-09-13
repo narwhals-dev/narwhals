@@ -4,14 +4,13 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
-from narwhals._plan import expressions as ir
+from narwhals._plan import common, expressions as ir
 from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_into_seq_of_expr_ir,
     parse_predicates_constraints_into_expr_ir,
 )
-from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions import (
     aggregation as agg,
     boolean,
@@ -98,7 +97,7 @@ class Expr:
         return self._from_ir(self._ir.alias(name))
 
     def cast(self, dtype: IntoDType) -> Self:
-        return self._from_ir(self._ir.cast(into_dtype(dtype)))
+        return self._from_ir(self._ir.cast(common.into_dtype(dtype)))
 
     def exclude(self, *names: OneOrIterable[str]) -> Self:
         return self._from_ir(ir.Exclude.from_names(self._ir, *names))
@@ -372,7 +371,7 @@ class Expr:
             before = tuple(old)
             after = tuple(new)
         if return_dtype is not None:
-            return_dtype = into_dtype(return_dtype)
+            return_dtype = common.into_dtype(return_dtype)
         function = F.ReplaceStrict(old=before, new=after, return_dtype=return_dtype)
         return self._with_unary(function)
 
@@ -388,7 +387,7 @@ class Expr:
         returns_scalar: bool = False,
     ) -> Self:
         if return_dtype is not None:
-            return_dtype = into_dtype(return_dtype)
+            return_dtype = common.into_dtype(return_dtype)
         return self._with_unary(
             F.MapBatches(
                 function=function,

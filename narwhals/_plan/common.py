@@ -56,7 +56,7 @@ T = TypeVar("T")
 Incomplete: TypeAlias = "Any"
 
 
-def _pascal_to_snake_case(s: str) -> str:
+def pascal_to_snake_case(s: str) -> str:
     """Convert a PascalCase, camelCase string to snake_case.
 
     Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
@@ -77,7 +77,7 @@ def _re_repl_snake(match: re.Match[str], /) -> str:
 
 def _dispatch_method_name(tp: type[ExprIRT | FunctionT]) -> str:
     config = tp.__expr_ir_config__
-    name = config.override_name or _pascal_to_snake_case(tp.__name__)
+    name = config.override_name or pascal_to_snake_case(tp.__name__)
     return f"{ns}.{name}" if (ns := getattr(config, "accessor_name", "")) else name
 
 
@@ -118,6 +118,10 @@ def _dispatch_generate_function(
         return getter(ctx)(node, frame, name)
 
     return _
+
+
+def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
+    return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
 class ExprIR(Immutable):
@@ -470,10 +474,6 @@ def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDT
     if isinstance(dtype, type) and issubclass(dtype, DType):
         return cast("NonNestedDTypeT", dtype())
     return dtype
-
-
-def _map_ir_child(obj: ExprIR | Seq[ExprIR], fn: MapIR, /) -> ExprIR | Seq[ExprIR]:
-    return obj.map_ir(fn) if isinstance(obj, ExprIR) else tuple(e.map_ir(fn) for e in obj)
 
 
 # TODO @dangotbanned: Review again and try to work around (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)
