@@ -116,6 +116,7 @@ if TYPE_CHECKING:
         CompliantLazyFrame,
         CompliantSeries,
         DTypes,
+        FileSource,
         IntoSeriesT,
         MultiIndexSelector,
         SingleIndexSelector,
@@ -2148,3 +2149,19 @@ class _Implementation:
     def __get__(self, instance: LazyFrame[Any], owner: Any) -> _LazyAllowedImpl: ...
     def __get__(self, instance: Narwhals[Any] | None, owner: Any) -> Any:
         return self if instance is None else instance._compliant._implementation
+
+
+def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
+    import pyarrow as pa  # ignore-banned-import
+
+    if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
+        return pa.Table.from_batches(tbl)
+    return tbl
+
+
+def normalize_path(source: FileSource, /) -> str:
+    if isinstance(source, str):
+        return source
+    from pathlib import Path
+
+    return str(Path(source))

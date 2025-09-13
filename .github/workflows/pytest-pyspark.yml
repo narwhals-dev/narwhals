@@ -6,6 +6,8 @@ on:
       - narwhals/_expression_parsing.py
       - narwhals/_spark_like/**
       - narwhals/_sql/**
+      - tests/*scan*.py
+      - tests/frame/*sink*.py
   schedule:
     - cron: 0 12 * * 0  # Sunday at mid-day
 

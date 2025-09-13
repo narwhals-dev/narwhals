@@ -61,7 +61,6 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         IntoSchema,
         JoinStrategy,
-        LazyUniqueKeepStrategy,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
@@ -155,7 +154,11 @@ class CompliantFrame(
     ) -> Self: ...
     def tail(self, n: int) -> Self: ...
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self: ...
     def unpivot(
         self,
@@ -267,6 +270,7 @@ class CompliantDataFrame(
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
+        order_by: Sequence[str] | None,
     ) -> Self: ...
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self: ...
     @overload

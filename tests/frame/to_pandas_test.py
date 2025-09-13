@@ -189,5 +189,5 @@ def test_to_pandas_no_arrow_dtype() -> None:  # pragma: no cover
 
     data: dict[str, Any] = {"a": [1, 2, 3], "b": ["four", "five", "six"]}
     df_pa = nw.from_native(pa.table(data))
-    with pytest.raises(NotImplementedError, match="1.5"):
+    with pytest.raises(NotImplementedError, match=r"1\.5"):
         df_pa.to_pandas(use_pyarrow_extension_array=True)

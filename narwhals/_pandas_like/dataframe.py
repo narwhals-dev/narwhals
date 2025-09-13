@@ -763,16 +763,29 @@ class PandasLikeDataFrame(
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
+        order_by: Sequence[str] | None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
         mapped_keep = {"none": False, "any": "first"}.get(keep, keep)
         if subset and (error := self._check_columns_exist(subset)):
             raise error
-        return self._with_native(
-            self.native.drop_duplicates(subset=subset, keep=mapped_keep),
-            validate_column_names=False,
-        )
+        if order_by and maintain_order:
+            token = generate_temporary_column_name(8, self.columns)
+            res = (
+                self.with_row_index(token, order_by=None)
+                .sort(*order_by, nulls_last=False, descending=False)
+                .native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+                .sort_values(token)
+            )
+            res.drop(columns=token, inplace=True)  # noqa: PD002
+        elif order_by:
+            res = self.sort(
+                *order_by, nulls_last=False, descending=False
+            ).native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+        else:
+            res = self.native.drop_duplicates(subset or self.columns, keep=mapped_keep)
+        return self._with_native(res, validate_column_names=False)
 
     # --- lazy-only ---
     def lazy(
