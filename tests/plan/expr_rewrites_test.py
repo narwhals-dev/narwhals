@@ -7,12 +7,12 @@ import pytest
 import narwhals as nw
 from narwhals._plan import _parse, functions as nwd
 from narwhals._plan._guards import is_expr
-from narwhals._plan.common import ExprIR, NamedIR
-from narwhals._plan.expr_rewrites import (
+from narwhals._plan._rewrites import (
     rewrite_all,
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
+from narwhals._plan.common import ExprIR, NamedIR
 from narwhals._plan.expressions import selectors as ndcs
 from narwhals._plan.expressions.expr import WindowExpr
 from narwhals._plan.expressions.window import Over
