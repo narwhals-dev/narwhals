@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expressions.expr import Column
+    from narwhals._plan.expressions import Column, ExprIR
 
 
 class IRMetaNamespace(IRNamespace):
@@ -86,7 +85,7 @@ def _expr_to_leaf_column_names_iter(ir: ExprIR) -> Iterator[str]:
 
 
 def _expr_to_leaf_column_exprs_iter(ir: ExprIR) -> Iterator[ExprIR]:
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     for outer in ir.iter_root_names():
         if isinstance(outer, (expr.Column, expr.All)):
@@ -102,7 +101,7 @@ def _expr_to_leaf_column_name(ir: ExprIR) -> str | ComputeError:
         msg = "no root column name found"
         return ComputeError(msg)
     leaf = leaves[0]
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     if isinstance(leaf, expr.Column):
         return leaf.name
@@ -119,7 +118,7 @@ def root_names_unique(irs: Iterable[ExprIR], /) -> set[str]:
 
 @lru_cache(maxsize=32)
 def _expr_output_name(ir: ExprIR) -> str | ComputeError:
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     for e in ir.iter_output_name():
         if isinstance(e, (expr.Column, expr.Alias, expr.Literal, expr.Len)):
@@ -144,7 +143,7 @@ def get_single_leaf_name(ir: ExprIR) -> str | ComputeError:
 
     [`polars_plan::utils::get_single_leaf`]: https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/utils.rs#L151-L168
     """
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     for e in ir.iter_right():
         if isinstance(e, (expr.WindowExpr, expr.SortBy, expr.Filter)):
@@ -159,7 +158,7 @@ def get_single_leaf_name(ir: ExprIR) -> str | ComputeError:
 
 
 def _has_multiple_outputs(ir: ExprIR) -> bool:
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     return isinstance(ir, (expr.Columns, expr.IndexColumns, expr.SelectorIR, expr.All))
 
@@ -181,7 +180,7 @@ def is_column(ir: ExprIR) -> TypeIs[Column]:
 
 
 def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
     from narwhals._plan.expressions.literal import is_literal_scalar
 
     return (
@@ -196,7 +195,7 @@ def _is_literal(ir: ExprIR, *, allow_aliasing: bool) -> bool:
 
 
 def _is_column_selection(ir: ExprIR, *, allow_aliasing: bool) -> bool:
-    from narwhals._plan.expressions import expr
+    from narwhals._plan import expressions as expr
 
     return isinstance(ir, (expr.Column, expr._ColumnSelection, expr.SelectorIR)) or (
         allow_aliasing and isinstance(ir, (expr.Alias, expr.KeepName, expr.RenameAlias))

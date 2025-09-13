@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR, NamedIR
+    from narwhals._plan.common import NamedIR
+    from narwhals._plan.expressions import ExprIR
     from narwhals._plan.protocols import CompliantBaseFrame, CompliantDataFrame
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
