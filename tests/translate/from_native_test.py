@@ -305,13 +305,13 @@ def test_from_native_strict_native_series() -> None:
     array_like = cast("Iterable[Any]", obj)
     not_array_like: Literal[1] = 1
 
-    with pytest.raises(TypeError, match="got.+list"):
+    with pytest.raises(TypeError, match=r"got.+list"):
         nw.from_native(obj, series_only=True)  # type: ignore[call-overload]
 
-    with pytest.raises(TypeError, match="got.+list"):
+    with pytest.raises(TypeError, match=r"got.+list"):
         nw.from_native(array_like, series_only=True)  # type: ignore[call-overload]
 
-    with pytest.raises(TypeError, match="got.+int"):
+    with pytest.raises(TypeError, match=r"got.+int"):
         nw.from_native(not_array_like, series_only=True)  # type: ignore[call-overload]
 
 
@@ -319,7 +319,7 @@ def test_from_native_strict_native_series() -> None:
 def test_from_native_strict_native_series_polars() -> None:
     obj: list[int] = [1, 2, 3, 4]
     np_array = pl.Series(obj).to_numpy()
-    with pytest.raises(TypeError, match="got.+numpy.ndarray"):
+    with pytest.raises(TypeError, match=r"got.+numpy.ndarray"):
         nw.from_native(np_array, series_only=True)  # type: ignore[call-overload]
 
 
