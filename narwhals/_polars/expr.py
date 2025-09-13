@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
 
 import polars as pl
 
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
@@ -435,7 +436,7 @@ class PolarsExprCatNamespace(
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
-    _accessor = "name"
+    _accessor: ClassVar[Accessor] = "name"
     keep: Method[PolarsExpr]
     map: Method[PolarsExpr]
     prefix: Method[PolarsExpr]
