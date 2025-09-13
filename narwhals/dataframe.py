@@ -18,7 +18,6 @@ from typing import (
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     ExprKind,
-    all_exprs_are_scalar_like,
     check_expressions_preserve_length,
     is_into_expr_eager,
     is_scalar_like,
@@ -80,7 +79,6 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
-        LazyUniqueKeepStrategy,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -92,6 +90,7 @@ if TYPE_CHECKING:
     )
 
     PS = ParamSpec("PS")
+    Incomplete: TypeAlias = Any
 
 _FrameT = TypeVar("_FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
@@ -222,7 +221,7 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all_exprs_are_scalar_like(*flat_exprs, **named_exprs):
+        if compliant_exprs and all(is_scalar_like(kind) for kind in kinds):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
             compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
@@ -285,7 +284,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join(
         self,
-        other: Self,
+        other: Incomplete,
         on: str | list[str] | None,
         how: JoinStrategy,
         *,
@@ -336,7 +335,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def join_asof(
         self,
-        other: Self,
+        other: Incomplete,
         *,
         left_on: str | None,
         right_on: str | None,
@@ -1112,7 +1111,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
     def to_dict(
         self, *, as_series: bool = True
@@ -1536,6 +1535,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         *,
         keep: UniqueKeepStrategy = "any",
         maintain_order: bool = False,
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this dataframe.
 
@@ -1551,6 +1551,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import pandas as pd
@@ -1568,7 +1569,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset, keep=keep, maintain_order=maintain_order)
+            self._compliant_frame.unique(
+                subset, keep=keep, maintain_order=maintain_order, order_by=order_by
+            )
         )
 
     def filter(
@@ -2739,23 +2742,27 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         self,
         subset: str | list[str] | None = None,
         *,
-        keep: LazyUniqueKeepStrategy = "any",
+        keep: UniqueKeepStrategy = "any",
+        order_by: str | Sequence[str] | None = None,
     ) -> Self:
         """Drop duplicate rows from this LazyFrame.
 
         Arguments:
             subset: Column name(s) to consider when identifying duplicate rows.
                      If set to `None`, use all columns.
-            keep: {'any', 'none'}
+            keep: {'any', 'none', 'first', 'last}
                 Which of the duplicate rows to keep.
 
                 * 'any': Does not give any guarantee of which row is kept.
                 * 'none': Don't keep duplicate rows.
+                * 'first': Keep the first row. Requires `order_by` to be specified.
+                * 'last': Keep the last row. Requires `order_by` to be specified.
+            order_by: Column(s) to order by when computing the row index.
 
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
-            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 1), (3, 4) df(a, b)")
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 3), (1, 4) df(a, b)")
             >>> nw.from_native(lf_native).unique("a").sort("a", descending=True)
             ┌──────────────────┐
             |Narwhals LazyFrame|
@@ -2764,21 +2771,23 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             |│   a   │   b   │ |
             |│ int32 │ int32 │ |
             |├───────┼───────┤ |
-            |│     3 │     4 │ |
-            |│     1 │     1 │ |
+            |│     1 │     3 │ |
             |└───────┴───────┘ |
             └──────────────────┘
         """
-        if keep not in {"any", "none"}:
+        if keep not in {"any", "none", "first", "last"}:
+            msg = f"Expected {'any', 'none', 'first', 'last'}, got: {keep}"
+            raise ValueError(msg)
+        if keep in {"first", "last"} and not order_by:
             msg = (
                 "narwhals.LazyFrame makes no assumptions about row order, so only "
-                f"'any' and 'none' are supported for `keep` in `unique`. Got: {keep}."
+                "'first' and 'last' are only supported if `order_by` is passed."
             )
-            raise ValueError(msg)
+            raise InvalidOperationError(msg)
         if isinstance(subset, str):
             subset = [subset]
         return self._with_compliant(
-            self._compliant_frame.unique(subset=subset, keep=keep)
+            self._compliant_frame.unique(subset=subset, keep=keep, order_by=order_by)
         )
 
     def filter(

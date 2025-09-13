@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import ibis
@@ -9,7 +9,7 @@ import ibis.expr.datatypes as ibis_dtypes
 from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from datetime import timedelta
 
     import ibis.expr.types as ir
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, PythonLiteral
 
+IntoColumn: TypeAlias = "str | ir.Value | ir.Column"
+SortFn: TypeAlias = "Callable[[IntoColumn], ir.Column]"
 Incomplete: TypeAlias = Any
 """Marker for upstream issues."""
 
@@ -43,6 +45,23 @@ def lit(value: Any, dtype: Any | None = None) -> Incomplete:
     """Alias for `ibis.literal`."""
     literal: Incomplete = ibis.literal
     return literal(value, dtype)
+
+
+asc_nulls_first = cast("SortFn", partial(ibis.asc, nulls_first=True))
+asc_nulls_last = cast("SortFn", partial(ibis.asc, nulls_first=False))
+desc_nulls_first = cast("SortFn", partial(ibis.desc, nulls_first=True))
+desc_nulls_last = cast("SortFn", partial(ibis.desc, nulls_first=False))
+
+
+def extend_bool(
+    value: bool | Iterable[bool],  # noqa: FBT001
+    n_match: int,
+) -> Sequence[bool]:
+    """Ensure the given bool or sequence of bools is the correct length.
+
+    Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+    """
+    return [value] * n_match if isinstance(value, bool) else list(value)
 
 
 BucketUnit: TypeAlias = Literal[

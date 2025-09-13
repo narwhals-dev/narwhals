@@ -5,6 +5,7 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
+import duckdb
 from duckdb import CoalesceOperator, Expression
 from duckdb.typing import BIGINT, VARCHAR
 
@@ -86,6 +87,14 @@ class DuckDBNamespace(
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
+        if how == "diagonal":
+            res = first.native
+            for _item in native_items[1:]:
+                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
+                res = duckdb.sql("""
+                    from res select * union all by name from _item select *
+                """)
+            return first._with_native(res)
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)
 

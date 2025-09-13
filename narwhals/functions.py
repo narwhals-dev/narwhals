@@ -21,6 +21,7 @@ from narwhals._utils import (
     is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
+    normalize_path,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.typing import (
         ConcatMethod,
+        FileSource,
         FrameT,
         IntoDType,
         IntoExpr,
@@ -564,7 +566,7 @@ def show_versions() -> None:
 
 
 def read_csv(
-    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -604,7 +606,7 @@ def read_csv(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
-        native_frame = native_namespace.read_csv(source, **kwargs)
+        native_frame = native_namespace.read_csv(normalize_path(source), **kwargs)
     elif impl is Implementation.PYARROW:
         from pyarrow import csv  # ignore-banned-import
 
@@ -634,7 +636,7 @@ def read_csv(
 
 
 def scan_csv(
-    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -674,6 +676,7 @@ def scan_csv(
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeDataFrame | NativeLazyFrame
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_csv(source, **kwargs)
     elif implementation in {
@@ -693,7 +696,6 @@ def scan_csv(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         csv_reader = session.read.format("csv")
         native_frame = (
             csv_reader.load(source)
@@ -715,7 +717,7 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -760,11 +762,12 @@ def read_parquet(
         Implementation.MODIN,
         Implementation.CUDF,
     }:
+        source = normalize_path(source)
         native_frame = native_namespace.read_parquet(source, **kwargs)
     elif impl is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 
-        native_frame = pq.read_table(source, **kwargs)
+        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
     elif impl in {
         Implementation.PYSPARK,
         Implementation.DASK,
@@ -790,7 +793,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -857,6 +860,7 @@ def scan_parquet(
     implementation = Implementation.from_backend(backend)
     native_namespace = implementation.to_native_namespace()
     native_frame: NativeDataFrame | NativeLazyFrame
+    source = normalize_path(source)
     if implementation is Implementation.POLARS:
         native_frame = native_namespace.scan_parquet(source, **kwargs)
     elif implementation in {
@@ -876,7 +880,6 @@ def scan_parquet(
         if (session := kwargs.pop("session", None)) is None:
             msg = "Spark like backends require a session object to be passed in `kwargs`."
             raise ValueError(msg)
-
         pq_reader = session.read.format("parquet")
         native_frame = (
             pq_reader.load(source)
