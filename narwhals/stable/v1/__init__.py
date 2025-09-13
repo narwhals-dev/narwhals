@@ -80,6 +80,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        FileSource,
         IntegerDType,
         IntoDType,
         IntoExpr,
@@ -204,9 +205,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
     @overload
     def to_dict(
-        self, *, as_series: bool
+        self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]: ...
-    def to_dict(
+    def to_dict(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, as_series: bool = True
     ) -> dict[str, Series[Any]] | dict[str, list[Any]]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v1.stable.Series`.
@@ -1281,7 +1282,7 @@ def from_numpy(
 
 @deprecate_native_namespace(required=True)
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1299,7 +1300,7 @@ def read_csv(
 
 @deprecate_native_namespace(required=True)
 def scan_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1317,7 +1318,7 @@ def scan_csv(
 
 @deprecate_native_namespace(required=True)
 def read_parquet(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -1335,7 +1336,7 @@ def read_parquet(
 
 @deprecate_native_namespace(required=True)
 def scan_parquet(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001

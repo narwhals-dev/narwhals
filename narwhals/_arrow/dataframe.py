@@ -693,6 +693,7 @@ class ArrowDataFrame(
         *,
         keep: UniqueKeepStrategy,
         maintain_order: bool | None = None,
+        order_by: Sequence[str] | None,
     ) -> Self:
         # The param `maintain_order` is only here for compatibility with the Polars API
         # and has no effect on the output.
@@ -705,14 +706,30 @@ class ArrowDataFrame(
 
             agg_func = ArrowGroupBy._REMAP_UNIQUE[keep]
             col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+            if order_by and maintain_order:
+                idx_token = generate_temporary_column_name(
+                    n_bytes=8, columns=[*self.columns, col_token]
+                )
+                df = (
+                    self.with_row_index(idx_token, order_by=None)
+                    .sort(*order_by, nulls_last=False, descending=False)
+                    .unique(subset=subset, keep=keep, maintain_order=False, order_by=None)
+                )
+                return df.sort(idx_token, descending=False, nulls_last=False).drop(
+                    [idx_token], strict=False
+                )
+            if order_by:
+                native = self.sort(*order_by, nulls_last=False, descending=False).native
+            else:
+                native = self.native
             keep_idx_native = (
-                self.native.append_column(col_token, int_range(0, len(self)))
+                native.append_column(col_token, int_range(0, len(self)))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
             return self._with_native(
-                self.native.take(keep_idx_native), validate_column_names=False
+                native.take(keep_idx_native), validate_column_names=False
             )
 
         keep_idx = self.simple_select(*subset).is_unique()

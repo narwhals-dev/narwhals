@@ -1,6 +1,7 @@
 # Test assorted functions which we overwrite in stable.v1
 from __future__ import annotations
 
+import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
@@ -301,10 +302,8 @@ def test_cast_to_enum_v1(
 
     df_native = constructor({"a": ["a", "b"]})
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Converting to Enum is not supported in narwhals.stable.v1",
-    ):
+    msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
+    with pytest.raises(NotImplementedError, match=msg):
         nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
@@ -798,10 +797,10 @@ def test_narwhalify_backends_cross() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pd.DataFrame(data), pl.DataFrame(data))
 
 
@@ -819,10 +818,10 @@ def test_narwhalify_backends_cross2() -> None:
     ) -> tuple[Any, Any, int]:  # pragma: no cover
         return arg1, arg2, extra
 
-    with pytest.raises(
-        ValueError,
-        match="Found multiple backends. Make sure that all dataframe/series inputs come from the same backend.",
-    ):
+    msg = re.escape(
+        "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
+    )
+    with pytest.raises(ValueError, match=msg):
         func(pl.DataFrame(data), pd.Series(data["a"]))
 
 

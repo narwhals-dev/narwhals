@@ -27,6 +27,7 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     requires,
+    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.dependencies import get_duckdb
@@ -54,7 +55,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, LazyUniqueKeepStrategy
+    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 
 class DuckDBLazyFrame(
@@ -138,7 +139,7 @@ class DuckDBLazyFrame(
             from narwhals._arrow.dataframe import ArrowDataFrame
 
             return ArrowDataFrame(
-                self.native.arrow(),
+                to_pyarrow_table(self.native.arrow()),
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
@@ -187,7 +188,7 @@ class DuckDBLazyFrame(
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
-        selection = (name for name in self.columns if name not in columns_to_drop)
+        selection = [col(name) for name in self.columns if name not in columns_to_drop]
         return self._with_native(self.native.select(*selection))
 
     def lazy(self, backend: None = None, **_: None) -> Self:
@@ -255,7 +256,7 @@ class DuckDBLazyFrame(
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
-        return self.native.arrow()
+        return self.lazy().collect(Implementation.PYARROW).native  # type: ignore[no-any-return]
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
@@ -379,25 +380,43 @@ class DuckDBLazyFrame(
         return self.schema
 
     def unique(
-        self, subset: Sequence[str] | None, *, keep: LazyUniqueKeepStrategy
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        order_by: Sequence[str] | None,
     ) -> Self:
-        if subset_ := subset if keep == "any" else (subset or self.columns):
-            # Sanitise input
-            if error := self._check_columns_exist(subset_):
-                raise error
-            idx_name = generate_temporary_column_name(8, self.columns)
-            count_name = generate_temporary_column_name(8, [*self.columns, idx_name])
-            name = count_name if keep == "none" else idx_name
-            idx_expr = window_expression(F("row_number"), subset_).alias(idx_name)
-            count_expr = window_expression(
-                F("count", StarExpression()), subset_, ()
-            ).alias(count_name)
-            return self._with_native(
-                self.native.select(StarExpression(), idx_expr, count_expr)
-                .filter(col(name) == lit(1))
-                .select(StarExpression(exclude=[count_name, idx_name]))
+        subset_ = subset or self.columns
+        if error := self._check_columns_exist(subset_):
+            raise error
+        tmp_name = generate_temporary_column_name(8, self.columns)
+        if order_by and keep == "last":
+            descending = [True] * len(order_by)
+            nulls_last = [True] * len(order_by)
+        else:
+            descending = None
+            nulls_last = None
+        if keep == "none":
+            expr = window_expression(
+                F("count", StarExpression()),
+                subset_,
+                order_by or (),
+                descending=descending,
+                nulls_last=nulls_last,
             )
-        return self._with_native(self.native.unique(join_column_names(*self.columns)))
+        else:
+            expr = window_expression(
+                F("row_number"),
+                subset_,
+                order_by or (),
+                descending=descending,
+                nulls_last=nulls_last,
+            )
+        return self._with_native(
+            self.native.select(StarExpression(), expr.alias(tmp_name)).filter(
+                col(tmp_name) == lit(1)
+            )
+        ).drop([tmp_name], strict=False)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if isinstance(descending, bool):

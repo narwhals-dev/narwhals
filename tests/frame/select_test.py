@@ -165,7 +165,7 @@ def test_select_duplicates(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
     with pytest.raises(
         ValueError,
-        match="Expected unique|[Dd]uplicate|more than one|Duplicate column name",
+        match=r"Expected unique|[Dd]uplicate|more than one|Duplicate column name",
     ):
         df.select("a", nw.col("a") + 1).collect()
 

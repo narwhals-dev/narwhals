@@ -8,6 +8,7 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 if TYPE_CHECKING:
     import datetime as dt
+    import os
     from collections.abc import Iterable, Sequence, Sized
     from decimal import Decimal
     from types import ModuleType
@@ -339,13 +340,6 @@ UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
 - *"last"*: Keep last unique row.
 """
 
-LazyUniqueKeepStrategy: TypeAlias = Literal["any", "none"]
-"""Which of the duplicate rows to keep.
-
-- *"any"*: Does not give any guarantee of which row is kept.
-- *"none"*: Don't keep duplicate rows.
-"""
-
 ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 """Which of the mode's to keep.
 
@@ -439,6 +433,15 @@ Examples:
 IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
+
+FileSource: TypeAlias = "str | os.PathLike[str]"
+"""Path to a file.
+
+Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+
+[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
+[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+"""
 
 
 # Annotations for `__getitem__` methods

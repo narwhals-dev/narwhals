@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
@@ -37,11 +38,11 @@ def test_quantile_expr(
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
+    msg = re.escape(
+        "`Expr.quantile` is not supported for Dask backend with multiple partitions."
+    )
     context = (
-        pytest.raises(
-            NotImplementedError,
-            match="`Expr.quantile` is not supported for Dask backend with multiple partitions.",
-        )
+        pytest.raises(NotImplementedError, match=msg)
         if "dask_lazy_p2" in str(constructor)
         else does_not_raise()
     )

@@ -51,12 +51,12 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     with pytest.raises(
         (Exception, TypeError),
-        match="unable to vstack|inputs should all have the same schema",
+        match=r"unable to vstack|inputs should all have the same schema",
     ):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
     with pytest.raises(
         (Exception, TypeError),
-        match="unable to vstack|unable to append|inputs should all have the same schema",
+        match=r"unable to vstack|unable to append|inputs should all have the same schema",
     ):
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
@@ -64,7 +64,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
 def test_concat_diagonal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) or "ibis" in str(constructor):
+    if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}

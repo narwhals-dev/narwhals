@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
@@ -44,11 +45,11 @@ def test_lit_error(constructor: Constructor) -> None:
     ):
         _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
     with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
+        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
     ):
         _ = df.with_columns(nw.lit((1, 2)).alias("lit"))  # type: ignore[arg-type]
     with pytest.raises(
-        NotImplementedError, match="Nested datatypes are not supported yet."
+        NotImplementedError, match=re.escape("Nested datatypes are not supported yet.")
     ):
         _ = df.with_columns(nw.lit([1, 2]).alias("lit"))  # type: ignore[arg-type]
 
