@@ -4,6 +4,7 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
+from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_column, is_expr, is_series
 from narwhals._plan._parse import (
     parse_into_expr_ir,
@@ -14,7 +15,6 @@ from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions import (
     aggregation as agg,
     boolean,
-    expr,
     functions as F,
     operators as ops,
 )
@@ -33,7 +33,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
 
-    from narwhals._plan.common import ExprIR, Function
+    from narwhals._plan.common import Function
     from narwhals._plan.expressions.categorical import ExprCatNamespace
     from narwhals._plan.expressions.lists import ExprListNamespace
     from narwhals._plan.expressions.name import ExprNameNamespace
@@ -59,7 +59,7 @@ def _parse_sort_by(
     *more_by: IntoExpr,
     descending: OneOrIterable[bool] = False,
     nulls_last: OneOrIterable[bool] = False,
-) -> tuple[Seq[ExprIR], SortMultipleOptions]:
+) -> tuple[Seq[ir.ExprIR], SortMultipleOptions]:
     sort_by = parse_into_seq_of_expr_ir(by, *more_by)
     if length_changing := next((e for e in sort_by if e.is_scalar), None):
         msg = f"All expressions sort keys must preserve length, but got:\n{length_changing!r}"
@@ -71,7 +71,7 @@ def _parse_sort_by(
 # NOTE: Overly simplified placeholders for mocking typing
 # Entirely ignoring namespace + function binding
 class Expr:
-    _ir: ExprIR
+    _ir: ir.ExprIR
     _version: ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
@@ -85,9 +85,9 @@ class Expr:
         return self._ir._repr_html_()
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Self:
+    def _from_ir(cls, expr_ir: ir.ExprIR, /) -> Self:
         obj = cls.__new__(cls)
-        obj._ir = ir
+        obj._ir = expr_ir
         return obj
 
     @property
@@ -101,7 +101,7 @@ class Expr:
         return self._from_ir(self._ir.cast(into_dtype(dtype)))
 
     def exclude(self, *names: OneOrIterable[str]) -> Self:
-        return self._from_ir(expr.Exclude.from_names(self._ir, *names))
+        return self._from_ir(ir.Exclude.from_names(self._ir, *names))
 
     def count(self) -> Self:
         return self._from_ir(agg.Count(expr=self._ir))
@@ -156,8 +156,8 @@ class Expr:
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
-        node: expr.WindowExpr | expr.OrderedWindowExpr
-        partition: Seq[ExprIR] = ()
+        node: ir.WindowExpr | ir.OrderedWindowExpr
+        partition: Seq[ir.ExprIR] = ()
         if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
@@ -173,7 +173,7 @@ class Expr:
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         options = SortOptions(descending=descending, nulls_last=nulls_last)
-        return self._from_ir(expr.Sort(expr=self._ir, options=options))
+        return self._from_ir(ir.Sort(expr=self._ir, options=options))
 
     def sort_by(
         self,
@@ -185,13 +185,13 @@ class Expr:
         keys, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        return self._from_ir(expr.SortBy(expr=self._ir, by=keys, options=opts))
+        return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
         by = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
-        return self._from_ir(expr.Filter(expr=self._ir, by=by))
+        return self._from_ir(ir.Filter(expr=self._ir, by=by))
 
     def _with_unary(self, function: Function, /) -> Self:
         return self._from_ir(function.to_function_expr(self._ir))
@@ -242,8 +242,8 @@ class Expr:
         limit: int | None = None,
     ) -> Self:
         if strategy is None:
-            ir = parse_into_expr_ir(value, str_as_lit=True)
-            return self._from_ir(F.FillNull().to_function_expr(self._ir, ir))
+            e = parse_into_expr_ir(value, str_as_lit=True)
+            return self._from_ir(F.FillNull().to_function_expr(self._ir, e))
         return self._with_unary(F.FillNullWithStrategy(strategy=strategy, limit=limit))
 
     def shift(self, n: int) -> Self:
@@ -593,15 +593,15 @@ class Expr:
 
 
 class Selector(Expr):
-    _ir: expr.SelectorIR
+    _ir: ir.SelectorIR
 
     def __repr__(self) -> str:
         return f"nw._plan.Selector({self.version.name.lower()}):\n{self._ir!r}"
 
     @classmethod
-    def _from_ir(cls, ir: expr.SelectorIR, /) -> Self:  # type: ignore[override]
+    def _from_ir(cls, selector_ir: ir.SelectorIR, /) -> Self:  # type: ignore[override]
         obj = cls.__new__(cls)
-        obj._ir = ir
+        obj._ir = selector_ir
         return obj
 
     def _to_expr(self) -> Expr:
@@ -650,7 +650,7 @@ class Selector(Expr):
         return self._to_expr() ^ other
 
     def __invert__(self) -> Self:
-        return self._from_ir(expr.InvertSelector(selector=self._ir))
+        return self._from_ir(ir.InvertSelector(selector=self._ir))
 
     def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):

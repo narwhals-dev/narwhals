@@ -3,10 +3,9 @@ from __future__ import annotations
 import builtins
 import typing as t
 
-from narwhals._plan import _guards, _parse
+from narwhals._plan import _guards, _parse, expressions as ir
 from narwhals._plan.common import into_dtype, py_to_narwhals_dtype
-from narwhals._plan.expressions import boolean, expr, functions as F
-from narwhals._plan.expressions.expr import All, Len
+from narwhals._plan.expressions import boolean, functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._plan.expressions.strings import ConcatStr
@@ -23,13 +22,13 @@ if t.TYPE_CHECKING:
 
 def col(*names: str | t.Iterable[str]) -> Expr:
     flat = tuple(flatten(names))
-    node = expr.col(flat[0]) if builtins.len(flat) == 1 else expr.cols(*flat)
+    node = ir.col(flat[0]) if builtins.len(flat) == 1 else ir.cols(*flat)
     return node.to_narwhals()
 
 
 def nth(*indices: int | t.Sequence[int]) -> Expr:
     flat = tuple(flatten(indices))
-    node = expr.nth(flat[0]) if builtins.len(flat) == 1 else expr.index_columns(*flat)
+    node = ir.nth(flat[0]) if builtins.len(flat) == 1 else ir.index_columns(*flat)
     return node.to_narwhals()
 
 
@@ -49,11 +48,11 @@ def lit(
 
 
 def len() -> Expr:
-    return Len().to_narwhals()
+    return ir.Len().to_narwhals()
 
 
 def all() -> Expr:
-    return All().to_narwhals()
+    return ir.All().to_narwhals()
 
 
 def exclude(*names: str | t.Iterable[str]) -> Expr:
