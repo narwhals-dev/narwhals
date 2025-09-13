@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._plan import common
 from narwhals._plan._immutable import Immutable
+from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import ExprIROptions
 
 if TYPE_CHECKING:
@@ -52,7 +53,7 @@ class Suffix(Immutable):
         return f"{name}{self.suffix}"
 
 
-class IRNameNamespace(common.IRNamespace):
+class IRNameNamespace(IRNamespace):
     def keep(self) -> KeepName:
         return KeepName(expr=self._ir)
 
@@ -72,7 +73,7 @@ class IRNameNamespace(common.IRNamespace):
         return self.map(str.upper)
 
 
-class ExprNameNamespace(common.ExprNamespace[IRNameNamespace]):
+class ExprNameNamespace(ExprNamespace[IRNameNamespace]):
     @property
     def _ir_namespace(self) -> type[IRNameNamespace]:
         return IRNameNamespace

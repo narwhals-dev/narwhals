@@ -16,7 +16,6 @@ from narwhals._plan.typing import (
     ExprIRT,
     ExprIRT2,
     FunctionT,
-    IRNamespaceT,
     MapIR,
     NonNestedDTypeT,
     OneOrIterable,
@@ -31,7 +30,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan._function import Function
     from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
@@ -353,34 +351,6 @@ class NamedIR(Immutable, Generic[ExprIRT]):
         if is_literal(ir):
             return ir.is_scalar
         return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.TernaryExpr, expr.Cast))
-
-
-class IRNamespace(Immutable):
-    __slots__ = ("_ir",)
-    _ir: ExprIR
-
-    @classmethod
-    def from_expr(cls, expr: Expr, /) -> Self:
-        return cls(_ir=expr._ir)
-
-
-class ExprNamespace(Immutable, Generic[IRNamespaceT]):
-    __slots__ = ("_expr",)
-    _expr: Expr
-
-    @property
-    def _ir_namespace(self) -> type[IRNamespaceT]:
-        raise NotImplementedError
-
-    @property
-    def _ir(self) -> IRNamespaceT:
-        return self._ir_namespace.from_expr(self._expr)
-
-    def _to_narwhals(self, ir: ExprIR, /) -> Expr:
-        return self._expr._from_ir(ir)
-
-    def _with_unary(self, function: Function, /) -> Expr:
-        return self._expr._with_unary(function)
 
 
 def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:

@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_literal
-from narwhals._plan.common import IRNamespace
 from narwhals._plan.expressions.literal import is_literal_scalar
+from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals.exceptions import ComputeError
 from narwhals.utils import Version
 

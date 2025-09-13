@@ -9,10 +9,11 @@ if t.TYPE_CHECKING:
 
     from narwhals import dtypes
     from narwhals._plan._function import Function
-    from narwhals._plan.common import ExprIR, IRNamespace, NamedIR, SelectorIR
+    from narwhals._plan.common import ExprIR, NamedIR, SelectorIR
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
+    from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.series import Series
     from narwhals.typing import (
