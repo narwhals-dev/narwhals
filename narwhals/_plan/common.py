@@ -466,9 +466,9 @@ def into_dtype(dtype: type[NonNestedDTypeT], /) -> NonNestedDTypeT: ...
 @overload
 def into_dtype(dtype: DTypeT, /) -> DTypeT: ...
 def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDTypeT:
+    # NOTE: `mypy` needs to learn intersections
     if isinstance(dtype, type) and issubclass(dtype, DType):
-        # NOTE: `mypy` needs to learn intersections
-        return dtype()  # type: ignore[return-value]
+        return cast("NonNestedDTypeT", dtype())
     return dtype
 
 
