@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pytest
 
-from narwhals._utils import Implementation, generate_temporary_column_name
+from narwhals._utils import Implementation, Version, generate_temporary_column_name
 from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as PySparkDataFrame
     from typing_extensions import TypeAlias
 
+    from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals._typing import EagerAllowed
     from narwhals.typing import NativeDataFrame, NativeLazyFrame
@@ -321,3 +322,15 @@ def eager_backend(request: pytest.FixtureRequest) -> EagerAllowed:
 def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
     """Use if a test is heavily parametric, skips `str` backend."""
     return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(scope="session")
+def arrow_namespace() -> ArrowNamespace:
+    """Using for `ArrowDataFrame.to_struct`.
+
+    Has a backcompat path, but ideally we replace this if/when [`nw.DataFrame.to_struct`] is added.
+
+    [`nw.DataFrame.to_struct`]: https://github.com/narwhals-dev/narwhals/pull/2839#issuecomment-3110332853
+    """
+    pytest.importorskip("pyarrow")
+    return Version.MAIN.namespace.from_backend("pyarrow").compliant
