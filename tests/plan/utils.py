@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr
-from narwhals._plan.common import ExprIR, NamedIR
+from narwhals import _plan as nwd
+from narwhals._plan import expressions as ir
+from narwhals._plan.common import NamedIR
 
 if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
-    from narwhals._plan.expr import Expr
 
-
-def _unwrap_ir(obj: Expr | ExprIR | NamedIR) -> ExprIR:
-    if is_expr(obj):
+def _unwrap_ir(obj: nwd.Expr | ir.ExprIR | NamedIR) -> ir.ExprIR:
+    if isinstance(obj, nwd.Expr):
         return obj._ir
-    if isinstance(obj, ExprIR):
+    if isinstance(obj, ir.ExprIR):
         return obj
     if isinstance(obj, NamedIR):
         return obj.expr
@@ -22,7 +21,9 @@ def _unwrap_ir(obj: Expr | ExprIR | NamedIR) -> ExprIR:
 
 
 def assert_expr_ir_equal(
-    actual: Expr | ExprIR | NamedIR, expected: Expr | ExprIR | NamedIR | LiteralString, /
+    actual: nwd.Expr | ir.ExprIR | NamedIR,
+    expected: nwd.Expr | ir.ExprIR | NamedIR | LiteralString,
+    /,
 ) -> None:
     """Assert that `actual` is equivalent to `expected`.
 
@@ -40,5 +41,5 @@ def assert_expr_ir_equal(
     elif isinstance(actual, NamedIR) and isinstance(expected, NamedIR):
         assert actual == expected
     else:
-        rhs = expected._ir if is_expr(expected) else expected
+        rhs = expected._ir if isinstance(expected, nwd.Expr) else expected
         assert lhs == rhs

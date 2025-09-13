@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from narwhals._plan.common import ExprIR, SelectorIR  # prob should move into package?
-from narwhals._plan.expressions import aggregation, functions, operators, selectors
+from narwhals._plan.expressions import (
+    aggregation,
+    boolean,
+    functions,
+    operators,
+    selectors,
+)
 from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.expressions.expr import (
     Alias,
@@ -69,6 +75,7 @@ __all__ = [
     "WindowExpr",
     "_ColumnSelection",
     "aggregation",
+    "boolean",
     "col",
     "cols",
     "functions",

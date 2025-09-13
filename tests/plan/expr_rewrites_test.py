@@ -5,22 +5,19 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals._plan import _parse, functions as nwd
-from narwhals._plan._guards import is_expr
+from narwhals import _plan as nwd
+from narwhals._plan import _parse, expressions as ir, selectors as ndcs
 from narwhals._plan._rewrites import (
     rewrite_all,
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
-from narwhals._plan.common import ExprIR, NamedIR
-from narwhals._plan.expressions import selectors as ndcs
-from narwhals._plan.expressions.expr import WindowExpr
+from narwhals._plan.common import NamedIR
 from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
-    from narwhals._plan.expr import Expr
     from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 
@@ -42,8 +39,8 @@ def schema_2() -> dict[str, DType]:
     }
 
 
-def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> WindowExpr:
-    return WindowExpr(
+def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> ir.WindowExpr:
+    return ir.WindowExpr(
         expr=_parse.parse_into_expr_ir(into_expr),
         partition_by=_parse.parse_into_seq_of_expr_ir(*partition_by),
         options=Over(),
@@ -83,10 +80,9 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         assert_expr_ir_equal(lhs, rhs)
 
 
-def named_ir(name: str, expr: Expr | ExprIR, /) -> NamedIR[ExprIR]:
+def named_ir(name: str, expr: nwd.Expr | ir.ExprIR, /) -> NamedIR[ir.ExprIR]:
     """Helper constructor for test compare."""
-    ir = expr._ir if is_expr(expr) else expr
-    return NamedIR(expr=ir, name=name)
+    return NamedIR(expr=expr._ir if isinstance(expr, nwd.Expr) else expr, name=name)
 
 
 def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:

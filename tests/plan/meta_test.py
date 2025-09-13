@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
-import narwhals._plan.functions as nwd
+from narwhals import _plan as nwd
 from tests.utils import POLARS_VERSION
-
-if TYPE_CHECKING:
-    from narwhals._plan.expr import Expr
 
 pytest.importorskip("polars")
 import polars as pl
@@ -51,7 +46,9 @@ else:  # pragma: no cover
         (nwd.all().mean().sort_by("d"), pl.all().mean().sort_by("d"), ["d"]),
     ],
 )
-def test_meta_root_names(nw_expr: Expr, pl_expr: pl.Expr, expected: list[str]) -> None:
+def test_meta_root_names(
+    nw_expr: nwd.Expr, pl_expr: pl.Expr, expected: list[str]
+) -> None:
     pl_result = pl_expr.meta.root_names()
     nw_result = nw_expr.meta.root_names()
     assert nw_result == expected
@@ -179,7 +176,7 @@ def test_meta_root_names(nw_expr: Expr, pl_expr: pl.Expr, expected: list[str]) -
         ),
     ],
 )
-def test_meta_output_name(nw_expr: Expr, pl_expr: pl.Expr, expected: str) -> None:
+def test_meta_output_name(nw_expr: nwd.Expr, pl_expr: pl.Expr, expected: str) -> None:
     pl_result = pl_expr.meta.output_name()
     nw_result = nw_expr.meta.output_name()
     assert nw_result == expected

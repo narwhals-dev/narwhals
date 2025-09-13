@@ -3,21 +3,18 @@ from __future__ import annotations
 import operator
 import re
 from collections import deque
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-import narwhals._plan.functions as nwd
+from narwhals import _plan as nwd
+from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.common import ExprIR
-from narwhals._plan.expr import Expr
-from narwhals._plan.expressions import boolean, expr, functions as F, operators as ops
-from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr, RangeExpr
+from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.literal import SeriesLiteral
-from narwhals._plan.series import Series
 from narwhals.exceptions import (
     InvalidIntoExprError,
     InvalidOperationError,
@@ -58,7 +55,7 @@ def test_parsing(
     exprs: Seq[IntoExpr | Iterable[IntoExpr]], named_exprs: dict[str, IntoExpr]
 ) -> None:
     assert all(
-        isinstance(node, ExprIR)
+        isinstance(node, ir.ExprIR)
         for node in parse_into_seq_of_expr_ir(*exprs, **named_exprs)
     )
 
@@ -66,8 +63,8 @@ def test_parsing(
 @pytest.mark.parametrize(
     ("function", "ir_node"),
     [
-        (nwd.all_horizontal, boolean.AllHorizontal),
-        (nwd.any_horizontal, boolean.AnyHorizontal),
+        (nwd.all_horizontal, ir.boolean.AllHorizontal),
+        (nwd.any_horizontal, ir.boolean.AnyHorizontal),
         (nwd.sum_horizontal, F.SumHorizontal),
         (nwd.min_horizontal, F.MinHorizontal),
         (nwd.max_horizontal, F.MaxHorizontal),
@@ -85,18 +82,18 @@ def test_parsing(
     ],
 )
 def test_function_expr_horizontal(
-    function: Callable[..., Expr],
+    function: Callable[..., nwd.Expr],
     ir_node: type[Function],
     args: Seq[IntoExpr | Iterable[IntoExpr]],
 ) -> None:
     variadic = function(*args)
     sequence = function(args)
-    assert isinstance(variadic, Expr)
-    assert isinstance(sequence, Expr)
+    assert isinstance(variadic, nwd.Expr)
+    assert isinstance(sequence, nwd.Expr)
     variadic_node = variadic._ir
     sequence_node = sequence._ir
     unrelated_node = nwd.lit(1)._ir
-    assert isinstance(variadic_node, FunctionExpr)
+    assert isinstance(variadic_node, ir.FunctionExpr)
     assert isinstance(variadic_node.function, ir_node)
     assert variadic_node == sequence_node
     assert sequence_node != unrelated_node
@@ -161,13 +158,13 @@ def test_invalid_agg_non_elementwise() -> None:
 
 def test_agg_non_elementwise_range_special() -> None:
     e = nwd.int_range(0, 100)
-    assert isinstance(e._ir, RangeExpr)
+    assert isinstance(e._ir, ir.RangeExpr)
     e = nwd.int_range(nwd.len(), dtype=nw.UInt32).alias("index")
-    ir = e._ir
-    assert isinstance(ir, expr.Alias)
-    assert isinstance(ir.expr, RangeExpr)
-    assert isinstance(ir.expr.input[0], expr.Literal)
-    assert isinstance(ir.expr.input[1], expr.Len)
+    e_ir = e._ir
+    assert isinstance(e_ir, ir.Alias)
+    assert isinstance(e_ir.expr, ir.RangeExpr)
+    assert isinstance(e_ir.expr.input[0], ir.Literal)
+    assert isinstance(e_ir.expr.input[1], ir.Len)
 
 
 def test_invalid_int_range() -> None:
@@ -249,8 +246,8 @@ def test_invalid_binary_expr_length_changing() -> None:
         a.map_batches(lambda x: x) / b.gather_every(1, 0)
 
 
-def _is_expr_ir_binary_expr(expr: Expr) -> bool:
-    return isinstance(expr._ir, BinaryExpr)
+def _is_expr_ir_binary_expr(expr: nwd.Expr) -> bool:
+    return isinstance(expr._ir, ir.BinaryExpr)
 
 
 def test_binary_expr_length_changing_agg() -> None:
@@ -291,10 +288,10 @@ def test_is_in_seq(into_iter: IntoIterable) -> None:
     expected = 1, 2, 3
     other = into_iter(list(expected))
     expr = nwd.col("a").is_in(other)
-    ir = expr._ir
-    assert isinstance(ir, FunctionExpr)
-    assert isinstance(ir.function, boolean.IsInSeq)
-    assert ir.function.other == expected
+    e_ir = expr._ir
+    assert isinstance(e_ir, ir.FunctionExpr)
+    assert isinstance(e_ir.function, ir.boolean.IsInSeq)
+    assert e_ir.function.other == expected
 
 
 def test_is_in_series() -> None:
@@ -302,12 +299,12 @@ def test_is_in_series() -> None:
     import pyarrow as pa
 
     native = pa.chunked_array([pa.array([1, 2, 3])])
-    other = Series.from_native(native)
+    other = nwd.Series.from_native(native)
     expr = nwd.col("a").is_in(other)
-    ir = expr._ir
-    assert isinstance(ir, FunctionExpr)
-    assert isinstance(ir.function, boolean.IsInSeries)
-    assert ir.function.other.unwrap().to_native() is native
+    e_ir = expr._ir
+    assert isinstance(e_ir, ir.FunctionExpr)
+    assert isinstance(e_ir.function, ir.boolean.IsInSeries)
+    assert e_ir.function.other.unwrap().to_native() is native
 
 
 @pytest.mark.parametrize(
@@ -395,15 +392,15 @@ def test_lit_series_roundtrip() -> None:
 
     data = ["a", "b", "c"]
     native = pa.chunked_array([pa.array(data)])
-    series = Series.from_native(native)
+    series = nwd.Series.from_native(native)
     lit_series = nwd.lit(series)
     assert lit_series.meta.is_literal()
-    ir = lit_series._ir
-    assert isinstance(ir, expr.Literal)
-    assert isinstance(ir.dtype, nw.String)
-    assert isinstance(ir.value, SeriesLiteral)
-    unwrapped = ir.unwrap()
-    assert isinstance(unwrapped, Series)
+    e_ir = lit_series._ir
+    assert isinstance(e_ir, ir.Literal)
+    assert isinstance(e_ir.dtype, nw.String)
+    assert isinstance(e_ir.value, SeriesLiteral)
+    unwrapped = e_ir.unwrap()
+    assert isinstance(unwrapped, nwd.Series)
     assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
     assert unwrapped.to_list() == data
 
@@ -445,8 +442,8 @@ def test_operators_left_right(
     }
     result_1 = function(arg_1, arg_2)
     result_2 = function(arg_2, arg_1)
-    assert isinstance(result_1, Expr)
-    assert isinstance(result_2, Expr)
+    assert isinstance(result_1, nwd.Expr)
+    assert isinstance(result_2, nwd.Expr)
     ir_1 = result_1._ir
     ir_2 = result_2._ir
     if op in {ops.Eq, ops.NotEq}:
@@ -454,9 +451,9 @@ def test_operators_left_right(
     else:
         assert ir_1 != ir_2
     if issubclass(op, ops.Operator):
-        assert isinstance(ir_1, BinaryExpr)
+        assert isinstance(ir_1, ir.BinaryExpr)
         assert isinstance(ir_1.op, op)
-        assert isinstance(ir_2, BinaryExpr)
+        assert isinstance(ir_2, ir.BinaryExpr)
         op_inverse = inverse.get(op, op)
         assert isinstance(ir_2.op, op_inverse)
         if op in {ops.Eq, ops.NotEq, *inverse}:
@@ -466,8 +463,8 @@ def test_operators_left_right(
             assert ir_1.left == ir_2.right
             assert ir_1.right == ir_2.left
     else:
-        assert isinstance(ir_1, FunctionExpr)
+        assert isinstance(ir_1, ir.FunctionExpr)
         assert isinstance(ir_1.function, op)
-        assert isinstance(ir_2, FunctionExpr)
+        assert isinstance(ir_2, ir.FunctionExpr)
         assert isinstance(ir_2.function, op)
         assert tuple(reversed(ir_2.input)) == ir_1.input

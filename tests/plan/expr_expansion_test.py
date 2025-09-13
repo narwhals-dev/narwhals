@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Callable
 import pytest
 
 import narwhals as nw
-from narwhals._plan import functions as nwd
+from narwhals import _plan as nwd
+from narwhals._plan import expressions as ir, selectors as ndcs
 from narwhals._plan._expansion import (
     prepare_projection,
     replace_selector,
     rewrite_special_aliases,
 )
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.expressions import Alias, Columns, selectors as ndcs
 from narwhals._plan.schema import freeze_schema
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
 from tests.plan.utils import assert_expr_ir_equal
@@ -21,8 +21,6 @@ from tests.plan.utils import assert_expr_ir_equal
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
 
@@ -110,7 +108,7 @@ def udf_name_map(name: str) -> str:
         ),
     ],
 )
-def test_rewrite_special_aliases_single(expr: Expr, expected: str) -> None:
+def test_rewrite_special_aliases_single(expr: nwd.Expr, expected: str) -> None:
     # NOTE: We can't use `output_name()` without resolving these rewrites
     # Once they're done, `output_name()` just peeks into `Alias(name=...)`
     ir_input = expr._ir
@@ -126,10 +124,10 @@ def test_rewrite_special_aliases_single(expr: Expr, expected: str) -> None:
 def alias_replace_guarded(name: str) -> MapIR:  # pragma: no cover
     """Guards against repeatedly creating the same alias."""
 
-    def fn(ir: ExprIR) -> ExprIR:
-        if isinstance(ir, Alias) and ir.name != name:
-            return Alias(expr=ir.expr, name=name)
-        return ir
+    def fn(e_ir: ir.ExprIR) -> ir.ExprIR:
+        if isinstance(e_ir, ir.Alias) and e_ir.name != name:
+            return ir.Alias(expr=e_ir.expr, name=name)
+        return e_ir
 
     return fn
 
@@ -143,10 +141,10 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
     - *Pragmatically*, it might require an extra iteration to detect a cycle
     """
 
-    def fn(ir: ExprIR) -> ExprIR:
-        if isinstance(ir, Alias):
-            return Alias(expr=ir.expr, name=name)
-        return ir
+    def fn(e_ir: ir.ExprIR) -> ir.ExprIR:
+        if isinstance(e_ir, ir.Alias):
+            return ir.Alias(expr=e_ir.expr, name=name)
+        return e_ir
 
     return fn
 
@@ -180,7 +178,7 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
         ),
     ],
 )
-def test_map_ir_recursive(expr: Expr, function: MapIR, expected: Expr) -> None:
+def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -> None:
     actual = expr._ir.map_ir(function)
     assert_expr_ir_equal(actual, expected)
 
@@ -190,7 +188,7 @@ def test_map_ir_recursive(expr: Expr, function: MapIR, expected: Expr) -> None:
     [
         (nwd.col("a"), nwd.col("a")),
         (nwd.col("a").max().alias("z"), nwd.col("a").max().alias("z")),
-        (ndcs.string(), Columns(names=("k",))),
+        (ndcs.string(), ir.Columns(names=("k",))),
         (
             ndcs.by_dtype(nw.Datetime("ms"), nw.Date, nw.List(nw.String)),
             nwd.col("n", "s"),
@@ -248,7 +246,9 @@ def test_map_ir_recursive(expr: Expr, function: MapIR, expected: Expr) -> None:
     ],
 )
 def test_replace_selector(
-    expr: Selector | Expr, expected: Expr | ExprIR, schema_1: dict[str, DType]
+    expr: nwd.Selector | nwd.Expr,
+    expected: nwd.Expr | ir.ExprIR,
+    schema_1: dict[str, DType],
 ) -> None:
     actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
     assert_expr_ir_equal(actual, expected)
@@ -422,7 +422,7 @@ def test_replace_selector(
 )
 def test_prepare_projection(
     into_exprs: IntoExpr | Sequence[IntoExpr],
-    expected: Sequence[Expr],
+    expected: Sequence[nwd.Expr],
     schema_1: dict[str, DType],
 ) -> None:
     irs_in = parse_into_seq_of_expr_ir(into_exprs)
@@ -447,7 +447,7 @@ def test_prepare_projection(
         *MULTI_OUTPUT_EXPRS,
     ],
 )
-def test_prepare_projection_duplicate(expr: Expr, schema_1: dict[str, DType]) -> None:
+def test_prepare_projection_duplicate(expr: nwd.Expr, schema_1: dict[str, DType]) -> None:
     irs = parse_into_seq_of_expr_ir(expr.alias("dupe"))
     pattern = re.compile(r"\.alias\(.dupe.\)")
     with pytest.raises(DuplicateError, match=pattern):
@@ -547,7 +547,7 @@ def test_prepare_projection_column_not_found(
 )
 def test_prepare_projection_horizontal_alias(
     into_exprs: IntoExpr | Iterable[IntoExpr],
-    function: Callable[..., Expr],
+    function: Callable[..., nwd.Expr],
     schema_1: dict[str, DType],
 ) -> None:
     # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2139965411
