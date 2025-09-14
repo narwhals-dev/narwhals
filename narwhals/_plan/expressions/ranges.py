@@ -8,8 +8,7 @@ from narwhals._plan.options import FEOptions, FunctionOptions
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expressions.expr import RangeExpr
+    from narwhals._plan.expressions import ExprIR, RangeExpr
     from narwhals.dtypes import IntegerType
 
 

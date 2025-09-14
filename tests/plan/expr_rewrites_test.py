@@ -12,7 +12,6 @@ from narwhals._plan._rewrites import (
     rewrite_binary_agg_over,
     rewrite_elementwise_over,
 )
-from narwhals._plan.common import NamedIR
 from narwhals._plan.expressions.window import Over
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_expr_ir_equal
@@ -80,9 +79,9 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         assert_expr_ir_equal(lhs, rhs)
 
 
-def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> NamedIR[ir.ExprIR]:
+def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
     """Helper constructor for test compare."""
-    return NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
+    return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
 
 
 def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:

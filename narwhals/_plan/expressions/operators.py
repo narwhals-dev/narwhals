@@ -16,8 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expressions.expr import BinaryExpr, BinarySelector
+    from narwhals._plan.expressions import BinaryExpr, BinarySelector, ExprIR
     from narwhals._plan.typing import (
         LeftSelectorT,
         LeftT,

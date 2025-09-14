@@ -11,8 +11,7 @@ from narwhals._plan.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expressions.expr import OrderedWindowExpr, WindowExpr
+    from narwhals._plan.expressions import ExprIR, OrderedWindowExpr, WindowExpr
     from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import Seq
     from narwhals.exceptions import InvalidOperationError

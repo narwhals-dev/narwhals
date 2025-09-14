@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan import common
+from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 from narwhals._plan.options import ExprIROptions
@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
 
 
-class KeepName(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class KeepName(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr",)
-    expr: common.ExprIR
+    expr: ExprIR
 
     @property
     def is_scalar(self) -> bool:
@@ -24,9 +24,9 @@ class KeepName(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch(
         return f"{self.expr!r}.name.keep()"
 
 
-class RenameAlias(common.ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
+class RenameAlias(ExprIR, child=("expr",), config=ExprIROptions.no_dispatch()):
     __slots__ = ("expr", "function")
-    expr: common.ExprIR
+    expr: ExprIR
     function: AliasName
 
     @property

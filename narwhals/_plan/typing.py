@@ -8,8 +8,8 @@ if t.TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals import dtypes
+    from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
-    from narwhals._plan.common import ExprIR, NamedIR, SelectorIR
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow

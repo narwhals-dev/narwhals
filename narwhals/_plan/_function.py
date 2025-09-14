@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import _dispatch_getter, _dispatch_method_name, replace
+from narwhals._plan.common import dispatch_getter, dispatch_method_name, replace
 from narwhals._plan.options import FEOptions, FunctionOptions
 
 if TYPE_CHECKING:
-    from typing import Any, Callable
+    from typing import Any, Callable, ClassVar
 
     from typing_extensions import Self, TypeAlias
 
@@ -22,7 +22,7 @@ Incomplete: TypeAlias = "Any"
 def _dispatch_generate_function(
     tp: type[FunctionT], /
 ) -> Callable[[Incomplete, FunctionExpr[FunctionT], Incomplete, str], Incomplete]:
-    getter = _dispatch_getter(tp)
+    getter = dispatch_getter(tp)
 
     def _(ctx: Any, /, node: FunctionExpr[FunctionT], frame: Any, name: str) -> Any:
         return getter(ctx)(node, frame, name)
@@ -75,7 +75,7 @@ class Function(Immutable):
         cls.__expr_ir_dispatch__ = staticmethod(_dispatch_generate_function(cls))
 
     def __repr__(self) -> str:
-        return _dispatch_method_name(type(self))
+        return dispatch_method_name(type(self))
 
 
 class HorizontalFunction(

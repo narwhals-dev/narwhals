@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions.expr import AnonymousExpr, FunctionExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals._plan.typing import Seq, Udf

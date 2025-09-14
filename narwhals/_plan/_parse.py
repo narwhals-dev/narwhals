@@ -4,7 +4,7 @@ from collections.abc import Iterable, Sequence
 
 # ruff: noqa: A002
 from itertools import chain
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from narwhals._plan._guards import is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
@@ -16,16 +16,16 @@ from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_ser
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any
+    from typing import Any, TypeVar
 
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals.typing import IntoDType
 
-T = TypeVar("T")
+    T = TypeVar("T")
 
 _RaisesInvalidIntoExprError: TypeAlias = "Any"
 """

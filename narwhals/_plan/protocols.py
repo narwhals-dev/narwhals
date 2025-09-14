@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._plan.common import NamedIR, flatten_hash_safe
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
+        NamedIR,
         aggregation as agg,
         boolean,
         functions as F,

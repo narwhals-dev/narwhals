@@ -11,8 +11,7 @@ from narwhals._plan._parse import (
 from narwhals._plan.expr import Expr
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expressions.expr import TernaryExpr
+    from narwhals._plan.expressions import ExprIR, TernaryExpr
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 

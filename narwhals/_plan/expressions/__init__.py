@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from narwhals._plan.common import ExprIR, SelectorIR  # prob should move into package?
+from narwhals._plan._expr_ir import (  # prob should move into package?
+    ExprIR,
+    NamedIR,
+    SelectorIR,
+)
 from narwhals._plan.expressions import (
     aggregation,
     boolean,
@@ -61,6 +65,7 @@ __all__ = [
     "KeepName",
     "Len",
     "Literal",
+    "NamedIR",
     "Nth",
     "OrderableAggExpr",
     "OrderedWindowExpr",

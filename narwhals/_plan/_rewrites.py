@@ -12,12 +12,12 @@ from narwhals._plan._guards import (
     is_window_expr,
 )
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.common import NamedIR, replace
+from narwhals._plan.common import replace
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import IntoFrozenSchema
     from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, Seq
 

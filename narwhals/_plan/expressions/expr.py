@@ -6,7 +6,8 @@ from __future__ import annotations
 # - Literal
 import typing as t
 
-from narwhals._plan.common import ExprIR, SelectorIR, flatten_hash_safe
+from narwhals._plan._expr_ir import ExprIR, SelectorIR
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals._plan.options import ExprIROptions
 from narwhals._plan.typing import (
