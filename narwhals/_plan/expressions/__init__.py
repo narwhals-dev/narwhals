@@ -45,6 +45,7 @@ from narwhals._plan.expressions.expr import (
     nth,
 )
 from narwhals._plan.expressions.name import KeepName, RenameAlias
+from narwhals._plan.expressions.window import over, over_ordered
 
 __all__ = [
     "AggExpr",
@@ -87,5 +88,7 @@ __all__ = [
     "index_columns",
     "nth",
     "operators",
+    "over",
+    "over_ordered",
     "selectors",
 ]

@@ -17,7 +17,6 @@ from narwhals._plan.expressions import (
     operators as ops,
 )
 from narwhals._plan.expressions.selectors import by_name
-from narwhals._plan.expressions.window import Over
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -154,20 +153,18 @@ class Expr:
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
-        node: ir.WindowExpr | ir.OrderedWindowExpr
-        partition: Seq[ir.ExprIR] = ()
         if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
-        if partition_by:
-            partition = parse_into_seq_of_expr_ir(*partition_by)
-        if order_by is not None:
-            by = parse_into_seq_of_expr_ir(order_by)
-            options = SortOptions(descending=descending, nulls_last=nulls_last)
-            node = Over().to_ordered_window_expr(self._ir, partition, by, options)
-        else:
-            node = Over().to_window_expr(self._ir, partition)
-        return self._from_ir(node)
+        parse = parse_into_seq_of_expr_ir
+        fn = self._ir
+        group = parse(*partition_by) if partition_by else ()
+        if order_by is None:
+            return self._from_ir(ir.over(fn, group))
+        over = ir.over_ordered
+        order = parse(order_by)
+        desc, nulls = descending, nulls_last
+        return self._from_ir(over(fn, group, order, descending=desc, nulls_last=nulls))
 
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self:
         options = SortOptions(descending=descending, nulls_last=nulls_last)
