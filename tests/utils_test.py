@@ -505,6 +505,14 @@ def test_requires() -> None:
         def compliant(self) -> ProbablyCompliant:
             return self._compliant
 
+        @property
+        def implementation(self) -> Implementation:
+            return self.compliant._implementation
+
+        @property
+        def backend_version(self) -> tuple[int, ...]:
+            return self.compliant._backend_version
+
         def waddle(self) -> str:
             return f"waddle<{self.compliant.native}>waddle"
 

@@ -271,6 +271,14 @@ class PolarsAnyNamespace(
 
         return func
 
+    @property
+    def implementation(self) -> Implementation:
+        return Implementation.POLARS
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        return BACKEND_VERSION
+
 
 class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "dt"

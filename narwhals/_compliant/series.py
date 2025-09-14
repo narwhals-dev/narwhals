@@ -6,6 +6,7 @@ from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    NamespaceAccessor,
     StringNamespace,
     StructNamespace,
 )
@@ -20,7 +21,6 @@ from narwhals._compliant.typing import (
 from narwhals._translate import FromIterable, FromNative, NumpyConvertible, ToNarwhals
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
-    _StoresCompliant,
     _StoresNative,
     is_compliant_series,
     is_sized_multi_index_selector,
@@ -80,8 +80,6 @@ class CompliantSeries(
     Protocol[NativeSeriesT],
 ):
     # NOTE: `narwhals`
-    _implementation: Implementation
-
     @property
     def native(self) -> NativeSeriesT: ...
     def __narwhals_series__(self) -> Self:
@@ -267,7 +265,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
 
 
 class _SeriesNamespace(  # type: ignore[misc]
-    _StoresCompliant[CompliantSeriesT_co],
+    NamespaceAccessor[CompliantSeriesT_co],
     _StoresNative[NativeSeriesT_co],
     Protocol[CompliantSeriesT_co, NativeSeriesT_co],
 ):
@@ -276,14 +274,6 @@ class _SeriesNamespace(  # type: ignore[misc]
     @property
     def compliant(self) -> CompliantSeriesT_co:
         return self._compliant_series
-
-    @property
-    def implementation(self) -> Implementation:
-        return self.compliant._implementation
-
-    @property
-    def backend_version(self) -> tuple[int, ...]:
-        return self.implementation._backend_version()
 
     @property
     def version(self) -> Version:
