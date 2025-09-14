@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals import _plan as nwd
+from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.expressions import functions as F, operators as ops
@@ -39,15 +39,15 @@ IntoIterable: TypeAlias = Callable[[Sequence[Any]], Iterable[Any]]
 @pytest.mark.parametrize(
     ("exprs", "named_exprs"),
     [
-        ([nwd.col("a")], {}),
+        ([nwp.col("a")], {}),
         (["a"], {}),
         ([], {"a": "b"}),
-        ([], {"a": nwd.col("b")}),
-        (["a", "b", nwd.col("c", "d", "e")], {"g": nwd.lit(1)}),
-        ([["a", "b", "c"]], {"q": nwd.lit(5, nw.Int8())}),
+        ([], {"a": nwp.col("b")}),
+        (["a", "b", nwp.col("c", "d", "e")], {"g": nwp.lit(1)}),
+        ([["a", "b", "c"]], {"q": nwp.lit(5, nw.Int8())}),
         (
-            [[nwd.nth(1), nwd.nth(2, 3, 4)]],
-            {"n": nwd.col("p").count(), "other n": nwd.len()},
+            [[nwp.nth(1), nwp.nth(2, 3, 4)]],
+            {"n": nwp.col("p").count(), "other n": nwp.len()},
         ),
     ],
 )
@@ -63,12 +63,12 @@ def test_parsing(
 @pytest.mark.parametrize(
     ("function", "ir_node"),
     [
-        (nwd.all_horizontal, ir.boolean.AllHorizontal),
-        (nwd.any_horizontal, ir.boolean.AnyHorizontal),
-        (nwd.sum_horizontal, F.SumHorizontal),
-        (nwd.min_horizontal, F.MinHorizontal),
-        (nwd.max_horizontal, F.MaxHorizontal),
-        (nwd.mean_horizontal, F.MeanHorizontal),
+        (nwp.all_horizontal, ir.boolean.AllHorizontal),
+        (nwp.any_horizontal, ir.boolean.AnyHorizontal),
+        (nwp.sum_horizontal, F.SumHorizontal),
+        (nwp.min_horizontal, F.MinHorizontal),
+        (nwp.max_horizontal, F.MaxHorizontal),
+        (nwp.mean_horizontal, F.MeanHorizontal),
     ],
 )
 @pytest.mark.parametrize(
@@ -76,23 +76,23 @@ def test_parsing(
     [
         ("a", "b", "c"),
         (["a", "b", "c"]),
-        (nwd.col("d", "e", "f"), nwd.col("g"), "q", nwd.nth(9)),
-        ((nwd.lit(1),)),
-        ([nwd.lit(1), nwd.lit(2, nw.Int64), nwd.lit(3, nw.Int64())]),
+        (nwp.col("d", "e", "f"), nwp.col("g"), "q", nwp.nth(9)),
+        ((nwp.lit(1),)),
+        ([nwp.lit(1), nwp.lit(2, nw.Int64), nwp.lit(3, nw.Int64())]),
     ],
 )
 def test_function_expr_horizontal(
-    function: Callable[..., nwd.Expr],
+    function: Callable[..., nwp.Expr],
     ir_node: type[Function],
     args: Seq[IntoExpr | Iterable[IntoExpr]],
 ) -> None:
     variadic = function(*args)
     sequence = function(args)
-    assert isinstance(variadic, nwd.Expr)
-    assert isinstance(sequence, nwd.Expr)
+    assert isinstance(variadic, nwp.Expr)
+    assert isinstance(sequence, nwp.Expr)
     variadic_node = variadic._ir
     sequence_node = sequence._ir
-    unrelated_node = nwd.lit(1)._ir
+    unrelated_node = nwp.lit(1)._ir
     assert isinstance(variadic_node, ir.FunctionExpr)
     assert isinstance(variadic_node.function, ir_node)
     assert variadic_node == sequence_node
@@ -105,7 +105,7 @@ def test_valid_windows() -> None:
     https://github.com/narwhals-dev/narwhals/blob/63c8e4771a1df4e0bfeea5559c303a4a447d5cc2/tests/expression_parsing_test.py#L10-L45
     """
     ELEMENTWISE_ERR = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)  # noqa: N806
-    a = nwd.col("a")
+    a = nwp.col("a")
     assert a.cum_sum()
     assert a.cum_sum().over(order_by="id")
     with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
@@ -114,32 +114,32 @@ def test_valid_windows() -> None:
     assert (a.cum_sum() + 1).over(order_by="id")
     assert a.cum_sum().cum_sum().over(order_by="id")
     assert a.cum_sum().cum_sum()
-    assert nwd.sum_horizontal(a, a.cum_sum())
+    assert nwp.sum_horizontal(a, a.cum_sum())
     with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
-        assert nwd.sum_horizontal(a, a.cum_sum()).over(order_by="a")
+        assert nwp.sum_horizontal(a, a.cum_sum()).over(order_by="a")
 
-    assert nwd.sum_horizontal(a, a.cum_sum().over(order_by="i"))
-    assert nwd.sum_horizontal(a.diff(), a.cum_sum().over(order_by="i"))
+    assert nwp.sum_horizontal(a, a.cum_sum().over(order_by="i"))
+    assert nwp.sum_horizontal(a.diff(), a.cum_sum().over(order_by="i"))
     with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
-        assert nwd.sum_horizontal(a.diff(), a.cum_sum()).over(order_by="i")
+        assert nwp.sum_horizontal(a.diff(), a.cum_sum()).over(order_by="i")
 
     with pytest.raises(InvalidOperationError, match=ELEMENTWISE_ERR):
-        assert nwd.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
+        assert nwp.sum_horizontal(a.diff().abs(), a.cum_sum()).over(order_by="i")
 
 
 def test_invalid_repeat_agg() -> None:
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").mean().mean()
+        nwp.col("a").mean().mean()
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").first().max()
+        nwp.col("a").first().max()
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").any().std()
+        nwp.col("a").any().std()
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").all().quantile(0.5, "linear")
+        nwp.col("a").all().quantile(0.5, "linear")
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").arg_max().min()
+        nwp.col("a").arg_max().min()
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").arg_min().arg_max()
+        nwp.col("a").arg_min().arg_max()
 
 
 # NOTE: Previously multiple different errors, but they can be reduced to the same thing
@@ -147,19 +147,19 @@ def test_invalid_repeat_agg() -> None:
 def test_invalid_agg_non_elementwise() -> None:
     pattern = re.compile(r"cannot use.+rank.+aggregated.+mean", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").mean().rank()
+        nwp.col("a").mean().rank()
     pattern = re.compile(r"cannot use.+drop_nulls.+aggregated.+max", re.IGNORECASE)
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").max().drop_nulls()
+        nwp.col("a").max().drop_nulls()
     pattern = re.compile(r"cannot use.+diff.+aggregated.+min", re.IGNORECASE)
     with pytest.raises(InvalidOperationError):
-        nwd.col("a").min().diff()
+        nwp.col("a").min().diff()
 
 
 def test_agg_non_elementwise_range_special() -> None:
-    e = nwd.int_range(0, 100)
+    e = nwp.int_range(0, 100)
     assert isinstance(e._ir, ir.RangeExpr)
-    e = nwd.int_range(nwd.len(), dtype=nw.UInt32).alias("index")
+    e = nwp.int_range(nwp.len(), dtype=nw.UInt32).alias("index")
     e_ir = e._ir
     assert isinstance(e_ir, ir.Alias)
     assert isinstance(e_ir.expr, ir.RangeExpr)
@@ -170,28 +170,28 @@ def test_agg_non_elementwise_range_special() -> None:
 def test_invalid_int_range() -> None:
     pattern = re.compile(r"scalar.+agg", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.int_range(nwd.col("a"))
+        nwp.int_range(nwp.col("a"))
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.int_range(nwd.nth(1), 10)
+        nwp.int_range(nwp.nth(1), 10)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.int_range(0, nwd.col("a").abs())
+        nwp.int_range(0, nwp.col("a").abs())
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.int_range(nwd.col("a") + 1)
+        nwp.int_range(nwp.col("a") + 1)
 
 
 # NOTE: Non-`polars`` rule
 def test_invalid_over() -> None:
     pattern = re.compile(r"cannot use.+over.+elementwise", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").fill_null(3).over("b")
+        nwp.col("a").fill_null(3).over("b")
 
 
 def test_nested_over() -> None:
     pattern = re.compile(r"cannot nest.+over", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").mean().over("b").over("c")
+        nwp.col("a").mean().over("b").over("c")
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").mean().over("b").over("c", order_by="i")
+        nwp.col("a").mean().over("b").over("c", order_by="i")
 
 
 # NOTE: This *can* error in polars, but only if the length **actually changes**
@@ -199,36 +199,36 @@ def test_nested_over() -> None:
 def test_filtration_over() -> None:
     pattern = re.compile(r"cannot use.+over.+change length", re.IGNORECASE)
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").drop_nulls().over("b")
+        nwp.col("a").drop_nulls().over("b")
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").drop_nulls().over("b", order_by="i")
+        nwp.col("a").drop_nulls().over("b", order_by="i")
     with pytest.raises(InvalidOperationError, match=pattern):
-        nwd.col("a").diff().drop_nulls().over("b", order_by="i")
+        nwp.col("a").diff().drop_nulls().over("b", order_by="i")
 
 
 def test_invalid_binary_expr_multi() -> None:
     pattern = re.escape("all() + cols(['b', 'c'])\n        ^^^^^^^^^^^^^^^^")
     with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwd.all() + nwd.col("b", "c")
+        nwp.all() + nwp.col("b", "c")
     pattern = re.escape(
         "index_columns((1, 2, 3)) * index_columns((4, 5, 6)).max()\n"
         "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwd.nth(1, 2, 3) * nwd.nth(4, 5, 6).max()
+        nwp.nth(1, 2, 3) * nwp.nth(4, 5, 6).max()
     pattern = re.escape(
         "cols(['a', 'b', 'c']).abs().fill_null([lit(int: 0)]).round() * index_columns((9, 10)).cast(Int64).sort(asc)\n"
         "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     with pytest.raises(MultiOutputExpressionError, match=pattern):
-        nwd.col("a", "b", "c").abs().fill_null(0).round(2) * nwd.nth(9, 10).cast(
+        nwp.col("a", "b", "c").abs().fill_null(0).round(2) * nwp.nth(9, 10).cast(
             nw.Int64()
         ).sort()
 
 
 def test_invalid_binary_expr_length_changing() -> None:
-    a = nwd.col("a")
-    b = nwd.col("b")
+    a = nwp.col("a")
+    b = nwp.col("b")
 
     with pytest.raises(LengthChangingExprError):
         a.unique() + b.unique()
@@ -246,13 +246,13 @@ def test_invalid_binary_expr_length_changing() -> None:
         a.map_batches(lambda x: x) / b.gather_every(1, 0)
 
 
-def _is_expr_ir_binary_expr(expr: nwd.Expr) -> bool:
+def _is_expr_ir_binary_expr(expr: nwp.Expr) -> bool:
     return isinstance(expr._ir, ir.BinaryExpr)
 
 
 def test_binary_expr_length_changing_agg() -> None:
-    a = nwd.col("a")
-    b = nwd.col("b")
+    a = nwp.col("a")
+    b = nwp.col("b")
 
     assert _is_expr_ir_binary_expr(a.unique().first() + b.unique())
     assert _is_expr_ir_binary_expr(a.mode().last() * b.unique())
@@ -272,8 +272,8 @@ def test_invalid_binary_expr_shape() -> None:
         re.escape("Cannot combine length-changing expressions with length-preserving"),
         re.IGNORECASE,
     )
-    a = nwd.col("a")
-    b = nwd.col("b")
+    a = nwp.col("a")
+    b = nwp.col("b")
 
     with pytest.raises(ShapeError, match=pattern):
         a.unique() + b
@@ -287,7 +287,7 @@ def test_invalid_binary_expr_shape() -> None:
 def test_is_in_seq(into_iter: IntoIterable) -> None:
     expected = 1, 2, 3
     other = into_iter(list(expected))
-    expr = nwd.col("a").is_in(other)
+    expr = nwp.col("a").is_in(other)
     e_ir = expr._ir
     assert isinstance(e_ir, ir.FunctionExpr)
     assert isinstance(e_ir.function, ir.boolean.IsInSeq)
@@ -299,8 +299,8 @@ def test_is_in_series() -> None:
     import pyarrow as pa
 
     native = pa.chunked_array([pa.array([1, 2, 3])])
-    other = nwd.Series.from_native(native)
-    expr = nwd.col("a").is_in(other)
+    other = nwp.Series.from_native(native)
+    expr = nwp.col("a").is_in(other)
     e_ir = expr._ir
     assert isinstance(e_ir, ir.FunctionExpr)
     assert isinstance(e_ir.function, ir.boolean.IsInSeries)
@@ -313,7 +313,7 @@ def test_is_in_series() -> None:
         ("words", pytest.raises(TypeError, match=r"str \| bytes.+str")),
         (b"words", pytest.raises(TypeError, match=r"str \| bytes.+bytes")),
         (
-            nwd.col("b"),
+            nwp.col("b"),
             pytest.raises(
                 NotImplementedError, match=re.compile(r"iterable instead", re.IGNORECASE)
             ),
@@ -328,19 +328,19 @@ def test_is_in_series() -> None:
 )
 def test_invalid_is_in(other: Any, context: AbstractContextManager[Any]) -> None:
     with context:
-        nwd.col("a").is_in(other)
+        nwp.col("a").is_in(other)
 
 
 def test_filter_full_spellings() -> None:
-    a = nwd.col("a")
-    b = nwd.col("b")
-    c = nwd.col("c")
-    d = nwd.col("d")
-    expected = a.filter(b != b.max(), c < nwd.lit(2), d == nwd.lit(5))
-    expr_1 = a.filter([b != b.max(), c < nwd.lit(2), d == nwd.lit(5)])
-    expr_2 = a.filter([b != b.max(), c < nwd.lit(2)], d=nwd.lit(5))
-    expr_3 = a.filter([b != b.max(), c < nwd.lit(2)], d=5)
-    expr_4 = a.filter(b != b.max(), c < nwd.lit(2), d=5)
+    a = nwp.col("a")
+    b = nwp.col("b")
+    c = nwp.col("c")
+    d = nwp.col("d")
+    expected = a.filter(b != b.max(), c < nwp.lit(2), d == nwp.lit(5))
+    expr_1 = a.filter([b != b.max(), c < nwp.lit(2), d == nwp.lit(5)])
+    expr_2 = a.filter([b != b.max(), c < nwp.lit(2)], d=nwp.lit(5))
+    expr_3 = a.filter([b != b.max(), c < nwp.lit(2)], d=5)
+    expr_4 = a.filter(b != b.max(), c < nwp.lit(2), d=5)
     expr_5 = a.filter(b != b.max(), c < 2, d=5)
     expr_6 = a.filter((b != b.max(), c < 2), d=5)
     assert_expr_ir_equal(expected, expr_1)
@@ -354,9 +354,9 @@ def test_filter_full_spellings() -> None:
 @pytest.mark.parametrize(
     ("predicates", "constraints", "context"),
     [
-        ([nwd.col("b").is_last_distinct()], {}, nullcontext()),
+        ([nwp.col("b").is_last_distinct()], {}, nullcontext()),
         ((), {"b": 10}, nullcontext()),
-        ((), {"b": nwd.lit(10)}, nullcontext()),
+        ((), {"b": nwp.lit(10)}, nullcontext()),
         (
             (),
             {},
@@ -364,9 +364,9 @@ def test_filter_full_spellings() -> None:
                 TypeError, match=re.compile(r"at least one predicate", re.IGNORECASE)
             ),
         ),
-        ((nwd.col("b") > 1, nwd.col("c").is_null()), {}, nullcontext()),
+        ((nwp.col("b") > 1, nwp.col("c").is_null()), {}, nullcontext()),
         (
-            ([nwd.col("b") > 1], nwd.col("c").is_null()),
+            ([nwp.col("b") > 1], nwp.col("c").is_null()),
             {},
             pytest.raises(
                 InvalidIntoExprError,
@@ -383,7 +383,7 @@ def test_filter_partial_spellings(
     context: AbstractContextManager[Any],
 ) -> None:
     with context:
-        assert nwd.col("a").filter(*predicates, **constraints)
+        assert nwp.col("a").filter(*predicates, **constraints)
 
 
 def test_lit_series_roundtrip() -> None:
@@ -392,15 +392,15 @@ def test_lit_series_roundtrip() -> None:
 
     data = ["a", "b", "c"]
     native = pa.chunked_array([pa.array(data)])
-    series = nwd.Series.from_native(native)
-    lit_series = nwd.lit(series)
+    series = nwp.Series.from_native(native)
+    lit_series = nwp.lit(series)
     assert lit_series.meta.is_literal()
     e_ir = lit_series._ir
     assert isinstance(e_ir, ir.Literal)
     assert isinstance(e_ir.dtype, nw.String)
     assert isinstance(e_ir.value, SeriesLiteral)
     unwrapped = e_ir.unwrap()
-    assert isinstance(unwrapped, nwd.Series)
+    assert isinstance(unwrapped, nwp.Series)
     assert isinstance(unwrapped.to_native(), pa.ChunkedArray)
     assert unwrapped.to_list() == data
 
@@ -408,24 +408,24 @@ def test_lit_series_roundtrip() -> None:
 @pytest.mark.parametrize(
     ("arg_1", "arg_2", "function", "op"),
     [
-        (nwd.col("a"), 1, operator.eq, ops.Eq),
-        (nwd.col("a"), "b", operator.eq, ops.Eq),
-        (nwd.col("a"), 1, operator.ne, ops.NotEq),
-        (nwd.col("a"), "b", operator.ne, ops.NotEq),
-        (nwd.col("a"), "b", operator.ge, ops.GtEq),
-        (nwd.col("a"), "b", operator.gt, ops.Gt),
-        (nwd.col("a"), "b", operator.le, ops.LtEq),
-        (nwd.col("a"), "b", operator.lt, ops.Lt),
-        ((nwd.col("a") != 1), False, operator.and_, ops.And),
-        ((nwd.col("a") != 1), False, operator.or_, ops.Or),
-        ((nwd.col("a")), True, operator.xor, ops.ExclusiveOr),
-        (nwd.col("a"), 6, operator.add, ops.Add),
-        (nwd.col("a"), 2.1, operator.mul, ops.Multiply),
-        (nwd.col("a"), nwd.col("b"), operator.sub, ops.Sub),
-        (nwd.col("a"), 2, operator.pow, F.Pow),
-        (nwd.col("a"), 2, operator.mod, ops.Modulus),
-        (nwd.col("a"), 2, operator.floordiv, ops.FloorDivide),
-        (nwd.col("a"), 4, operator.truediv, ops.TrueDivide),
+        (nwp.col("a"), 1, operator.eq, ops.Eq),
+        (nwp.col("a"), "b", operator.eq, ops.Eq),
+        (nwp.col("a"), 1, operator.ne, ops.NotEq),
+        (nwp.col("a"), "b", operator.ne, ops.NotEq),
+        (nwp.col("a"), "b", operator.ge, ops.GtEq),
+        (nwp.col("a"), "b", operator.gt, ops.Gt),
+        (nwp.col("a"), "b", operator.le, ops.LtEq),
+        (nwp.col("a"), "b", operator.lt, ops.Lt),
+        ((nwp.col("a") != 1), False, operator.and_, ops.And),
+        ((nwp.col("a") != 1), False, operator.or_, ops.Or),
+        ((nwp.col("a")), True, operator.xor, ops.ExclusiveOr),
+        (nwp.col("a"), 6, operator.add, ops.Add),
+        (nwp.col("a"), 2.1, operator.mul, ops.Multiply),
+        (nwp.col("a"), nwp.col("b"), operator.sub, ops.Sub),
+        (nwp.col("a"), 2, operator.pow, F.Pow),
+        (nwp.col("a"), 2, operator.mod, ops.Modulus),
+        (nwp.col("a"), 2, operator.floordiv, ops.FloorDivide),
+        (nwp.col("a"), 4, operator.truediv, ops.TrueDivide),
     ],
 )
 def test_operators_left_right(
@@ -442,8 +442,8 @@ def test_operators_left_right(
     }
     result_1 = function(arg_1, arg_2)
     result_2 = function(arg_2, arg_1)
-    assert isinstance(result_1, nwd.Expr)
-    assert isinstance(result_2, nwd.Expr)
+    assert isinstance(result_1, nwp.Expr)
+    assert isinstance(result_2, nwp.Expr)
     ir_1 = result_1._ir
     ir_2 = result_2._ir
     if op in {ops.Eq, ops.NotEq}:

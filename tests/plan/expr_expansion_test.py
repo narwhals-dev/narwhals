@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable
 import pytest
 
 import narwhals as nw
-from narwhals import _plan as nwd
+from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ndcs
 from narwhals._plan._expansion import (
     prepare_projection,
@@ -52,9 +52,9 @@ def schema_1() -> dict[str, DType]:
 
 
 MULTI_OUTPUT_EXPRS = (
-    pytest.param(nwd.col("a", "b", "c")),
+    pytest.param(nwp.col("a", "b", "c")),
     pytest.param(ndcs.numeric() - ndcs.matches("[d-j]")),
-    pytest.param(nwd.nth(0, 1, 2)),
+    pytest.param(nwp.nth(0, 1, 2)),
     pytest.param(ndcs.by_dtype(nw.Int64, nw.Int32, nw.Int16)),
     pytest.param(ndcs.by_name("a", "b", "c")),
 )
@@ -74,19 +74,19 @@ def udf_name_map(name: str) -> str:
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (nwd.col("a").name.to_uppercase(), "A"),
-        (nwd.col("B").name.to_lowercase(), "b"),
-        (nwd.col("c").name.suffix("_after"), "c_after"),
-        (nwd.col("d").name.prefix("before_"), "before_d"),
+        (nwp.col("a").name.to_uppercase(), "A"),
+        (nwp.col("B").name.to_lowercase(), "b"),
+        (nwp.col("c").name.suffix("_after"), "c_after"),
+        (nwp.col("d").name.prefix("before_"), "before_d"),
         (
-            nwd.col("aBcD EFg hi").name.map(udf_name_map),
+            nwp.col("aBcD EFg hi").name.map(udf_name_map),
             "original='aBcD EFg hi' | upper='ABCD EFG HI' | lower='abcd efg hi' | title='Abcd Efg Hi'",
         ),
-        (nwd.col("a").min().alias("b").over("c").alias("d").max().name.keep(), "a"),
+        (nwp.col("a").min().alias("b").over("c").alias("d").max().name.keep(), "a"),
         (
             (
-                nwd.col("hello")
-                .sort_by(nwd.col("ignore me"))
+                nwp.col("hello")
+                .sort_by(nwp.col("ignore me"))
                 .max()
                 .over("ignore me as well")
                 .first()
@@ -96,7 +96,7 @@ def udf_name_map(name: str) -> str:
         ),
         (
             (
-                nwd.col("start")
+                nwp.col("start")
                 .alias("next")
                 .sort()
                 .round()
@@ -108,7 +108,7 @@ def udf_name_map(name: str) -> str:
         ),
     ],
 )
-def test_rewrite_special_aliases_single(expr: nwd.Expr, expected: str) -> None:
+def test_rewrite_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
     # NOTE: We can't use `output_name()` without resolving these rewrites
     # Once they're done, `output_name()` just peeks into `Alias(name=...)`
     ir_input = expr._ir
@@ -152,33 +152,33 @@ def alias_replace_unguarded(name: str) -> MapIR:  # pragma: no cover
 @pytest.mark.parametrize(
     ("expr", "function", "expected"),
     [
-        (nwd.col("a"), alias_replace_guarded("never"), nwd.col("a")),
-        (nwd.col("a"), alias_replace_unguarded("never"), nwd.col("a")),
-        (nwd.col("a").alias("b"), alias_replace_guarded("c"), nwd.col("a").alias("c")),
-        (nwd.col("a").alias("b"), alias_replace_unguarded("c"), nwd.col("a").alias("c")),
+        (nwp.col("a"), alias_replace_guarded("never"), nwp.col("a")),
+        (nwp.col("a"), alias_replace_unguarded("never"), nwp.col("a")),
+        (nwp.col("a").alias("b"), alias_replace_guarded("c"), nwp.col("a").alias("c")),
+        (nwp.col("a").alias("b"), alias_replace_unguarded("c"), nwp.col("a").alias("c")),
         (
-            nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
+            nwp.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_guarded("d"),
-            nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+            nwp.col("a").alias("d").first().over("b", order_by="c").alias("d"),
         ),
         (
-            nwd.col("a").alias("d").first().over("b", order_by="c").alias("e"),
+            nwp.col("a").alias("d").first().over("b", order_by="c").alias("e"),
             alias_replace_unguarded("d"),
-            nwd.col("a").alias("d").first().over("b", order_by="c").alias("d"),
+            nwp.col("a").alias("d").first().over("b", order_by="c").alias("d"),
         ),
         (
-            nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
+            nwp.col("a").alias("e").abs().alias("f").sort().alias("g"),
             alias_replace_guarded("e"),
-            nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
+            nwp.col("a").alias("e").abs().alias("e").sort().alias("e"),
         ),
         (
-            nwd.col("a").alias("e").abs().alias("f").sort().alias("g"),
+            nwp.col("a").alias("e").abs().alias("f").sort().alias("g"),
             alias_replace_unguarded("e"),
-            nwd.col("a").alias("e").abs().alias("e").sort().alias("e"),
+            nwp.col("a").alias("e").abs().alias("e").sort().alias("e"),
         ),
     ],
 )
-def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -> None:
+def test_map_ir_recursive(expr: nwp.Expr, function: MapIR, expected: nwp.Expr) -> None:
     actual = expr._ir.map_ir(function)
     assert_expr_ir_equal(actual, expected)
 
@@ -186,17 +186,17 @@ def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (nwd.col("a"), nwd.col("a")),
-        (nwd.col("a").max().alias("z"), nwd.col("a").max().alias("z")),
+        (nwp.col("a"), nwp.col("a")),
+        (nwp.col("a").max().alias("z"), nwp.col("a").max().alias("z")),
         (ndcs.string(), ir.Columns(names=("k",))),
         (
             ndcs.by_dtype(nw.Datetime("ms"), nw.Date, nw.List(nw.String)),
-            nwd.col("n", "s"),
+            nwp.col("n", "s"),
         ),
-        (ndcs.string() | ndcs.boolean(), nwd.col("k", "m")),
+        (ndcs.string() | ndcs.boolean(), nwp.col("k", "m")),
         (
             ~(ndcs.numeric() | ndcs.string()),
-            nwd.col("l", "m", "n", "o", "p", "q", "r", "s", "u"),
+            nwp.col("l", "m", "n", "o", "p", "q", "r", "s", "u"),
         ),
         (
             (
@@ -204,14 +204,14 @@ def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -
                 - (ndcs.categorical() | ndcs.by_name("a", "b") | ndcs.matches("[fqohim]"))
                 ^ ndcs.by_name("u", "a", "b", "d", "e", "f", "g")
             ).name.suffix("_after"),
-            nwd.col("a", "b", "c", "f", "j", "k", "l", "n", "r", "s").name.suffix(
+            nwp.col("a", "b", "c", "f", "j", "k", "l", "n", "r", "s").name.suffix(
                 "_after"
             ),
         ),
         (
             (ndcs.matches("[a-m]") & ~ndcs.numeric()).sort(nulls_last=True).first()
-            != nwd.lit(None),
-            nwd.col("k", "l", "m").sort(nulls_last=True).first() != nwd.lit(None),
+            != nwp.lit(None),
+            nwp.col("k", "l", "m").sort(nulls_last=True).first() != nwp.lit(None),
         ),
         (
             (
@@ -220,9 +220,9 @@ def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -
                 .over("k", order_by=ndcs.by_dtype(nw.Date()) | ndcs.boolean())
             ),
             (
-                nwd.col("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+                nwp.col("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
                 .mean()
-                .over(nwd.col("k"), order_by=nwd.col("m", "n"))
+                .over(nwp.col("k"), order_by=nwp.col("m", "n"))
             ),
         ),
         (
@@ -235,10 +235,10 @@ def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -
                 .name.to_uppercase()
             ),
             (
-                nwd.col("l", "o")
+                nwp.col("l", "o")
                 .dt.timestamp("us")
                 .min()
-                .over(nwd.col("k", "m"))
+                .over(nwp.col("k", "m"))
                 .last()
                 .name.to_uppercase()
             ),
@@ -246,8 +246,8 @@ def test_map_ir_recursive(expr: nwd.Expr, function: MapIR, expected: nwd.Expr) -
     ],
 )
 def test_replace_selector(
-    expr: nwd.Selector | nwd.Expr,
-    expected: nwd.Expr | ir.ExprIR,
+    expr: nwp.Selector | nwp.Expr,
+    expected: nwp.Expr | ir.ExprIR,
     schema_1: dict[str, DType],
 ) -> None:
     actual = replace_selector(expr._ir, schema=freeze_schema(**schema_1))
@@ -257,41 +257,41 @@ def test_replace_selector(
 @pytest.mark.parametrize(
     ("into_exprs", "expected"),
     [
-        ("a", [nwd.col("a")]),
-        (nwd.col("b", "c", "d"), [nwd.col("b"), nwd.col("c"), nwd.col("d")]),
-        (nwd.nth(6), [nwd.col("g")]),
-        (nwd.nth(9, 8, -5), [nwd.col("j"), nwd.col("i"), nwd.col("p")]),
+        ("a", [nwp.col("a")]),
+        (nwp.col("b", "c", "d"), [nwp.col("b"), nwp.col("c"), nwp.col("d")]),
+        (nwp.nth(6), [nwp.col("g")]),
+        (nwp.nth(9, 8, -5), [nwp.col("j"), nwp.col("i"), nwp.col("p")]),
         (
-            [nwd.nth(2).alias("c again"), nwd.nth(-1, -2).name.to_uppercase()],
+            [nwp.nth(2).alias("c again"), nwp.nth(-1, -2).name.to_uppercase()],
             [
-                nwd.col("c").alias("c again"),
-                nwd.col("u").alias("U"),
-                nwd.col("s").alias("S"),
+                nwp.col("c").alias("c again"),
+                nwp.col("u").alias("U"),
+                nwp.col("s").alias("S"),
             ],
         ),
         (
-            nwd.all(),
+            nwp.all(),
             [
-                nwd.col("a"),
-                nwd.col("b"),
-                nwd.col("c"),
-                nwd.col("d"),
-                nwd.col("e"),
-                nwd.col("f"),
-                nwd.col("g"),
-                nwd.col("h"),
-                nwd.col("i"),
-                nwd.col("j"),
-                nwd.col("k"),
-                nwd.col("l"),
-                nwd.col("m"),
-                nwd.col("n"),
-                nwd.col("o"),
-                nwd.col("p"),
-                nwd.col("q"),
-                nwd.col("r"),
-                nwd.col("s"),
-                nwd.col("u"),
+                nwp.col("a"),
+                nwp.col("b"),
+                nwp.col("c"),
+                nwp.col("d"),
+                nwp.col("e"),
+                nwp.col("f"),
+                nwp.col("g"),
+                nwp.col("h"),
+                nwp.col("i"),
+                nwp.col("j"),
+                nwp.col("k"),
+                nwp.col("l"),
+                nwp.col("m"),
+                nwp.col("n"),
+                nwp.col("o"),
+                nwp.col("p"),
+                nwp.col("q"),
+                nwp.col("r"),
+                nwp.col("s"),
+                nwp.col("u"),
             ],
         ),
         (
@@ -300,21 +300,21 @@ def test_replace_selector(
             .mean()
             .name.suffix("_mean"),
             [
-                nwd.col("a").cast(nw.Int64()).mean().alias("a_mean"),
-                nwd.col("b").cast(nw.Int64()).mean().alias("b_mean"),
-                nwd.col("c").cast(nw.Int64()).mean().alias("c_mean"),
-                nwd.col("d").cast(nw.Int64()).mean().alias("d_mean"),
-                nwd.col("e").cast(nw.Int64()).mean().alias("e_mean"),
-                nwd.col("f").cast(nw.Int64()).mean().alias("f_mean"),
-                nwd.col("g").cast(nw.Int64()).mean().alias("g_mean"),
-                nwd.col("h").cast(nw.Int64()).mean().alias("h_mean"),
+                nwp.col("a").cast(nw.Int64()).mean().alias("a_mean"),
+                nwp.col("b").cast(nw.Int64()).mean().alias("b_mean"),
+                nwp.col("c").cast(nw.Int64()).mean().alias("c_mean"),
+                nwp.col("d").cast(nw.Int64()).mean().alias("d_mean"),
+                nwp.col("e").cast(nw.Int64()).mean().alias("e_mean"),
+                nwp.col("f").cast(nw.Int64()).mean().alias("f_mean"),
+                nwp.col("g").cast(nw.Int64()).mean().alias("g_mean"),
+                nwp.col("h").cast(nw.Int64()).mean().alias("h_mean"),
             ],
         ),
         (
-            nwd.col("u").alias("1").alias("2").alias("3").alias("4").name.keep(),
+            nwp.col("u").alias("1").alias("2").alias("3").alias("4").name.keep(),
             # NOTE: Would be nice to rewrite with less intermediate steps
             # but retrieving the root name is enough for now
-            [nwd.col("u").alias("1").alias("2").alias("3").alias("4").alias("u")],
+            [nwp.col("u").alias("1").alias("2").alias("3").alias("4").alias("u")],
         ),
         (
             (
@@ -322,30 +322,30 @@ def test_replace_selector(
                 * 100
             ).name.suffix("_mult_100"),
             [
-                (nwd.col("e") * nwd.lit(100)).alias("e_mult_100"),
-                (nwd.col("h") * nwd.lit(100)).alias("h_mult_100"),
-                (nwd.col("j") * nwd.lit(100)).alias("j_mult_100"),
+                (nwp.col("e") * nwp.lit(100)).alias("e_mult_100"),
+                (nwp.col("h") * nwp.lit(100)).alias("h_mult_100"),
+                (nwp.col("j") * nwp.lit(100)).alias("j_mult_100"),
             ],
         ),
         (
             ndcs.by_dtype(nw.Duration())
             .dt.total_minutes()
             .name.map(lambda nm: f"total_mins: {nm!r} ?"),
-            [nwd.col("q").dt.total_minutes().alias("total_mins: 'q' ?")],
+            [nwp.col("q").dt.total_minutes().alias("total_mins: 'q' ?")],
         ),
         (
-            nwd.col("f", "g")
+            nwp.col("f", "g")
             .cast(nw.String)
             .str.starts_with("1")
             .all()
             .name.suffix("_all_starts_with_1"),
             [
-                nwd.col("f")
+                nwp.col("f")
                 .cast(nw.String)
                 .str.starts_with("1")
                 .all()
                 .alias("f_all_starts_with_1"),
-                nwd.col("g")
+                nwp.col("g")
                 .cast(nw.String)
                 .str.starts_with("1")
                 .all()
@@ -353,66 +353,66 @@ def test_replace_selector(
             ],
         ),
         (
-            nwd.col("a", "b")
+            nwp.col("a", "b")
             .first()
             .over("c", "e", order_by="d")
             .name.suffix("_first_over_part_order_1"),
             [
-                nwd.col("a")
+                nwp.col("a")
                 .first()
-                .over(nwd.col("c"), nwd.col("e"), order_by=[nwd.col("d")])
+                .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")])
                 .alias("a_first_over_part_order_1"),
-                nwd.col("b")
+                nwp.col("b")
                 .first()
-                .over(nwd.col("c"), nwd.col("e"), order_by=[nwd.col("d")])
+                .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")])
                 .alias("b_first_over_part_order_1"),
             ],
         ),
         (
-            nwd.exclude(BIG_EXCLUDE),
+            nwp.exclude(BIG_EXCLUDE),
             [
-                nwd.col("c"),
-                nwd.col("d"),
-                nwd.col("f"),
-                nwd.col("g"),
-                nwd.col("h"),
-                nwd.col("i"),
-                nwd.col("j"),
+                nwp.col("c"),
+                nwp.col("d"),
+                nwp.col("f"),
+                nwp.col("g"),
+                nwp.col("h"),
+                nwp.col("i"),
+                nwp.col("j"),
             ],
         ),
         (
-            nwd.exclude(BIG_EXCLUDE).name.suffix("_2"),
+            nwp.exclude(BIG_EXCLUDE).name.suffix("_2"),
             [
-                nwd.col("c").alias("c_2"),
-                nwd.col("d").alias("d_2"),
-                nwd.col("f").alias("f_2"),
-                nwd.col("g").alias("g_2"),
-                nwd.col("h").alias("h_2"),
-                nwd.col("i").alias("i_2"),
-                nwd.col("j").alias("j_2"),
+                nwp.col("c").alias("c_2"),
+                nwp.col("d").alias("d_2"),
+                nwp.col("f").alias("f_2"),
+                nwp.col("g").alias("g_2"),
+                nwp.col("h").alias("h_2"),
+                nwp.col("i").alias("i_2"),
+                nwp.col("j").alias("j_2"),
             ],
         ),
         (
-            nwd.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
+            nwp.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
             [
-                nwd.col("c")
+                nwp.col("c")
                 .alias("c_min_over_order_by")
                 .min()
-                .over(order_by=[nwd.col("k")])
+                .over(order_by=[nwp.col("k")])
             ],
         ),
         pytest.param(
-            (ndcs.by_name("a", "b", "c") / nwd.col("e").first())
+            (ndcs.by_name("a", "b", "c") / nwp.col("e").first())
             .over("g", "f", order_by="f")
             .name.prefix("hi_"),
             [
-                (nwd.col("a") / nwd.col("e").first())
+                (nwp.col("a") / nwp.col("e").first())
                 .over("g", "f", order_by="f")
                 .alias("hi_a"),
-                (nwd.col("b") / nwd.col("e").first())
+                (nwp.col("b") / nwp.col("e").first())
                 .over("g", "f", order_by="f")
                 .alias("hi_b"),
-                (nwd.col("c") / nwd.col("e").first())
+                (nwp.col("c") / nwp.col("e").first())
                 .over("g", "f", order_by="f")
                 .alias("hi_c"),
             ],
@@ -422,7 +422,7 @@ def test_replace_selector(
 )
 def test_prepare_projection(
     into_exprs: IntoExpr | Sequence[IntoExpr],
-    expected: Sequence[nwd.Expr],
+    expected: Sequence[nwp.Expr],
     schema_1: dict[str, DType],
 ) -> None:
     irs_in = parse_into_seq_of_expr_ir(into_exprs)
@@ -435,19 +435,19 @@ def test_prepare_projection(
 @pytest.mark.parametrize(
     "expr",
     [
-        nwd.all(),
-        nwd.nth(1, 2, 3),
-        nwd.col("a", "b", "c"),
+        nwp.all(),
+        nwp.nth(1, 2, 3),
+        nwp.col("a", "b", "c"),
         ndcs.boolean() | ndcs.categorical(),
         (ndcs.by_name("a", "b") | ndcs.string()),
-        (nwd.col("b", "c") & nwd.col("a")),
-        nwd.col("a", "b").min().over("c", order_by="e"),
+        (nwp.col("b", "c") & nwp.col("a")),
+        nwp.col("a", "b").min().over("c", order_by="e"),
         (~ndcs.by_dtype(nw.Int64()) - ndcs.datetime()),
-        nwd.nth(6, 2).abs().cast(nw.Int32()) + 10,
+        nwp.nth(6, 2).abs().cast(nw.Int32()) + 10,
         *MULTI_OUTPUT_EXPRS,
     ],
 )
-def test_prepare_projection_duplicate(expr: nwd.Expr, schema_1: dict[str, DType]) -> None:
+def test_prepare_projection_duplicate(expr: nwp.Expr, schema_1: dict[str, DType]) -> None:
     irs = parse_into_seq_of_expr_ir(expr.alias("dupe"))
     pattern = re.compile(r"\.alias\(.dupe.\)")
     with pytest.raises(DuplicateError, match=pattern):
@@ -457,12 +457,12 @@ def test_prepare_projection_duplicate(expr: nwd.Expr, schema_1: dict[str, DType]
 @pytest.mark.parametrize(
     ("into_exprs", "missing"),
     [
-        ([nwd.col("y", "z")], ["y", "z"]),
-        ([nwd.col("a", "b", "z")], ["z"]),
-        ([nwd.col("x", "b", "a")], ["x"]),
+        ([nwp.col("y", "z")], ["y", "z"]),
+        ([nwp.col("a", "b", "z")], ["z"]),
+        ([nwp.col("x", "b", "a")], ["x"]),
         (
             [
-                nwd.col(
+                nwp.col(
                     [
                         "a",
                         "b",
@@ -491,18 +491,18 @@ def test_prepare_projection_duplicate(expr: nwd.Expr, schema_1: dict[str, DType]
             ["FIVE"],
         ),
         (
-            [nwd.col("a").min().over("c").alias("y"), nwd.col("one").alias("b").last()],
+            [nwp.col("a").min().over("c").alias("y"), nwp.col("one").alias("b").last()],
             ["one"],
         ),
-        ([nwd.col("a").sort_by("b", "who").alias("f")], ["who"]),
+        ([nwp.col("a").sort_by("b", "who").alias("f")], ["who"]),
         (
             [
-                nwd.nth(0, 5)
+                nwp.nth(0, 5)
                 .cast(nw.Int64())
                 .abs()
                 .cum_sum()
                 .over("X", "O", "h", "m", "r", "zee"),
-                nwd.col("d", "j"),
+                nwp.col("d", "j"),
                 "n",
             ],
             ["O", "X", "zee"],
@@ -525,29 +525,29 @@ def test_prepare_projection_column_not_found(
     [
         ("a", "b", "c"),
         (["a", "b", "c"]),
-        ("a", "b", nwd.col("c")),
-        (nwd.col("a"), "b", "c"),
-        (nwd.col("a", "b"), "c"),
-        ("a", nwd.col("b", "c")),
-        ((nwd.nth(0), nwd.nth(1, 2))),
+        ("a", "b", nwp.col("c")),
+        (nwp.col("a"), "b", "c"),
+        (nwp.col("a", "b"), "c"),
+        ("a", nwp.col("b", "c")),
+        ((nwp.nth(0), nwp.nth(1, 2))),
         *MULTI_OUTPUT_EXPRS,
     ],
 )
 @pytest.mark.parametrize(
     "function",
     [
-        nwd.all_horizontal,
-        nwd.any_horizontal,
-        nwd.sum_horizontal,
-        nwd.min_horizontal,
-        nwd.max_horizontal,
-        nwd.mean_horizontal,
-        nwd.concat_str,
+        nwp.all_horizontal,
+        nwp.any_horizontal,
+        nwp.sum_horizontal,
+        nwp.min_horizontal,
+        nwp.max_horizontal,
+        nwp.mean_horizontal,
+        nwp.concat_str,
     ],
 )
 def test_prepare_projection_horizontal_alias(
     into_exprs: IntoExpr | Iterable[IntoExpr],
-    function: Callable[..., nwd.Expr],
+    function: Callable[..., nwp.Expr],
     schema_1: dict[str, DType],
 ) -> None:
     # NOTE: See https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2139965411
@@ -566,7 +566,7 @@ def test_prepare_projection_horizontal_alias(
 
 
 @pytest.mark.parametrize(
-    "into_exprs", [nwd.nth(-21), nwd.nth(-1, 2, 54, 0), nwd.nth(20), nwd.nth([-10, -100])]
+    "into_exprs", [nwp.nth(-21), nwp.nth(-1, 2, 54, 0), nwp.nth(20), nwp.nth([-10, -100])]
 )
 def test_prepare_projection_index_error(
     into_exprs: IntoExpr | Iterable[IntoExpr], schema_1: dict[str, DType]

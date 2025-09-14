@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from narwhals import _plan as nwd
+from narwhals import _plan as nwp
 from narwhals._plan import _parse, expressions as ir, selectors as ndcs
 from narwhals._plan._rewrites import (
     rewrite_all,
@@ -49,14 +49,14 @@ def _to_window_expr(into_expr: IntoExpr, *partition_by: IntoExpr) -> ir.WindowEx
 
 def test_rewrite_elementwise_over_simple(schema_2: dict[str, DType]) -> None:
     with pytest.raises(InvalidOperationError, match=r"over.+elementwise"):
-        nwd.col("a").sum().abs().over("b")
+        nwp.col("a").sum().abs().over("b")
 
     # NOTE: Since the requested "before" expression is currently an error (at definition time),
     # we need to manually build the IR - to sidestep the validation in `Over.to_window_expr`.
     # Later, that error might not be needed if we can do this rewrite.
     # If you're here because of a "Did not raise" - just replace everything with the (previously) erroring expr.
-    expected = nwd.col("a").sum().over("b").abs()
-    before = _to_window_expr(nwd.col("a").sum().abs(), "b").to_narwhals()
+    expected = nwp.col("a").sum().over("b").abs()
+    before = _to_window_expr(nwp.col("a").sum().abs(), "b").to_narwhals()
     assert_expr_ir_equal(before, "col('a').sum().abs().over([col('b')])")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 1
@@ -65,11 +65,11 @@ def test_rewrite_elementwise_over_simple(schema_2: dict[str, DType]) -> None:
 
 def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
     expected = (
-        nwd.col("b").last().over("d").replace_strict({1: 2}),
-        nwd.col("c").last().over("d").replace_strict({1: 2}),
+        nwp.col("b").last().over("d").replace_strict({1: 2}),
+        nwp.col("c").last().over("d").replace_strict({1: 2}),
     )
     before = _to_window_expr(
-        nwd.col("b", "c").last().replace_strict({1: 2}), "d"
+        nwp.col("b", "c").last().replace_strict({1: 2}), "d"
     ).to_narwhals()
     assert_expr_ir_equal(
         before, "cols(['b', 'c']).last().replace_strict().over([col('d')])"
@@ -80,36 +80,36 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         assert_expr_ir_equal(lhs, rhs)
 
 
-def named_ir(name: str, expr: nwd.Expr | ir.ExprIR, /) -> NamedIR[ir.ExprIR]:
+def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> NamedIR[ir.ExprIR]:
     """Helper constructor for test compare."""
-    return NamedIR(expr=expr._ir if isinstance(expr, nwd.Expr) else expr, name=name)
+    return NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
 
 
 def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     expected = (
-        named_ir("a", nwd.col("a")),
-        named_ir("b", nwd.col("b").cast(nw.String)),
-        named_ir("x2", nwd.col("c").max().over("a").fill_null(50)),
-        named_ir("d**", ~nwd.col("d").is_duplicated().over("b")),
-        named_ir("f_some", nwd.col("f").str.contains("some")),
-        named_ir("g_some", nwd.col("g").str.contains("some")),
-        named_ir("h_some", nwd.col("h").str.contains("some")),
-        named_ir("D", nwd.col("d").null_count().over("f", "g", "j").sqrt()),
-        named_ir("E", nwd.col("e").null_count().over("f", "g", "j").sqrt()),
-        named_ir("B", nwd.col("b").null_count().over("f", "g", "j").sqrt()),
+        named_ir("a", nwp.col("a")),
+        named_ir("b", nwp.col("b").cast(nw.String)),
+        named_ir("x2", nwp.col("c").max().over("a").fill_null(50)),
+        named_ir("d**", ~nwp.col("d").is_duplicated().over("b")),
+        named_ir("f_some", nwp.col("f").str.contains("some")),
+        named_ir("g_some", nwp.col("g").str.contains("some")),
+        named_ir("h_some", nwp.col("h").str.contains("some")),
+        named_ir("D", nwp.col("d").null_count().over("f", "g", "j").sqrt()),
+        named_ir("E", nwp.col("e").null_count().over("f", "g", "j").sqrt()),
+        named_ir("B", nwp.col("b").null_count().over("f", "g", "j").sqrt()),
     )
     before = (
-        nwd.col("a"),
-        nwd.col("b").cast(nw.String),
+        nwp.col("a"),
+        nwp.col("b").cast(nw.String),
         (
-            _to_window_expr(nwd.col("c").max().alias("x").fill_null(50), "a")
+            _to_window_expr(nwp.col("c").max().alias("x").fill_null(50), "a")
             .to_narwhals()
             .alias("x2")
         ),
-        ~(nwd.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
+        ~(nwp.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
         ndcs.string().str.contains("some").name.suffix("_some"),
         (
-            _to_window_expr(nwd.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
+            _to_window_expr(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
             .to_narwhals()
             .name.to_uppercase()
         ),
@@ -122,12 +122,12 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
 
 def test_rewrite_binary_agg_over_simple(schema_2: dict[str, DType]) -> None:
     expected = (
-        nwd.col("a") - nwd.col("a").mean().over("b"),
-        nwd.col("c") * nwd.col("c").abs().null_count().over("d"),
+        nwp.col("a") - nwp.col("a").mean().over("b"),
+        nwp.col("c") * nwp.col("c").abs().null_count().over("d"),
     )
     before = (
-        (nwd.col("a") - nwd.col("a").mean()).over("b"),
-        (nwd.col("c") * nwd.col("c").abs().null_count()).over("d"),
+        (nwp.col("a") - nwp.col("a").mean()).over("b"),
+        (nwp.col("c") * nwp.col("c").abs().null_count()).over("d"),
     )
     actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 2
@@ -137,13 +137,13 @@ def test_rewrite_binary_agg_over_simple(schema_2: dict[str, DType]) -> None:
 
 def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
     expected = (
-        named_ir("hi_a", nwd.col("a") / nwd.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_b", nwd.col("b") / nwd.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_c", nwd.col("c") / nwd.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_d", nwd.col("d") / nwd.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_a", nwp.col("a") / nwp.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_b", nwp.col("b") / nwp.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_c", nwp.col("c") / nwp.col("e").drop_nulls().first().over("g")),
+        named_ir("hi_d", nwp.col("d") / nwp.col("e").drop_nulls().first().over("g")),
     )
     before = (
-        (nwd.col("a", "b", "c", "d") / nwd.col("e").drop_nulls().first()).over("g")
+        (nwp.col("a", "b", "c", "d") / nwp.col("e").drop_nulls().first()).over("g")
     ).name.prefix("hi_")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 4
