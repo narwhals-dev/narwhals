@@ -186,10 +186,10 @@ def test_series_from_iterable_numpy_not_1d(eager_backend: EagerAllowed) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    with pytest.raises(ValueError, match="only.+1D numpy arrays"):
+    with pytest.raises(ValueError, match=r"only.+1D numpy arrays"):
         nw.Series.from_iterable("", np.array([[0], [2]]), backend=eager_backend)
 
 
 def test_series_from_iterable_not_iterable(eager_backend: EagerAllowed) -> None:
-    with pytest.raises(TypeError, match="iterable.+got.+int"):
+    with pytest.raises(TypeError, match=r"iterable.+got.+int"):
         nw.Series.from_iterable("", 2000, backend=eager_backend)  # type: ignore[arg-type]

@@ -51,12 +51,12 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     with pytest.raises(
         (Exception, TypeError),
-        match="unable to vstack|inputs should all have the same schema",
+        match=r"unable to vstack|inputs should all have the same schema",
     ):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
     with pytest.raises(
         (Exception, TypeError),
-        match="unable to vstack|unable to append|inputs should all have the same schema",
+        match=r"unable to vstack|unable to append|inputs should all have the same schema",
     ):
         nw.concat([df_left, df_left.select("d")], how="vertical").collect()
 
