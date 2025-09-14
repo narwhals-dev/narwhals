@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from contextlib import nullcontext as does_not_raise
+import re
+from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
@@ -19,8 +20,10 @@ if TYPE_CHECKING:
     SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
 
 
-def _pytest_assertion_error(detail: str) -> Any:
-    return pytest.raises(AssertionError, match=rf"Series are different \({detail}\)")
+def _assertion_error(detail: str) -> pytest.RaisesExc:
+    return pytest.raises(
+        AssertionError, match=re.escape(f"Series are different ({detail})")
+    )
 
 
 def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
@@ -62,7 +65,7 @@ def test_implementation_mismatch() -> None:
     import pandas as pd
     import pyarrow as pa
 
-    with _pytest_assertion_error("implementation mismatch"):
+    with _assertion_error("implementation mismatch"):
         assert_series_equal(
             series_from_native(pd.Series([1])),
             series_from_native(pa.chunked_array([[2]])),  # type: ignore[misc] # pyright: ignore[reportArgumentType]
@@ -84,7 +87,7 @@ def test_metadata_checks(
     series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     left, right = setup_fn(series)
 
-    with _pytest_assertion_error(error_msg):
+    with _assertion_error(error_msg):
         assert_series_equal(left, right)
 
 
@@ -108,7 +111,7 @@ def test_metadata_checks_with_flags(
     series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     left, right = setup_fn(series)
 
-    with _pytest_assertion_error(error_msg):
+    with _assertion_error(error_msg):
         assert_series_equal(
             left, right, check_dtypes=check_dtypes, check_names=check_names
         )
@@ -130,7 +133,7 @@ def test_check_order(
     dtype: nw.dtypes.DType,
     *,
     check_order: bool,
-    context: Any,
+    context: AbstractContextManager[Any],
 ) -> None:
     """Test check_order behavior with nested and simple data."""
     if (
@@ -160,15 +163,15 @@ def test_null_mismatch(constructor_eager: ConstructorEager, null_data: Data) -> 
     """Test null value mismatch detection."""
     frame = nw.from_native(constructor_eager(null_data), eager_only=True)
     left, right = frame["left"], frame["right"]
-    with _pytest_assertion_error("null value mismatch"):
+    with _assertion_error("null value mismatch"):
         assert_series_equal(left, right, check_names=False)
 
 
 @pytest.mark.parametrize(
     ("check_exact", "abs_tol", "rel_tol", "context"),
     [
-        (True, 1e-3, 1e-3, _pytest_assertion_error("exact value mismatch")),
-        (False, 1e-3, 1e-3, _pytest_assertion_error("values not within tolerance")),
+        (True, 1e-3, 1e-3, _assertion_error("exact value mismatch")),
+        (False, 1e-3, 1e-3, _assertion_error("values not within tolerance")),
         (False, 2e-1, 2e-1, does_not_raise()),
     ],
 )
@@ -178,7 +181,7 @@ def test_numeric(
     check_exact: bool,
     abs_tol: float,
     rel_tol: float,
-    context: Any,
+    context: AbstractContextManager[Any],
 ) -> None:
     data = {
         "left": [1.0, float("nan"), float("inf"), None, 1.1],
@@ -205,28 +208,28 @@ def test_numeric(
             [["foo", "bar"]],
             [["foo", None]],
             True,
-            _pytest_assertion_error("nested value mismatch"),
+            _assertion_error("nested value mismatch"),
             nw.List(nw.String()),
         ),
         (
             [["foo", "bar"]],
             [["foo", None]],
             True,
-            _pytest_assertion_error("nested value mismatch"),
+            _assertion_error("nested value mismatch"),
             nw.Array(nw.String(), 2),
         ),
         (
             [[0.0, 0.1]],
             [[0.1, 0.1]],
             True,
-            _pytest_assertion_error("nested value mismatch"),
+            _assertion_error("nested value mismatch"),
             nw.List(nw.Float32()),
         ),
         (
             [[0.0, 0.1]],
             [[0.1, 0.1]],
             True,
-            _pytest_assertion_error("nested value mismatch"),
+            _assertion_error("nested value mismatch"),
             nw.Array(nw.Float32(), 2),
         ),
         ([[0.0, 1e-10]], [[1e-10, 0.0]], False, does_not_raise(), nw.List(nw.Float64())),
@@ -245,7 +248,7 @@ def test_list_like(
     r_vals: list[list[Any]],
     *,
     check_exact: bool,
-    context: Any,
+    context: AbstractContextManager[Any],
     dtype: nw.dtypes.DType,
 ) -> None:
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
@@ -277,13 +280,13 @@ def test_list_like(
             [{"a": 0.0, "b": ["orca"]}, None],
             [{"a": 1e-10, "b": ["orca"]}, None],
             True,
-            _pytest_assertion_error("exact value mismatch"),
+            _assertion_error("exact value mismatch"),
         ),
         (
             [{"a": 0.0, "b": ["beluga"]}, None],
             [{"a": 0.0, "b": ["orca"]}, None],
             False,
-            _pytest_assertion_error("exact value mismatch"),
+            _assertion_error("exact value mismatch"),
         ),
         (
             [{"a": 0.0, "b": ["orca"]}, None],
@@ -299,7 +302,7 @@ def test_struct(
     r_vals: list[dict[str, Any]],
     *,
     check_exact: bool,
-    context: Any,
+    context: AbstractContextManager[Any],
 ) -> None:
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
@@ -315,15 +318,15 @@ def test_struct(
 
 def test_non_nw_series() -> None:
     pytest.importorskip("pandas")
-    pytest.importorskip("pyarrow")
 
     import pandas as pd
-    import pyarrow as pa
 
-    with pytest.raises(TypeError, match=r"Expected `narwhals.Series` instance, found"):
+    with pytest.raises(
+        TypeError, match=re.escape("Expected `narwhals.Series` instance, found")
+    ):
         assert_series_equal(
             left=pd.Series([1]),  # type: ignore[arg-type]
-            right=pa.chunked_array([[2]]),  # type: ignore[arg-type]
+            right=pd.Series([2]),  # type: ignore[arg-type]
         )
 
 
@@ -345,7 +348,7 @@ def test_categorical_as_str(
     constructor_eager: ConstructorEager,
     *,
     categorical_as_str: bool,
-    context: Any,
+    context: AbstractContextManager[Any],
 ) -> None:
     if (
         "polars" in str(constructor_eager)
