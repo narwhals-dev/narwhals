@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.expressions import boolean
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -119,7 +118,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(fn.all_)(node, frame, name)
 
     def any(
-        self, node: FunctionExpr[boolean.Any], frame: Frame, name: str
+        self, node: FunctionExpr[ir.boolean.Any], frame: Frame, name: str
     ) -> StoresNativeT_co:
         return self._unary_function(fn.any_)(node, frame, name)
 

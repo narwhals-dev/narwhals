@@ -13,7 +13,6 @@ from narwhals._plan._parse import (
 )
 from narwhals._plan.expressions import (
     aggregation as agg,
-    boolean,
     functions as F,
     operators as ops,
 )
@@ -398,31 +397,31 @@ class Expr:
         )
 
     def any(self) -> Self:
-        return self._with_unary(boolean.Any())
+        return self._with_unary(ir.boolean.Any())
 
     def all(self) -> Self:
-        return self._with_unary(boolean.All())
+        return self._with_unary(ir.boolean.All())
 
     def is_duplicated(self) -> Self:
-        return self._with_unary(boolean.IsDuplicated())
+        return self._with_unary(ir.boolean.IsDuplicated())
 
     def is_finite(self) -> Self:
-        return self._with_unary(boolean.IsFinite())
+        return self._with_unary(ir.boolean.IsFinite())
 
     def is_nan(self) -> Self:
-        return self._with_unary(boolean.IsNan())
+        return self._with_unary(ir.boolean.IsNan())
 
     def is_null(self) -> Self:
-        return self._with_unary(boolean.IsNull())
+        return self._with_unary(ir.boolean.IsNull())
 
     def is_first_distinct(self) -> Self:
-        return self._with_unary(boolean.IsFirstDistinct())
+        return self._with_unary(ir.boolean.IsFirstDistinct())
 
     def is_last_distinct(self) -> Self:
-        return self._with_unary(boolean.IsLastDistinct())
+        return self._with_unary(ir.boolean.IsLastDistinct())
 
     def is_unique(self) -> Self:
-        return self._with_unary(boolean.IsUnique())
+        return self._with_unary(ir.boolean.IsUnique())
 
     def is_between(
         self,
@@ -432,16 +431,16 @@ class Expr:
     ) -> Self:
         it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
         return self._from_ir(
-            boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
+            ir.boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
 
     def is_in(self, other: Iterable[Any]) -> Self:
         if is_series(other):
-            return self._with_unary(boolean.IsInSeries.from_series(other))
+            return self._with_unary(ir.boolean.IsInSeries.from_series(other))
         if isinstance(other, Iterable):
-            return self._with_unary(boolean.IsInSeq.from_iterable(other))
+            return self._with_unary(ir.boolean.IsInSeq.from_iterable(other))
         if is_expr(other):
-            return self._with_unary(boolean.IsInExpr(other=other._ir))
+            return self._with_unary(ir.boolean.IsInExpr(other=other._ir))
         msg = f"`is_in` only supports iterables, got: {type(other).__name__}"
         raise TypeError(msg)
 
@@ -537,7 +536,7 @@ class Expr:
         return self._from_ir(F.Pow().to_function_expr(parse_into_expr_ir(base), self._ir))
 
     def __invert__(self) -> Self:
-        return self._with_unary(boolean.Not())
+        return self._with_unary(ir.boolean.Not())
 
     @property
     def meta(self) -> MetaNamespace:

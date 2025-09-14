@@ -4,7 +4,7 @@ import builtins
 import typing as t
 
 from narwhals._plan import _guards, _parse, common, expressions as ir
-from narwhals._plan.expressions import boolean, functions as F
+from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._plan.expressions.strings import ConcatStr
@@ -80,12 +80,12 @@ def sum(*columns: str) -> Expr:
 
 def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
+    return ir.boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
     it = _parse.parse_into_seq_of_expr_ir(*exprs)
-    return boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
+    return ir.boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
 
 
 def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
