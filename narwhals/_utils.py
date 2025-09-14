@@ -629,9 +629,8 @@ def _import_native_namespace(module_name: str) -> ModuleType:
 def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     if not isinstance(implementation, Implementation):
         assert_never(implementation)
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        msg = "Cannot return backend version from UNKNOWN Implementation"
-        raise AssertionError(msg)
+    if implementation is Implementation.UNKNOWN:
+        return (0, 0, 0)
     into_version: ModuleType | str
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
