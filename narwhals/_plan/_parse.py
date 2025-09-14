@@ -88,14 +88,14 @@ def parse_into_expr_ir(
     input: IntoExpr, *, str_as_lit: bool = False, dtype: IntoDType | None = None
 ) -> ExprIR:
     """Parse a single input into an `ExprIR` node."""
-    from narwhals._plan import functions as nwd
+    from narwhals._plan import col, lit
 
     if is_expr(input):
         expr = input
     elif isinstance(input, str) and not str_as_lit:
-        expr = nwd.col(input)
+        expr = col(input)
     else:
-        expr = nwd.lit(input, dtype=dtype)
+        expr = lit(input, dtype=dtype)
     return expr._ir
 
 
@@ -157,10 +157,10 @@ def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR
 
 
 def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    from narwhals._plan import functions as nwd
+    from narwhals._plan import col
 
     for name, value in constraints.items():
-        yield (nwd.col(name) == value)._ir
+        yield (col(name) == value)._ir
 
 
 def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
