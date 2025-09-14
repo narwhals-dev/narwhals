@@ -24,10 +24,9 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
 
-    from narwhals._plan.aggregation import AggExpr
-    from narwhals._plan.common import ExprIR, Function
-    from narwhals._plan.expr import FunctionExpr, WindowExpr
-    from narwhals._plan.operators import Operator
+    from narwhals._plan import expressions as ir
+    from narwhals._plan._function import Function
+    from narwhals._plan.expressions.operators import Operator
     from narwhals._plan.options import SortOptions
     from narwhals._plan.typing import IntoExpr, Seq
 
@@ -37,13 +36,13 @@ if TYPE_CHECKING:
 
 
 # TODO @dangotbanned: Use arguments in error message
-def agg_scalar_error(agg: AggExpr, scalar: ExprIR, /) -> InvalidOperationError:  # noqa: ARG001
+def agg_scalar_error(agg: ir.AggExpr, scalar: ir.ExprIR, /) -> InvalidOperationError:  # noqa: ARG001
     msg = "Can't apply aggregations to scalar-like expressions."
     return InvalidOperationError(msg)
 
 
 def function_expr_invalid_operation_error(
-    function: Function, parent: ExprIR
+    function: Function, parent: ir.ExprIR
 ) -> InvalidOperationError:
     msg = f"Cannot use `{function!r}()` on aggregated expression `{parent!r}`."
     return InvalidOperationError(msg)
@@ -57,7 +56,9 @@ def hist_bins_monotonic_error(bins: Seq[float]) -> ComputeError:  # noqa: ARG001
 
 # NOTE: Always underlining `right`, since the message refers to both types of exprs
 # Assuming the most recent as the issue
-def binary_expr_shape_error(left: ExprIR, op: Operator, right: ExprIR) -> ShapeError:
+def binary_expr_shape_error(
+    left: ir.ExprIR, op: Operator, right: ir.ExprIR
+) -> ShapeError:
     lhs_op = f"{left!r} {op!r} "
     rhs = repr(right)
     indent = len(lhs_op) * " "
@@ -71,7 +72,7 @@ def binary_expr_shape_error(left: ExprIR, op: Operator, right: ExprIR) -> ShapeE
 
 # TODO @dangotbanned: Share the right underline code w/ `binary_expr_shape_error`
 def binary_expr_multi_output_error(
-    left: ExprIR, op: Operator, right: ExprIR
+    left: ir.ExprIR, op: Operator, right: ir.ExprIR
 ) -> MultiOutputExpressionError:
     lhs_op = f"{left!r} {op!r} "
     rhs = repr(right)
@@ -86,7 +87,7 @@ def binary_expr_multi_output_error(
 
 
 def binary_expr_length_changing_error(
-    left: ExprIR, op: Operator, right: ExprIR
+    left: ir.ExprIR, op: Operator, right: ir.ExprIR
 ) -> LengthChangingExprError:
     lhs, rhs = repr(left), repr(right)
     op_s = f" {op!r} "
@@ -103,9 +104,9 @@ def binary_expr_length_changing_error(
 
 # TODO @dangotbanned: Use arguments in error message
 def over_nested_error(
-    expr: WindowExpr,  # noqa: ARG001
-    partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    expr: ir.WindowExpr,  # noqa: ARG001
+    partition_by: Seq[ir.ExprIR],  # noqa: ARG001
+    order_by: Seq[ir.ExprIR] = (),  # noqa: ARG001
     sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = "Cannot nest `over` statements."
@@ -114,9 +115,9 @@ def over_nested_error(
 
 # TODO @dangotbanned: Use arguments in error message
 def over_elementwise_error(
-    expr: FunctionExpr[Function],
-    partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    expr: ir.FunctionExpr,
+    partition_by: Seq[ir.ExprIR],  # noqa: ARG001
+    order_by: Seq[ir.ExprIR] = (),  # noqa: ARG001
     sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = f"Cannot use `over` on expressions which are elementwise.\n{expr!r}"
@@ -125,9 +126,9 @@ def over_elementwise_error(
 
 # TODO @dangotbanned: Use arguments in error message
 def over_row_separable_error(
-    expr: FunctionExpr[Function],
-    partition_by: Seq[ExprIR],  # noqa: ARG001
-    order_by: Seq[ExprIR] = (),  # noqa: ARG001
+    expr: ir.FunctionExpr,
+    partition_by: Seq[ir.ExprIR],  # noqa: ARG001
+    order_by: Seq[ir.ExprIR] = (),  # noqa: ARG001
     sort_options: SortOptions | None = None,  # noqa: ARG001
 ) -> InvalidOperationError:
     msg = f"Cannot use `over` on expressions which change length.\n{expr!r}"
@@ -169,7 +170,7 @@ def is_iterable_polars_error(
     return TypeError(msg)
 
 
-def duplicate_error(exprs: Seq[ExprIR]) -> DuplicateError:
+def duplicate_error(exprs: Seq[ir.ExprIR]) -> DuplicateError:
     INDENT = "\n  "  # noqa: N806
     names = [_output_name(expr) for expr in exprs]
     duplicates = {k for k, v in Counter(names).items() if v > 1}
@@ -184,7 +185,7 @@ def duplicate_error(exprs: Seq[ExprIR]) -> DuplicateError:
     return DuplicateError(msg)
 
 
-def _output_name(expr: ExprIR) -> str:
+def _output_name(expr: ir.ExprIR) -> str:
     return expr.meta.output_name()
 
 

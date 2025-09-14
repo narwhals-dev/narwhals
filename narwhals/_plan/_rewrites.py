@@ -1,25 +1,25 @@
-"""Post-`expr_expansion` rewrites, in a similar style."""
+"""Post-`_expansion` rewrites, in a similar style."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan import expr_parsing as parse
+from narwhals._plan._expansion import into_named_irs, prepare_projection
 from narwhals._plan._guards import (
     is_aggregation,
     is_binary_expr,
     is_function_expr,
     is_window_expr,
 )
-from narwhals._plan.common import NamedIR, map_ir, replace
-from narwhals._plan.expr_expansion import into_named_irs, prepare_projection
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan.common import replace
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, MapIR, Seq
+    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, Seq
 
 
 def rewrite_all(
@@ -31,9 +31,7 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    out_irs, _, names = prepare_projection(
-        parse.parse_into_seq_of_expr_ir(*exprs), schema
-    )
+    out_irs, _, names = prepare_projection(parse_into_seq_of_expr_ir(*exprs), schema)
     named_irs = into_named_irs(out_irs, names)
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
@@ -85,3 +83,15 @@ def rewrite_binary_agg_over(window: ExprIR, /) -> ExprIR:
         binary_expr = window.expr
         return replace(binary_expr, right=replace(window, expr=binary_expr.right))
     return window
+
+
+def map_ir(
+    origin: NamedOrExprIRT, function: MapIR, *more_functions: MapIR
+) -> NamedOrExprIRT:
+    """Apply one or more functions, sequentially, to all of `origin`'s children."""
+    if more_functions:
+        result = origin
+        for fn in (function, *more_functions):
+            result = result.map_ir(fn)
+        return result
+    return origin.map_ir(function)

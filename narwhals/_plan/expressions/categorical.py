@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from narwhals._plan.common import ExprNamespace, Function, IRNamespace
+from narwhals._plan._function import Function
+from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
 
 if TYPE_CHECKING:
-    from narwhals._plan.dummy import Expr
+    from narwhals._plan.expr import Expr
 
 
 # fmt: off

@@ -16,8 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import BinaryExpr, BinarySelector
+    from narwhals._plan.expressions import BinaryExpr, BinarySelector, ExprIR
     from narwhals._plan.typing import (
         LeftSelectorT,
         LeftT,
@@ -45,7 +44,7 @@ class Operator(Immutable):
     def to_binary_expr(
         self, left: LeftT, right: RightT, /
     ) -> BinaryExpr[LeftT, Self, RightT]:
-        from narwhals._plan.expr import BinaryExpr
+        from narwhals._plan.expressions.expr import BinaryExpr
 
         if right.meta.has_multiple_outputs():
             raise binary_expr_multi_output_error(left, self, right)
@@ -74,7 +73,7 @@ class SelectorOperator(Operator, func=None):
     def to_binary_selector(
         self, left: LeftSelectorT, right: RightSelectorT, /
     ) -> BinarySelector[LeftSelectorT, Self, RightSelectorT]:
-        from narwhals._plan.expr import BinarySelector
+        from narwhals._plan.expressions.expr import BinarySelector
 
         return BinarySelector(left=left, op=self, right=right)
 

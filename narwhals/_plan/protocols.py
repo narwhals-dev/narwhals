@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._plan.common import ExprIR, NamedIR, flatten_hash_safe
+from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
@@ -11,13 +11,21 @@ from narwhals._utils import Version
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan import aggregation as agg, boolean, expr, functions as F
-    from narwhals._plan.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
-    from narwhals._plan.dummy import BaseFrame, DataFrame, Series
-    from narwhals._plan.expr import BinaryExpr, FunctionExpr, RangeExpr
+    from narwhals._plan import expressions as ir
+    from narwhals._plan.dataframe import BaseFrame, DataFrame
+    from narwhals._plan.expressions import (
+        BinaryExpr,
+        FunctionExpr,
+        NamedIR,
+        aggregation as agg,
+        boolean,
+        functions as F,
+    )
+    from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
+    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.options import SortMultipleOptions
-    from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -162,13 +170,13 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     @classmethod
-    def from_ir(cls, node: ExprIR, frame: FrameT_contra, name: str) -> R_co:
+    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
         obj._version = frame.version
         return node.dispatch(obj, frame, name)
 
     @classmethod
-    def from_named_ir(cls, named_ir: NamedIR[ExprIR], frame: FrameT_contra) -> R_co:
+    def from_named_ir(cls, named_ir: NamedIR[ir.ExprIR], frame: FrameT_contra) -> R_co:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
     # NOTE: Needs to stay `covariant` and never be used as a parameter
@@ -191,7 +199,7 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
         return self.from_native(native, name or self.name, self.version)
 
     # series & scalar
-    def cast(self, node: expr.Cast, frame: FrameT_contra, name: str) -> Self: ...
+    def cast(self, node: ir.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
     def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
     def fill_null(
@@ -211,24 +219,24 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     ) -> Self: ...
     def binary_expr(self, node: BinaryExpr, frame: FrameT_contra, name: str) -> Self: ...
     def ternary_expr(
-        self, node: expr.TernaryExpr, frame: FrameT_contra, name: str
+        self, node: ir.TernaryExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
-    def over(self, node: expr.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
+    def over(self, node: ir.WindowExpr, frame: FrameT_contra, name: str) -> Self: ...
     # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
     # e.g. `nw.col("a").first().over(order_by="b")`
     def over_ordered(
-        self, node: expr.OrderedWindowExpr, frame: FrameT_contra, name: str
+        self, node: ir.OrderedWindowExpr, frame: FrameT_contra, name: str
     ) -> Self | CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def map_batches(
-        self, node: expr.AnonymousExpr, frame: FrameT_contra, name: str
+        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
     def rolling_expr(
-        self, node: expr.RollingExpr, frame: FrameT_contra, name: str
+        self, node: ir.RollingExpr, frame: FrameT_contra, name: str
     ) -> Self: ...
     # series only (section 3)
-    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self: ...
-    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self: ...
-    def filter(self, node: expr.Filter, frame: FrameT_contra, name: str) -> Self: ...
+    def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self: ...
+    def sort_by(self, node: ir.SortBy, frame: FrameT_contra, name: str) -> Self: ...
+    def filter(self, node: ir.Filter, frame: FrameT_contra, name: str) -> Self: ...
     # series -> scalar
     def first(
         self, node: agg.First, frame: FrameT_contra, name: str
@@ -328,7 +336,7 @@ class CompliantScalar(
         """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
-    def _cast_float(self, node: ExprIR, frame: FrameT_contra, name: str) -> Self:
+    def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
         dtype = self.version.dtypes.Float64()
         return self.cast(node.cast(dtype), frame, name)
@@ -366,10 +374,10 @@ class CompliantScalar(
         """Returns 0 if null, else 1."""
         ...
 
-    def sort(self, node: expr.Sort, frame: FrameT_contra, name: str) -> Self:
+    def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
 
-    def sort_by(self, node: expr.SortBy, frame: FrameT_contra, name: str) -> Self:
+    def sort_by(self, node: ir.SortBy, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
 
     # NOTE: `Filter` behaves the same, (maybe) no need to override
@@ -439,11 +447,11 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     def _expr(self) -> type[ExprT_co]: ...
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
-    def col(self, node: expr.Column, frame: FrameT, name: str) -> ExprT_co: ...
+    def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
     def lit(
-        self, node: expr.Literal[Any], frame: FrameT, name: str
+        self, node: ir.Literal[Any], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def len(self, node: expr.Len, frame: FrameT, name: str) -> ScalarT_co: ...
+    def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def any_horizontal(
         self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
@@ -466,7 +474,7 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
         self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def int_range(
-        self, node: RangeExpr[IntRange], frame: FrameT, name: str
+        self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
     ) -> ExprT_co: ...
 
 
@@ -491,16 +499,16 @@ class EagerNamespace(
 
     @overload
     def lit(
-        self, node: expr.Literal[NonNestedLiteral], frame: EagerDataFrameT, name: str
+        self, node: ir.Literal[NonNestedLiteral], frame: EagerDataFrameT, name: str
     ) -> EagerScalarT_co: ...
     @overload
     def lit(
-        self, node: expr.Literal[Series[Any]], frame: EagerDataFrameT, name: str
+        self, node: ir.Literal[Series[Any]], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co: ...
     def lit(
-        self, node: expr.Literal[Any], frame: EagerDataFrameT, name: str
+        self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
-    def len(self, node: expr.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
+    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
@@ -542,7 +550,7 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     @property
     def schema(self) -> Mapping[str, DType]: ...
     def _evaluate_irs(
-        self, nodes: Iterable[NamedIR[ExprIR]], /
+        self, nodes: Iterable[NamedIR[ir.ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...
     def select(self, irs: Seq[NamedIR]) -> Self: ...
     def with_columns(self, irs: Seq[NamedIR]) -> Self: ...
@@ -603,7 +611,7 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
         return self._name
 
     def to_narwhals(self) -> Series[NativeSeriesT]:
-        from narwhals._plan.dummy import Series
+        from narwhals._plan.series import Series
 
         return Series[NativeSeriesT]._from_compliant(self)
 

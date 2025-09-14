@@ -45,21 +45,23 @@ from typing import TYPE_CHECKING
 from narwhals._plan import common, meta
 from narwhals._plan._guards import is_horizontal_reduction
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.common import ExprIR, NamedIR, SelectorIR
 from narwhals._plan.exceptions import (
     column_index_error,
     column_not_found_error,
     duplicate_error,
 )
-from narwhals._plan.expr import (
+from narwhals._plan.expressions import (
     Alias,
     All,
     Columns,
     Exclude,
+    ExprIR,
     IndexColumns,
     KeepName,
+    NamedIR,
     Nth,
     RenameAlias,
+    SelectorIR,
     _ColumnSelection,
     col,
     cols,

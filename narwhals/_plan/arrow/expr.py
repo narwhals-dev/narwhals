@@ -9,7 +9,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
-from narwhals._plan.common import ExprIR, NamedIR
+from narwhals._plan.expressions import NamedIR
 from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch, namespace
 from narwhals._utils import (
     Implementation,
@@ -26,8 +26,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
-    from narwhals._plan import boolean, expr
-    from narwhals._plan.aggregation import (
+    from narwhals._plan import expressions as ir
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
+    from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
         Count,
@@ -43,19 +45,16 @@ if TYPE_CHECKING:
         Sum,
         Var,
     )
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
-    from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.boolean import All, IsBetween, IsFinite, IsNan, IsNull, Not
-    from narwhals._plan.expr import (
-        AnonymousExpr,
-        BinaryExpr,
-        FunctionExpr,
-        OrderedWindowExpr,
-        RollingExpr,
-        TernaryExpr,
-        WindowExpr,
+    from narwhals._plan.expressions.boolean import (
+        All,
+        IsBetween,
+        IsFinite,
+        IsNan,
+        IsNull,
+        Not,
     )
-    from narwhals._plan.functions import FillNull, Pow
+    from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
+    from narwhals._plan.expressions.functions import FillNull, Pow
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -74,7 +73,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return ArrowNamespace(self.version)
 
     def _with_native(self, native: Any, name: str, /) -> StoresNativeT_co: ...
-    def cast(self, node: expr.Cast, frame: Frame, name: str) -> StoresNativeT_co:
+    def cast(self, node: ir.Cast, frame: Frame, name: str) -> StoresNativeT_co:
         data_type = narwhals_to_native_dtype(node.dtype, frame.version)
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
@@ -119,7 +118,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(fn.all_)(node, frame, name)
 
     def any(
-        self, node: FunctionExpr[boolean.Any], frame: Frame, name: str
+        self, node: FunctionExpr[ir.boolean.Any], frame: Frame, name: str
     ) -> StoresNativeT_co:
         return self._unary_function(fn.any_)(node, frame, name)
 
@@ -147,7 +146,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(result, name)
 
     def ternary_expr(
-        self, node: TernaryExpr, frame: Frame, name: str
+        self, node: ir.TernaryExpr, frame: Frame, name: str
     ) -> StoresNativeT_co:
         when = node.predicate.dispatch(self, frame, name)
         then = node.truthy.dispatch(self, frame, name)
@@ -192,7 +191,7 @@ class ArrowExpr(  # type: ignore[misc]
             return ArrowScalar.from_native(result, name, version=self.version)
         return self.from_native(result, name or self.name, self.version)
 
-    def _dispatch_expr(self, node: ExprIR, frame: Frame, name: str) -> Series:
+    def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         """Use instead of `_dispatch` *iff* an operation isn't natively supported on `ChunkedArray`.
 
         There is no need to broadcast, as they may have a cheaper impl elsewhere (`CompliantScalar` or `ArrowScalar`).
@@ -218,12 +217,12 @@ class ArrowExpr(  # type: ignore[misc]
     def __len__(self) -> int:
         return len(self._evaluated)
 
-    def sort(self, node: expr.Sort, frame: Frame, name: str) -> Expr:
+    def sort(self, node: ir.Sort, frame: Frame, name: str) -> Expr:
         native = self._dispatch_expr(node.expr, frame, name).native
         sorted_indices = pc.array_sort_indices(native, options=node.options.to_arrow())
         return self._with_native(native.take(sorted_indices), name)
 
-    def sort_by(self, node: expr.SortBy, frame: Frame, name: str) -> Expr:
+    def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
         by = (
             self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
@@ -235,7 +234,7 @@ class ArrowExpr(  # type: ignore[misc]
         result: ChunkedArrayAny = df.native.column(0).take(indices)
         return self._with_native(result, name)
 
-    def filter(self, node: expr.Filter, frame: Frame, name: str) -> Expr:
+    def filter(self, node: ir.Filter, frame: Frame, name: str) -> Expr:
         return self._with_native(
             self._dispatch_expr(node.expr, frame, name).native.filter(
                 self._dispatch_expr(node.by, frame, name).native
@@ -319,11 +318,11 @@ class ArrowExpr(  # type: ignore[misc]
     # - [x] `map_batches` is defined in `EagerExpr`, might be simpler here than on main
     # - [ ] `rolling_expr` has 4 variants
 
-    def over(self, node: WindowExpr, frame: Frame, name: str) -> Self:
+    def over(self, node: ir.WindowExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
     def over_ordered(
-        self, node: OrderedWindowExpr, frame: Frame, name: str
+        self, node: ir.OrderedWindowExpr, frame: Frame, name: str
     ) -> Self | Scalar:
         if node.partition_by:
             msg = f"Need to implement `group_by`, `join` for:\n{node!r}"
@@ -347,7 +346,7 @@ class ArrowExpr(  # type: ignore[misc]
         return self._with_native(result, name)
 
     # NOTE: Can't implement in `EagerExpr`, since it doesn't derive `ExprDispatch`
-    def map_batches(self, node: AnonymousExpr, frame: Frame, name: str) -> Self:
+    def map_batches(self, node: ir.AnonymousExpr, frame: Frame, name: str) -> Self:
         if node.is_scalar:
             # NOTE: Just trying to avoid redoing the whole API for `Series`
             msg = "Only elementwise is currently supported"
@@ -361,7 +360,7 @@ class ArrowExpr(  # type: ignore[misc]
             result = result.cast(dtype)
         return self.from_series(result)
 
-    def rolling_expr(self, node: RollingExpr, frame: Frame, name: str) -> Self:
+    def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
 
@@ -414,7 +413,7 @@ class ArrowScalar(
         msg = f"Too long {len(series)!r}"
         raise InvalidOperationError(msg)
 
-    def _dispatch_expr(self, node: ExprIR, frame: Frame, name: str) -> Series:
+    def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         msg = f"Expected unreachable, but hit at: {node!r}"
         raise InvalidOperationError(msg)
 

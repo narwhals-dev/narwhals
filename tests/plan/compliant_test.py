@@ -4,15 +4,15 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from narwhals._plan import selectors as ndcs
+
 pytest.importorskip("pyarrow")
 pytest.importorskip("numpy")
 import numpy as np
 import pyarrow as pa
 
 import narwhals as nw
-from narwhals._plan import demo as nwd, selectors as ndcs
-from narwhals._plan._guards import is_expr
-from narwhals._plan.dummy import DataFrame
+from narwhals import _plan as nwp
 from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 from tests.utils import assert_equal_data
@@ -20,7 +20,6 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals._plan.dummy import Expr
     from narwhals.typing import PythonLiteral
 
 
@@ -64,8 +63,8 @@ def data_indexed() -> dict[str, Any]:
     }
 
 
-def _ids_ir(expr: Expr | Any) -> str:
-    if is_expr(expr):
+def _ids_ir(expr: nwp.Expr | Any) -> str:
+    if isinstance(expr, nwp.Expr):
         return repr(expr._ir)
     return repr(expr)
 
@@ -87,60 +86,60 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (nwd.col("a"), {"a": ["A", "B", "A"]}),
-        (nwd.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
-        (nwd.lit(1), {"literal": [1]}),
-        (nwd.lit(2.0), {"literal": [2.0]}),
-        (nwd.lit(None, nw.String), {"literal": [None]}),
-        (nwd.col("a", "b").first(), {"a": ["A"], "b": [1]}),
-        (nwd.col("d").max(), {"d": [8]}),
-        ([nwd.len(), nwd.nth(3).last()], {"len": [3], "d": [8]}),
+        (nwp.col("a"), {"a": ["A", "B", "A"]}),
+        (nwp.col("a", "b"), {"a": ["A", "B", "A"], "b": [1, 2, 3]}),
+        (nwp.lit(1), {"literal": [1]}),
+        (nwp.lit(2.0), {"literal": [2.0]}),
+        (nwp.lit(None, nw.String), {"literal": [None]}),
+        (nwp.col("a", "b").first(), {"a": ["A"], "b": [1]}),
+        (nwp.col("d").max(), {"d": [8]}),
+        ([nwp.len(), nwp.nth(3).last()], {"len": [3], "d": [8]}),
         (
-            [nwd.len().alias("e"), nwd.nth(3).last(), nwd.nth(2)],
+            [nwp.len().alias("e"), nwp.nth(3).last(), nwp.nth(2)],
             {"e": [3, 3, 3], "d": [8, 8, 8], "c": [9, 2, 4]},
         ),
-        (nwd.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
-        (nwd.col("c").filter(a="B"), {"c": [2]}),
+        (nwp.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
+        (nwp.col("c").filter(a="B"), {"c": [2]}),
         (
-            [nwd.nth(0, 1).filter(nwd.col("c") >= 4), nwd.col("d").last() - 4],
+            [nwp.nth(0, 1).filter(nwp.col("c") >= 4), nwp.col("d").last() - 4],
             {"a": ["A", "A"], "b": [1, 3], "d": [4, 4]},
         ),
-        (nwd.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
-        (nwd.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
+        (nwp.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
+        (nwp.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
         pytest.param(
-            nwd.lit(1).cast(nw.Float64()).name.suffix("_cast"),
+            nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"),
             {"literal_cast": [1.0]},
             marks=XFAIL_REWRITE_SPECIAL_ALIASES,
         ),
-        ([ndcs.string().first(), nwd.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
+        ([ndcs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
         (
-            nwd.col("c", "d")
+            nwp.col("c", "d")
             .sort_by("a", "b", descending=[True, False])
             .cast(nw.Float32())
             .name.to_uppercase(),
             {"C": [2.0, 9.0, 4.0], "D": [7.0, 8.0, 8.0]},
         ),
-        ([nwd.int_range(5)], {"literal": [0, 1, 2, 3, 4]}),
-        ([nwd.int_range(nwd.len())], {"literal": [0, 1, 2]}),
-        (nwd.int_range(nwd.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
-        (nwd.int_range(nwd.col("b").min() + 4, nwd.col("d").last()), {"b": [5, 6, 7]}),
-        (nwd.col("b") ** 2, {"b": [1, 4, 9]}),
+        ([nwp.int_range(5)], {"literal": [0, 1, 2, 3, 4]}),
+        ([nwp.int_range(nwp.len())], {"literal": [0, 1, 2]}),
+        (nwp.int_range(nwp.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
+        (nwp.int_range(nwp.col("b").min() + 4, nwp.col("d").last()), {"b": [5, 6, 7]}),
+        (nwp.col("b") ** 2, {"b": [1, 4, 9]}),
         (
-            [2 ** nwd.col("b"), (nwd.lit(2.0) ** nwd.nth(1)).alias("lit")],
+            [2 ** nwp.col("b"), (nwp.lit(2.0) ** nwp.nth(1)).alias("lit")],
             {"literal": [2, 4, 8], "lit": [2, 4, 8]},
         ),
         pytest.param(
             [
-                nwd.col("b").is_between(2, 3, "left").alias("left"),
-                nwd.col("b").is_between(2, 3, "right").alias("right"),
-                nwd.col("b").is_between(2, 3, "none").alias("none"),
-                nwd.col("b").is_between(2, 3, "both").alias("both"),
-                nwd.col("c").is_between(
-                    nwd.col("c").mean() - 1, 7 - nwd.col("b"), "both"
+                nwp.col("b").is_between(2, 3, "left").alias("left"),
+                nwp.col("b").is_between(2, 3, "right").alias("right"),
+                nwp.col("b").is_between(2, 3, "none").alias("none"),
+                nwp.col("b").is_between(2, 3, "both").alias("both"),
+                nwp.col("c").is_between(
+                    nwp.col("c").mean() - 1, 7 - nwp.col("b"), "both"
                 ),
-                nwd.col("c")
+                nwp.col("c")
                 .alias("c_right")
-                .is_between(nwd.col("c").mean() - 1, 7 - nwd.col("b"), "right"),
+                .is_between(nwp.col("c").mean() - 1, 7 - nwp.col("b"), "right"),
             ],
             {
                 "left": [False, True, False],
@@ -154,12 +153,12 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwd.col("e").fill_null(0).alias("e_0"),
-                nwd.col("e").fill_null(nwd.col("b")).alias("e_b"),
-                nwd.col("e").fill_null(nwd.col("b").last()).alias("e_b_last"),
-                nwd.col("e")
+                nwp.col("e").fill_null(0).alias("e_0"),
+                nwp.col("e").fill_null(nwp.col("b")).alias("e_b"),
+                nwp.col("e").fill_null(nwp.col("b").last()).alias("e_b_last"),
+                nwp.col("e")
                 .sort(nulls_last=True)
-                .fill_null(nwd.col("d").last() - nwd.col("c"))
+                .fill_null(nwp.col("d").last() - nwp.col("c"))
                 .alias("e_sort_wild"),
             ],
             {
@@ -170,88 +169,88 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             },
             id="sort",
         ),
-        (nwd.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
+        (nwp.col("e", "d").is_null().any(), {"e": [True], "d": [False]}),
         (
-            [(~nwd.col("e", "d").is_null()).all(), "b"],
+            [(~nwp.col("e", "d").is_null()).all(), "b"],
             {"e": [False, False, False], "d": [True, True, True], "b": [1, 2, 3]},
         ),
         pytest.param(
-            nwd.when(d=8).then("c"), {"c": [9, None, 4]}, id="When-otherwise-none"
+            nwp.when(d=8).then("c"), {"c": [9, None, 4]}, id="When-otherwise-none"
         ),
         pytest.param(
-            nwd.when(nwd.col("e").is_null())
-            .then(nwd.col("b") + nwd.col("c"))
+            nwp.when(nwp.col("e").is_null())
+            .then(nwp.col("b") + nwp.col("c"))
             .otherwise(50),
             {"b": [10, 50, 50]},
             id="When-otherwise-native-broadcast",
         ),
         pytest.param(
-            nwd.when(nwd.col("a") == nwd.lit("C"))
-            .then(nwd.lit("c"))
-            .when(nwd.col("a") == nwd.lit("D"))
-            .then(nwd.lit("d"))
-            .when(nwd.col("a") == nwd.lit("B"))
-            .then(nwd.lit("b"))
-            .when(nwd.col("a") == nwd.lit("A"))
-            .then(nwd.lit("a"))
+            nwp.when(nwp.col("a") == nwp.lit("C"))
+            .then(nwp.lit("c"))
+            .when(nwp.col("a") == nwp.lit("D"))
+            .then(nwp.lit("d"))
+            .when(nwp.col("a") == nwp.lit("B"))
+            .then(nwp.lit("b"))
+            .when(nwp.col("a") == nwp.lit("A"))
+            .then(nwp.lit("a"))
             .alias("A"),
             {"A": ["a", "b", "a"]},
             id="When-then-x4",
         ),
         pytest.param(
-            nwd.when(nwd.col("c") > 5, b=1).then(999),
+            nwp.when(nwp.col("c") > 5, b=1).then(999),
             {"literal": [999, None, None]},
             id="When-multiple-predicates",
         ),
         pytest.param(
-            nwd.when(nwd.col("b") == nwd.col("c"), nwd.col("d").mean() > nwd.col("d"))
+            nwp.when(nwp.col("b") == nwp.col("c"), nwp.col("d").mean() > nwp.col("d"))
             .then(123)
-            .when(nwd.lit(True), ~nwd.nth(4).is_null())
+            .when(nwp.lit(True), ~nwp.nth(4).is_null())
             .then(456)
-            .otherwise(nwd.col("c")),
+            .otherwise(nwp.col("c")),
             {"literal": [9, 123, 456]},
             id="When-multiple-predicates-mixed-broadcast",
         ),
         pytest.param(
-            nwd.when(nwd.lit(True)).then("c"),
+            nwp.when(nwp.lit(True)).then("c"),
             {"c": [9, 2, 4]},
             id="When-literal-then-column",
         ),
         pytest.param(
-            nwd.when(nwd.lit(True)).then(nwd.col("c").mean()),
+            nwp.when(nwp.lit(True)).then(nwp.col("c").mean()),
             {"c": [5.0]},
             id="When-literal-then-agg",
         ),
         pytest.param(
             [
-                nwd.when(nwd.lit(True)).then(nwd.col("e").last()),
-                nwd.col("b").sort(descending=True),
+                nwp.when(nwp.lit(True)).then(nwp.col("e").last()),
+                nwp.col("b").sort(descending=True),
             ],
             {"e": [7, 7, 7], "b": [3, 2, 1]},
             id="When-literal-then-agg-broadcast",
         ),
         pytest.param(
             [
-                nwd.all_horizontal(
-                    nwd.col("b") < nwd.col("c"),
-                    nwd.col("a") != nwd.lit("B"),
-                    nwd.col("e").cast(nw.Boolean),
-                    nwd.lit(True),
+                nwp.all_horizontal(
+                    nwp.col("b") < nwp.col("c"),
+                    nwp.col("a") != nwp.lit("B"),
+                    nwp.col("e").cast(nw.Boolean),
+                    nwp.lit(True),
                 ),
-                nwd.nth(1).last().name.suffix("_last"),
+                nwp.nth(1).last().name.suffix("_last"),
             ],
             {"b": [None, False, True], "b_last": [3, 3, 3]},
             id="all-horizontal-mixed-broadcast",
         ),
         pytest.param(
             [
-                nwd.all_horizontal(nwd.lit(True), nwd.lit(True)).alias("a"),
-                nwd.all_horizontal(nwd.lit(False), nwd.lit(True)).alias("b"),
-                nwd.all_horizontal(nwd.lit(False), nwd.lit(False)).alias("c"),
-                nwd.all_horizontal(nwd.lit(None, nw.Boolean), nwd.lit(True)).alias("d"),
-                nwd.all_horizontal(nwd.lit(None, nw.Boolean), nwd.lit(False)).alias("e"),
-                nwd.all_horizontal(
-                    nwd.lit(None, nw.Boolean), nwd.lit(None, nw.Boolean)
+                nwp.all_horizontal(nwp.lit(True), nwp.lit(True)).alias("a"),
+                nwp.all_horizontal(nwp.lit(False), nwp.lit(True)).alias("b"),
+                nwp.all_horizontal(nwp.lit(False), nwp.lit(False)).alias("c"),
+                nwp.all_horizontal(nwp.lit(None, nw.Boolean), nwp.lit(True)).alias("d"),
+                nwp.all_horizontal(nwp.lit(None, nw.Boolean), nwp.lit(False)).alias("e"),
+                nwp.all_horizontal(
+                    nwp.lit(None, nw.Boolean), nwp.lit(None, nw.Boolean)
                 ).alias("f"),
             ],
             {
@@ -266,9 +265,9 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwd.any_horizontal("f", "g"),
-                nwd.any_horizontal("g", "h"),
-                nwd.any_horizontal(nwd.lit(False), nwd.col("g").last()).alias(
+                nwp.any_horizontal("f", "g"),
+                nwp.any_horizontal("g", "h"),
+                nwp.any_horizontal(nwp.lit(False), nwp.col("g").last()).alias(
                     "False-False"
                 ),
             ],
@@ -281,9 +280,9 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwd.any_horizontal(nwd.lit(None, nw.Boolean), "i").alias("None-None"),
-                nwd.any_horizontal(nwd.lit(True), "i").alias("True-None"),
-                nwd.any_horizontal(nwd.lit(False), "i").alias("False-None"),
+                nwp.any_horizontal(nwp.lit(None, nw.Boolean), "i").alias("None-None"),
+                nwp.any_horizontal(nwp.lit(True), "i").alias("True-None"),
+                nwp.any_horizontal(nwp.lit(False), "i").alias("False-None"),
             ],
             {
                 "None-None": [None, None, None],
@@ -295,15 +294,15 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwd.col("b").alias("a"),
-                nwd.col("l").alias("b"),
-                nwd.col("m").alias("i"),
-                nwd.any_horizontal(nwd.sum("b", "l").cast(nw.Boolean)).alias("any"),
-                nwd.all_horizontal(nwd.sum("b", "l").cast(nw.Boolean)).alias("all"),
-                nwd.max_horizontal(nwd.sum("b"), nwd.sum("l")).alias("max"),
-                nwd.min_horizontal(nwd.sum("b"), nwd.sum("l")).alias("min"),
-                nwd.sum_horizontal(nwd.sum("b"), nwd.sum("l")).alias("sum"),
-                nwd.mean_horizontal(nwd.sum("b"), nwd.sum("l")).alias("mean"),
+                nwp.col("b").alias("a"),
+                nwp.col("l").alias("b"),
+                nwp.col("m").alias("i"),
+                nwp.any_horizontal(nwp.sum("b", "l").cast(nw.Boolean)).alias("any"),
+                nwp.all_horizontal(nwp.sum("b", "l").cast(nw.Boolean)).alias("all"),
+                nwp.max_horizontal(nwp.sum("b"), nwp.sum("l")).alias("max"),
+                nwp.min_horizontal(nwp.sum("b"), nwp.sum("l")).alias("min"),
+                nwp.sum_horizontal(nwp.sum("b"), nwp.sum("l")).alias("sum"),
+                nwp.mean_horizontal(nwp.sum("b"), nwp.sum("l")).alias("mean"),
             ],
             {
                 "a": [1, 2, 3],
@@ -319,39 +318,39 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="sumh_broadcasting",
         ),
         pytest.param(
-            nwd.mean_horizontal("j", nwd.col("k"), "e"),
+            nwp.mean_horizontal("j", nwp.col("k"), "e"),
             {"j": [27.05, 9.5, 5.5]},
             id="mean_horizontal-null",
         ),
         pytest.param(
-            nwd.sum_horizontal("j", nwd.col("k"), "e"),
+            nwp.sum_horizontal("j", nwp.col("k"), "e"),
             {"j": [54.1, 19.0, 11.0]},
             id="sum_horizontal-null",
         ),
         pytest.param(
-            nwd.concat_str(nwd.col("b") * 2, "n", nwd.col("o"), separator=" "),
+            nwp.concat_str(nwp.col("b") * 2, "n", nwp.col("o"), separator=" "),
             {"b": ["2 dogs play", "4 cats swim", None]},
             id="concat_str-preserve_nulls",
         ),
         pytest.param(
-            nwd.concat_str(
-                nwd.col("b") * 2, "n", nwd.col("o"), separator=" ", ignore_nulls=True
+            nwp.concat_str(
+                nwp.col("b") * 2, "n", nwp.col("o"), separator=" ", ignore_nulls=True
             ),
             {"b": ["2 dogs play", "4 cats swim", "6 walk"]},
             id="concat_str-ignore_nulls",
         ),
         pytest.param(
-            nwd.concat_str("a", nwd.lit("a")),
+            nwp.concat_str("a", nwp.lit("a")),
             {"a": ["Aa", "Ba", "Aa"]},
             id="concat_str-lit",
         ),
         pytest.param(
-            nwd.concat_str(
-                nwd.lit("a"),
-                nwd.lit("b"),
-                nwd.lit("c"),
-                nwd.lit("d"),
-                nwd.col("e").last() + 13,
+            nwp.concat_str(
+                nwp.lit("a"),
+                nwp.lit("b"),
+                nwp.lit("c"),
+                nwp.lit("d"),
+                nwp.col("e").last() + 13,
                 separator="|",
             ),
             {"literal": ["a|b|c|d|20"]},
@@ -359,7 +358,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwd.col("a")
+                nwp.col("a")
                 .alias("...")
                 .map_batches(
                     lambda s: s.from_iterable(
@@ -369,13 +368,13 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
                     ),
                     is_elementwise=True,
                 ),
-                nwd.col("a"),
+                nwp.col("a"),
             ],
             {"funky": ["string", "string", "last"], "a": ["A", "B", "A"]},
             id="map_batches-series",
         ),
         pytest.param(
-            nwd.col("b")
+            nwp.col("b")
             .map_batches(lambda s: s.to_numpy() + 1, nw.Float64(), is_elementwise=True)
             .sum(),
             {"b": [9.0]},
@@ -389,7 +388,7 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="map_batches-selector",
         ),
         pytest.param(
-            nwd.col("j", "k")
+            nwp.col("j", "k")
             .fill_null(15)
             .map_batches(lambda s: (s.to_numpy().max()), returns_scalar=True),
             {"j": [15], "k": [42]},
@@ -403,10 +402,12 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
     ids=_ids_ir,
 )
 def test_select(
-    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_small: dict[str, Any]
+    expr: nwp.Expr | Sequence[nwp.Expr],
+    expected: dict[str, Any],
+    data_small: dict[str, Any],
 ) -> None:
     frame = pa.table(data_small)
-    df = DataFrame.from_native(frame)
+    df = nwp.DataFrame.from_native(frame)
     result = df.select(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
@@ -415,7 +416,7 @@ def test_select(
     ("expr", "expected"),
     [
         (
-            ["d", nwd.col("a"), "b", nwd.col("e")],
+            ["d", nwp.col("a"), "b", nwp.col("e")],
             {
                 "a": ["A", "B", "A"],
                 "b": [1, 2, 3],
@@ -438,9 +439,9 @@ def test_select(
         ),
         (
             [
-                nwd.col("e").fill_null(nwd.col("e").last()),
-                nwd.col("f").sort(),
-                nwd.nth(1).max(),
+                nwp.col("e").fill_null(nwp.col("e").last()),
+                nwp.col("f").sort(),
+                nwp.nth(1).max(),
             ],
             {
                 "a": ["A", "B", "A"],
@@ -453,11 +454,11 @@ def test_select(
         ),
         pytest.param(
             [
-                nwd.col("a").alias("a?"),
+                nwp.col("a").alias("a?"),
                 ndcs.by_name("a"),
-                nwd.col("b").cast(nw.Float64).name.suffix("_float"),
-                nwd.col("c").max() + 1,
-                nwd.sum_horizontal(1, "d", nwd.col("b"), nwd.lit(3)),
+                nwp.col("b").cast(nw.Float64).name.suffix("_float"),
+                nwp.col("c").max() + 1,
+                nwp.sum_horizontal(1, "d", nwp.col("b"), nwp.lit(3)),
             ],
             {
                 "a": ["A", "B", "A"],
@@ -475,20 +476,22 @@ def test_select(
     ],
 )
 def test_with_columns(
-    expr: Expr | Sequence[Expr], expected: dict[str, Any], data_smaller: dict[str, Any]
+    expr: nwp.Expr | Sequence[nwp.Expr],
+    expected: dict[str, Any],
+    data_smaller: dict[str, Any],
 ) -> None:
     frame = pa.table(data_smaller)
-    df = DataFrame.from_native(frame)
+    df = nwp.DataFrame.from_native(frame)
     result = df.with_columns(expr).to_dict(as_series=False)
     assert_equal_data(result, expected)
 
 
-def first(*names: str) -> Expr:
-    return nwd.col(*names).first()
+def first(*names: str) -> nwp.Expr:
+    return nwp.col(*names).first()
 
 
-def last(*names: str) -> Expr:
-    return nwd.col(*names).last()
+def last(*names: str) -> nwp.Expr:
+    return nwp.col(*names).last()
 
 
 @pytest.mark.parametrize(
@@ -503,12 +506,12 @@ def last(*names: str) -> Expr:
     ],
 )
 def test_first_last_expr_with_columns(
-    data_indexed: dict[str, Any], agg: Expr, expected: PythonLiteral
+    data_indexed: dict[str, Any], agg: nwp.Expr, expected: PythonLiteral
 ) -> None:
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_broadcast = height * [expected]
-    frame = DataFrame.from_native(pa.table(data_indexed))
+    frame = nwp.DataFrame.from_native(pa.table(data_indexed))
     expr = agg.over(order_by="idx").alias("result")
     result = frame.with_columns(expr).select("result").to_dict(as_series=False)
     assert_equal_data(result, {"result": expected_broadcast})

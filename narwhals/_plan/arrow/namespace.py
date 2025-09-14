@@ -9,8 +9,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._guards import is_tuple_of
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.common import collect
-from narwhals._plan.literal import is_literal_scalar
+from narwhals._plan.expressions.literal import is_literal_scalar
 from narwhals._plan.protocols import EagerNamespace
 from narwhals._utils import Version
 from narwhals.exceptions import InvalidOperationError
@@ -19,15 +18,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from narwhals._arrow.typing import ChunkedArrayAny
-    from narwhals._plan import expr, functions as F
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
-    from narwhals._plan.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.dummy import Series as NwSeries
-    from narwhals._plan.expr import FunctionExpr, RangeExpr
-    from narwhals._plan.ranges import IntRange
-    from narwhals._plan.strings import ConcatStr
+    from narwhals._plan.expressions import expr, functions as F
+    from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
+    from narwhals._plan.expressions.expr import FunctionExpr, RangeExpr
+    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.strings import ConcatStr
+    from narwhals._plan.series import Series as NwSeries
     from narwhals.typing import ConcatMethod, NonNestedLiteral, PythonLiteral
 
 
@@ -225,7 +224,7 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         return self._dataframe.from_native(native, self.version)
 
     def _concat_vertical(self, items: Iterable[Frame | Series]) -> Frame | Series:
-        collected = collect(items)
+        collected = items if isinstance(items, tuple) else tuple(items)
         if is_tuple_of(collected, self._series):
             sers = collected
             chunked = fn.concat_vertical_chunked(ser.native for ser in sers)

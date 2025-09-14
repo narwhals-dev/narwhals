@@ -1,182 +1,161 @@
-"""General functions that aren't namespaced."""
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import builtins
+import typing as t
 
-from narwhals._plan.common import Function, HorizontalFunction
-from narwhals._plan.exceptions import hist_bins_monotonic_error
-from narwhals._plan.options import FunctionFlags, FunctionOptions
+from narwhals._plan import _guards, _parse, common, expressions as ir
+from narwhals._plan.expressions import functions as F
+from narwhals._plan.expressions.literal import ScalarLiteral, SeriesLiteral
+from narwhals._plan.expressions.ranges import IntRange
+from narwhals._plan.expressions.strings import ConcatStr
+from narwhals._plan.when_then import When
+from narwhals._utils import Version, flatten
 
-if TYPE_CHECKING:
-    from typing import Any
-
-    from typing_extensions import Self
-
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import AnonymousExpr, FunctionExpr, RollingExpr
-    from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
-    from narwhals._plan.typing import Seq, Udf
-    from narwhals.dtypes import DType
-    from narwhals.typing import FillNullStrategy
-
-
-class CumAgg(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("reverse",)
-    reverse: bool
+if t.TYPE_CHECKING:
+    from narwhals._plan.expr import Expr
+    from narwhals._plan.series import Series
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, NativeSeriesT
+    from narwhals.dtypes import IntegerType
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
 
-class RollingWindow(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("options",)
-    options: RollingOptionsFixedWindow
-
-    def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
-        from narwhals._plan.expr import RollingExpr
-
-        options = self.function_options
-        return RollingExpr(input=inputs, function=self, options=options)
+def col(*names: str | t.Iterable[str]) -> Expr:
+    flat = tuple(flatten(names))
+    node = ir.col(flat[0]) if builtins.len(flat) == 1 else ir.cols(*flat)
+    return node.to_narwhals()
 
 
-# fmt: off
-class Abs(Function, options=FunctionOptions.elementwise): ...
-class NullCount(Function, options=FunctionOptions.aggregation): ...
-class Exp(Function, options=FunctionOptions.elementwise): ...
-class Sqrt(Function, options=FunctionOptions.elementwise): ...
-class DropNulls(Function, options=FunctionOptions.row_separable): ...
-class Mode(Function): ...
-class Skew(Function, options=FunctionOptions.aggregation): ...
-class Clip(Function, options=FunctionOptions.elementwise): ...
-class CumCount(CumAgg): ...
-class CumMin(CumAgg): ...
-class CumMax(CumAgg): ...
-class CumProd(CumAgg): ...
-class CumSum(CumAgg): ...
-class RollingSum(RollingWindow): ...
-class RollingMean(RollingWindow): ...
-class RollingVar(RollingWindow): ...
-class RollingStd(RollingWindow): ...
-class Diff(Function, options=FunctionOptions.length_preserving): ...
-class Unique(Function): ...
-class SumHorizontal(HorizontalFunction): ...
-class MinHorizontal(HorizontalFunction): ...
-class MaxHorizontal(HorizontalFunction): ...
-class MeanHorizontal(HorizontalFunction): ...
-# fmt: on
-class Hist(Function):
-    """Only supported for `Series` so far."""
-
-    __slots__ = ("include_breakpoint",)
-    include_breakpoint: bool
-
-    def __repr__(self) -> str:
-        return "hist"
+def nth(*indices: int | t.Sequence[int]) -> Expr:
+    flat = tuple(flatten(indices))
+    node = ir.nth(flat[0]) if builtins.len(flat) == 1 else ir.index_columns(*flat)
+    return node.to_narwhals()
 
 
-class HistBins(Hist):
-    __slots__ = ("bins", *Hist.__slots__)
-    bins: Seq[float]
-
-    def __init__(self, *, bins: Seq[float], include_breakpoint: bool = True) -> None:
-        for i in range(1, len(bins)):
-            if bins[i - 1] >= bins[i]:
-                raise hist_bins_monotonic_error(bins)
-        object.__setattr__(self, "bins", bins)
-        object.__setattr__(self, "include_breakpoint", include_breakpoint)
-
-
-class HistBinCount(Hist):
-    __slots__ = ("bin_count", *Hist.__slots__)
-    bin_count: int
-
-    def __init__(self, *, bin_count: int = 10, include_breakpoint: bool = True) -> None:
-        object.__setattr__(self, "bin_count", bin_count)
-        object.__setattr__(self, "include_breakpoint", include_breakpoint)
+def lit(
+    value: NonNestedLiteral | Series[NativeSeriesT], dtype: IntoDType | None = None
+) -> Expr:
+    if _guards.is_series(value):
+        return SeriesLiteral(value=value).to_literal().to_narwhals()
+    if not _guards.is_non_nested_literal(value):
+        msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+        raise TypeError(msg)
+    if dtype is None:
+        dtype = common.py_to_narwhals_dtype(value, Version.MAIN)
+    else:
+        dtype = common.into_dtype(dtype)
+    return ScalarLiteral(value=value, dtype=dtype).to_literal().to_narwhals()
 
 
-class Log(Function, options=FunctionOptions.elementwise):
-    __slots__ = ("base",)
-    base: float
+def len() -> Expr:
+    return ir.Len().to_narwhals()
 
 
-class Pow(Function, options=FunctionOptions.elementwise):
-    """N-ary (base, exponent)."""
-
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        base, exponent = node.input
-        return base, exponent
+def all() -> Expr:
+    return ir.All().to_narwhals()
 
 
-class Kurtosis(Function, options=FunctionOptions.aggregation):
-    __slots__ = ("bias", "fisher")
-    fisher: bool
-    bias: bool
+def exclude(*names: str | t.Iterable[str]) -> Expr:
+    return all().exclude(*names)
 
 
-class FillNull(Function, options=FunctionOptions.elementwise):
-    """N-ary (expr, value)."""
-
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, value = node.input
-        return expr, value
+def max(*columns: str) -> Expr:
+    return col(columns).max()
 
 
-class FillNullWithStrategy(Function):
-    __slots__ = ("limit", "strategy")
-    strategy: FillNullStrategy
-    limit: int | None
+def mean(*columns: str) -> Expr:
+    return col(columns).mean()
 
 
-class Shift(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("n",)
-    n: int
+def min(*columns: str) -> Expr:
+    return col(columns).min()
 
 
-class Rank(Function):
-    __slots__ = ("options",)
-    options: RankOptions
+def median(*columns: str) -> Expr:
+    return col(columns).median()
 
 
-class Round(Function, options=FunctionOptions.elementwise):
-    __slots__ = ("decimals",)
-    decimals: int
+def sum(*columns: str) -> Expr:
+    return col(columns).sum()
 
 
-class EwmMean(Function, options=FunctionOptions.length_preserving):
-    __slots__ = ("options",)
-    options: EWMOptions
+def all_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return ir.boolean.AllHorizontal().to_function_expr(*it).to_narwhals()
 
 
-class ReplaceStrict(Function, options=FunctionOptions.elementwise):
-    __slots__ = ("new", "old", "return_dtype")
-    old: Seq[Any]
-    new: Seq[Any]
-    return_dtype: DType | None
+def any_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return ir.boolean.AnyHorizontal().to_function_expr(*it).to_narwhals()
 
 
-class GatherEvery(Function):
-    __slots__ = ("n", "offset")
-    n: int
-    offset: int
+def sum_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.SumHorizontal().to_function_expr(*it).to_narwhals()
 
 
-class MapBatches(Function):
-    __slots__ = ("function", "is_elementwise", "return_dtype", "returns_scalar")
-    function: Udf
-    return_dtype: DType | None
-    is_elementwise: bool
-    returns_scalar: bool
+def min_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MinHorizontal().to_function_expr(*it).to_narwhals()
 
-    @property
-    def function_options(self) -> FunctionOptions:
-        options = super().function_options
-        if self.is_elementwise:
-            options = options.with_elementwise()
-        if self.returns_scalar:
-            options = options.with_flags(FunctionFlags.RETURNS_SCALAR)
-        return options
 
-    def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
-        from narwhals._plan.expr import AnonymousExpr
+def max_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MaxHorizontal().to_function_expr(*it).to_narwhals()
 
-        options = self.function_options
-        return AnonymousExpr(input=inputs, function=self, options=options)
+
+def mean_horizontal(*exprs: IntoExpr | t.Iterable[IntoExpr]) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(*exprs)
+    return F.MeanHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def concat_str(
+    exprs: IntoExpr | t.Iterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    separator: str = "",
+    ignore_nulls: bool = False,
+) -> Expr:
+    it = _parse.parse_into_seq_of_expr_ir(exprs, *more_exprs)
+    return (
+        ConcatStr(separator=separator, ignore_nulls=ignore_nulls)
+        .to_function_expr(*it)
+        .to_narwhals()
+    )
+
+
+def when(
+    *predicates: IntoExprColumn | t.Iterable[IntoExprColumn], **constraints: t.Any
+) -> When:
+    """Start a `when-then-otherwise` expression.
+
+    Examples:
+        >>> from narwhals import _plan as nw
+
+        >>> nw.when(nw.col("y") == "b").then(1)
+        nw._plan.Expr(main):
+        .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
+    """
+    condition = _parse.parse_predicates_constraints_into_expr_ir(
+        *predicates, **constraints
+    )
+    return When._from_ir(condition)
+
+
+def int_range(
+    start: int | IntoExprColumn = 0,
+    end: int | IntoExprColumn | None = None,
+    step: int = 1,
+    *,
+    dtype: IntegerType | type[IntegerType] = Version.MAIN.dtypes.Int64,
+    eager: bool = False,
+) -> Expr:
+    if end is None:
+        end = start
+        start = 0
+    if eager:
+        msg = f"{eager=}"
+        raise NotImplementedError(msg)
+    return (
+        IntRange(step=step, dtype=common.into_dtype(dtype))
+        .to_function_expr(*_parse.parse_into_seq_of_expr_ir(start, end))
+        .to_narwhals()
+    )

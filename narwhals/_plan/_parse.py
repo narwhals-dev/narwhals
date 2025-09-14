@@ -4,7 +4,7 @@ from collections.abc import Iterable, Sequence
 
 # ruff: noqa: A002
 from itertools import chain
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from narwhals._plan._guards import is_expr, is_iterable_reject
 from narwhals._plan.exceptions import (
@@ -16,16 +16,16 @@ from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_ser
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any
+    from typing import Any, TypeVar
 
     import polars as pl
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.common import ExprIR
+    from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals.typing import IntoDType
 
-T = TypeVar("T")
+    T = TypeVar("T")
 
 _RaisesInvalidIntoExprError: TypeAlias = "Any"
 """
@@ -88,14 +88,14 @@ def parse_into_expr_ir(
     input: IntoExpr, *, str_as_lit: bool = False, dtype: IntoDType | None = None
 ) -> ExprIR:
     """Parse a single input into an `ExprIR` node."""
-    from narwhals._plan import demo as nwd
+    from narwhals._plan import col, lit
 
     if is_expr(input):
         expr = input
     elif isinstance(input, str) and not str_as_lit:
-        expr = nwd.col(input)
+        expr = col(input)
     else:
-        expr = nwd.lit(input, dtype=dtype)
+        expr = lit(input, dtype=dtype)
     return expr._ir
 
 
@@ -157,14 +157,14 @@ def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR
 
 
 def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    from narwhals._plan import demo as nwd
+    from narwhals._plan import col
 
     for name, value in constraints.items():
-        yield (nwd.col(name) == value)._ir
+        yield (col(name) == value)._ir
 
 
 def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    from narwhals._plan.boolean import AllHorizontal
+    from narwhals._plan.expressions.boolean import AllHorizontal
 
     first = next(predicates, None)
     if not first:

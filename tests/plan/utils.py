@@ -2,27 +2,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._guards import is_expr
-from narwhals._plan.common import ExprIR, NamedIR
+from narwhals import _plan as nwp
+from narwhals._plan import expressions as ir
 
 if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
-    from narwhals._plan.dummy import Expr
 
-
-def _unwrap_ir(obj: Expr | ExprIR | NamedIR) -> ExprIR:
-    if is_expr(obj):
+def _unwrap_ir(obj: nwp.Expr | ir.ExprIR | ir.NamedIR) -> ir.ExprIR:
+    if isinstance(obj, nwp.Expr):
         return obj._ir
-    if isinstance(obj, ExprIR):
+    if isinstance(obj, ir.ExprIR):
         return obj
-    if isinstance(obj, NamedIR):
+    if isinstance(obj, ir.NamedIR):
         return obj.expr
     raise NotImplementedError(type(obj))
 
 
 def assert_expr_ir_equal(
-    actual: Expr | ExprIR | NamedIR, expected: Expr | ExprIR | NamedIR | LiteralString, /
+    actual: nwp.Expr | ir.ExprIR | ir.NamedIR,
+    expected: nwp.Expr | ir.ExprIR | ir.NamedIR | LiteralString,
+    /,
 ) -> None:
     """Assert that `actual` is equivalent to `expected`.
 
@@ -37,8 +37,8 @@ def assert_expr_ir_equal(
     lhs = _unwrap_ir(actual)
     if isinstance(expected, str):
         assert repr(lhs) == expected
-    elif isinstance(actual, NamedIR) and isinstance(expected, NamedIR):
+    elif isinstance(actual, ir.NamedIR) and isinstance(expected, ir.NamedIR):
         assert actual == expected
     else:
-        rhs = expected._ir if is_expr(expected) else expected
+        rhs = expected._ir if isinstance(expected, nwp.Expr) else expected
         assert lhs == rhs

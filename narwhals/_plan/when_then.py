@@ -4,15 +4,14 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._plan._guards import is_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.dummy import Expr
-from narwhals._plan.expr_parsing import (
+from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_predicates_constraints_into_expr_ir,
 )
+from narwhals._plan.expr import Expr
 
 if TYPE_CHECKING:
-    from narwhals._plan.common import ExprIR
-    from narwhals._plan.expr import TernaryExpr
+    from narwhals._plan.expressions import ExprIR, TernaryExpr
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
 
 
@@ -28,8 +27,8 @@ class When(Immutable):
         return When(condition=expr._ir)
 
     @staticmethod
-    def _from_ir(ir: ExprIR, /) -> When:
-        return When(condition=ir)
+    def _from_ir(expr_ir: ExprIR, /) -> When:
+        return When(condition=expr_ir)
 
 
 class Then(Immutable, Expr):
@@ -56,8 +55,8 @@ class Then(Immutable, Expr):
         return self._otherwise()
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Expr:  # type: ignore[override]
-        return Expr._from_ir(ir)
+    def _from_ir(cls, expr_ir: ExprIR, /) -> Expr:  # type: ignore[override]
+        return Expr._from_ir(expr_ir)
 
     def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
         if is_expr(value):
@@ -104,8 +103,8 @@ class ChainedThen(Immutable, Expr):
         return self._otherwise()
 
     @classmethod
-    def _from_ir(cls, ir: ExprIR, /) -> Expr:  # type: ignore[override]
-        return Expr._from_ir(ir)
+    def _from_ir(cls, expr_ir: ExprIR, /) -> Expr:  # type: ignore[override]
+        return Expr._from_ir(expr_ir)
 
     def __eq__(self, value: object) -> Expr | bool:  # type: ignore[override]
         if is_expr(value):
@@ -114,6 +113,6 @@ class ChainedThen(Immutable, Expr):
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:
-    from narwhals._plan.expr import TernaryExpr
+    from narwhals._plan.expressions.expr import TernaryExpr
 
     return TernaryExpr(predicate=predicate, truthy=truthy, falsy=falsy)
