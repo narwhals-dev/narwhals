@@ -14,7 +14,9 @@ def test_package_version() -> None:
 
     with Path("pyproject.toml").open(encoding="utf-8") as file:
         content = file.read()
-        pyproject_version = re.search(r'version = "(.*)"', content).group(1)  # type: ignore[union-attr]
+        match = re.search(r'version = "(.*)"', content)
+        assert match is not None
+        pyproject_version = match.group(1)
 
     assert isinstance(version, str)
     if version != pyproject_version:
