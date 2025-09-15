@@ -77,6 +77,19 @@ class FrozenSchema(Immutable):
             items = self
         return tuple(exprs_out), freeze_schema(items)
 
+    def merge(self, other: FrozenSchema, /) -> FrozenSchema:
+        """Return a new schema, merging `other` with `self`.
+
+        Merging logic (from [`Schema.merge`]):
+        - Fields that occur in `self` but not `other` are unmodified
+        - Fields that occur in `other` but not `self` are appended, in order, to the end of `self`
+        - Fields that occur in both `self` and `other` are updated with the dtype from `other`, but keep their original index
+
+        [`Schema.merge`]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-schema/src/schema.rs#L265-L274
+        """
+        msg = "`FrozenSchema.merge` has some fancy logic I need to twiddle around with first!"
+        raise NotImplementedError(msg)
+
     @property
     def __immutable_hash__(self) -> int:
         if hasattr(self, _IMMUTABLE_HASH_NAME):
