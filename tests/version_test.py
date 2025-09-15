@@ -12,11 +12,10 @@ def test_package_version() -> None:
     version = nw.__version__
     dist_version = distribution("narwhals").version
 
-    with Path("pyproject.toml").open(encoding="utf-8") as file:
-        content = file.read()
-        match = re.search(r'version = "(.*)"', content)
-        assert match is not None
-        pyproject_version = match.group(1)
+    content = Path("pyproject.toml").read_text("utf-8")
+    match = re.search(r'version = "(.*)"', content)
+    assert match is not None
+    pyproject_version = match.group(1)
 
     assert isinstance(version, str)
     if version != pyproject_version:
