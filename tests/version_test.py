@@ -1,14 +1,25 @@
 from __future__ import annotations
 
 import re
+from importlib.metadata import distribution
 from pathlib import Path
 
 import narwhals as nw
+from narwhals._utils import parse_version
 
 
-def test_version_matches_pyproject() -> None:
+def test_package_version() -> None:
+    version = nw.__version__
+    dist_version = distribution("narwhals").version
+
     with Path("pyproject.toml").open(encoding="utf-8") as file:
         content = file.read()
         pyproject_version = re.search(r'version = "(.*)"', content).group(1)  # type: ignore[union-attr]
 
-    assert nw.__version__ == pyproject_version
+    assert isinstance(version, str)
+    if version != pyproject_version:
+        # NOTE: metadata from venv is outdated (https://github.com/narwhals-dev/narwhals/pull/3130#issuecomment-3291578373)
+        version_comp = parse_version(version)
+        assert version_comp < parse_version(pyproject_version)
+        assert version_comp == parse_version(dist_version)
+    assert version == dist_version
