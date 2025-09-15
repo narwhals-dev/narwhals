@@ -1936,23 +1936,22 @@ class requires:  # noqa: N801
     def _unparse_version(backend_version: tuple[int, ...], /) -> str:
         return ".".join(f"{d}" for d in backend_version)
 
-    def _unwrap_context(
-        self, instance: _IntoContext
-    ) -> tuple[Implementation, tuple[int, ...]]:
+    def _unwrap_context(self, instance: _IntoContext) -> _FullContext:
         if is_namespace_accessor(instance):
             # NOTE: Should only need to do this once per class (the first time the method is called)
             if "." not in self._wrapped_name:
                 self._wrapped_name = f"{instance._accessor}.{self._wrapped_name}"
-            return instance.implementation, instance.backend_version
-        return instance._implementation, instance._backend_version
+            return instance.compliant
+        return instance
 
     def _ensure_version(self, instance: _IntoContext, /) -> None:
-        backend, version = self._unwrap_context(instance)
-        if version >= self._min_version:
+        context = self._unwrap_context(instance)
+        if context._backend_version >= self._min_version:
             return
         method = self._wrapped_name
+        backend = context._implementation
         minimum = self._unparse_version(self._min_version)
-        found = self._unparse_version(version)
+        found = self._unparse_version(context._backend_version)
         msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
