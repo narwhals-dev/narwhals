@@ -163,7 +163,7 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
-CompliantT_co = TypeVar("CompliantT_co", bound="_StoresImplementation", covariant=True)
+CompliantT_co = TypeVar("CompliantT_co", covariant=True)
 _IntoContext: TypeAlias = "_FullContext | NamespaceAccessor[_FullContext]"
 _IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
 _Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"

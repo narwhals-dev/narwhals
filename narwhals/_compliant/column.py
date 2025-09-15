@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         StructNamespace,
     )
     from narwhals._compliant.namespace import CompliantNamespace
-    from narwhals._utils import Implementation, Version
+    from narwhals._utils import Version
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -33,8 +33,6 @@ __all__ = ["CompliantColumn"]
 class CompliantColumn(Protocol):
     """Common parts of `Expr`, `Series`."""
 
-    # NOTE: `narwhals`
-    _implementation: Implementation
     _version: Version
 
     def __add__(self, other: Any) -> Self: ...

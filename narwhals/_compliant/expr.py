@@ -87,6 +87,7 @@ class CompliantExpr(
     CompliantColumn, Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co]
 ):
     # NOTE: `narwhals`
+    _implementation: Implementation
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
     _metadata: ExprMetadata | None

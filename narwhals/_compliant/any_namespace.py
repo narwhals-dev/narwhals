@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
-from narwhals._utils import CompliantT_co, Implementation, _StoresCompliant
+from narwhals._utils import CompliantT_co, _StoresCompliant
 
 if TYPE_CHECKING:
     from typing import Callable
@@ -26,14 +26,6 @@ __all__ = [
 class NamespaceAccessor(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor]
 
-    @property
-    def implementation(self) -> Implementation:
-        return self.compliant._implementation
-
-    @property
-    def backend_version(self) -> tuple[int, ...]:
-        return self.implementation._backend_version()
-
 
 class CatNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "cat"
@@ -41,7 +33,7 @@ class CatNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
     def get_categories(self) -> CompliantT_co: ...
 
 
-class DateTimeNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
+class DateTimeNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "dt"
 
     def to_string(self, format: str) -> CompliantT_co: ...
@@ -69,7 +61,7 @@ class DateTimeNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co
     def offset_by(self, by: str) -> CompliantT_co: ...
 
 
-class ListNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
+class ListNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "list"
 
     def get(self, index: int) -> CompliantT_co: ...
@@ -78,7 +70,7 @@ class ListNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
     def contains(self, item: NonNestedLiteral) -> CompliantT_co: ...
 
 
-class NameNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
+class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "name"
 
     def keep(self) -> CompliantT_co: ...
@@ -89,7 +81,7 @@ class NameNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
     def to_uppercase(self) -> CompliantT_co: ...
 
 
-class StringNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
+class StringNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "str"
 
     def len_chars(self) -> CompliantT_co: ...
@@ -112,7 +104,7 @@ class StringNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co])
     def zfill(self, width: int) -> CompliantT_co: ...
 
 
-class StructNamespace(NamespaceAccessor[CompliantT_co], Protocol[CompliantT_co]):
+class StructNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "struct"
 
     def field(self, name: str) -> CompliantT_co: ...
