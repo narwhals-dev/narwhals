@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
@@ -170,10 +171,8 @@ def test_to_datetime_infer_fmt_from_date(
 
 
 def test_pyarrow_infer_datetime_raise_invalid() -> None:
-    with pytest.raises(
-        NotImplementedError,
-        match="Unable to infer datetime format, provided format is not supported.",
-    ):
+    msg = re.escape("Unable to infer datetime format, provided format is not supported.")
+    with pytest.raises(NotImplementedError, match=msg):
         parse_datetime_format(pa.chunked_array([["2024-01-01", "abc"]]))
 
 
@@ -198,7 +197,7 @@ def test_pyarrow_infer_datetime_raise_not_unique(
 def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
     data: list[str | None],
 ) -> None:
-    with pytest.raises(ValueError, match="Unable to infer datetime format. "):
+    with pytest.raises(ValueError, match=re.escape("Unable to infer datetime format. ")):
         parse_datetime_format(pa.chunked_array([data]))
 
 
