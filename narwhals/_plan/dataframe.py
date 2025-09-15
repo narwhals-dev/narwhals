@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 from narwhals._plan import _expansion, _parse
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expr import _parse_sort_by
+from narwhals._plan.group_by import GroupBy
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
@@ -138,3 +139,9 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
     def __len__(self) -> int:
         return len(self._compliant)
+
+    def group_by(
+        self, *by: OneOrIterable[IntoExpr], **named_by: IntoExpr
+    ) -> GroupBy[Self]:
+        exprs = _parse.parse_into_seq_of_expr_ir(*by, **named_by)
+        return GroupBy(self, exprs)

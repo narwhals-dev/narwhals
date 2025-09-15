@@ -10,6 +10,7 @@ if t.TYPE_CHECKING:
     from narwhals import dtypes
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.functions import RollingWindow
@@ -25,6 +26,7 @@ if t.TYPE_CHECKING:
     )
 
 __all__ = [
+    "DataFrameT",
     "FunctionT",
     "IntoExpr",
     "IntoExprColumn",
@@ -107,3 +109,4 @@ Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 OneOrIterable: TypeAlias = "T | t.Iterable[T]"
+DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
