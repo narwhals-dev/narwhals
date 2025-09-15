@@ -18,7 +18,7 @@ def test_package_version() -> None:
     pyproject_version = match.group(1)
 
     assert isinstance(version, str)
-    if version != pyproject_version:
+    if version != pyproject_version:  # pragma: no cover
         # NOTE: metadata from venv is outdated (https://github.com/narwhals-dev/narwhals/pull/3130#issuecomment-3291578373)
         version_comp = parse_version(version)
         assert version_comp < parse_version(pyproject_version)
