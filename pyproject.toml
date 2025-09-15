@@ -208,7 +208,6 @@ extend-ignore-names = [
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
-  "RUF043",  # temp ignore until sync
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311"]
