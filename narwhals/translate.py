@@ -15,8 +15,6 @@ from narwhals._namespace import (
 from narwhals._utils import (
     Implementation,
     Version,
-    _is_native_plugin,
-    discover_entrypoints,
     has_native_namespace,
     is_compliant_dataframe,
     is_compliant_lazyframe,
@@ -37,6 +35,7 @@ from narwhals.dependencies import (
     is_pyarrow_scalar,
     is_pyarrow_table,
 )
+from narwhals.plugins._utils import _is_native_plugin, discover_entrypoints
 
 if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame

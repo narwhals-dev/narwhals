@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import sys
 from functools import cache
-from typing import TYPE_CHECKING, Protocol, Any
-from narwhals.utils import Version
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoints
+
     from typing_extensions import LiteralString
+
     from narwhals._compliant.typing import CompliantNamespaceAny
+    from narwhals.utils import Version
+
 
 @cache
 def discover_entrypoints() -> EntryPoints:
@@ -16,6 +21,7 @@ def discover_entrypoints() -> EntryPoints:
     if sys.version_info < (3, 10):
         return cast("EntryPoints", eps().get(group, ()))
     return eps(group=group)
+
 
 class Plugin(Protocol):
     NATIVE_PACKAGE: LiteralString
@@ -30,6 +36,7 @@ def _might_be(cls: type, type_: str) -> bool:
         return any(type_ in o.__module__.split(".") for o in cls.mro())
     except TypeError:
         return False
+
 
 def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
     pkg = plugin.NATIVE_PACKAGE
