@@ -46,12 +46,17 @@ class GroupBy(Generic[DataFrameT]):
         self._keys = keys
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
-        keys_named_irs, aggs_named_irs, result_schema = resolve_group_by(  # noqa: RUF059
+        keys_named_irs, aggs_named_irs, result_schema = resolve_group_by(
             self._keys,
             _parse.parse_into_seq_of_expr_ir(*aggs, **named_aggs),
             self._frame.schema,
         )
-        msg = "`GroupBy.agg` needs a compliant-level to dispatch to"
+        msg = (
+            "TODO: `GroupBy.agg` needs a `CompliantGroupBy` to dispatch to:\n\n"
+            f"keys:\n{keys_named_irs!r}\n\n"
+            f"aggs:\n{aggs_named_irs!r}\n\n"
+            f"result_schema:\n{result_schema!r}"
+        )
         raise NotImplementedError(msg)
 
 
