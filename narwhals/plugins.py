@@ -27,6 +27,8 @@ __all__ = ["Plugin", "from_native"]
 CompliantAny: TypeAlias = (
     "CompliantDataFrameAny | CompliantLazyFrameAny | CompliantSeriesAny"
 )
+"""A statically-unknown, Compliant object originating from a plugin."""
+
 FrameT = TypeVar(
     "FrameT",
     bound="CompliantFrameAny",
@@ -93,9 +95,16 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
         version: Narwhals API version.
 
     Returns:
-        (TODO: Probably better to do this through typing)
-        ...
+        If the following conditions are met
+            - at least 1 plugin is installed
+            - at least 1 installed plugin supports `type(native_object)`
 
-        In all other cases, `None`.
+        Then for the **first matching plugin**, the result of the call below.
+        This *should* be an object accepted by a Narwhals Dataframe, Lazyframe, or Series:
+
+            plugin: Plugin
+            plugin.__narwhals_namespace__(version).from_native(native_object)
+
+        In all other cases, `None` is returned instead.
     """
     return next(_iter_from_native(native_object, version), None)
