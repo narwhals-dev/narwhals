@@ -73,11 +73,7 @@ if TYPE_CHECKING:
         CompliantSeriesT,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import (
-        EvalNames,
-        NativeDataFrameT,
-        NativeLazyFrameT,
-    )
+    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
     from narwhals._namespace import (
         Namespace,
         _NativeArrow,
@@ -2066,6 +2062,7 @@ def deep_attrgetter(attr: str, *nested: str) -> attrgetter[Any]:
 def deep_getattr(obj: Any, name_1: str, *nested: str) -> Any:
     """Perform a nested attribute lookup on `obj`."""
     return deep_attrgetter(name_1, *nested)(obj)
+
 
 class Compliant(
     _StoresNative[NativeT_co], _StoresImplementation, Protocol[NativeT_co]
