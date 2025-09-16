@@ -5,6 +5,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from importlib.metadata import EntryPoints
 
     from typing_extensions import LiteralString
@@ -12,9 +13,11 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantNamespaceAny
     from narwhals.utils import Version
 
+__all__ = ["Plugin", "from_native"]
+
 
 @cache
-def discover_entrypoints() -> EntryPoints:
+def _discover_entrypoints() -> EntryPoints:
     from importlib.metadata import entry_points as eps
 
     group = "narwhals.plugins"
@@ -45,3 +48,15 @@ def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
         and _might_be(type(native_object), pkg)  # type: ignore[arg-type]
         and plugin.is_native(native_object)
     )
+
+
+def _iter_from_native(native_object: Any, version: Version) -> Iterator[object]:
+    for entry_point in _discover_entrypoints():
+        plugin = entry_point.load()
+        if _is_native_plugin(native_object, plugin):
+            compliant_namespace = plugin.__narwhals_namespace__(version=version)
+            yield compliant_namespace.from_native(native_object)
+
+
+def from_native(native_object: Any, version: Version) -> object | None:
+    return next(_iter_from_native(native_object, version), None)
