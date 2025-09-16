@@ -67,8 +67,7 @@ def resolve_group_by(
     output_schema = input_schema._select(keys_named_irs)
 
     # "Add aggregation column(s)"  # noqa: ERA001
-    # TODO @dangotbanned: Figure out if/when `keys: GroupByKeys` got out of sync
-    aggs = rewrite_projections(input_aggs, keys=key_names, schema=input_schema)  # type: ignore[arg-type]
+    aggs = rewrite_projections(input_aggs, keys=key_names, schema=input_schema)
     aggs_names = ensure_valid_exprs(aggs, input_schema)
     aggs_named_irs = into_named_irs(aggs, aggs_names)
     aggs_schema = input_schema._select(aggs_named_irs)

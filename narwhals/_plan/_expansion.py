@@ -87,7 +87,7 @@ if TYPE_CHECKING:
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
-GroupByKeys: TypeAlias = "Seq[ExprIR]"
+GroupByKeys: TypeAlias = "Seq[str]"
 """Represents group_by keys.
 
 - Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
@@ -326,9 +326,7 @@ def prepare_excluded(
     exclude: set[str] = set()
     if flags.has_exclude:
         exclude.update(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
-    for group_by_key in keys:
-        if name := group_by_key.meta.output_name(raise_if_undetermined=False):
-            exclude.add(name)
+    exclude.update(keys)
     return frozenset(exclude)
 
 
