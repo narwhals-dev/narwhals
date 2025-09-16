@@ -52,7 +52,7 @@ def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
 
 def _iter_from_native(native_object: Any, version: Version) -> Iterator[object]:
     for entry_point in _discover_entrypoints():
-        plugin = entry_point.load()
+        plugin: Plugin = entry_point.load()
         if _is_native_plugin(native_object, plugin):
             compliant_namespace = plugin.__narwhals_namespace__(version=version)
             yield compliant_namespace.from_native(native_object)
