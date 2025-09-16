@@ -59,4 +59,16 @@ def _iter_from_native(native_object: Any, version: Version) -> Iterator[object]:
 
 
 def from_native(native_object: Any, version: Version) -> object | None:
+    """Attempt to convert `native_object` to a Compliant object, using any available plugin(s).
+
+    Arguments:
+        native_object: Raw object from user.
+        version: Narwhals API version.
+
+    Returns:
+        (TODO: Probably better to do this through typing)
+        ...
+
+        In all other cases, `None`.
+    """
     return next(_iter_from_native(native_object, version), None)
