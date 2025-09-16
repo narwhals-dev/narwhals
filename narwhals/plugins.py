@@ -4,16 +4,37 @@ import sys
 from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from narwhals._compliant import CompliantNamespace
+from narwhals._typing_compat import TypeVar
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from importlib.metadata import EntryPoints
 
-    from typing_extensions import LiteralString
+    from typing_extensions import LiteralString, TypeAlias
 
-    from narwhals._compliant.typing import CompliantNamespaceAny
+    from narwhals._compliant.typing import (
+        CompliantDataFrameAny,
+        CompliantFrameAny,
+        CompliantLazyFrameAny,
+        CompliantSeriesAny,
+    )
     from narwhals.utils import Version
 
+
 __all__ = ["Plugin", "from_native"]
+
+CompliantAny: TypeAlias = (
+    "CompliantDataFrameAny | CompliantLazyFrameAny | CompliantSeriesAny"
+)
+FrameT = TypeVar(
+    "FrameT",
+    bound="CompliantFrameAny",
+    default="CompliantDataFrameAny | CompliantLazyFrameAny",
+)
+FromNativeR_co = TypeVar(
+    "FromNativeR_co", bound=CompliantAny, covariant=True, default=CompliantAny
+)
 
 
 @cache
@@ -26,10 +47,16 @@ def _discover_entrypoints() -> EntryPoints:
     return eps(group=group)
 
 
-class Plugin(Protocol):
+class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNativeR_co]):
+    def from_native(self, data: Any, /) -> FromNativeR_co: ...
+
+
+class Plugin(Protocol[FrameT, FromNativeR_co]):
     NATIVE_PACKAGE: LiteralString
 
-    def __narwhals_namespace__(self, version: Version) -> CompliantNamespaceAny: ...
+    def __narwhals_namespace__(
+        self, version: Version
+    ) -> PluginNamespace[FrameT, FromNativeR_co]: ...
     def is_native(self, native_object: object, /) -> bool: ...
 
 
@@ -50,7 +77,7 @@ def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
     )
 
 
-def _iter_from_native(native_object: Any, version: Version) -> Iterator[object]:
+def _iter_from_native(native_object: Any, version: Version) -> Iterator[CompliantAny]:
     for entry_point in _discover_entrypoints():
         plugin: Plugin = entry_point.load()
         if _is_native_plugin(native_object, plugin):
@@ -58,7 +85,7 @@ def _iter_from_native(native_object: Any, version: Version) -> Iterator[object]:
             yield compliant_namespace.from_native(native_object)
 
 
-def from_native(native_object: Any, version: Version) -> object | None:
+def from_native(native_object: Any, version: Version) -> CompliantAny | None:
     """Attempt to convert `native_object` to a Compliant object, using any available plugin(s).
 
     Arguments:
