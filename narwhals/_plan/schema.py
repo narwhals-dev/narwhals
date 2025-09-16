@@ -87,8 +87,7 @@ class FrozenSchema(Immutable):
 
         [`Schema.merge`]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-schema/src/schema.rs#L265-L274
         """
-        msg = "`FrozenSchema.merge` has some fancy logic I need to twiddle around with first!"
-        raise NotImplementedError(msg)
+        return freeze_schema(self._mapping | other._mapping)
 
     @property
     def __immutable_hash__(self) -> int:
