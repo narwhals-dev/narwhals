@@ -61,7 +61,7 @@ def resolve_group_by(
     input_schema = freeze_schema(schema)
 
     # "Initialize schema from keys"
-    keys = rewrite_projections(input_keys, keys=(), schema=input_schema)
+    keys = rewrite_projections(input_keys, schema=input_schema)
     key_names = ensure_valid_exprs(keys, input_schema)
     keys_named_irs = into_named_irs(keys, key_names)
     output_schema = input_schema._select(keys_named_irs)
