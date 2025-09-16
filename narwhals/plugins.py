@@ -42,6 +42,6 @@ def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
     pkg = plugin.NATIVE_PACKAGE
     return (
         sys.modules.get(pkg) is not None
-        and _might_be(type(native_object), pkg)
+        and _might_be(type(native_object), pkg)  # type: ignore[arg-type]
         and plugin.is_native(native_object)
     )
