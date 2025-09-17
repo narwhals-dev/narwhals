@@ -15,6 +15,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Generic,
     Literal,
     Protocol,
@@ -1637,9 +1638,11 @@ def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     return fn
 
 
+_SENTINEL: Final = object()
+
+
 def _hasattr_static(obj: Any, attr: str) -> bool:
-    sentinel = object()
-    return getattr_static(obj, attr, sentinel) is not sentinel
+    return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
 def is_compliant_dataframe(
@@ -1678,11 +1681,7 @@ def is_compliant_expr(
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
-    sentinel = object()
-    return (
-        getattr_static(obj, "compliant", sentinel) is not sentinel
-        and getattr_static(obj, "_accessor", sentinel) is not sentinel
-    )
+    return _hasattr_static(obj, "compliant") and _hasattr_static(obj, "_accessor")
 
 
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
