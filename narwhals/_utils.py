@@ -1677,7 +1677,7 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
+def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     return _hasattr_static(obj, "_accessor")
 
 
@@ -1945,7 +1945,7 @@ class requires:  # noqa: N801
             self._wrapped_name = f"{prefix}.{self._wrapped_name}"
 
     def _unwrap_context(self, instance: _IntoContext, /) -> tuple[tuple[int, ...], str]:
-        if is_namespace_accessor(instance):
+        if _is_namespace_accessor(instance):
             self._qualify_accessor_name(instance._accessor)
             compliant = instance.compliant
         else:
