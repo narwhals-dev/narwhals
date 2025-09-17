@@ -1677,9 +1677,7 @@ def is_compliant_expr(
     return hasattr(obj, "__narwhals_expr__")
 
 
-def is_namespace_accessor(
-    obj: NamespaceAccessor[_FullContext] | Any,
-) -> TypeIs[NamespaceAccessor[_FullContext]]:
+def is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     return _hasattr_static(obj, "_accessor")
 
 
