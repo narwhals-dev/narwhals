@@ -1681,6 +1681,12 @@ def is_compliant_expr(
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
+    # NOTE: Only `compliant` has false positives **internally**
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_namespace.py#L166-L168
+    # NOTE: Only `_accessor` has false positives **upstream**
+    # - https://github.com/pandas-dev/pandas/blob/e209a35403f8835bbcff97636b83d2fc39b51e68/pandas/core/accessor.py#L200-L233
+    # - https://github.com/pola-rs/polars/blob/a60c5019f7b694c97009ef9208d25aaa4cc1d8a6/py-polars/polars/api.py#L29-L42
     return _hasattr_static(obj, "compliant") and _hasattr_static(obj, "_accessor")
 
 
