@@ -1678,7 +1678,11 @@ def is_compliant_expr(
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
-    return _hasattr_static(obj, "_accessor")
+    sentinel = object()
+    return (
+        getattr_static(obj, "compliant", sentinel) is not sentinel
+        and getattr_static(obj, "_accessor", sentinel) is not sentinel
+    )
 
 
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
