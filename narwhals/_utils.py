@@ -1680,7 +1680,7 @@ def is_compliant_expr(
 def is_namespace_accessor(
     obj: NamespaceAccessor[_FullContext] | Any,
 ) -> TypeIs[NamespaceAccessor[_FullContext]]:
-    return _hasattr_static(obj, "compliant")
+    return _hasattr_static(obj, "_accessor")
 
 
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
