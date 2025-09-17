@@ -401,16 +401,10 @@ class PolarsExprDateTimeNamespace(
 class PolarsExprStringNamespace(
     PolarsExprNamespace, PolarsStringNamespace[PolarsExpr, pl.Expr]
 ):
+    @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
-
-        if backend_version < (0, 20, 5):  # pragma: no cover
-            # Reason:
-            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
-            # in `native_expr.str.slice(1, length)`
-            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
-            raise NotImplementedError(msg)
 
         if backend_version <= (1, 30, 0):
             length = self.native.str.len_chars()
