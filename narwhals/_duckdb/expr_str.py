@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._duckdb.utils import F, col, concat_str, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, requires
 
 if TYPE_CHECKING:
     from duckdb import Expression
@@ -29,13 +29,8 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
         compliant_expr = self.compliant
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
 
+    @requires.backend_version((1, 2))
     def to_titlecase(self) -> DuckDBExpr:
-        if (version := self.compliant._backend_version) < (1, 2):  # pragma: no cover
-            msg = (
-                "`Expr.str.to_titlecase` is only available in 'duckdb>=1.2', "
-                f"found version {version!r}."
-            )
-            raise NotImplementedError(msg)
         from narwhals._duckdb.utils import lambda_expr
 
         def _to_titlecase(expr: Expression) -> Expression:
