@@ -7,6 +7,7 @@ from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -69,7 +70,10 @@ ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
 FrameT = TypeVar("FrameT", bound=FrameAny)
+FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
+DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
+DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
@@ -531,6 +535,8 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
     def __narwhals_namespace__(self) -> Any: ...
     @property
+    def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
+    @property
     def native(self) -> NativeFrameT:
         return self._native
 
@@ -561,6 +567,8 @@ class CompliantDataFrame(
     CompliantBaseFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    @property
+    def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
     @classmethod
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
@@ -579,6 +587,44 @@ class CompliantDataFrame(
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
     def __len__(self) -> int: ...
     def with_row_index(self, name: str) -> Self: ...
+
+
+class CompliantGroupBy(Protocol[FrameT_co]):
+    @property
+    def compliant(self) -> FrameT_co: ...
+    def agg(self, *args: Any, **kwds: Any) -> FrameT_co: ...
+
+
+class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
+    _keys: Seq[NamedIR]
+    _keys_names: Seq[str]
+
+    @classmethod
+    def by_names(
+        cls, df: DataFrameT, names: Seq[str], /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+
+    # TODO @dangotbanned: Plan how projection should work
+    @classmethod
+    def by_named_irs(
+        cls, df: DataFrameT, irs: Seq[NamedIR], /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    @property
+    def keys(self) -> Seq[NamedIR]:
+        return self._keys
+
+    @property
+    def keys_names(self) -> Seq[str]:
+        if names := self._keys_names:
+            return names
+        if keys := self.keys:
+            return tuple(e.name for e in keys)
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
+
+    def agg(self, irs: Seq[NamedIR]) -> DataFrameT: ...
 
 
 class EagerDataFrame(
