@@ -49,6 +49,9 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
+HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+"""https://github.com/pola-rs/polars/pull/20232"""
+
 SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 """`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
 
@@ -93,8 +96,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
-    if hasattr(pl, "Int128") and dtype == pl.Int128:  # pragma: no cover
-        # Not available for Polars pre 1.8.0
+    if HAS_INT_128 and dtype == pl.Int128:
         return dtypes.Int128()
     if dtype == pl.Int64:
         return dtypes.Int64()
