@@ -167,9 +167,12 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 dtypes = Version.MAIN.dtypes
-_version_dependent: dict[type[DType], pl.DataType] = {}
-if HAS_INT_128:
-    _version_dependent[dtypes.Int128] = pl.Int128()
+
+
+def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
+    return {} if not HAS_INT_128 else {dtypes.Int128: pl.Int128()}
+
+
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.Float64: pl.Float64(),
     dtypes.Float32: pl.Float32(),
@@ -189,10 +192,9 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.UInt64: pl.UInt64(),
     dtypes.Object: pl.Object(),
     dtypes.Unknown: pl.Unknown(),
-    **_version_dependent,
+    **_version_dependent_dtypes(),
 }
 UNSUPPORTED_DTYPES = (dtypes.Decimal,)
-del _version_dependent
 
 
 def narwhals_to_native_dtype(  # noqa: C901
