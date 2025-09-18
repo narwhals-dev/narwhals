@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, NamedTuple
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import (
@@ -46,23 +46,53 @@ class GroupBy(Generic[DataFrameT]):
         self._keys = keys
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
-        keys_named_irs, aggs_named_irs, result_schema = resolve_group_by(
+        frame = self._frame
+        resolved = resolve_group_by(
             self._keys,
             _parse.parse_into_seq_of_expr_ir(*aggs, **named_aggs),
-            self._frame.schema,
+            frame.schema,
         )
-        msg = (
-            "TODO: `GroupBy.agg` needs a `CompliantGroupBy` to dispatch to:\n\n"
-            f"keys:\n{keys_named_irs!r}\n\n"
-            f"aggs:\n{aggs_named_irs!r}\n\n"
-            f"result_schema:\n{result_schema!r}"
+        compliant = frame._compliant
+        compliant_gb = compliant._group_by
+        # Do we need to project first?
+        if not all(key.is_column() for key in resolved.keys):
+            msg = fmt_group_by_error(
+                "Need to sketch out non-projecting keys group by first",
+                resolved.keys,
+                resolved.aggs,
+                resolved.result_schema,
+            )
+            raise NotImplementedError(msg)
+            grouped = compliant_gb.by_named_irs(compliant, resolved.keys)
+        else:  # noqa: RET506
+            # If not, we can just use the resolved key names as a fast-path
+            grouped = compliant_gb.by_names(compliant, resolved.keys_names)
+        msg = fmt_group_by_error(
+            "`GroupBy.agg` needs a `CompliantGroupBy.agg` to dispatch to",
+            resolved.keys,
+            resolved.aggs,
+            resolved.result_schema,
         )
         raise NotImplementedError(msg)
+        return grouped.agg(resolved.aggs)
+
+
+class _TempGroupByStuff(NamedTuple):
+    """Trying to organize info that's useful to keep from `resolve_group_by`.
+
+    Important:
+        Not a long-term thing!
+    """
+
+    keys: Seq[NamedIR]
+    aggs: Seq[NamedIR]
+    keys_names: Seq[str]
+    result_schema: FrozenSchema
 
 
 def resolve_group_by(
     input_keys: Seq[ExprIR], input_aggs: Seq[ExprIR], schema: Schema
-) -> tuple[Seq[NamedIR], Seq[NamedIR], FrozenSchema]:
+) -> _TempGroupByStuff:
     input_schema = freeze_schema(schema)
 
     # "Initialize schema from keys"
@@ -86,4 +116,15 @@ def resolve_group_by(
     # "Make sure aggregation columns do not contain keys or index columns"
     # TODO @dangotbanned: Probably just the keys part?
     # *index columns* seems to be rolling/dynamic only
-    return keys_named_irs, aggs_named_irs, result_schema
+    return _TempGroupByStuff(keys_named_irs, aggs_named_irs, key_names, result_schema)
+
+
+def fmt_group_by_error(
+    message: str, /, keys: Seq[NamedIR], aggs: Seq[NamedIR], schema: FrozenSchema
+) -> str:
+    return (
+        f"TODO: {message}:\n\n"
+        f"keys:\n{keys!r}\n\n"
+        f"aggs:\n{aggs!r}\n\n"
+        f"result_schema:\n{schema!r}"
+    )
