@@ -167,6 +167,9 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 dtypes = Version.MAIN.dtypes
+_version_dependent: dict[type[DType], pl.DataType] = {}
+if HAS_INT_128:
+    _version_dependent[dtypes.Int128] = pl.Int128()
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.Float64: pl.Float64(),
     dtypes.Float32: pl.Float32(),
@@ -186,8 +189,10 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.UInt64: pl.UInt64(),
     dtypes.Object: pl.Object(),
     dtypes.Unknown: pl.Unknown(),
+    **_version_dependent,
 }
 UNSUPPORTED_DTYPES = (dtypes.Decimal,)
+del _version_dependent
 
 
 def narwhals_to_native_dtype(  # noqa: C901
@@ -197,9 +202,6 @@ def narwhals_to_native_dtype(  # noqa: C901
     base_type = dtype.base_type()
     if pl_type := NW_TO_PL_DTYPES.get(base_type):
         return pl_type
-    if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
-        # Not available for Polars pre 1.8.0
-        return pl.Int128()
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
