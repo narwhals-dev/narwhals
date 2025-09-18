@@ -240,6 +240,11 @@ jobs:
           cd tea-tasting
           uv pip uninstall narwhals
           uv pip install -e ./..
+      - name: temporary pin duckdb  # TODO(FBruzzesi): Unpin duckdb
+        run: |
+          cd tea-tasting
+          uv pip uninstall duckdb
+          uv pip install "duckdb<1.4"
       - name: show-deps
         run: |
           cd tea-tasting
