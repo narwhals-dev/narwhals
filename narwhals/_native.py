@@ -58,6 +58,8 @@ Otherwise, we need to define a [`Protocol`] which the native type(s) can match a
 Important:
     The goal is to be as minimal as possible, while still being *specific-enough* to **not** match something else.
 
+For a more complete example, see [ibis#9276 comment].
+
 ### (5) `is_native_<backend>`
 [Type guards] for **(4)**, *similar* to those found in `nw.dependencies`.
 
@@ -70,6 +72,7 @@ They differ by checking **all** native types/protocols in a single-call and usin
 [`TypeVar`]: https://mypy.readthedocs.io/en/stable/generics.html#type-variables-with-upper-bounds
 [generic class]: https://docs.python.org/3/library/typing.html#user-defined-generic-types
 [`@overload`s]: https://typing.python.org/en/latest/spec/overload.html
+[ibis#9276 comment]: https://github.com/ibis-project/ibis/issues/9276#issuecomment-3292016818
 [Type guards]: https://typing.python.org/en/latest/spec/narrowing.html
 """
 
