@@ -471,7 +471,7 @@ def test_join_keys_exceptions(constructor: Constructor, how: JoinStrategy) -> No
         df.join(df, how=how, on="antananarivo", right_on="antananarivo")
 
     with pytest.raises(
-        ValueError, match="`left_on` and `right_on` must have the same length."
+        ValueError, match=re.escape("`left_on` and `right_on` must have the same length.")
     ):
         df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")
 
@@ -693,31 +693,40 @@ def test_joinasof_keys_exceptions(constructor: Constructor) -> None:
 
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df, left_on="antananarivo")
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df, right_on="antananarivo")
     with pytest.raises(
         ValueError,
-        match=r"Either \(`left_on` and `right_on`\) or `on` keys should be specified.",
+        match=re.escape(
+            "Either (`left_on` and `right_on`) or `on` keys should be specified."
+        ),
     ):
         df.join_asof(df)
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(
             df, left_on="antananarivo", right_on="antananarivo", on="antananarivo"
         )
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(df, left_on="antananarivo", on="antananarivo")
     with pytest.raises(
-        ValueError, match="If `on` is specified, `left_on` and `right_on` should be None."
+        ValueError,
+        match=re.escape("If `on` is specified, `left_on` and `right_on` should be None."),
     ):
         df.join_asof(df, right_on="antananarivo", on="antananarivo")
 

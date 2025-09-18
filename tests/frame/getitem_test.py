@@ -72,7 +72,7 @@ def test_slice_int(constructor_eager: ConstructorEager) -> None:
 def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
-    with pytest.raises(TypeError, match="Unexpected type.*, got:"):
+    with pytest.raises(TypeError, match=r"Unexpected type.*, got:"):
         nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload, unused-ignore]
 
 
