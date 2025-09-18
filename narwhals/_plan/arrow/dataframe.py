@@ -4,11 +4,14 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
+from typing_extensions import Self
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.protocols import EagerDataFrame, namespace
+from narwhals._plan.expressions import NamedIR
+from narwhals._plan.protocols import DataFrameGroupBy, EagerDataFrame, namespace
+from narwhals._plan.typing import Seq
 from narwhals._utils import Version
 from narwhals.schema import Schema
 
@@ -33,6 +36,10 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         from narwhals._plan.arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(self._version)
+
+    @property
+    def _group_by(self) -> type[ArrowGroupBy]:
+        return ArrowGroupBy
 
     @property
     def columns(self) -> list[str]:
@@ -113,3 +120,42 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
             else:
                 native = native.append_column(name, chunked)
         return self._with_native(native)
+
+
+class ArrowGroupBy(DataFrameGroupBy[ArrowDataFrame]):
+    """What narwhals is doing.
+
+    - Keys are handled only at compliant
+       - `ParseKeysGroupBy` does weird stuff
+       - But has a fast path for all `str` keys
+    - Aggs are handled in both levels
+      - Some compliant have more restrictions
+    """
+
+    _df: ArrowDataFrame
+    _grouped: pa.TableGroupBy
+    _keys: Seq[NamedIR]
+    _keys_names: Seq[str]
+
+    @classmethod
+    def by_names(cls, df: ArrowDataFrame, names: Seq[str], /) -> Self:
+        obj = cls.__new__(cls)
+        obj._df = df
+        obj._keys = ()
+        obj._keys_names = names
+        obj._grouped = pa.TableGroupBy(df.native, list(names))
+        return obj
+
+    @classmethod
+    def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
+        raise NotImplementedError
+
+    @property
+    def compliant(self) -> ArrowDataFrame:
+        return self._df
+
+    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+        raise NotImplementedError
+
+    def agg(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
+        raise NotImplementedError
