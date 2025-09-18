@@ -15,6 +15,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Generic,
     Literal,
     Protocol,
@@ -72,7 +73,13 @@ if TYPE_CHECKING:
         CompliantSeriesT,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
+    from narwhals._compliant.any_namespace import NamespaceAccessor
+    from narwhals._compliant.typing import (
+        Accessor,
+        EvalNames,
+        NativeDataFrameT,
+        NativeLazyFrameT,
+    )
     from narwhals._namespace import (
         Namespace,
         _NativeArrow,
@@ -163,8 +170,9 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-_ContextT = TypeVar("_ContextT", bound="_FullContext")
-_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
+_IntoContext: TypeAlias = "_FullContext | NamespaceAccessor[_FullContext]"
+_IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
+_Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
@@ -223,12 +231,11 @@ class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
     """
 
 
-class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
-    """Provides 3 attributes.
+class _FullContext(_StoresImplementation, _StoresBackendVersion, Protocol):
+    """Provides 2 attributes.
 
     - `_implementation`
     - `_backend_version`
-    - `_version`
     """
 
 
@@ -1631,9 +1638,11 @@ def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     return fn
 
 
+_SENTINEL: Final = object()
+
+
 def _hasattr_static(obj: Any, attr: str) -> bool:
-    sentinel = object()
-    return getattr_static(obj, attr, sentinel) is not sentinel
+    return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
 def is_compliant_dataframe(
@@ -1669,6 +1678,16 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
+    # NOTE: Only `compliant` has false positives **internally**
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_namespace.py#L166-L168
+    # NOTE: Only `_accessor` has false positives **upstream**
+    # - https://github.com/pandas-dev/pandas/blob/e209a35403f8835bbcff97636b83d2fc39b51e68/pandas/core/accessor.py#L200-L233
+    # - https://github.com/pola-rs/polars/blob/a60c5019f7b694c97009ef9208d25aaa4cc1d8a6/py-polars/polars/api.py#L29-L42
+    return _hasattr_static(obj, "compliant") and _hasattr_static(obj, "_accessor")
 
 
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
@@ -1906,6 +1925,11 @@ class requires:  # noqa: N801
 
     _min_version: tuple[int, ...]
     _hint: str
+    _wrapped_name: str
+    """(Unqualified) decorated method name.
+
+    When used in a namespace accessor, it will be prefixed by the property name.
+    """
 
     @classmethod
     def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
@@ -1924,23 +1948,37 @@ class requires:  # noqa: N801
     def _unparse_version(backend_version: tuple[int, ...], /) -> str:
         return ".".join(f"{d}" for d in backend_version)
 
-    def _ensure_version(self, instance: _FullContext, /) -> None:
-        if instance._backend_version >= self._min_version:
+    def _qualify_accessor_name(self, prefix: Accessor, /) -> None:
+        # NOTE: Should only need to do this once per class (the first time the method is called)
+        if "." not in self._wrapped_name:
+            self._wrapped_name = f"{prefix}.{self._wrapped_name}"
+
+    def _unwrap_context(self, instance: _IntoContext, /) -> tuple[tuple[int, ...], str]:
+        if _is_namespace_accessor(instance):
+            self._qualify_accessor_name(instance._accessor)
+            compliant = instance.compliant
+        else:
+            compliant = instance
+        return compliant._backend_version, str(compliant._implementation)
+
+    def _ensure_version(self, instance: _IntoContext, /) -> None:
+        version, backend = self._unwrap_context(instance)
+        if version >= self._min_version:
             return
-        method = self._wrapped_name
-        backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
-        found = self._unparse_version(instance._backend_version)
-        msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
+        found = self._unparse_version(version)
+        msg = f"`{self._wrapped_name}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
 
-    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+    def __call__(
+        self, fn: _Method[_IntoContextT, P, R], /
+    ) -> _Method[_IntoContextT, P, R]:
         self._wrapped_name = fn.__name__
 
         @wraps(fn)
-        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+        def wrapper(instance: _IntoContextT, *args: P.args, **kwds: P.kwargs) -> R:
             self._ensure_version(instance)
             return fn(instance, *args, **kwds)
 
