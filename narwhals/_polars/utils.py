@@ -49,6 +49,9 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
+HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+"""https://github.com/pola-rs/polars/pull/24346"""
+
 HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
 """https://github.com/pola-rs/polars/pull/20232"""
 
@@ -106,6 +109,8 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
+    if HAS_UINT_128 and hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pyright: ignore[reportAttributeAccessIssue] # pragma: no cover
+        return dtypes.UInt128()
     if dtype == pl.UInt64:
         return dtypes.UInt64()
     if dtype == pl.UInt32:
