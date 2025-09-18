@@ -16,6 +16,7 @@ from narwhals._utils import (
     Implementation,
     _into_arrow_table,
     convert_str_slice_to_int_slice,
+    generate_temporary_column_name,
     is_compliant_series,
     is_index_selector,
     is_range,
@@ -53,6 +54,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         PivotAgg,
         SingleIndexSelector,
+        UniqueKeepStrategy,
         _2DArray,
     )
 
@@ -89,7 +91,6 @@ INHERITED_METHODS = frozenset(
         "tail",
         "to_arrow",
         "to_pandas",
-        "unique",
         "with_columns",
         "write_csv",
         "write_parquet",
@@ -110,7 +111,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     select: Method[Self]
     sort: Method[Self]
     tail: Method[Self]
-    unique: Method[Self]
     with_columns: Method[Self]
 
     _native_frame: NativePolarsFrame
@@ -174,6 +174,31 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
 
     def aggregate(self, *exprs: Any) -> Self:
         return self.select(*exprs)
+
+    def unique(
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: UniqueKeepStrategy,
+        maintain_order: bool | None = None,
+        order_by: Sequence[str] | None = None,
+    ) -> Self:
+        if order_by and maintain_order:
+            token = generate_temporary_column_name(8, self.columns)
+            res = (
+                self.native.with_row_index(token)
+                .sort(order_by, nulls_last=False)
+                .unique(subset or self.columns, keep=keep)
+                .sort(token)
+                .drop(token)
+            )
+        elif order_by:
+            res = self.native.sort(order_by).unique(subset, keep=keep)
+        else:
+            res = self.native.unique(
+                subset, keep=keep, maintain_order=maintain_order or False
+            )
+        return self._with_native(res)
 
     @property
     def schema(self) -> dict[str, DType]:

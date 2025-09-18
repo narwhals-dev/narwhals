@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
 
 import polars as pl
 
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
@@ -416,16 +417,10 @@ class PolarsExprStringNamespace(
 
         return self.compliant._with_native(native_result)
 
+    @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
-
-        if backend_version < (0, 20, 5):  # pragma: no cover
-            # Reason:
-            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
-            # in `native_expr.str.slice(1, length)`
-            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
-            raise NotImplementedError(msg)
 
         if backend_version <= (1, 30, 0):
             length = self.native.str.len_chars()
@@ -451,7 +446,7 @@ class PolarsExprCatNamespace(
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
-    _accessor = "name"
+    _accessor: ClassVar[Accessor] = "name"
     keep: Method[PolarsExpr]
     map: Method[PolarsExpr]
     prefix: Method[PolarsExpr]
