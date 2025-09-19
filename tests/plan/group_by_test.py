@@ -23,10 +23,8 @@ def dataframe(data: dict[str, Any], /) -> nwp.DataFrame[Any, Any]:
     return nwp.DataFrame.from_native(pa.table(data))
 
 
-def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
-    if isinstance(result, nwp.DataFrame):
-        result = result.to_dict(as_series=False)
-    _assert_equal_data(result, expected)
+def assert_equal_data(result: nwp.DataFrame, expected: Mapping[str, Any]) -> None:
+    _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
 @pytest.mark.parametrize(
