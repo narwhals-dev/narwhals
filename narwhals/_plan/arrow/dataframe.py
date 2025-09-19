@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -105,6 +105,14 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def drop(self, columns: Sequence[str]) -> Self:
         to_drop = list(columns)
         return self._with_native(self.native.drop(to_drop))
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        names: dict[str, str] | list[str]
+        if fn.BACKEND_VERSION >= (17,):
+            names = cast("dict[str, str]", mapping)
+        else:  # pragma: no cover
+            names = [mapping.get(c, c) for c in self.columns]
+        return self._with_native(self.native.rename_columns(names))
 
     # NOTE: Use instead of `with_columns` for trivial cases
     def _with_columns(self, exprs: Iterable[Expr | Scalar], /) -> Self:

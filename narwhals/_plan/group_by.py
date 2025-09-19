@@ -67,14 +67,7 @@ class GroupBy(Generic[DataFrameT]):
         else:  # noqa: RET506
             # If not, we can just use the resolved key names as a fast-path
             grouped = compliant_gb.by_names(compliant, resolved.keys_names)
-        msg = fmt_group_by_error(
-            "`GroupBy.agg` needs a `CompliantGroupBy.agg` to dispatch to",
-            resolved.keys,
-            resolved.aggs,
-            resolved.result_schema,
-        )
-        raise NotImplementedError(msg)
-        return grouped.agg(resolved.aggs)
+        return self._frame._from_compliant(grouped.agg(resolved.aggs))
 
 
 class _TempGroupByStuff(NamedTuple):
