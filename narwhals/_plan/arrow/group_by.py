@@ -172,6 +172,8 @@ class ArrowAggExpr:
             input_name, agg_name, option, grouped = self._parse_agg_expr(expr, grouped)
         elif isinstance(expr, ir.Len):
             input_name, agg_name, option = ((), "count_all", None)
+        elif isinstance(expr, ir.Column):
+            input_name, agg_name, option = (expr.name, "list", None)
         elif isinstance(expr, ir.FunctionExpr):
             input_name, agg_name, option = self._parse_function_expr(expr)
         else:
