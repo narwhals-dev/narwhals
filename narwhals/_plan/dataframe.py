@@ -141,7 +141,13 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
         return len(self._compliant)
 
     def group_by(
-        self, *by: OneOrIterable[IntoExpr], **named_by: IntoExpr
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
     ) -> GroupBy[Self]:
+        if drop_null_keys:
+            msg = "TODO: `drop_null_keys=True`"
+            raise NotImplementedError(msg)
         exprs = _parse.parse_into_seq_of_expr_ir(*by, **named_by)
         return GroupBy(self, exprs)
