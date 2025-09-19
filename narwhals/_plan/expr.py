@@ -103,6 +103,9 @@ class Expr:
     def count(self) -> Self:
         return self._from_ir(agg.Count(expr=self._ir))
 
+    def len(self) -> Self:
+        return self._from_ir(agg.Len(expr=self._ir))
+
     def max(self) -> Self:
         return self._from_ir(agg.Max(expr=self._ir))
 

@@ -45,6 +45,7 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
     agg.Std: "stddev",
     agg.Var: "variance",
     agg.Count: "count",
+    agg.Len: "count",
     agg.NUnique: "count_distinct",
     agg.First: "first",
     agg.Last: "last",
@@ -133,7 +134,7 @@ class ArrowAggExpr:
             if isinstance(expr, (agg.Std, agg.Var)):
                 # NOTE: Only branch which needs an instance (for `ddof`)
                 option = pc.VarianceOptions(ddof=expr.ddof)
-            elif isinstance(expr, agg.NUnique):
+            elif isinstance(expr, (agg.NUnique, agg.Len)):
                 option = pc.CountOptions(mode="all")
             elif isinstance(expr, agg.Count):
                 option = pc.CountOptions(mode="only_valid")

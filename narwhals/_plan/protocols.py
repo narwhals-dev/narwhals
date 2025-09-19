@@ -272,6 +272,9 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     def count(
         self, node: agg.Count, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def len(
+        self, node: agg.Len, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def max(
         self, node: agg.Max, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
@@ -376,6 +379,10 @@ class CompliantScalar(
 
     def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
         """Returns 0 if null, else 1."""
+        ...
+
+    def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
+        """Returns 1."""
         ...
 
     def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
