@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
+from narwhals._compliant.typing import NarwhalsAggregation as _NarwhalsAggregation
 from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import DataFrameGroupBy
@@ -19,17 +20,19 @@ if TYPE_CHECKING:
         AggregateOptions,
         Aggregation,
     )
-    from narwhals._compliant.typing import NarwhalsAggregation as _NarwhalsAggregation
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
-    NarwhalsAggregation: TypeAlias = Literal[_NarwhalsAggregation, "first", "last"]
-    InputName: TypeAlias = str
-    NativeName: TypeAlias = str
-    OutputName: TypeAlias = str
-    NativeAggSpec: TypeAlias = tuple[InputName, Aggregation, AggregateOptions | None]
-    RenameSpec: TypeAlias = tuple[NativeName, OutputName]
+
+NarwhalsAggregation: TypeAlias = Literal[_NarwhalsAggregation, "first", "last"]
+InputName: TypeAlias = "str | tuple[()]"
+"""`()` can be used with `"count_all"`."""
+
+NativeName: TypeAlias = str
+OutputName: TypeAlias = str
+NativeAggSpec: TypeAlias = "tuple[InputName, Aggregation, AggregateOptions | None]"
+RenameSpec: TypeAlias = tuple[NativeName, OutputName]
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -52,14 +55,13 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
 }
 
 
-SUPPORTED_IR: Mapping[type[ir.Len], Aggregation] = {ir.Len: "count"}
+SUPPORTED_IR: Mapping[type[ir.Len], Aggregation] = {ir.Len: "count_all"}
 SUPPORTED_FUNCTION: Mapping[type[ir.boolean.BooleanFunction], Aggregation] = {
     ir.boolean.All: "all",
     ir.boolean.Any: "any",
 }
 
 REMAINING: tuple[Aggregation, ...] = (
-    "count_all",  # Count the number of rows in each group
     "distinct",  # Keep the distinct values in each group
     "first_last",  # Compute the first and last of values in each group
     "list",  # List all values in each group
@@ -159,7 +161,8 @@ class ArrowAggExpr:
     def _rename_spec(self, input_name: InputName, agg_name: Aggregation, /) -> RenameSpec:
         # `pyarrow` auto-generates the lhs
         # we want to overwrite that later with rhs
-        return f"{input_name}_{agg_name}", self.output_name
+        old = f"{input_name}_{agg_name}" if input_name else agg_name
+        return old, self.output_name
 
     def to_native(
         self, grouped: pa.TableGroupBy
@@ -168,8 +171,7 @@ class ArrowAggExpr:
         if isinstance(expr, agg.AggExpr):
             input_name, agg_name, option, grouped = self._parse_agg_expr(expr, grouped)
         elif isinstance(expr, ir.Len):
-            msg = "Need to investigate https://github.com/narwhals-dev/narwhals/blob/0fb045536f5b56b978f354f8178b292301e9598c/narwhals/_arrow/group_by.py#L132-L141"
-            raise NotImplementedError(msg)
+            input_name, agg_name, option = ((), "count_all", None)
         elif isinstance(expr, ir.FunctionExpr):
             input_name, agg_name, option = self._parse_function_expr(expr)
         else:
