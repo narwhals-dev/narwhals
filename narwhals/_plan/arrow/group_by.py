@@ -56,13 +56,13 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
 
 
 SUPPORTED_IR: Mapping[type[ir.Len], Aggregation] = {ir.Len: "count_all"}
-SUPPORTED_FUNCTION: Mapping[type[ir.boolean.BooleanFunction], Aggregation] = {
+SUPPORTED_FUNCTION: Mapping[type[ir.Function], Aggregation] = {
     ir.boolean.All: "all",
     ir.boolean.Any: "any",
+    ir.functions.Unique: "distinct",
 }
 
 REMAINING: tuple[Aggregation, ...] = (
-    "distinct",  # Keep the distinct values in each group
     "first_last",  # Compute the first and last of values in each group
     "list",  # List all values in each group
     "min_max",  # Compute the minimum and maximum of values in each group
@@ -150,13 +150,17 @@ class ArrowAggExpr:
         raise group_by_error(self, "unsupported aggregation")
 
     def _parse_function_expr(self, expr: ir.FunctionExpr) -> NativeAggSpec:
-        if isinstance(expr.function, (ir.boolean.All, ir.boolean.Any)):
-            agg_name = SUPPORTED_FUNCTION[type(expr.function)]
-            option = pc.ScalarAggregateOptions(min_count=0)
-            if len(expr.input) == 1 and isinstance(expr.input[0], ir.Column):
-                return expr.input[0].name, agg_name, option
-            raise group_by_error(self, "too complex")
-        raise group_by_error(self, "unsupported function")
+        func = expr.function
+        if agg_name := SUPPORTED_FUNCTION.get(type(func)):
+            if isinstance(func, (ir.boolean.All, ir.boolean.Any)):
+                option = pc.ScalarAggregateOptions(min_count=0)
+            else:
+                option = None
+        else:
+            raise group_by_error(self, "unsupported function")
+        if len(expr.input) == 1 and isinstance(expr.input[0], ir.Column):
+            return expr.input[0].name, agg_name, option
+        raise group_by_error(self, "too complex")
 
     def _rename_spec(self, input_name: InputName, agg_name: Aggregation, /) -> RenameSpec:
         # `pyarrow` auto-generates the lhs
