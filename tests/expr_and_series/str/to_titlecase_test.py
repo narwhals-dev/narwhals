@@ -41,10 +41,6 @@ def test_str_to_titlecase_expr(
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "sqlframe" in str(constructor):
-        reason = "https://github.com/eakmanrq/sqlframe/issues/505"
-        request.applymarker(pytest.mark.xfail(reason=reason))
-
     expected_ = deepcopy(expected)
     if any(x in str(constructor) for x in ("duckdb", "polars", "pyspark")):
         expected_ = {"a": [REPLACEMENTS.get(el, el) for el in expected_["a"]]}

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import _is_naive_format, not_implemented
+from narwhals._utils import _is_naive_format, not_implemented, requires
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -35,11 +35,18 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
-    def to_titlecase(self) -> SparkLikeExpr:  # pragma: no cover
-        if self.compliant._implementation.is_sqlframe():
+    def to_titlecase(self) -> SparkLikeExpr:
+        impl = self.compliant._implementation
+        sqlframe_required_version = (3, 43, 1)
+        if (
+            impl.is_sqlframe()
+            and (version := impl._backend_version()) < sqlframe_required_version
+        ):  # pragma: no cover
+            required_str = requires._unparse_version(sqlframe_required_version)
+            found_str = requires._unparse_version(version)
             msg = (
-                "`Expr.str.to_titlecase` is not implemented for "
-                f"{self.compliant._implementation}"
+                f"`str.to_titlecase` is only available in 'sqlframe>={required_str}', "
+                f"found version {found_str!r}."
             )
             raise NotImplementedError(msg)
 
