@@ -38,7 +38,6 @@ RenameSpec: TypeAlias = tuple[NativeName, OutputName]
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 
-# TODO @dangotbanned: Missing `nw.col("a").len()`
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
     agg.Sum: "sum",
     agg.Mean: "mean",
@@ -53,9 +52,10 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
     agg.First: "first",
     agg.Last: "last",
 }
-
-
-SUPPORTED_IR: Mapping[type[ir.Len], Aggregation] = {ir.Len: "count_all"}
+SUPPORTED_IR: Mapping[type[ir.ExprIR], Aggregation] = {
+    ir.Len: "count_all",
+    ir.Column: "list",
+}
 SUPPORTED_FUNCTION: Mapping[type[ir.Function], Aggregation] = {
     ir.boolean.All: "all",
     ir.boolean.Any: "any",
@@ -64,13 +64,12 @@ SUPPORTED_FUNCTION: Mapping[type[ir.Function], Aggregation] = {
 
 REMAINING: tuple[Aggregation, ...] = (
     "first_last",  # Compute the first and last of values in each group
-    "list",  # List all values in each group
     "min_max",  # Compute the minimum and maximum of values in each group
     "one",  # Get one value from each group
     "product",  # Compute the product of values in each group
     "tdigest",  # Compute approximate quantiles of values in each group
 )
-"""Available [native aggs] we haven't used (excluding `first`, `last`)
+"""Available [native aggs] we haven't used.
 
 [native aggs]: https://arrow.apache.org/docs/python/compute.html#grouped-aggregations
 """
