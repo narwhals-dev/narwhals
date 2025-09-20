@@ -247,7 +247,9 @@ class DaskLazyFrame(
             raise error
         if keep == "none":
             subset = subset or self.columns
-            token = generate_temporary_column_name(n_bytes=8, columns=subset)
+            token = generate_temporary_column_name(
+                n_bytes=8, columns=subset, prefix="count_"
+            )
             ser = self.native.groupby(subset).size().rename(token)
             ser = ser[ser == 1]
             unique = ser.reset_index().drop(columns=token)
@@ -335,7 +337,7 @@ class DaskLazyFrame(
 
     def _join_cross(self, other: Self, *, suffix: str) -> dd.DataFrame:
         key_token = generate_temporary_column_name(
-            n_bytes=8, columns=(*self.columns, *other.columns)
+            n_bytes=8, columns=(*self.columns, *other.columns), prefix="cross_join_key_"
         )
         return (
             self.native.assign(**{key_token: 0})
@@ -365,7 +367,7 @@ class DaskLazyFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> dd.DataFrame:
         indicator_token = generate_temporary_column_name(
-            n_bytes=8, columns=(*self.columns, *other.columns)
+            n_bytes=8, columns=(*self.columns, *other.columns), prefix="join_indicator_"
         )
         other_native = self._join_filter_rename(
             other=other,
@@ -477,7 +479,9 @@ class DaskLazyFrame(
         raise NotImplementedError(msg)
 
     def gather_every(self, n: int, offset: int) -> Self:
-        row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
+        row_index_token = generate_temporary_column_name(
+            n_bytes=8, columns=self.columns, prefix="row_index_"
+        )
         plx = self.__narwhals_namespace__()
         return (
             self.with_row_index(row_index_token, order_by=None)

@@ -330,7 +330,7 @@ class IbisLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        tmp_name = generate_temporary_column_name(8, self.columns)
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
         if order_by and keep == "last":
             order_by_ = IbisExpr._sort(*order_by, descending=True, nulls_last=True)
         elif order_by:
