@@ -187,8 +187,21 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | None,
     ) -> Self:
-        # TODO @felixgwilliams: implementation
-        raise NotImplementedError
+        from narwhals.schema import Schema
+
+        implementation = context._implementation
+        ns = implementation.to_native_namespace()
+        DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
+        if data or not schema:
+            native = DataFrame.from_records(data)
+        else:
+            native = DataFrame.from_dict({col: [] for col in schema})
+        if schema:
+            backend: Iterable[DTypeBackend] | None = None
+            if data:
+                backend = iter_dtype_backends(native.dtypes, implementation)
+            native = native.astype(Schema(schema).to_pandas(backend))
+        return cls.from_native(native, context=context)
 
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:

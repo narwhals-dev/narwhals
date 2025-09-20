@@ -138,8 +138,14 @@ class ArrowDataFrame(
         context: _LimitedContext,
         schema: IntoSchema | None,
     ) -> Self:
-        # TODO @felixgwilliams: implementation
-        raise NotImplementedError
+        from narwhals.schema import Schema
+
+        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        if pa_schema and not data:
+            native = pa_schema.empty_table()
+        else:
+            native = pa.Table.from_pylist(data, schema=pa_schema)
+        return cls.from_native(native, context=context)
 
     @staticmethod
     def _is_native(obj: pa.Table | Any) -> TypeIs[pa.Table]:

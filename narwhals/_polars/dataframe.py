@@ -331,8 +331,10 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         context: _LimitedContext,
         schema: IntoSchema | None,
     ) -> Self:
-        # TODO @felixgwilliams: implementation
-        raise NotImplementedError
+        from narwhals.schema import Schema
+
+        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        return cls.from_native(pl.from_dicts(data, pl_schema), context=context)
 
     @staticmethod
     def _is_native(obj: pl.DataFrame | Any) -> TypeIs[pl.DataFrame]:
