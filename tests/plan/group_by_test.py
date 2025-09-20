@@ -186,8 +186,7 @@ def test_key_with_nulls() -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="Not implemented `drop_null_keys`")
-def test_key_with_nulls_ignored() -> None:  # pragma: no cover
+def test_key_with_nulls_ignored() -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
         dataframe(data)
@@ -200,9 +199,7 @@ def test_key_with_nulls_ignored() -> None:  # pragma: no cover
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="Not implemented `drop_null_keys`, `__iter__`", raises=NotImplementedError
-)
+@pytest.mark.xfail(reason="Not implemented `__iter__`", raises=NotImplementedError)
 def test_key_with_nulls_iter() -> None:  # pragma: no cover
     data = {
         "b": [None, "4", "5", None, "7"],
@@ -221,7 +218,7 @@ def test_key_with_nulls_iter() -> None:  # pragma: no cover
     assert len(result) == 4
 
 
-@pytest.mark.xfail(reason="Not implemented `drop_null_keys`, `Expr` as keys")
+@pytest.mark.xfail(reason="Not implemented `Expr` as keys")
 @pytest.mark.parametrize(
     "keys", [[nwp.col("a").abs()], ["a", nwp.col("a").abs().alias("a_test")]]
 )

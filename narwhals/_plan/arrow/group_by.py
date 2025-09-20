@@ -168,8 +168,12 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
     _keys_names: Seq[str]
 
     @classmethod
-    def by_names(cls, df: ArrowDataFrame, names: Seq[str], /) -> Self:
+    def by_names(
+        cls, df: ArrowDataFrame, names: Seq[str], /, *, drop_null_keys: bool = False
+    ) -> Self:
         obj = cls.__new__(cls)
+        if drop_null_keys:
+            df = df.drop_nulls(names)
         obj._df = df
         obj._keys = ()
         obj._keys_names = names

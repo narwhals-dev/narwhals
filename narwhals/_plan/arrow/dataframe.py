@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -12,7 +13,7 @@ from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.protocols import EagerDataFrame, namespace
 from narwhals._plan.typing import Seq
-from narwhals._utils import Version
+from narwhals._utils import Version, parse_columns_to_drop
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -102,9 +103,17 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
 
-    def drop(self, columns: Sequence[str]) -> Self:
-        to_drop = list(columns)
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
+
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
+        if subset is None:
+            native = self.native.drop_null()
+        else:
+            to_drop = reduce(pc.or_, (pc.field(name).is_null() for name in subset))
+            native = self.native.filter(~to_drop)
+        return self._with_native(native)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         names: dict[str, str] | list[str]

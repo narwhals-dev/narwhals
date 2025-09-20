@@ -42,10 +42,14 @@ if TYPE_CHECKING:
 class GroupBy(Generic[DataFrameT]):
     _frame: DataFrameT
     _keys: Seq[ExprIR]
+    _drop_null_keys: bool
 
-    def __init__(self, frame: DataFrameT, keys: Seq[ExprIR], /) -> None:
+    def __init__(
+        self, frame: DataFrameT, keys: Seq[ExprIR], /, *, drop_null_keys: bool = False
+    ) -> None:
         self._frame = frame
         self._keys = keys
+        self._drop_null_keys = drop_null_keys
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
         frame = self._frame
@@ -68,7 +72,9 @@ class GroupBy(Generic[DataFrameT]):
             grouped = compliant_gb.by_named_irs(compliant, resolved.keys)
         else:  # noqa: RET506
             # If not, we can just use the resolved key names as a fast-path
-            grouped = compliant_gb.by_names(compliant, resolved.keys_names)
+            grouped = compliant_gb.by_names(
+                compliant, resolved.keys_names, drop_null_keys=self._drop_null_keys
+            )
         return self._frame._from_compliant(grouped.agg(resolved.aggs))
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
