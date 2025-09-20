@@ -217,9 +217,6 @@ def test_group_by_shift_raises() -> None:
         df.group_by("b").agg(nwp.col("a").shift(1))
 
 
-@pytest.mark.xfail(
-    reason="First column rename is shadowed by the second.", raises=KeyError
-)
 def test_double_same_aggregation() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
     result = df.group_by("a").agg(c=nwp.col("b").mean(), d=nwp.col("b").mean()).sort("a")
@@ -334,9 +331,6 @@ def test_renaming_edge_case() -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="First column rename is shadowed by the second.", raises=KeyError
-)
 def test_group_by_len_1_column() -> None:
     """Based on a failure from marimo.
 
