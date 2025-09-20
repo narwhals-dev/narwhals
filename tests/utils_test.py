@@ -312,10 +312,10 @@ def test_generate_temporary_column_name_raise() -> None:
 
 def test_generate_temporary_column_name_pr_3118_example() -> None:
     from tests.utils import DUCKDB_VERSION
-    
+
     if DUCKDB_VERSION < (1, 3, 0):
         pytest.skip()
-    
+
     import duckdb
 
     conn = duckdb.connect()
