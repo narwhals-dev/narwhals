@@ -1133,21 +1133,12 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast("Any", obj)
-    native_obj = obj_any.to_native()
-    if is_pandas_like_dataframe(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_frame._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    if is_pandas_like_series(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_series._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    return obj_any
+    if not obj.implementation.is_pandas_like():
+        return obj
+    result = obj._with_compliant(
+        obj._compliant._with_native(obj.to_native().convert_dtypes(*args, **kwargs))
+    )
+    return cast("FrameOrSeriesT", result)
 
 
 def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
