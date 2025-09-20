@@ -10,12 +10,12 @@ if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import TypeAlias
 
-    from narwhals._namespace import (
+    from narwhals._native import (
+        NativePandasLikeDataFrame,
         _CuDFDataFrame,
         _CuDFSeries,
         _ModinDataFrame,
         _ModinSeries,
-        _NativePandasLikeDataFrame,
     )
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -30,7 +30,7 @@ NativeSeriesT = TypeVar(
     default="pd.Series[Any]",
 )
 NativeDataFrameT = TypeVar(
-    "NativeDataFrameT", bound="_NativePandasLikeDataFrame", default="pd.DataFrame"
+    "NativeDataFrameT", bound="NativePandasLikeDataFrame", default="pd.DataFrame"
 )
 NativeNDFrameT = TypeVar(
     "NativeNDFrameT",
