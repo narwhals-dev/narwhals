@@ -282,6 +282,17 @@ def test_generate_temporary_column_name(n_bytes: int) -> None:
     assert temp_col_name not in columns
 
 
+@pytest.mark.parametrize("_idx", [1, 2])
+def test_generate_temporary_column_name_prefix(_idx: int) -> None:
+    columns = ["abc", "XYZ"]
+    prefix = columns[0][:_idx]
+
+    temp_col_name = nw.generate_temporary_column_name(
+        n_bytes=2, columns=columns, prefix=prefix
+    )
+    assert temp_col_name not in columns
+
+
 def test_generate_temporary_column_name_raise() -> None:
     from itertools import product
 
@@ -297,6 +308,20 @@ def test_generate_temporary_column_name_raise() -> None:
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
         nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+
+
+def test_generate_temporary_column_name_pr_3118_example() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    import narwhals as nw
+
+    conn = duckdb.connect()
+    conn.sql("""CREATE TABLE df (a int64, b int64);""")
+
+    df = nw.from_native(conn.table("df"))
+    sql = df.unique("b", keep="any").select("a").to_native().sql_query()
+    assert "AS row_index_" in sql
 
 
 @pytest.mark.parametrize(
