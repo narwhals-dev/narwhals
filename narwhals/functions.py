@@ -359,11 +359,22 @@ def from_dicts(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: deprecated, same as `backend`.
 
+    Examples:
+        >>> import pandas as pd
+        >>> import narwhals as nw
+        >>> data = [{"c": 5, "d": 1}, {"c": 2, "d": 4}]
+        >>> nw.from_dicts(data, backend="pandas")
+        ┌──────────────────┐
+        |Narwhals DataFrame|
+        |------------------|
+        |        c  d      |
+        |     0  5  1      |
+        |     1  2  4      |
+        └──────────────────┘
+
     Returns:
         A new DataFrame.
     """
-    # TODO @felixgwilliams: include an example
-
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant

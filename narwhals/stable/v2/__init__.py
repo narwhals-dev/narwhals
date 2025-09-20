@@ -1146,8 +1146,6 @@ def from_dicts(
     Returns:
         A new DataFrame.
     """
-    # TODO @felixgwilliams: include an example
-
     return _stableify(nw_f.from_dicts(data, schema, backend=backend))
 
 

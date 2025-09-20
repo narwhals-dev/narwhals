@@ -636,9 +636,20 @@ class DataFrame(BaseFrame[DataFrameT]):
                     `POLARS`, `MODIN` or `CUDF`.
                 - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
                 - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        """
-        # TODO @felixgwilliams: include an example
 
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> data = [{"c": 5, "d": 1}, {"c": 2, "d": 4}]
+            >>> nw.DataFrame.from_dicts(data, backend="pandas")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        c  d      |
+            |     0  5  1      |
+            |     1  2  4      |
+            └──────────────────┘
+        """
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
