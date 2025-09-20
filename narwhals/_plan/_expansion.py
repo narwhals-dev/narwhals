@@ -87,7 +87,7 @@ if TYPE_CHECKING:
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
-GroupByKeys: TypeAlias = "Seq[ExprIR]"
+GroupByKeys: TypeAlias = "Seq[str]"
 """Represents group_by keys.
 
 - Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
@@ -169,7 +169,7 @@ def prepare_projection(
         `exprs`, rewritten using `Column(name)` only.
     """
     frozen_schema = freeze_schema(schema)
-    rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
+    rewritten = rewrite_projections(tuple(exprs), schema=frozen_schema)
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
     return rewritten, frozen_schema, output_names
 
@@ -202,7 +202,7 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         if is_horizontal_reduction(child):
-            rewrites = rewrite_projections(child.input, keys=(), schema=schema)
+            rewrites = rewrite_projections(child.input, schema=schema)
             return common.replace(child, input=rewrites)
         return child
 
@@ -275,7 +275,7 @@ def expand_selector(selector: SelectorIR, schema: FrozenSchema) -> Columns:
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
-    keys: GroupByKeys,
+    keys: GroupByKeys = (),
     *,
     schema: FrozenSchema,
 ) -> Seq[ExprIR]:
@@ -326,9 +326,7 @@ def prepare_excluded(
     exclude: set[str] = set()
     if flags.has_exclude:
         exclude.update(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
-    for group_by_key in keys:
-        if name := group_by_key.meta.output_name(raise_if_undetermined=False):
-            exclude.add(name)
+    exclude.update(keys)
     return frozenset(exclude)
 
 

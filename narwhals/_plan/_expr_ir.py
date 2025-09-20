@@ -290,3 +290,17 @@ class NamedIR(Immutable, Generic[ExprIRT]):
         if is_literal(ir):
             return ir.is_scalar
         return isinstance(ir, (expr.BinaryExpr, expr.Column, expr.TernaryExpr, expr.Cast))
+
+    def is_column(self, *, allow_aliasing: bool = False) -> bool:
+        """Return True if wrapping a single `Column` node.
+
+        Note:
+            Multi-output (including selectors) expressions have been expanded at this stage.
+
+        Arguments:
+            allow_aliasing: If False (default), any aliasing is not considered to be column selection.
+        """
+        from narwhals._plan.expressions import Column
+
+        ir = self.expr
+        return isinstance(ir, Column) and ((self.name == ir.name) or allow_aliasing)

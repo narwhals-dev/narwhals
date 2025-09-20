@@ -35,6 +35,7 @@ if TYPE_CHECKING:
         Count,
         First,
         Last,
+        Len,
         Max,
         Mean,
         Median,
@@ -296,6 +297,10 @@ class ArrowExpr(  # type: ignore[misc]
         result = fn.count(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
+    def len(self, node: Len, frame: Frame, name: str) -> Scalar:
+        result = fn.count(self._dispatch_expr(node.expr, frame, name).native, mode="all")
+        return self._with_native(result, name)
+
     def max(self, node: Max, frame: Frame, name: str) -> Scalar:
         result: NativeScalar = fn.max_(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
@@ -459,6 +464,9 @@ class ArrowScalar(
     def count(self, node: Count, frame: Frame, name: str) -> Scalar:
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
+
+    def len(self, node: Len, frame: Frame, name: str) -> Scalar:
+        return self._with_native(pa.scalar(1), name)
 
     filter = not_implemented()
     over = not_implemented()

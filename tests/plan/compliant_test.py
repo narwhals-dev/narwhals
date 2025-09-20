@@ -398,6 +398,11 @@ XFAIL_KLEENE_ALL_NULL = pytest.mark.xfail(
                 raises=NotImplementedError,
             ),
         ),
+        pytest.param(
+            [nwp.col("g").len(), nwp.col("m").last(), nwp.col("h").count()],
+            {"g": [3], "m": [2], "h": [1]},
+            id="len-count-with-nulls",
+        ),
     ],
     ids=_ids_ir,
 )

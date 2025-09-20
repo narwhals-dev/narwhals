@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 from narwhals._plan import _expansion, _parse
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expr import _parse_sort_by
+from narwhals._plan.group_by import GroupBy
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
@@ -18,6 +19,8 @@ from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import pyarrow as pa
     from typing_extensions import Self
 
@@ -96,6 +99,12 @@ class BaseFrame(Generic[NativeFrameT]):
         named_irs = _expansion.into_named_irs(irs, output_names)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+        raise NotImplementedError
+
+    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
+        raise NotImplementedError
+
 
 class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
     _compliant: CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]
@@ -138,3 +147,19 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
     def __len__(self) -> int:
         return len(self._compliant)
+
+    def group_by(
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
+    ) -> GroupBy[Self]:
+        exprs = _parse.parse_into_seq_of_expr_ir(*by, **named_by)
+        return GroupBy(self, exprs, drop_null_keys=drop_null_keys)
+
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+        return self._from_compliant(self._compliant.drop(columns, strict=strict))
+
+    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
+        subset = [subset] if isinstance(subset, str) else subset
+        return self._from_compliant(self._compliant.drop_nulls(subset))
