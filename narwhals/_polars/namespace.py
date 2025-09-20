@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from datetime import timezone
 
+    from typing_extensions import TypeIs
+
     from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
@@ -100,6 +102,9 @@ class PolarsNamespace:
         if isinstance(data, str) and not str_as_lit:
             return self.col(data)
         return self.lit(data.to_native() if is_series(data) else data, None)
+
+    def is_native(self, obj: Any) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
+        return isinstance(obj, (pl.DataFrame, pl.LazyFrame, pl.Series))
 
     @overload
     def from_native(self, data: pl.DataFrame, /) -> PolarsDataFrame: ...

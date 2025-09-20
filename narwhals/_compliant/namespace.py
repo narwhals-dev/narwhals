@@ -13,7 +13,6 @@ from narwhals._compliant.typing import (
     EagerSeriesT,
     LazyExprT,
     NativeFrameT,
-    NativeFrameT_co,
     NativeSeriesT,
 )
 from narwhals._expression_parsing import is_expr, is_series
@@ -27,7 +26,7 @@ from narwhals.dependencies import is_numpy_array, is_numpy_array_2d
 if TYPE_CHECKING:
     from collections.abc import Container, Iterable, Sequence
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._compliant.when_then import CompliantWhen, EagerWhen
@@ -115,6 +114,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     # NOTE: typing this accurately requires 2x more `TypeVar`s
     def from_native(self, data: Any, /) -> Any: ...
+    def is_native(self, obj: Any, /) -> TypeIs[Any]:
+        """Return `True` if `obj` can be passed to `from_native`."""
+        ...
 
 
 class DepthTrackingNamespace(
@@ -141,7 +143,7 @@ class DepthTrackingNamespace(
 
 class LazyNamespace(
     CompliantNamespace[CompliantLazyFrameT, LazyExprT],
-    Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT_co],
+    Protocol[CompliantLazyFrameT, LazyExprT, NativeFrameT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -149,8 +151,10 @@ class LazyNamespace(
 
     @property
     def _lazyframe(self) -> type[CompliantLazyFrameT]: ...
+    def is_native(self, obj: Any, /) -> TypeIs[NativeFrameT]:
+        return self._lazyframe._is_native(obj)
 
-    def from_native(self, data: NativeFrameT_co | Any, /) -> CompliantLazyFrameT:
+    def from_native(self, data: NativeFrameT | Any, /) -> CompliantLazyFrameT:
         if self._lazyframe._is_native(data):
             return self._lazyframe.from_native(data, context=self)
         msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
@@ -172,6 +176,9 @@ class EagerNamespace(
     def when(
         self, predicate: EagerExprT
     ) -> EagerWhen[EagerDataFrameT, EagerSeriesT, EagerExprT, NativeSeriesT]: ...
+
+    def is_native(self, obj: Any, /) -> TypeIs[NativeFrameT | NativeSeriesT]:
+        return self._dataframe._is_native(obj) or self._series._is_native(obj)
 
     @overload
     def from_native(self, data: NativeFrameT, /) -> EagerDataFrameT: ...
