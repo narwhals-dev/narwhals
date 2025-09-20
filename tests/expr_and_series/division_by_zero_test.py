@@ -1,132 +1,154 @@
 from __future__ import annotations
 
+import os
+from typing import Any, Callable
+
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from narwhals._utils import zip_strict
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+data: dict[str, list[float]] = {
+    "int": [-2, 0, 2],
+    "float": [-2.1, 0.0, 2.1],
+    "denominator": [0, 0, 0],
+}
+expected_truediv: list[float] = [float("-inf"), float("nan"), float("inf")]
+expected_floordiv: list[float | None] = [None, None, None]
 
 
-@pytest.mark.parametrize(
-    ("left", "right", "expected"),
-    [
-        (-2, 0, float("-inf")),
-        (-2.0, 0.0, float("-inf")),
-        (0, 0, None),
-        (0.0, 0.0, None),
-        (2, 0, float("inf")),
-        (2.0, 0.0, float("inf")),
-    ],
-)
+@pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
 def test_series_truediv_by_zero(
-    left: float, right: float, expected: float | None, constructor_eager: ConstructorEager
+    constructor_eager: ConstructorEager,
+    get_denominator: Callable[[nw.DataFrame[Any]], int | nw.Series[Any]],
 ) -> None:
-    data: dict[str, list[int | float]] = {"a": [left], "b": [right]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    truediv_result = df["a"] / df["b"]
-    assert_equal_data({"a": truediv_result}, {"a": [expected]})
+    denominator = get_denominator(df)
+    result = {"int": df["int"] / denominator, "float": df["float"] / denominator}
+    expected = {"int": expected_truediv, "float": expected_truediv}
+    assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(
-    ("left", "right", "expected"),
-    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
-)
-def test_series_floordiv_int_by_zero(
-    left: int,
-    right: int,
-    expected: float | None,
+@pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
+def test_expr_truediv_by_zero(
+    constructor: Constructor, denominator: int | nw.Expr
+) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("int", "float") / denominator)
+    expected = {"int": expected_truediv, "float": expected_truediv}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
+def test_series_floordiv_by_zero(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
+    get_denominator: Callable[[nw.DataFrame[Any]], int | nw.Series[Any]],
 ) -> None:
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2,):
-        pytest.skip(reason="converts floordiv by zero to 0")
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    data: dict[str, list[int]] = {"a": [left], "b": [right]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-    # pyarrow backend floordiv raises divide by zero error
-    if "pyarrow" in str(constructor_eager):
+    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    # polars backend floordiv by zero always returns null
-    if "polars" in str(constructor_eager):
-        floordiv_result = df["a"] // df["b"]
-        assert all(floordiv_result.is_null())
-    # pandas[nullable] backend floordiv always returns 0
-    elif all(x in str(constructor_eager) for x in ["pandas", "nullable"]):
-        floordiv_result = df["a"] // df["b"]
-        assert_equal_data({"a": floordiv_result}, {"a": [0]})
-    else:
-        floordiv_result = df["a"] // df["b"]
-        assert_equal_data({"a": floordiv_result}, {"a": [expected]})
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    denominator = get_denominator(df)
+    result = {"result": df["int"] // denominator}
+    expected = {"result": expected_floordiv}
+    assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(
-    ("left", "right", "expected"),
-    [
-        (-2, 0, float("-inf")),
-        (-2.0, 0.0, float("-inf")),
-        (0, 0, None),
-        (0.0, 0.0, None),
-        (2, 0, float("inf")),
-        (2.0, 0.0, float("inf")),
-    ],
-)
-def test_truediv_by_zero(
-    left: float, right: float, expected: float | None, constructor: Constructor
+@pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
+def test_expr_floordiv_by_zero(
+    constructor: Constructor, request: pytest.FixtureRequest, denominator: int | nw.Expr
 ) -> None:
-    if "pyspark" in str(constructor):
-        # https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.try_divide.html
-        # PySpark always returns null when dividing by zero.
-        expected = None
-    data: dict[str, list[int | float]] = {"a": [left]}
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf")):
+        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor(data))
-    truediv_result = df.select(nw.col("a") / right)
-    assert_equal_data(truediv_result, {"a": [expected]})
+
+    result = df.select(result=nw.col("int") // denominator)
+    expected = {"result": expected_floordiv}
+    assert_equal_data(result, expected)
+    assert_equal_data(result.select(nw.col("result").is_null().all()), {"result": [True]})
 
 
 @pytest.mark.parametrize(
-    ("left", "right", "expected"),
-    [(-2, 0, float("-inf")), (0, 0, None), (2, 0, float("inf"))],
+    ("numerator", "expected"),
+    list(
+        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+    ),
 )
-def test_floordiv_int_by_zero(
-    left: int,
-    right: int,
-    expected: float | None,
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+def test_series_rtruediv_by_zero(
+    constructor_eager: ConstructorEager, numerator: float, expected: float
 ) -> None:
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2,):
-        pytest.skip(reason="converts floordiv by zero to 0")
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = {"result": numerator / df["denominator"]}
+    assert_equal_data(result, {"result": [expected] * len(df)})
+
+
+@pytest.mark.parametrize(
+    ("numerator", "expected"),
+    list(
+        zip_strict([*data["int"], *data["float"]], [*expected_truediv, *expected_truediv])
+    ),
+)
+def test_expr_rtruediv_by_zero(
+    constructor: Constructor, numerator: float, expected: float
+) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(result=numerator / nw.col("denominator"))
+    assert_equal_data(result, {"result": [expected] * len(data["denominator"])})
+    assert_equal_data(result.select((~nw.all().is_finite()).all()), {"result": [True]})
+
+
+@pytest.mark.parametrize("numerator", data["int"])
+def test_series_rfloordiv_by_zero(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, numerator: float
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if any(
+        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
+    ) or (
+        any(
+            x in str(constructor_eager)
+            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
+        )
+        and numerator != 0
+    ):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = {"result": numerator // df["denominator"]}
+    assert_equal_data(result, {"result": expected_floordiv})
+
+
+@pytest.mark.parametrize("numerator", data["int"])
+def test_expr_rfloordiv_by_zero(
+    constructor: Constructor, request: pytest.FixtureRequest, numerator: float
+) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
 
-    data: dict[str, list[int]] = {"a": [left]}
-    df = nw.from_native(constructor(data))
-    # pyarrow backend floordiv raises divide by zero error
-    # ibis backend floordiv cannot cast value to inf or -inf
-    if any(x in str(constructor) for x in ["ibis", "pyarrow"]):
+    if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU"):
+        request.applymarker(
+            pytest.mark.xfail(reason="https://github.com/pola-rs/polars/issues/23365")
+        )
+    if any(
+        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
+    ) or (
+        any(
+            x in str(constructor)
+            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
+        )
+        and numerator != 0
+    ):
         request.applymarker(pytest.mark.xfail)
-    # duckdb backend floordiv return None
-    if any(x in str(constructor) for x in ("duckdb", "pyspark")):
-        floordiv_result = df.select(nw.col("a") // right)
-        assert_equal_data(floordiv_result, {"a": [None]})
-    # polars backend floordiv returns null
-    elif "polars" in str(constructor) and "lazy" not in str(constructor):
-        floordiv_result = df.select(nw.col("a") // right)
-        assert all(floordiv_result["a"].is_null())
-    # polars lazy floordiv cannot be sliced and returns None
-    elif all(x in str(constructor) for x in ["polars", "lazy"]):
-        floordiv_result = df.select(nw.col("a") // right)
-        assert_equal_data(floordiv_result, {"a": [None]})
-    # pandas[nullable] backend floordiv always returns 0
-    elif "pandas_nullable" in str(constructor):
-        floordiv_result = df.select(nw.col("a") // right)
-        assert_equal_data(floordiv_result, {"a": [0]})
-    else:
-        floordiv_result = df.select(nw.col("a") // right)
-        assert_equal_data(floordiv_result, {"a": [expected]})
+
+    df = nw.from_native(constructor(data))
+    result = df.select(result=numerator // nw.col("denominator"))
+    expected = {"result": expected_floordiv}
+    assert_equal_data(result, expected)
