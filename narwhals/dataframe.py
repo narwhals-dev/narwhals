@@ -611,6 +611,48 @@ class DataFrame(BaseFrame[DataFrameT]):
         raise ValueError(msg)
 
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[dict[str, Any]],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+        Notes:
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Args:
+            data: Sequence of dictionaries to create DataFrame from.
+            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+                specified, the schema will be inferred by the native library.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        """
+        # TODO @felixgwilliams: include an example
+
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+            return cls(compliant, level="full")
+        # NOTE: (#2786) needs resolving for extensions
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,

@@ -331,6 +331,63 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
+@deprecate_native_namespace(warn_version="1.26.0")
+def from_dicts(
+    data: Sequence[dict[str, Any]],
+    schema: IntoSchema | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Args:
+        data: Sequence of dictionaries to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: deprecated, same as `backend`.
+
+    Returns:
+        A new DataFrame.
+    """
+    # TODO @felixgwilliams: include an example
+
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        ns = Version.MAIN.namespace.from_backend(implementation).compliant
+        return ns._dataframe.from_dicts(data, schema=schema, context=ns).to_narwhals()
+    if implementation is Implementation.UNKNOWN:  # pragma: no cover
+        _native_namespace = implementation.to_native_namespace()
+        try:
+            # implementation is UNKNOWN, Narwhals extension using this feature should
+            # implement `from_dicts` function in the top-level namespace.
+            native_frame: NativeDataFrame = _native_namespace.from_dicts(
+                data, schema=schema
+            )
+        except AttributeError as e:
+            msg = "Unknown namespace is expected to implement `from_dicts` function."
+            raise AttributeError(msg) from e
+        return from_native(native_frame, eager_only=True)
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `from_dicts` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    nw.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+    )
+    raise ValueError(msg)
+
+
 def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,

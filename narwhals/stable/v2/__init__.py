@@ -127,6 +127,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return cast("DataFrame[Any]", result)
 
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[dict[str, Any]],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
@@ -1106,6 +1117,40 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
+def from_dicts(
+    data: Sequence[dict[str, Any]],
+    schema: Mapping[str, DType] | Schema | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Args:
+        data: Sequence of dictionaries to create DataFrame from.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library.
+        backend: specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        native_namespace: deprecated, same as `backend`.
+
+    Returns:
+        A new DataFrame.
+    """
+    # TODO @felixgwilliams: include an example
+
+    return _stableify(nw_f.from_dicts(data, schema, backend=backend))
+
+
 def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
@@ -1303,6 +1348,7 @@ __all__ = [
     "exclude",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",

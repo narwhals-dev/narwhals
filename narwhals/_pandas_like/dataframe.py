@@ -178,6 +178,18 @@ class PandasLikeDataFrame(
             native = native.astype(Schema(schema).to_pandas(backend))
         return cls.from_native(native, context=context)
 
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[dict[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self:
+        # TODO @felixgwilliams: implementation
+        raise NotImplementedError
+
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
         return is_pandas_like_dataframe(obj)  # pragma: no cover

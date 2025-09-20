@@ -129,6 +129,18 @@ class ArrowDataFrame(
             native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, context=context)
 
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[dict[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self:
+        # TODO @felixgwilliams: implementation
+        raise NotImplementedError
+
     @staticmethod
     def _is_native(obj: pa.Table | Any) -> TypeIs[pa.Table]:
         return isinstance(obj, pa.Table)

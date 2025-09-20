@@ -322,6 +322,18 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
 
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[dict[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self:
+        # TODO @felixgwilliams: implementation
+        raise NotImplementedError
+
     @staticmethod
     def _is_native(obj: pl.DataFrame | Any) -> TypeIs[pl.DataFrame]:
         return isinstance(obj, pl.DataFrame)
