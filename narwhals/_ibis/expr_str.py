@@ -81,3 +81,4 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         return self.compliant._with_callable(fn)
 
     replace = not_implemented()
+    to_titlecase = not_implemented()
