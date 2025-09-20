@@ -49,6 +49,12 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
+HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+"""https://github.com/pola-rs/polars/pull/24346"""
+
+HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+"""https://github.com/pola-rs/polars/pull/20232"""
+
 SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 """`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
 
@@ -93,8 +99,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
-    if hasattr(pl, "Int128") and dtype == pl.Int128:  # pragma: no cover
-        # Not available for Polars pre 1.8.0
+    if HAS_INT_128 and dtype == pl.Int128:
         return dtypes.Int128()
     if dtype == pl.Int64:
         return dtypes.Int64()
@@ -104,8 +109,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pragma: no cover
-        # Not available for Polars pre 1.8.0
+    if HAS_UINT_128 and hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pyright: ignore[reportAttributeAccessIssue] # pragma: no cover
         return dtypes.UInt128()
     if dtype == pl.UInt64:
         return dtypes.UInt64()
@@ -163,6 +167,12 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
 
 
 dtypes = Version.MAIN.dtypes
+
+
+def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
+    return {} if not HAS_INT_128 else {dtypes.Int128: pl.Int128()}
+
+
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.Float64: pl.Float64(),
     dtypes.Float32: pl.Float32(),
@@ -182,6 +192,7 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.UInt64: pl.UInt64(),
     dtypes.Object: pl.Object(),
     dtypes.Unknown: pl.Unknown(),
+    **_version_dependent_dtypes(),
 }
 UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
@@ -193,9 +204,6 @@ def narwhals_to_native_dtype(  # noqa: C901
     base_type = dtype.base_type()
     if pl_type := NW_TO_PL_DTYPES.get(base_type):
         return pl_type
-    if dtype == dtypes.Int128 and hasattr(pl, "Int128"):
-        # Not available for Polars pre 1.8.0
-        return pl.Int128()
     if isinstance_or_issubclass(dtype, dtypes.Enum):
         if version is Version.V1:
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
