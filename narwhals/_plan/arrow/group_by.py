@@ -9,10 +9,10 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import DataFrameGroupBy
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterator, Mapping
 
     from typing_extensions import Self, TypeAlias
 
@@ -83,24 +83,6 @@ REQUIRES_PYARROW_20: tuple[
 """https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations"""
 
 
-# TODO @dangotbanned: Factor out to just a `bool.__ior__`
-def _ensure_single_thread(
-    grouped: pa.TableGroupBy, expr: ir.OrderableAggExpr, /
-) -> pa.TableGroupBy:
-    """First/last require disabling threading."""
-    if BACKEND_VERSION >= (14, 0) and grouped._use_threads:
-        # NOTE: Stubs say `_table` is a method, but at runtime it is a property
-        grouped = pa.TableGroupBy(grouped._table, grouped.keys, use_threads=False)  # type: ignore[arg-type]
-    elif BACKEND_VERSION < (14, 0):  # pragma: no cover
-        msg = (
-            f"Using `{expr!r}` in a `group_by().agg(...)` context is only available in 'pyarrow>=14.0.0', "
-            f"found version {requires._unparse_version(BACKEND_VERSION)!r}.\n\n"
-            f"See https://github.com/apache/arrow/issues/36709"
-        )
-        raise NotImplementedError(msg)
-    return grouped
-
-
 def group_by_error(
     expr: ArrowAggExpr,
     reason: Literal[
@@ -121,14 +103,17 @@ def group_by_error(
 class ArrowAggExpr:
     def __init__(self, named_ir: NamedIR, /) -> None:
         self.named_ir: NamedIR = named_ir
+        self.use_threads: bool = True
+        """See https://github.com/apache/arrow/issues/36709"""
+        self.spec: AceroAggSpec
 
     @property
     def output_name(self) -> OutputName:
         return self.named_ir.name
 
     def _parse_agg_expr(
-        self, expr: agg.AggExpr, grouped: pa.TableGroupBy
-    ) -> tuple[AceroTarget, Aggregation, AggregateOptions | None, pa.TableGroupBy]:
+        self, expr: agg.AggExpr
+    ) -> tuple[AceroTarget, Aggregation, AggregateOptions | None]:
         if agg_name := SUPPORTED_AGG.get(type(expr)):
             option: AggregateOptions | None = None
             if isinstance(expr, (agg.Std, agg.Var)):
@@ -140,10 +125,9 @@ class ArrowAggExpr:
                 option = pc.CountOptions(mode="only_valid")
             elif isinstance(expr, (agg.First, agg.Last)):
                 option = pc.ScalarAggregateOptions(skip_nulls=False)
-                # NOTE: Only branch which needs access to `pa.TableGroupBy`
-                grouped = _ensure_single_thread(grouped, expr)
+                self.use_threads = False
             if isinstance(expr.expr, ir.Column):
-                return [expr.expr.name], agg_name, option, grouped
+                return [expr.expr.name], agg_name, option
             raise group_by_error(self, "too complex")
         raise group_by_error(self, "unsupported aggregation")
 
@@ -160,12 +144,12 @@ class ArrowAggExpr:
             return [expr.input[0].name], agg_name, option
         raise group_by_error(self, "too complex")
 
-    def to_native(self, grouped: pa.TableGroupBy) -> tuple[pa.TableGroupBy, AceroAggSpec]:
+    def parse(self) -> Self:
         expr = self.named_ir.expr
         input_name: AceroTarget = ()
         option: AggregateOptions | None = None
         if isinstance(expr, agg.AggExpr):
-            input_name, agg_name, option, grouped = self._parse_agg_expr(expr, grouped)
+            input_name, agg_name, option = self._parse_agg_expr(expr)
         elif isinstance(expr, ir.FunctionExpr):
             input_name, agg_name, option = self._parse_function_expr(expr)
         elif isinstance(expr, (ir.Len, ir.Column)):
@@ -174,13 +158,12 @@ class ArrowAggExpr:
                 input_name = [expr.name]
         else:
             raise group_by_error(self, "unsupported expression")
-        agg_spec = input_name, agg_name, option, self.output_name
-        return grouped, agg_spec
+        self.spec = input_name, agg_name, option, self.output_name
+        return self
 
 
 class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
     _df: ArrowDataFrame
-    _grouped: pa.TableGroupBy
     _keys: Seq[NamedIR]
     _keys_names: Seq[str]
 
@@ -190,7 +173,6 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
         obj._df = df
         obj._keys = ()
         obj._keys_names = names
-        obj._grouped = pa.TableGroupBy(df.native, list(names))
         return obj
 
     @classmethod
@@ -205,55 +187,34 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
         raise NotImplementedError
 
     def agg(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
-        gb = self._grouped
         aggs: list[AceroAggSpec] = []
+        use_threads: bool = True
         for e in irs:
-            gb, agg_spec = ArrowAggExpr(e).to_native(gb)
-            aggs.append(agg_spec)
-        result = _aggregate(
-            self.compliant.native,
-            list(self.keys_names),
-            aggs,
-            use_threads=gb._use_threads,
-        )
-        return self.compliant._with_native(result)
+            expr = ArrowAggExpr(e).parse()
+            use_threads = use_threads and expr.use_threads
+            aggs.append(expr.spec)
+        return self.compliant._with_native(self._agg(aggs, use_threads=use_threads))
 
+    def _agg(self, agg_specs: list[AceroAggSpec], /, *, use_threads: bool) -> pa.Table:
+        """Adapted from [`pa.TableGroupBy.aggregate`] and [`pa.acero._group_by`].
 
-def _aggregate(
-    df: pa.Table,
-    keys: list[str],
-    aggregations: Iterable[  # TODO @dangotbanned: Revisit after replacing `_ensure_single_thread`
-        AceroAggSpec
-    ],
-    *,
-    use_threads: bool,
-) -> pa.Table:
-    """Adapted from [`pa.TableGroupBy.aggregate`](https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/table.pxi#L6600-L6626)."""
-    aggs = list(aggregations) if not isinstance(aggregations, list) else aggregations
-    return _group_by(df, keys, aggs, use_threads=use_threads)
+        - Backport of [apache/arrow#36768].
+          - `first` and `last` were [broken in `pyarrow==13`].
+        - Also allows us to specify our own aliases for aggregate output columns.
+          - Fixes [narwhals-dev/narwhals#1612]
 
-
-def _group_by(
-    table: pa.Table,
-    keys: list[str],
-    aggregates: list[AceroAggSpec],
-    *,
-    use_threads: bool = True,
-) -> pa.Table:
-    """Backport of [apache/arrow#36768].
-
-    `first` and `last` were [broken in `pyarrow==13`].
-
-    Also allows us to specify our own aliases for aggregate output columns.
-
-    [apache/arrow#36768]: https://github.com/apache/arrow/pull/36768
-    [broken in `pyarrow==13`]: https://github.com/apache/arrow/issues/36709
-    """
-    # NOTE: Stubs are (incorrectly) invariant
-    aggs: Incomplete = aggregates
-    keys_: Incomplete = keys
-    decls = [
-        pac.Declaration("table_source", pac.TableSourceNodeOptions(table)),
-        pac.Declaration("aggregate", pac.AggregateNodeOptions(aggs, keys=keys_)),
-    ]
-    return pac.Declaration.from_sequence(decls).to_table(use_threads=use_threads)
+        [`pa.TableGroupBy.aggregate`]: https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/table.pxi#L6600-L6626
+        [`pa.acero._group_by`]: https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/acero.py#L412-L418
+        [apache/arrow#36768]: https://github.com/apache/arrow/pull/36768
+        [broken in `pyarrow==13`]: https://github.com/apache/arrow/issues/36709
+        [narwhals-dev/narwhals#1612]: https://github.com/narwhals-dev/narwhals/issues/1612
+        """
+        df = self.compliant.native
+        # NOTE: Stubs are (incorrectly) invariant
+        keys: Incomplete = list(self.keys_names)
+        aggs: Incomplete = agg_specs
+        decls = [
+            pac.Declaration("table_source", pac.TableSourceNodeOptions(df)),
+            pac.Declaration("aggregate", pac.AggregateNodeOptions(aggs, keys=keys)),
+        ]
+        return pac.Declaration.from_sequence(decls).to_table(use_threads=use_threads)
