@@ -27,6 +27,26 @@ def assert_equal_data(result: nwp.DataFrame, expected: Mapping[str, Any]) -> Non
     _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
+@pytest.mark.xfail(reason="Not implemented `__iter__`", raises=NotImplementedError)
+def test_group_by_iter() -> None:  # pragma: no cover
+    data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    expected_keys: list[tuple[int, ...]] = [(1,), (3,)]
+    keys = []
+    for key, sub_df in df.group_by("a"):
+        if key == (1,):
+            expected = {"a": [1, 1], "b": [4, 4], "c": [7.0, 8.0]}
+            assert_equal_data(sub_df, expected)
+            assert isinstance(sub_df, nwp.DataFrame)
+        keys.append(key)
+    assert sorted(keys) == sorted(expected_keys)
+    expected_keys = [(1, 4), (3, 6)]
+    keys = [key for key, _ in df.group_by("a", "b")]
+    assert sorted(keys) == sorted(expected_keys)
+    keys = [key for key, _ in df.group_by("a", "b")]
+    assert sorted(keys) == sorted(expected_keys)
+
+
 @pytest.mark.parametrize(
     ("attr", "expected"),
     [
@@ -178,6 +198,42 @@ def test_key_with_nulls_ignored() -> None:  # pragma: no cover
     )
     expected = {"b": [4.0, 5], "len": [1, 1], "a": [1, 2]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason="Not implemented `drop_null_keys`, `__iter__`", raises=NotImplementedError
+)
+def test_key_with_nulls_iter() -> None:  # pragma: no cover
+    data = {
+        "b": [None, "4", "5", None, "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": [None, "4", "3", None, None],
+    }
+    result = dict(dataframe(data).group_by("b", "c", drop_null_keys=True).__iter__())
+
+    assert len(result) == 2
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+
+    result = dict(dataframe(data).group_by("b", "c", drop_null_keys=False).__iter__())
+    assert_equal_data(result[("4", "4")], {"b": ["4"], "a": [1], "c": ["4"]})
+    assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
+    assert len(result) == 4
+
+
+@pytest.mark.xfail(reason="Not implemented `drop_null_keys`, `Expr` as keys")
+@pytest.mark.parametrize(
+    "keys", [[nwp.col("a").abs()], ["a", nwp.col("a").abs().alias("a_test")]]
+)
+def test_group_by_raise_drop_null_keys_with_exprs(
+    keys: list[nwp.Expr | str],
+) -> None:  # pragma: no cover
+    data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
+    df = dataframe(data)
+    with pytest.raises(
+        NotImplementedError, match="drop_null_keys cannot be True when keys contains Expr"
+    ):
+        df.group_by(*keys, drop_null_keys=True)  # type: ignore[call-overload,unused-ignore]
 
 
 def test_no_agg() -> None:

@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, NamedTuple
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import (
@@ -32,6 +32,8 @@ from narwhals._plan.schema import FrozenSchema, freeze_schema
 from narwhals._plan.typing import DataFrameT
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals.schema import Schema
@@ -68,6 +70,10 @@ class GroupBy(Generic[DataFrameT]):
             # If not, we can just use the resolved key names as a fast-path
             grouped = compliant_gb.by_names(compliant, resolved.keys_names)
         return self._frame._from_compliant(grouped.agg(resolved.aggs))
+
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
+        msg = "Not Implemented `GroupBy.__iter__`"
+        raise NotImplementedError(msg)
 
 
 class _TempGroupByStuff(NamedTuple):
