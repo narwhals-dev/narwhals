@@ -314,8 +314,6 @@ def test_generate_temporary_column_name_pr_3118_example() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    import narwhals as nw
-
     conn = duckdb.connect()
     conn.sql("""CREATE TABLE df (a int64, b int64);""")
 
