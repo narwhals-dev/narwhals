@@ -52,3 +52,20 @@ def test_to_native_namespace_unknown() -> None:
         AssertionError, match="Cannot return native namespace from UNKNOWN Implementation"
     ):
         impl.to_native_namespace()
+
+
+@pytest.mark.parametrize("impl", list(Implementation))
+def test_backend_version(impl: Implementation) -> None:
+    version: tuple[int, ...] | None
+    try:
+        version = impl._backend_version()
+    except (ModuleNotFoundError, ValueError) as err:
+        # NOTE: See https://github.com/narwhals-dev/narwhals/issues/2786
+        assert impl is not Implementation.UNKNOWN
+
+        with pytest.raises(type(err)):
+            impl.to_native_namespace()
+        version = None
+
+    if version is not None:
+        assert version >= (0, 0, 0)
