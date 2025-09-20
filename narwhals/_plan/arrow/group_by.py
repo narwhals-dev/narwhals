@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
+import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._compliant.typing import NarwhalsAggregation as _NarwhalsAggregation
@@ -10,9 +11,10 @@ from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import DataFrameGroupBy
 from narwhals._utils import Implementation, requires
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping
 
     from typing_extensions import Self, TypeAlias
 
@@ -85,6 +87,8 @@ REQUIRES_PYARROW_20: tuple[
 """https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations"""
 
 
+# NOTE: Was available internally in `pyarrow==13`
+# https://github.com/apache/arrow/blob/b7d2f7ffca66c868bd2fce5b3749c6caa002a7f0/python/pyarrow/acero.py#L302-L308
 def _ensure_single_thread(
     grouped: pa.TableGroupBy, expr: ir.OrderableAggExpr, /
 ) -> pa.TableGroupBy:
@@ -219,4 +223,60 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
             gb, agg_spec, rename = ArrowAggExpr(e).to_native(gb)
             aggs.append(agg_spec)
             renames.append(rename)
-        return self.compliant._with_native(gb.aggregate(aggs)).rename(dict(renames))
+        result = _aggregate(
+            self.compliant.native,
+            list(self.keys_names),
+            aggs,
+            use_threads=gb._use_threads,
+        )
+        return self.compliant._with_native(result).rename(dict(renames))
+
+
+_HASH: Literal["hash_"] = "hash_"
+
+
+# TODO @dangotbanned: need to pass in the second element of `RenameSpec` + use that for `aggr_name`
+def _aggregate(
+    df: pa.Table,
+    keys: list[str | pc.Expression],
+    aggregations: Iterable[NativeAggSpec],
+    *,
+    use_threads: bool,
+) -> pa.Table:
+    """Adapted from [`pa.TableGroupBy.aggregate`].
+
+    [`pa.TableGroupBy.aggregate`]: https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/table.pxi#L6600-L6626
+    """
+    if not keys:
+        # NOTE: We guard against this earlier, but `pyarrow` allows empty keys at this stage
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
+    group_by_aggrs = []
+    for aggr in aggregations:
+        target, func, opt = aggr
+        # Ensure target is a list
+        if isinstance(target, str):
+            target = [target]
+        # Ensure aggregate function is hash_
+        # NOTE: Currently always the case, but probably want to invert that
+        hash_func = f"{_HASH}{func}"
+        # Determine output field name
+        aggr_name = "_".join((*target, func))  # <<<<<<<<<<<<<<<< replace me!!!
+        group_by_aggrs.append((target, hash_func, opt, aggr_name))
+    return _group_by(df, group_by_aggrs, keys, use_threads=use_threads)
+
+
+def _group_by(
+    table: pa.Table,
+    aggregates: Any,
+    keys: list[str | pc.Expression],
+    *,
+    use_threads: bool = True,
+) -> pa.Table:
+    decl = pac.Declaration.from_sequence(
+        [
+            pac.Declaration("table_source", pac.TableSourceNodeOptions(table)),
+            pac.Declaration("aggregate", pac.AggregateNodeOptions(aggregates, keys=keys)),
+        ]
+    )
+    return decl.to_table(use_threads=use_threads)
