@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from typing_extensions import Self
-
 from narwhals._plan import _expansion, _parse
 from narwhals._plan.contexts import ExprContext
 from narwhals._plan.expr import _parse_sort_by
