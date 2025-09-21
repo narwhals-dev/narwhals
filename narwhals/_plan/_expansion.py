@@ -154,8 +154,8 @@ class ExpansionFlags(Immutable):
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], schema: IntoFrozenSchema
-) -> tuple[Seq[ExprIR], FrozenSchema, OutputNames]:
+    exprs: Sequence[ExprIR], /, keys: GroupByKeys = (), *, schema: IntoFrozenSchema
+) -> tuple[Seq[NamedIR], FrozenSchema]:
     """Expand IRs into named column selections.
 
     **Primary entry-point**, will be used by `select`, `with_columns`,
@@ -163,15 +163,14 @@ def prepare_projection(
 
     Arguments:
         exprs: IRs that *may* contain things like `Columns`, `SelectorIR`, `Exclude`, etc.
+        keys: Names of `group_by` columns.
         schema: Scope to expand multi-column selectors in.
-
-    Returns:
-        `exprs`, rewritten using `Column(name)` only.
     """
     frozen_schema = freeze_schema(schema)
-    rewritten = rewrite_projections(tuple(exprs), schema=frozen_schema)
+    rewritten = rewrite_projections(tuple(exprs), keys=keys, schema=frozen_schema)
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
-    return rewritten, frozen_schema, output_names
+    named_irs = into_named_irs(rewritten, output_names)
+    return named_irs, frozen_schema
 
 
 def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:

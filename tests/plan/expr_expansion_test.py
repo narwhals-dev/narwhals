@@ -16,7 +16,7 @@ from narwhals._plan._expansion import (
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.schema import freeze_schema
 from narwhals.exceptions import ColumnNotFoundError, ComputeError, DuplicateError
-from tests.plan.utils import assert_expr_ir_equal
+from tests.plan.utils import assert_expr_ir_equal, named_ir
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -257,19 +257,28 @@ def test_replace_selector(
 @pytest.mark.parametrize(
     ("into_exprs", "expected"),
     [
-        ("a", [nwp.col("a")]),
-        (nwp.col("b", "c", "d"), [nwp.col("b"), nwp.col("c"), nwp.col("d")]),
-        (nwp.nth(6), [nwp.col("g")]),
-        (nwp.nth(9, 8, -5), [nwp.col("j"), nwp.col("i"), nwp.col("p")]),
-        (
+        pytest.param("a", [nwp.col("a")], id="Col"),
+        pytest.param(
+            nwp.col("b", "c", "d"),
+            [nwp.col("b"), nwp.col("c"), nwp.col("d")],
+            id="Columns",
+        ),
+        pytest.param(nwp.nth(6), [nwp.col("g")], id="Nth"),
+        pytest.param(
+            nwp.nth(9, 8, -5),
+            [nwp.col("j"), nwp.col("i"), nwp.col("p")],
+            id="IndexColumns",
+        ),
+        pytest.param(
             [nwp.nth(2).alias("c again"), nwp.nth(-1, -2).name.to_uppercase()],
             [
-                nwp.col("c").alias("c again"),
-                nwp.col("u").alias("U"),
-                nwp.col("s").alias("S"),
+                named_ir("c again", nwp.col("c")),
+                named_ir("U", nwp.col("u")),
+                named_ir("S", nwp.col("s")),
             ],
+            id="Nth-Alias-IndexColumns-Uppercase",
         ),
-        (
+        pytest.param(
             nwp.all(),
             [
                 nwp.col("a"),
@@ -293,82 +302,89 @@ def test_replace_selector(
                 nwp.col("s"),
                 nwp.col("u"),
             ],
+            id="All",
         ),
-        (
+        pytest.param(
             (ndcs.numeric() - ndcs.by_dtype(nw.Float32(), nw.Float64()))
             .cast(nw.Int64)
             .mean()
             .name.suffix("_mean"),
             [
-                nwp.col("a").cast(nw.Int64()).mean().alias("a_mean"),
-                nwp.col("b").cast(nw.Int64()).mean().alias("b_mean"),
-                nwp.col("c").cast(nw.Int64()).mean().alias("c_mean"),
-                nwp.col("d").cast(nw.Int64()).mean().alias("d_mean"),
-                nwp.col("e").cast(nw.Int64()).mean().alias("e_mean"),
-                nwp.col("f").cast(nw.Int64()).mean().alias("f_mean"),
-                nwp.col("g").cast(nw.Int64()).mean().alias("g_mean"),
-                nwp.col("h").cast(nw.Int64()).mean().alias("h_mean"),
+                named_ir("a_mean", nwp.col("a").cast(nw.Int64()).mean()),
+                named_ir("b_mean", nwp.col("b").cast(nw.Int64()).mean()),
+                named_ir("c_mean", nwp.col("c").cast(nw.Int64()).mean()),
+                named_ir("d_mean", nwp.col("d").cast(nw.Int64()).mean()),
+                named_ir("e_mean", nwp.col("e").cast(nw.Int64()).mean()),
+                named_ir("f_mean", nwp.col("f").cast(nw.Int64()).mean()),
+                named_ir("g_mean", nwp.col("g").cast(nw.Int64()).mean()),
+                named_ir("h_mean", nwp.col("h").cast(nw.Int64()).mean()),
             ],
+            id="Selector-SUB-Cast-Mean-Suffix",
         ),
-        (
+        pytest.param(
             nwp.col("u").alias("1").alias("2").alias("3").alias("4").name.keep(),
-            # NOTE: Would be nice to rewrite with less intermediate steps
-            # but retrieving the root name is enough for now
-            [nwp.col("u").alias("1").alias("2").alias("3").alias("4").alias("u")],
+            [named_ir("u", nwp.col("u"))],
+            id="Alias-Etc-Keep",
         ),
-        (
+        pytest.param(
             (
                 (ndcs.numeric() ^ (ndcs.matches(r"[abcdg]") | ndcs.by_name("i", "f")))
                 * 100
             ).name.suffix("_mult_100"),
             [
-                (nwp.col("e") * nwp.lit(100)).alias("e_mult_100"),
-                (nwp.col("h") * nwp.lit(100)).alias("h_mult_100"),
-                (nwp.col("j") * nwp.lit(100)).alias("j_mult_100"),
+                named_ir("e_mult_100", (nwp.col("e") * nwp.lit(100))),
+                named_ir("h_mult_100", (nwp.col("h") * nwp.lit(100))),
+                named_ir("j_mult_100", (nwp.col("j") * nwp.lit(100))),
             ],
+            id="Selector-XOR-OR-BinaryExpr-Suffix",
         ),
-        (
+        pytest.param(
             ndcs.by_dtype(nw.Duration())
             .dt.total_minutes()
             .name.map(lambda nm: f"total_mins: {nm!r} ?"),
-            [nwp.col("q").dt.total_minutes().alias("total_mins: 'q' ?")],
+            [named_ir("total_mins: 'q' ?", nwp.col("q").dt.total_minutes())],
+            id="ByDType-TotalMins-Name-Map",
         ),
-        (
+        pytest.param(
             nwp.col("f", "g")
             .cast(nw.String)
             .str.starts_with("1")
             .all()
             .name.suffix("_all_starts_with_1"),
             [
-                nwp.col("f")
-                .cast(nw.String)
-                .str.starts_with("1")
-                .all()
-                .alias("f_all_starts_with_1"),
-                nwp.col("g")
-                .cast(nw.String)
-                .str.starts_with("1")
-                .all()
-                .alias("g_all_starts_with_1"),
+                named_ir(
+                    "f_all_starts_with_1",
+                    nwp.col("f").cast(nw.String).str.starts_with("1").all(),
+                ),
+                named_ir(
+                    "g_all_starts_with_1",
+                    nwp.col("g").cast(nw.String).str.starts_with("1").all(),
+                ),
             ],
+            id="Cast-StartsWith-All-Suffix",
         ),
-        (
+        pytest.param(
             nwp.col("a", "b")
             .first()
             .over("c", "e", order_by="d")
             .name.suffix("_first_over_part_order_1"),
             [
-                nwp.col("a")
-                .first()
-                .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")])
-                .alias("a_first_over_part_order_1"),
-                nwp.col("b")
-                .first()
-                .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")])
-                .alias("b_first_over_part_order_1"),
+                named_ir(
+                    "a_first_over_part_order_1",
+                    nwp.col("a")
+                    .first()
+                    .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")]),
+                ),
+                named_ir(
+                    "b_first_over_part_order_1",
+                    nwp.col("b")
+                    .first()
+                    .over(nwp.col("c"), nwp.col("e"), order_by=[nwp.col("d")]),
+                ),
             ],
+            id="First-Over-Partitioned-Ordered-Suffix",
         ),
-        (
+        pytest.param(
             nwp.exclude(BIG_EXCLUDE),
             [
                 nwp.col("c"),
@@ -379,42 +395,48 @@ def test_replace_selector(
                 nwp.col("i"),
                 nwp.col("j"),
             ],
+            id="Exclude",
         ),
-        (
+        pytest.param(
             nwp.exclude(BIG_EXCLUDE).name.suffix("_2"),
             [
-                nwp.col("c").alias("c_2"),
-                nwp.col("d").alias("d_2"),
-                nwp.col("f").alias("f_2"),
-                nwp.col("g").alias("g_2"),
-                nwp.col("h").alias("h_2"),
-                nwp.col("i").alias("i_2"),
-                nwp.col("j").alias("j_2"),
+                named_ir("c_2", nwp.col("c")),
+                named_ir("d_2", nwp.col("d")),
+                named_ir("f_2", nwp.col("f")),
+                named_ir("g_2", nwp.col("g")),
+                named_ir("h_2", nwp.col("h")),
+                named_ir("i_2", nwp.col("i")),
+                named_ir("j_2", nwp.col("j")),
             ],
+            id="Exclude-Suffix",
         ),
-        (
+        pytest.param(
             nwp.col("c").alias("c_min_over_order_by").min().over(order_by=ndcs.string()),
             [
-                nwp.col("c")
-                .alias("c_min_over_order_by")
-                .min()
-                .over(order_by=[nwp.col("k")])
+                named_ir(
+                    "c_min_over_order_by",
+                    nwp.col("c").min().over(order_by=[nwp.col("k")]),
+                )
             ],
+            id="Alias-Min-Over-Order-By-Selector",
         ),
         pytest.param(
             (ndcs.by_name("a", "b", "c") / nwp.col("e").first())
             .over("g", "f", order_by="f")
             .name.prefix("hi_"),
             [
-                (nwp.col("a") / nwp.col("e").first())
-                .over("g", "f", order_by="f")
-                .alias("hi_a"),
-                (nwp.col("b") / nwp.col("e").first())
-                .over("g", "f", order_by="f")
-                .alias("hi_b"),
-                (nwp.col("c") / nwp.col("e").first())
-                .over("g", "f", order_by="f")
-                .alias("hi_c"),
+                named_ir(
+                    "hi_a",
+                    (nwp.col("a") / nwp.col("e").first()).over("g", "f", order_by="f"),
+                ),
+                named_ir(
+                    "hi_b",
+                    (nwp.col("b") / nwp.col("e").first()).over("g", "f", order_by="f"),
+                ),
+                named_ir(
+                    "hi_c",
+                    (nwp.col("c") / nwp.col("e").first()).over("g", "f", order_by="f"),
+                ),
             ],
             id="Selector-BinaryExpr-Over-Prefix",
         ),
@@ -426,7 +448,7 @@ def test_prepare_projection(
     schema_1: dict[str, DType],
 ) -> None:
     irs_in = parse_into_seq_of_expr_ir(into_exprs)
-    actual, _, _ = prepare_projection(irs_in, schema_1)
+    actual, _ = prepare_projection(irs_in, schema=schema_1)
     assert len(actual) == len(expected)
     for lhs, rhs in zip(actual, expected):
         assert_expr_ir_equal(lhs, rhs)
@@ -451,7 +473,7 @@ def test_prepare_projection_duplicate(expr: nwp.Expr, schema_1: dict[str, DType]
     irs = parse_into_seq_of_expr_ir(expr.alias("dupe"))
     pattern = re.compile(r"\.alias\(.dupe.\)")
     with pytest.raises(DuplicateError, match=pattern):
-        prepare_projection(irs, schema_1)
+        prepare_projection(irs, schema=schema_1)
 
 
 @pytest.mark.parametrize(
@@ -517,7 +539,7 @@ def test_prepare_projection_column_not_found(
     pattern = re.compile(rf"not found: {re.escape(repr(missing))}")
     irs = parse_into_seq_of_expr_ir(into_exprs)
     with pytest.raises(ColumnNotFoundError, match=pattern):
-        prepare_projection(irs, schema_1)
+        prepare_projection(irs, schema=schema_1)
 
 
 @pytest.mark.parametrize(
@@ -554,15 +576,15 @@ def test_prepare_projection_horizontal_alias(
     expr = function(into_exprs)
     alias_1 = expr.alias("alias(x1)")
     irs = parse_into_seq_of_expr_ir(alias_1)
-    out_irs, _, _ = prepare_projection(irs, schema_1)
+    out_irs, _ = prepare_projection(irs, schema=schema_1)
     assert len(out_irs) == 1
-    assert out_irs[0] == function("a", "b", "c").alias("alias(x1)")._ir
+    assert out_irs[0] == named_ir("alias(x1)", function("a", "b", "c"))
 
     alias_2 = alias_1.alias("alias(x2)")
     irs = parse_into_seq_of_expr_ir(alias_2)
-    out_irs, _, _ = prepare_projection(irs, schema_1)
+    out_irs, _ = prepare_projection(irs, schema=schema_1)
     assert len(out_irs) == 1
-    assert out_irs[0] == function("a", "b", "c").alias("alias(x1)").alias("alias(x2)")._ir
+    assert out_irs[0] == named_ir("alias(x2)", function("a", "b", "c"))
 
 
 @pytest.mark.parametrize(
@@ -574,4 +596,4 @@ def test_prepare_projection_index_error(
     irs = parse_into_seq_of_expr_ir(into_exprs)
     pattern = re.compile(r"invalid.+index.+nth", re.DOTALL | re.IGNORECASE)
     with pytest.raises(ComputeError, match=pattern):
-        prepare_projection(irs, schema_1)
+        prepare_projection(irs, schema=schema_1)

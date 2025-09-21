@@ -23,18 +23,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple
 
 from narwhals._plan import _parse
-from narwhals._plan._expansion import (
-    ensure_valid_exprs,
-    into_named_irs,
-    rewrite_projections,
-)
-from narwhals._plan.schema import FrozenSchema, freeze_schema
+from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.typing import DataFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan.expressions import ExprIR, NamedIR
+    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals.schema import Schema
 
@@ -101,30 +97,21 @@ class _TempGroupByStuff(NamedTuple):
 def resolve_group_by(
     input_keys: Seq[ExprIR], input_aggs: Seq[ExprIR], schema: Schema
 ) -> _TempGroupByStuff:
-    input_schema = freeze_schema(schema)
+    # > Initialize schema from keys
+    keys, input_schema = prepare_projection(input_keys, schema=schema)
+    keys_names = tuple(e.name for e in keys)
+    output_schema = input_schema._select(keys)
 
-    # "Initialize schema from keys"
-    keys = rewrite_projections(input_keys, schema=input_schema)
-    key_names = ensure_valid_exprs(keys, input_schema)
-    keys_named_irs = into_named_irs(keys, key_names)
-    output_schema = input_schema._select(keys_named_irs)
-
-    # "Add aggregation column(s)"  # noqa: ERA001
-    aggs = rewrite_projections(input_aggs, keys=key_names, schema=input_schema)
-    aggs_names = ensure_valid_exprs(aggs, input_schema)
-    aggs_named_irs = into_named_irs(aggs, aggs_names)
-    aggs_schema = input_schema._select(aggs_named_irs)
-
-    # "Coerce aggregation column(s) into List unless not needed (auto-implode)"  # noqa: ERA001
-    # TODO @dangotbanned: seems to just be a schema transform, maybe not important for now?
-
-    # "Final output_schema"
+    # > Add aggregation column(s)
+    aggs, _ = prepare_projection(input_aggs, keys_names, schema=input_schema)
+    aggs_schema = input_schema._select(aggs)
+    # > Final output_schema
     result_schema = output_schema.merge(aggs_schema)
 
-    # "Make sure aggregation columns do not contain keys or index columns"
+    # > Make sure aggregation columns do not contain keys or index columns
     # TODO @dangotbanned: Probably just the keys part?
-    # *index columns* seems to be rolling/dynamic only
-    return _TempGroupByStuff(keys_named_irs, aggs_named_irs, key_names, result_schema)
+    #     *index columns* seems to be rolling/dynamic only
+    return _TempGroupByStuff(keys, aggs, keys_names, result_schema)
 
 
 def fmt_group_by_error(

@@ -71,10 +71,9 @@ class BaseFrame(Generic[NativeFrameT]):
         /,
     ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
         """Temp, while these parts aren't connected, this is easier for testing."""
-        irs, schema_frozen, output_names = _expansion.prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
+        named_irs, schema_frozen = _expansion.prepare_projection(
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self.schema
         )
-        named_irs = _expansion.into_named_irs(irs, output_names)
         return schema_frozen.project(named_irs, context)
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
@@ -95,8 +94,7 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        irs, _, output_names = _expansion.prepare_projection(sort, self.schema)
-        named_irs = _expansion.into_named_irs(irs, output_names)
+        named_irs, _ = _expansion.prepare_projection(sort, schema=self.schema)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
