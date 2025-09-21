@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
 import polars as pl
 
 from narwhals._polars.utils import (
+    BACKEND_VERSION,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -403,9 +404,8 @@ class PolarsExprStringNamespace(
 ):
     def to_titlecase(self) -> PolarsExpr:
         native_expr = self.native
-        backend_version = self.compliant._backend_version
 
-        if backend_version < (1, 5):  # pragma: no cover
+        if BACKEND_VERSION < (1, 5):  # pragma: no cover
             native_result = (
                 native_expr.str.to_lowercase()
                 .str.extract_all(r"[a-z0-9]*[^a-z0-9]*")

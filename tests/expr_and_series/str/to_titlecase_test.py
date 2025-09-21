@@ -25,7 +25,7 @@ expected = {
         "__Dunder__Score_A1_.2B ?Three",
     ]
 }
-REPLACEMENTS = {
+non_alphabetic_to_non_alphanumeric_boundary_mapping = {
     "With123Numbers": "With123numbers",
     "__Dunder__Score_A1_.2B ?Three": "__Dunder__Score_A1_.2b ?Three",
 }
@@ -43,7 +43,12 @@ def test_str_to_titlecase_expr(
 
     expected_ = deepcopy(expected)
     if any(x in str(constructor) for x in ("duckdb", "polars", "pyspark")):
-        expected_ = {"a": [REPLACEMENTS.get(el, el) for el in expected_["a"]]}
+        expected_ = {
+            "a": [
+                non_alphabetic_to_non_alphanumeric_boundary_mapping.get(el, el)
+                for el in expected_["a"]
+            ]
+        }
 
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_titlecase())
@@ -54,7 +59,12 @@ def test_str_to_titlecase_expr(
 def test_str_to_titlecase_series(constructor_eager: ConstructorEager) -> None:
     expected_ = deepcopy(expected)
     if "polars" in str(constructor_eager):
-        expected_ = {"a": [REPLACEMENTS.get(el, el) for el in expected_["a"]]}
+        expected_ = {
+            "a": [
+                non_alphabetic_to_non_alphanumeric_boundary_mapping.get(el, el)
+                for el in expected_["a"]
+            ]
+        }
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.to_titlecase()
