@@ -331,13 +331,11 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
-@deprecate_native_namespace(warn_version="1.26.0")
 def from_dicts(
     data: Sequence[dict[str, Any]],
     schema: IntoSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
@@ -345,11 +343,11 @@ def from_dicts(
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
 
-    Args:
-        data: Sequence of dictionaries to create DataFrame from.
+    Arguments:
+        data: Sequence with dictionaries mapping column name to value.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
             specified, the schema will be inferred by the native library.
-        backend: specifies which eager backend instantiate to.
+        backend: Specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
 
@@ -357,7 +355,9 @@ def from_dicts(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: deprecated, same as `backend`.
+
+    Returns:
+        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -371,9 +371,6 @@ def from_dicts(
         |     0  5  1      |
         |     1  2  4      |
         └──────────────────┘
-
-    Returns:
-        A new DataFrame.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):

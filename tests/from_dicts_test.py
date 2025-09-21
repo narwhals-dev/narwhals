@@ -17,7 +17,7 @@ def test_from_dicts(eager_backend: EagerAllowed) -> None:
     assert isinstance(result, nw.DataFrame)
 
 
-def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
+def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw.Int16(), "d": nw.Float32()}
     result = nw.from_dicts(
         [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
@@ -36,6 +36,11 @@ def test_from_dicts_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
         nw.from_dicts([{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend="duckdb")  # type: ignore[arg-type]
+
+
+def test_from_dicts_empty(eager_backend: EagerAllowed) -> None:
+    result = nw.from_dicts([], backend=eager_backend)
+    assert result.shape == (0, 0)
 
 
 def test_from_dicts_empty_with_schema(eager_backend: EagerAllowed) -> None:

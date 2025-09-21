@@ -1129,11 +1129,11 @@ def from_dicts(
         For pandas-like dataframes, conversion to schema is applied after dataframe
         creation.
 
-    Args:
-        data: Sequence of dictionaries to create DataFrame from.
+    Arguments:
+        data: Sequence with dictionaries mapping column name to value.
         schema: The DataFrame schema as Schema or dict of {name: type}. If not
             specified, the schema will be inferred by the native library.
-        backend: specifies which eager backend instantiate to.
+        backend: Specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
 
@@ -1141,7 +1141,6 @@ def from_dicts(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-        native_namespace: deprecated, same as `backend`.
 
     Returns:
         A new DataFrame.

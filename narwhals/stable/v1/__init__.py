@@ -133,6 +133,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
         return cast("DataFrame[Any]", result)
 
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Any],
+        schema: Mapping[str, DType] | Schema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
@@ -1261,6 +1272,23 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
+@deprecate_native_namespace()
+def from_dicts(
+    data: Sequence[dict[str, Any]],
+    schema: Mapping[str, DType] | Schema | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+    native_namespace: ModuleType | None = None,  # noqa: ARG001
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    See `narwhals.from_dicts` for full docstring. Note that `native_namespace` is
+    an is the same as `backend` but only accepts module types - for new code, we
+    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
+    """
+    return _stableify(nw_f.from_dicts(data, schema, backend=backend))
+
+
 @deprecate_native_namespace(required=True)
 def from_numpy(
     data: _2DArray,
@@ -1399,6 +1427,7 @@ __all__ = [
     "exclude",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",
