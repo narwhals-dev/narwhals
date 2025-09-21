@@ -148,6 +148,19 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
     def __len__(self) -> int:
         return len(self._compliant)
 
+    @overload
+    def group_by(
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: Literal[False] = ...,
+        **named_by: IntoExpr,
+    ) -> GroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *by: OneOrIterable[str], drop_null_keys: Literal[True]
+    ) -> GroupBy[Self]: ...
+
     def group_by(
         self,
         *by: OneOrIterable[IntoExpr],

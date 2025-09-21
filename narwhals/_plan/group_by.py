@@ -62,6 +62,9 @@ class GroupBy(Generic[DataFrameT]):
         compliant_gb = compliant._group_by
         # Do we need to project first?
         if not all(key.is_column() for key in resolved.keys):
+            if self._drop_null_keys:
+                msg = "drop_null_keys cannot be True when keys contains Expr or Series"
+                raise NotImplementedError(msg)
             msg = fmt_group_by_error(
                 "Need to sketch out non-projecting keys group by first",
                 resolved.keys,

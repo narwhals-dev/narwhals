@@ -218,19 +218,16 @@ def test_key_with_nulls_iter() -> None:  # pragma: no cover
     assert len(result) == 4
 
 
-@pytest.mark.xfail(reason="Not implemented `Expr` as keys")
 @pytest.mark.parametrize(
     "keys", [[nwp.col("a").abs()], ["a", nwp.col("a").abs().alias("a_test")]]
 )
-def test_group_by_raise_drop_null_keys_with_exprs(
-    keys: list[nwp.Expr | str],
-) -> None:  # pragma: no cover
+def test_group_by_raise_drop_null_keys_with_exprs(keys: list[nwp.Expr | str]) -> None:
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
     df = dataframe(data)
     with pytest.raises(
         NotImplementedError, match="drop_null_keys cannot be True when keys contains Expr"
     ):
-        df.group_by(*keys, drop_null_keys=True)  # type: ignore[call-overload,unused-ignore]
+        df.group_by(*keys, drop_null_keys=True).agg(nwp.sum("y"))  # type: ignore[call-overload]
 
 
 def test_no_agg() -> None:
