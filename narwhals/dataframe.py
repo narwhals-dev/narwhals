@@ -613,7 +613,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     @classmethod
     def from_dicts(
         cls,
-        data: Sequence[dict[str, Any]],
+        data: Sequence[Mapping[str, Any]],
         schema: IntoSchema | None = None,
         *,
         backend: IntoBackend[EagerAllowed],

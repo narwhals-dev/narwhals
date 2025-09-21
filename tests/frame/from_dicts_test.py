@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from narwhals._typing import EagerAllowed
 
 
@@ -42,3 +45,28 @@ def test_from_dicts_empty_with_schema(eager_backend: EagerAllowed) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
     result = nw.DataFrame.from_dicts([], schema, backend=eager_backend)
     assert result.schema == schema
+
+
+class NonDictMapping(Mapping[str, Any]):
+    """A mapping which is not a dictionary."""
+
+    def __init__(self, *keys: str) -> None:
+        self._keys = set(keys)
+
+    def __len__(self) -> int:
+        return len(self._keys)
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self._keys
+
+    def __getitem__(self, key: str) -> Any:
+        return len(key)
+
+
+def test_from_dicts_other_mapping(eager_backend: EagerAllowed) -> None:
+    # test the function works with non-dict mappings
+    data = [NonDictMapping("c", "d", "hello"), NonDictMapping("c", "d", "hello")]
+    expected = [{"c": 1, "d": 1, "hello": 5}, {"c": 1, "d": 1, "hello": 5}]
+
+    result = nw.from_dicts(data, backend=eager_backend)
+    assert result.rows(named=True) == expected

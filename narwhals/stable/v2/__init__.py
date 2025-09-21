@@ -129,7 +129,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     @classmethod
     def from_dicts(
         cls,
-        data: Sequence[dict[str, Any]],
+        data: Sequence[Mapping[str, Any]],
         schema: Mapping[str, DType] | Schema | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
@@ -1118,7 +1118,7 @@ def from_dict(
 
 
 def from_dicts(
-    data: Sequence[dict[str, Any]],
+    data: Sequence[Mapping[str, Any]],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],

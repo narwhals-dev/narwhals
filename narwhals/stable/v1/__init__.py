@@ -1274,7 +1274,7 @@ def from_dict(
 
 @deprecate_native_namespace()
 def from_dicts(
-    data: Sequence[dict[str, Any]],
+    data: Sequence[Mapping[str, Any]],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],

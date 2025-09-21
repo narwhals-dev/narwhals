@@ -325,7 +325,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
     @classmethod
     def from_dicts(
         cls,
-        data: Sequence[dict[str, Any]],
+        data: Sequence[Mapping[str, Any]],
         /,
         *,
         context: _LimitedContext,

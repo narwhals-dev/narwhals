@@ -332,7 +332,7 @@ def _from_dict_no_backend(
 
 
 def from_dicts(
-    data: Sequence[dict[str, Any]],
+    data: Sequence[Mapping[str, Any]],
     schema: IntoSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
