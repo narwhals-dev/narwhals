@@ -9,6 +9,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import DataFrameGroupBy
+from narwhals._plan.schema import freeze_schema
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -181,7 +182,12 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
 
     @classmethod
     def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
-        raise NotImplementedError
+        obj = cls.__new__(cls)
+        irs_all, _ = freeze_schema(df.schema)._with_columns(irs)
+        obj._df = df.with_columns(irs_all)
+        obj._keys = irs
+        obj._keys_names = ()
+        return obj
 
     @property
     def compliant(self) -> ArrowDataFrame:

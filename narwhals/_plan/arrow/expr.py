@@ -55,7 +55,7 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.expressions.expr import BinaryExpr, FunctionExpr
-    from narwhals._plan.expressions.functions import FillNull, Pow
+    from narwhals._plan.expressions.functions import Abs, FillNull, Pow
     from narwhals.typing import Into1DArray, IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -111,6 +111,9 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
             return self._with_native(fn_native(native), name)
 
         return func
+
+    def abs(self, node: FunctionExpr[Abs], frame: Frame, name: str) -> StoresNativeT_co:
+        return self._unary_function(pc.abs)(node, frame, name)
 
     def not_(self, node: FunctionExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(pc.invert)(node, frame, name)

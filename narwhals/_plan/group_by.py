@@ -61,15 +61,8 @@ class GroupBy(Generic[DataFrameT]):
             if self._drop_null_keys:
                 msg = "drop_null_keys cannot be True when keys contains Expr or Series"
                 raise NotImplementedError(msg)
-            msg = fmt_group_by_error(
-                "Need to sketch out non-projecting keys group by first",
-                resolved.keys,
-                resolved.aggs,
-                resolved.result_schema,
-            )
-            raise NotImplementedError(msg)
             grouped = compliant_gb.by_named_irs(compliant, resolved.keys)
-        else:  # noqa: RET506
+        else:
             # If not, we can just use the resolved key names as a fast-path
             grouped = compliant_gb.by_names(
                 compliant, resolved.keys_names, drop_null_keys=self._drop_null_keys

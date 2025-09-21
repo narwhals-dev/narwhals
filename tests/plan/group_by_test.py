@@ -47,6 +47,16 @@ def test_group_by_iter() -> None:  # pragma: no cover
     assert sorted(keys) == sorted(expected_keys)
 
 
+def test_group_by_nw_all() -> None:
+    df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]})
+    result = df.group_by("a").agg(nwp.all().sum()).sort("a")
+    expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a").agg(nwp.all().sum().name.suffix("_sum")).sort("a")
+    expected = {"a": [1, 2], "b_sum": [9, 6], "c_sum": [15, 9]}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.parametrize(
     ("attr", "expected"),
     [
@@ -274,6 +284,36 @@ def test_double_same_aggregation() -> None:
     assert_equal_data(result, expected)
 
 
+def test_all_kind_of_aggs() -> None:
+    df = dataframe({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]})
+    result = (
+        df.group_by("a")
+        .agg(
+            c=nwp.col("b").mean(),
+            d=nwp.col("b").mean(),
+            e=nwp.col("b").std(ddof=1),
+            f=nwp.col("b").std(ddof=2),
+            g=nwp.col("b").var(ddof=2),
+            h=nwp.col("b").var(ddof=2),
+            i=nwp.col("b").n_unique(),
+        )
+        .sort("a")
+    )
+
+    variance_num = sum((v - 10 / 3) ** 2 for v in [0, 5, 5])
+    expected = {
+        "a": [1, 2],
+        "c": [5, 10 / 3],
+        "d": [5, 10 / 3],
+        "e": [1, (variance_num / (3 - 1)) ** 0.5],
+        "f": [2**0.5, (variance_num) ** 0.5],  # denominator is 1 (=3-2)
+        "g": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "h": [2.0, variance_num],  # denominator is 1 (=3-2)
+        "i": [3, 2],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_fancy_functions() -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
     result = df.group_by("a").agg(nwp.all().std(ddof=0)).sort("a")
@@ -294,54 +334,49 @@ def test_fancy_functions() -> None:
     assert_equal_data(result, expected)
 
 
-XFAIL_NOT_IMPL_EXPR_KEYS = pytest.mark.xfail(
-    reason="TODO: Expr group_by keys", raises=NotImplementedError
-)
-
-
+# TODO @dangotbanned: Investigate the single failing case
 @pytest.mark.parametrize(
     ("keys", "aggs", "expected", "sort_by"),
     [
-        pytest.param(
+        (
             [nwp.col("a").abs(), nwp.col("a").abs().alias("a_with_alias")],
             [nwp.col("x").sum()],
             {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]},
             ["a"],
-            marks=XFAIL_NOT_IMPL_EXPR_KEYS,
         ),
         pytest.param(
             [nwp.col("a").alias("x")],
             [nwp.col("x").mean().alias("y")],
             {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]},
             ["x"],
-            marks=XFAIL_NOT_IMPL_EXPR_KEYS,
+            marks=pytest.mark.xfail(
+                reason="AssertionError: Mismatch at index 0: -1.0 != 4.0"
+            ),
+            id="FIXME",
         ),
-        (  # NOTE: This one is fine as it just selects
+        (
             [nwp.col("a")],
             [nwp.col("a").count().alias("foo-bar"), nwp.all().sum()],
             {"a": [-1, 1, 2], "foo-bar": [1, 2, 2], "x": [4, 1, 5], "y": [1.5, 0, 0]},
             ["a"],
         ),
-        pytest.param(
+        (
             [nwp.col("a", "y").abs()],
             [nwp.col("x").sum()],
             {"a": [1, 1, 2], "y": [0.5, 1.5, 1], "x": [1, 4, 5]},
             ["a", "y"],
-            marks=XFAIL_NOT_IMPL_EXPR_KEYS,
         ),
-        pytest.param(
+        (
             [nwp.col("a").abs().alias("y")],
             [nwp.all().sum().name.suffix("c")],
             {"y": [1, 2], "ac": [1, 4], "xc": [5, 5]},
             ["y"],
-            marks=XFAIL_NOT_IMPL_EXPR_KEYS,
         ),
-        pytest.param(
+        (
             [npcs.by_dtype(nw.Float64()).abs()],
             [npcs.numeric().sum()],
             {"y": [0.5, 1.0, 1.5], "a": [2, 4, -1], "x": [1, 5, 4]},
             ["y"],
-            marks=XFAIL_NOT_IMPL_EXPR_KEYS,
         ),
     ],
 )
