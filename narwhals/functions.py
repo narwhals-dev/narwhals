@@ -372,28 +372,7 @@ def from_dicts(
         |     1  2  4      |
         └──────────────────┘
     """
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_dicts(data, schema=schema, context=ns).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_dicts` function in the top-level namespace.
-            native_frame: NativeDataFrame = _native_namespace.from_dicts(
-                data, schema=schema
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_dicts` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_dicts` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    return Version.MAIN.dataframe.from_dicts(data, schema, backend=backend)
 
 
 def from_numpy(

@@ -1286,7 +1286,7 @@ def from_dicts(
     an is the same as `backend` but only accepts module types - for new code, we
     recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
     """
-    return _stableify(nw_f.from_dicts(data, schema, backend=backend))
+    return DataFrame.from_dicts(data, schema, backend=backend)
 
 
 @deprecate_native_namespace(required=True)
