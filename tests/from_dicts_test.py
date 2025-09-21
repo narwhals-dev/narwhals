@@ -23,13 +23,6 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
         [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
     )
     assert result.collect_schema() == schema
-    with pytest.deprecated_call():
-        result = nw.from_dicts(
-            [{"c": 1, "d": 5}, {"c": 2, "d": 6}],
-            native_namespace=eager_backend,  # type: ignore[arg-type]
-            schema=schema,
-        )
-        assert result.collect_schema() == schema
 
 
 def test_from_dicts_non_eager() -> None:
