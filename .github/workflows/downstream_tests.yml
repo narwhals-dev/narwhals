@@ -79,7 +79,7 @@ jobs:
           uv venv -p 3.12
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools hatch --system
+        run: uv pip install --upgrade tox virtualenv setuptools hatch "click!=8.3.0" --system
       - name: install-marimo-dev
         run: |
           cd marimo
@@ -409,7 +409,7 @@ jobs:
       - name: create-hatch-env
         run: |
           cd formulaic
-          uv pip install hatch hatch-vcs --system
+          uv pip install hatch hatch-vcs "click!=8.3.0" --system
       - name: install-formulaic-dev
         run: |
           cd formulaic
