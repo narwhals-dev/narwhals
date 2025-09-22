@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
+from narwhals._plan.common import replace
 
 Incomplete: TypeAlias = Any
 
@@ -167,6 +168,7 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
     _df: ArrowDataFrame
     _keys: Seq[NamedIR]
     _keys_names: Seq[str]
+    _keys_names_original: Seq[str]
 
     @classmethod
     def by_names(
@@ -178,15 +180,29 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
         obj._df = df
         obj._keys = ()
         obj._keys_names = names
+        obj._keys_names_original = ()
         return obj
 
     @classmethod
     def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
         obj = cls.__new__(cls)
-        irs_all, _ = freeze_schema(df.schema)._with_columns(irs)
-        obj._df = df.with_columns(irs_all)
-        obj._keys = irs
+        _, schema = freeze_schema(df.schema)._with_columns(irs)
+        tmp_name_length = max(len(str(c)) for c in schema) + 1
+        key_names_orig: list[str] = []
+
+        def _temporary_name(key: str) -> str:
+            # 5 is the length of `__tmp`
+            len__tmp = 5
+            alias = f"_{key}_tmp{'_' * (tmp_name_length - len(key) - len__tmp)}"
+            key_names_orig.append(key)
+            return alias
+
+        safe_keys = tuple(replace(key, name=_temporary_name(key.name)) for key in irs)
+        irs_final, _ = freeze_schema(df.schema)._with_columns(safe_keys)
+        obj._df = df.with_columns(irs_final)
+        obj._keys = safe_keys
         obj._keys_names = ()
+        obj._keys_names_original = tuple(key_names_orig)
         return obj
 
     @property
@@ -203,7 +219,10 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
             expr = ArrowAggExpr(e).parse()
             use_threads = use_threads and expr.use_threads
             aggs.append(expr.spec)
-        return self.compliant._with_native(self._agg(aggs, use_threads=use_threads))
+        result = self.compliant._with_native(self._agg(aggs, use_threads=use_threads))
+        if original := self._keys_names_original:
+            return result.rename(dict(zip(self.keys_names, original)))
+        return result
 
     def _agg(self, agg_specs: list[AceroAggSpec], /, *, use_threads: bool) -> pa.Table:
         """Adapted from [`pa.TableGroupBy.aggregate`] and [`pa.acero._group_by`].

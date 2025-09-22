@@ -334,7 +334,6 @@ def test_fancy_functions() -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Investigate the single failing case
 @pytest.mark.parametrize(
     ("keys", "aggs", "expected", "sort_by"),
     [
@@ -344,15 +343,11 @@ def test_fancy_functions() -> None:
             {"a": [1, 2], "a_with_alias": [1, 2], "x": [5, 5]},
             ["a"],
         ),
-        pytest.param(
+        (
             [nwp.col("a").alias("x")],
             [nwp.col("x").mean().alias("y")],
             {"x": [-1, 1, 2], "y": [4.0, 0.5, 2.5]},
             ["x"],
-            marks=pytest.mark.xfail(
-                reason="AssertionError: Mismatch at index 0: -1.0 != 4.0"
-            ),
-            id="FIXME",
         ),
         (
             [nwp.col("a")],
@@ -389,6 +384,25 @@ def test_group_by_expr(
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
     df = dataframe(data)
     result = df.group_by(*keys).agg(*aggs).sort(*sort_by)
+    assert_equal_data(result, expected)
+
+
+def test_group_by_expr_2757684799() -> None:
+    """From [narwhals-dev/narwhals#2325-2757684799].
+
+    The **incorrect** result is:
+
+        {'b': [2, 1], 'a': [2, 1], 'c': [2.0, 1.0]}
+
+    [narwhals-dev/narwhals#2325-2757684799]: https://github.com/narwhals-dev/narwhals/pull/2325#pullrequestreview-2757684799
+    """
+    data: dict[str, Any] = {"a": [1, 1, 2], "b": [4, 5, 6], "unrelated": [10, -1, -9]}
+    df = dataframe(data)
+    keys = nwp.col("a").alias("b"), "a"
+    aggs = nwp.col("b").mean().alias("c")
+    expected = {"b": [2, 1], "a": [2, 1], "c": [6.0, 4.5]}
+
+    result = df.group_by(keys).agg(aggs).sort("b", descending=True)
     assert_equal_data(result, expected)
 
 
