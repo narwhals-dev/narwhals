@@ -18,6 +18,8 @@ import pyarrow as pa
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from narwhals._plan.typing import IntoExpr
+
 
 def dataframe(data: dict[str, Any], /) -> nwp.DataFrame[Any, Any]:
     return nwp.DataFrame.from_native(pa.table(data))
@@ -521,4 +523,44 @@ def test_group_by_agg_last(
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
     result = df.group_by(keys).agg(nwp.col(aggs).last()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected"),
+    [
+        (["a"], [nwp.col("b").unique()], {"a": ["a", "b", "c"], "b": [[1], [2, 3], [3]]}),
+        (
+            ["a"],
+            [nwp.col("b", "d").unique()],
+            {
+                "a": ["a", "b", "c"],
+                "b": [[1], [2, 3], [3]],
+                "d": [["three", "one"], ["three"], ["one"]],
+            },
+        ),
+        (
+            ["d", "c"],
+            [npcs.string().unique(), nwp.col("b").first().alias("b_first")],
+            {
+                "d": ["one", "one", "three", "three", "three"],
+                "c": [1, 3, 2, 4, 5],
+                "a": [["c"], ["a"], ["b"], ["b"], ["a"]],
+                "b_first": [3, 1, 3, 2, 1],
+            },
+        ),
+    ],
+    ids=["Unique-Single", "Unique-Multi", "Unique-Selector-Fancy"],
+)
+def test_group_by_agg_unique(
+    keys: Sequence[str], aggs: Sequence[IntoExpr], expected: Mapping[str, Any]
+) -> None:
+    data = {
+        "a": ["a", "b", "a", "b", "c"],
+        "b": [1, 2, 1, 3, 3],
+        "c": [5, 4, 3, 2, 1],
+        "d": ["three", "three", "one", "three", "one"],
+    }
+    df = dataframe(data)
+    result = df.group_by(keys).agg(aggs).sort(keys)
     assert_equal_data(result, expected)
