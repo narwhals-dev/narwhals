@@ -6,15 +6,20 @@ import sys
 from collections.abc import Iterable
 from decimal import Decimal
 from operator import attrgetter
+from secrets import token_hex
 from typing import TYPE_CHECKING, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
+from narwhals._utils import _hasattr_static
 from narwhals.dtypes import DType
+from narwhals.exceptions import NarwhalsError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any, Callable, TypeVar
+    from typing import Any, Callable, ClassVar, TypeVar
+
+    from typing_extensions import TypeIs
 
     from narwhals._plan.typing import (
         DTypeT,
@@ -23,6 +28,7 @@ if TYPE_CHECKING:
         NonNestedDTypeT,
         OneOrIterable,
     )
+    from narwhals._utils import _StoresColumns
     from narwhals.typing import NonNestedDType, NonNestedLiteral
 
     T = TypeVar("T")
@@ -115,3 +121,114 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
             yield from flatten_hash_safe(element)
         else:
             yield element  # type: ignore[misc]
+
+
+def _has_columns(obj: Any) -> TypeIs[_StoresColumns]:
+    return _hasattr_static(obj, "columns")
+
+
+class temp:  # noqa: N801
+    """Temporary mini namespace for temporary utils."""
+
+    _MAX_ITERATIONS: ClassVar[int] = 100
+
+    @classmethod
+    def column_name(
+        cls,
+        source: _StoresColumns | Iterable[str],
+        /,
+        *,
+        prefix: str = "nw",
+        n_chars: int = 16,
+    ) -> str:
+        """Generate a single, unique column name that is not present in `source`."""
+        columns = cls._into_columns(source)
+        prefix, n_bytes = cls._parse_prefix_n_bytes(prefix, n_chars)
+        for _ in range(cls._MAX_ITERATIONS):
+            token = f"{prefix}{token_hex(n_bytes)}"
+            if token not in columns:
+                return token
+        raise cls._failed_generation_error(columns, n_bytes)
+
+    @classmethod
+    def column_names(
+        cls,
+        source: _StoresColumns | Iterable[str],
+        /,
+        *,
+        prefix: str = "nw",
+        n_chars: int = 16,
+    ) -> Iterator[str]:
+        """Yields unique column names that are not present in `source`.
+
+        Any column name returned will be unique among those that preceded it.
+        """
+        columns = cls._into_columns(source)
+        prefix, n_bytes = cls._parse_prefix_n_bytes(prefix, n_chars)
+        n_failed: int = 0
+        while n_failed <= cls._MAX_ITERATIONS:
+            token = f"{prefix}{token_hex(n_bytes)}"
+            if token not in columns:
+                columns.add(token)
+                n_failed = 0
+                yield token
+            else:
+                n_failed += 1
+        raise cls._failed_generation_error(columns, n_bytes)
+
+    @staticmethod
+    def _into_columns(source: _StoresColumns | Iterable[str], /) -> set[str]:
+        return set(source.columns if _has_columns(source) else source)
+
+    @staticmethod
+    def _parse_prefix_n_bytes(prefix: str, n_chars: int, /) -> tuple[str, int]:
+        prefix = prefix or "nw"
+        n_bytes = (n_chars - len(prefix)) // 2
+        if n_bytes < 2:
+            msg = (
+                f"Temporary column name generation requires at least 4 characters to store random bytes, \n"
+                f"but not enough room with: {prefix=}, {n_chars=}.\n\n"
+                "Hint: Maybe try\n- a shorter `prefix`?\n- a higher `n_chars`?"
+            )
+            raise NarwhalsError(msg)
+        return prefix, n_bytes
+
+    @classmethod
+    def _failed_generation_error(
+        cls, columns: Iterable[str], n_bytes: int, /
+    ) -> NarwhalsError:  # pragma: no cover
+        """Takes some work to trigger this, but it's possible 😅.
+
+        Examples:
+            >>> import itertools
+            >>> from narwhals._plan.common import temp
+            >>> it = temp.column_names(["a", "b", "c"], prefix="long_prefix")
+            >>> list(itertools.islice(it, 100_000))  # doctest:+SKIP
+            Traceback (most recent call last):
+                ...
+            NarwhalsError: Was unable to generate a column name with `n_bytes=2` within 100 iterations,
+            that was not present in existing (60246) columns:
+            [
+                'a',
+                'b',
+                'c',
+                'long_prefix0000',
+                'long_prefix0003',
+                'long_prefix0004',
+                'long_prefix0005',
+                'long_prefix0006',
+                'long_prefix0007',
+                'long_prefix0008',
+                ...,
+            ]
+        """
+        import reprlib
+
+        current = sorted(columns)
+        truncated = reprlib.Repr(indent=4, maxlist=10).repr(current)
+        msg = (
+            "Was unable to generate a column name with "
+            f"`{n_bytes=}` within {cls._MAX_ITERATIONS} iterations, \n"
+            f"that was not present in existing ({len(current)}) columns:\n{truncated}"
+        )
+        return NarwhalsError(msg)
