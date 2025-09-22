@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
@@ -7,6 +8,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
+from narwhals._plan.common import replace, temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import DataFrameGroupBy
 from narwhals._plan.schema import freeze_schema
@@ -24,7 +26,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.dataframe import ArrowDataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
-from narwhals._plan.common import replace
 
 Incomplete: TypeAlias = Any
 
@@ -186,22 +187,14 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
     @classmethod
     def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
         obj = cls.__new__(cls)
-        _, schema = freeze_schema(df.schema)._with_columns(irs)
-        len__tmp = 5
-        tmp_name_length = (max(len(c) for c in schema) + 1) - len__tmp
-        key_names_orig: list[str] = []
-
-        def _temporary_name(key: str) -> str:
-            alias = f"_{key}_tmp{'_' * (tmp_name_length - len(key))}"
-            key_names_orig.append(key)
-            return alias
-
-        safe_keys = tuple(replace(key, name=_temporary_name(key.name)) for key in irs)
+        keys_names = tuple(key.name for key in irs)
+        unique_names = temp.column_names(chain(keys_names, df.columns))
+        safe_keys = tuple(replace(key, name=name) for key, name in zip(irs, unique_names))
         irs_final, _ = freeze_schema(df.schema)._with_columns(safe_keys)
         obj._df = df.with_columns(irs_final)
         obj._keys = safe_keys
         obj._keys_names = ()
-        obj._keys_names_original = tuple(key_names_orig)
+        obj._keys_names_original = keys_names
         return obj
 
     @property
