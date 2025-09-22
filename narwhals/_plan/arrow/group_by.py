@@ -187,13 +187,12 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
     def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
         obj = cls.__new__(cls)
         _, schema = freeze_schema(df.schema)._with_columns(irs)
-        tmp_name_length = max(len(str(c)) for c in schema) + 1
+        len__tmp = 5
+        tmp_name_length = (max(len(c) for c in schema) + 1) - len__tmp
         key_names_orig: list[str] = []
 
         def _temporary_name(key: str) -> str:
-            # 5 is the length of `__tmp`
-            len__tmp = 5
-            alias = f"_{key}_tmp{'_' * (tmp_name_length - len(key) - len__tmp)}"
+            alias = f"_{key}_tmp{'_' * (tmp_name_length - len(key))}"
             key_names_orig.append(key)
             return alias
 
