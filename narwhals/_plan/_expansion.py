@@ -158,7 +158,7 @@ def prepare_projection(
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
     """Expand IRs into named column selections.
 
-    **Primary entry-point**, will be used by `select`, `with_columns`,
+    **Primary entry-point**, for `select`, `with_columns`,
     and any other context that requires resolving expression names.
 
     Arguments:

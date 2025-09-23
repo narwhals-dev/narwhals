@@ -178,8 +178,7 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
         keys_names = tuple(key.name for key in irs)
         unique_names = temp.column_names(chain(keys_names, df.columns))
         safe_keys = tuple(replace(key, name=name) for key, name in zip(irs, unique_names))
-        irs_final, _ = freeze_schema(df.schema)._with_columns(safe_keys)
-        obj._df = df.with_columns(irs_final)
+        obj._df = df.with_columns(freeze_schema(df.schema).with_columns_irs(safe_keys))
         obj._keys = safe_keys
         obj._keys_names = ()
         obj._keys_names_original = keys_names

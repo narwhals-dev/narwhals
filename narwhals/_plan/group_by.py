@@ -93,11 +93,11 @@ def resolve_group_by(
     # > Initialize schema from keys
     keys, input_schema = prepare_projection(input_keys, schema=schema)
     keys_names = tuple(e.name for e in keys)
-    output_schema = input_schema._select(keys)
+    output_schema = input_schema.select(keys)
 
     # > Add aggregation column(s)
     aggs, _ = prepare_projection(input_aggs, keys_names, schema=input_schema)
-    aggs_schema = input_schema._select(aggs)
+    aggs_schema = input_schema.select(aggs)
     # > Final output_schema
     result_schema = output_schema.merge(aggs_schema)
 
@@ -105,14 +105,3 @@ def resolve_group_by(
     # TODO @dangotbanned: Probably just the keys part?
     #     *index columns* seems to be rolling/dynamic only
     return _TempGroupByStuff(keys, aggs, keys_names, result_schema)
-
-
-def fmt_group_by_error(
-    message: str, /, keys: Seq[NamedIR], aggs: Seq[NamedIR], schema: FrozenSchema
-) -> str:
-    return (
-        f"TODO: {message}:\n\n"
-        f"keys:\n{keys!r}\n\n"
-        f"aggs:\n{aggs!r}\n\n"
-        f"result_schema:\n{schema!r}"
-    )

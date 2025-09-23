@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import _expansion, _parse
-from narwhals._plan.contexts import ExprContext
+from narwhals._plan import _parse
+from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.expr import _parse_sort_by
 from narwhals._plan.group_by import GroupBy
 from narwhals._plan.series import Series
@@ -24,10 +24,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.protocols import CompliantBaseFrame, CompliantDataFrame
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq
     from narwhals.typing import NativeFrame
 
 
@@ -63,29 +60,22 @@ class BaseFrame(Generic[NativeFrameT]):
     def to_native(self) -> NativeFrameT:
         return self._compliant.native
 
-    def _project(
-        self,
-        exprs: tuple[OneOrIterable[IntoExpr], ...],
-        named_exprs: dict[str, Any],
-        context: ExprContext,
-        /,
-    ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
-        """Temp, while these parts aren't connected, this is easier for testing."""
-        named_irs, schema_frozen = _expansion.prepare_projection(
+    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
+        named_irs, schema = prepare_projection(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self.schema
         )
-        return schema_frozen.project(named_irs, context)
-
-    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, _ = self._project(exprs, named_exprs, ExprContext.SELECT)
-        return self._from_compliant(self._compliant.select(named_irs))
+        return self._from_compliant(self._compliant.select(schema.select_irs(named_irs)))
 
     # NOTE: Want to be able to call `with_columns` at compliant level - and still get the right schema
     # - Currently it acts like select in `group_by`
     # - Doing some gymnastics to workaround for now
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, _ = self._project(exprs, named_exprs, ExprContext.WITH_COLUMNS)
-        return self._from_compliant(self._compliant.with_columns(named_irs))
+        named_irs, schema = prepare_projection(
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self.schema
+        )
+        return self._from_compliant(
+            self._compliant.with_columns(schema.with_columns_irs(named_irs))
+        )
 
     def sort(
         self,
@@ -97,7 +87,7 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        named_irs, _ = _expansion.prepare_projection(sort, schema=self.schema)
+        named_irs, _ = prepare_projection(sort, schema=self.schema)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:

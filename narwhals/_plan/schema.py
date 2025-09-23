@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections import deque
 from collections.abc import Mapping
 from functools import lru_cache
-from itertools import chain, repeat
+from itertools import chain
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
@@ -16,7 +15,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.contexts import ExprContext
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
@@ -41,16 +39,14 @@ class FrozenSchema(Immutable):
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
 
-    def project(
-        self, exprs: Seq[NamedIR], context: ExprContext
-    ) -> tuple[Seq[NamedIR], FrozenSchema]:
-        if context.is_select():
-            return exprs, self._select(exprs)
-        if context.is_with_columns():
-            return self._with_columns(exprs)
-        raise TypeError(context)
+    def merge(self, other: FrozenSchema, /) -> FrozenSchema:
+        """Return a new schema, merging `other` with `self` (see [upstream]).
 
-    def _select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
+        [upstream]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-schema/src/schema.rs#L265-L274.
+        """
+        return freeze_schema(self._mapping | other._mapping)
+
+    def select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
         """Return a new schema, equivalent to performing `df.select(*exprs)`.
 
         Arguments:
@@ -64,25 +60,20 @@ class FrozenSchema(Immutable):
         default = Unknown()
         return freeze_schema((name, self.get(name, default)) for name in names)
 
-    def _with_columns(self, exprs: Seq[NamedIR]) -> tuple[Seq[NamedIR], FrozenSchema]:
-        exprs_out = deque[NamedIR]()
+    def select_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
+        return exprs
+
+    def with_columns(self, exprs: Seq[NamedIR]) -> FrozenSchema:
+        # similar to `merge`, but preserving known `DType`s
+        names = (e.name for e in exprs)
+        default = Unknown()
+        miss = {name: default for name in names if name not in self}
+        return freeze_schema(self._mapping | miss)
+
+    def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
         named: dict[str, NamedIR[Any]] = {e.name: e for e in exprs}
-        items: IntoFrozenSchema
-        for name in self:
-            exprs_out.append(named.pop(name, NamedIR.from_name(name)))
-        if named:
-            items = chain(self.items(), zip(named, repeat(Unknown(), len(named))))
-            exprs_out.extend(named.values())
-        else:
-            items = self
-        return tuple(exprs_out), freeze_schema(items)
-
-    def merge(self, other: FrozenSchema, /) -> FrozenSchema:
-        """Return a new schema, merging `other` with `self` (see [upstream]).
-
-        [upstream]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-schema/src/schema.rs#L265-L274.
-        """
-        return freeze_schema(self._mapping | other._mapping)
+        it = (named.pop(name, NamedIR.from_name(name)) for name in self)
+        return tuple(chain(it, named.values()))
 
     @property
     def __immutable_hash__(self) -> int:
