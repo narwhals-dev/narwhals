@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -564,3 +565,67 @@ def test_group_by_agg_unique(
     df = dataframe(data)
     result = df.group_by(keys).agg(aggs).sort(keys)
     assert_equal_data(result, expected)
+
+
+def test_group_by_args() -> None:
+    """Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/04dbc94c36f75ed05bb19587f2226e240ec1775f/py-polars/tests/unit/operations/test_group_by.py#L302-L325
+    """
+    data = {
+        "a": ["a", "b", "a", "b", "b", "c"],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [6, 5, 4, 3, 2, 1],
+    }
+    df = dataframe(data)
+
+    # Single column name
+    assert df.group_by("a").agg("b").columns == ["a", "b"]
+    # Column names as list
+    expected = ["a", "b", "c"]
+    assert df.group_by(["a", "b"]).agg("c").columns == expected
+    # Column names as positional arguments
+    assert df.group_by("a", "b").agg("c").columns == expected
+    # With keyword argument
+    assert df.group_by("a", "b", drop_null_keys=True).agg("c").columns == expected
+    # Multiple aggregations as list
+    assert df.group_by("a").agg(["b", "c"]).columns == expected
+    # Multiple aggregations as positional arguments
+    assert df.group_by("a").agg("b", "c").columns == expected
+    # Multiple aggregations as keyword arguments
+    assert df.group_by("a").agg(q="b", r="c").columns == ["a", "q", "r"]
+
+
+def test_group_by_all() -> None:
+    """Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/04dbc94c36f75ed05bb19587f2226e240ec1775f/py-polars/tests/unit/operations/test_group_by.py#L568-L577
+    """
+    data = {"a": [1, 2], "b": [1, 2]}
+    df = dataframe(data)
+    expected = {"a": [1, 2], "b": [1, 2], "a_agg": [1, 2]}
+    result = df.group_by(nwp.all()).agg(nwp.col("a").max().name.suffix("_agg")).sort("a")
+    assert_equal_data(result, expected)
+
+
+def test_group_by_input_independent_with_len_23868() -> None:
+    """Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/04dbc94c36f75ed05bb19587f2226e240ec1775f/py-polars/tests/unit/operations/test_group_by.py#L1476-L1484
+    """
+    data = {"a": ["A", "B", "C"]}
+    expected = {"literal": ["G"], "len": [3]}
+    result = dataframe(data).group_by(nwp.lit("G")).agg(nwp.len())
+    assert_equal_data(result, expected)
+
+
+def test_group_by_series_lit_22103() -> None:
+    """Adapted from [upstream], but rejecting for now.
+
+    [upstream]: https://github.com/pola-rs/polars/blob/04dbc94c36f75ed05bb19587f2226e240ec1775f/py-polars/tests/unit/operations/test_group_by.py#L1406-L1424
+    """
+    data = {"g": [0, 1]}
+    series = nwp.Series.from_native(pa.chunked_array([[42, 2, 3]]))
+    df = dataframe(data)
+    with pytest.raises(NotImplementedError, match=re.escape("foo=lit(Series)")):
+        df.group_by("g").agg(foo=series)
