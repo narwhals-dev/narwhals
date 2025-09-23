@@ -643,3 +643,41 @@ def test_group_by_named() -> None:
         df.group_by((nwp.col("a") * 2).alias("z")).agg(nwp.col("b").min()).sort("b")
     )
     assert_equal_data(result, expected.to_dict(as_series=False))
+
+
+def test_group_by_exclude_keys() -> None:
+    # `group_by(keys)` and `exclude` share some logic
+    data = {
+        "a": ["A", "B", "A"],
+        "b": [1, 2, 3],
+        "c": [9, 2, 4],
+        "d": [8, 7, 8],
+        "e": [None, 9, 7],
+        "f": [True, False, None],
+        "g": [False, None, False],
+        "h": [None, None, True],
+        "j": [12.1, None, 4.0],
+        "k": [42, 10, None],
+        "l": [4, 5, 6],
+        "m": [0, 1, 2],
+    }
+    df = dataframe(data).with_columns(
+        npcs.boolean().fill_null(False), npcs.numeric().fill_null(0)
+    )
+    exclude = "b", "c", "d", "e", "f", "g", "j", "k", "l", "m"
+    result = df.group_by(nwp.exclude(exclude)).agg(npcs.all().sum()).sort("a", "h")
+    expected = {
+        "a": ["A", "A", "B"],
+        "h": [False, True, False],
+        "b": [1, 3, 2],
+        "c": [9, 4, 2],
+        "d": [8, 8, 7],
+        "e": [0, 7, 9],
+        "f": [1, 0, 0],
+        "g": [0, 0, 0],
+        "j": [12.1, 4.0, 0.0],
+        "k": [42, 0, 10],
+        "l": [4, 6, 5],
+        "m": [0, 2, 1],
+    }
+    assert_equal_data(result, expected)
