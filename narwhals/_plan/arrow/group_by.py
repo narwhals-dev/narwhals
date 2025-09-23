@@ -63,27 +63,15 @@ SUPPORTED_FUNCTION: Mapping[type[ir.Function], Aggregation] = {
     ir.functions.Unique: "hash_distinct",
 }
 
-REMAINING: tuple[Aggregation, ...] = (
-    "hash_first_last",  # Compute the first and last of values in each group
-    "hash_min_max",  # Compute the minimum and maximum of values in each group
-    "hash_one",  # Get one value from each group
-    "hash_product",  # Compute the product of values in each group
-    "hash_tdigest",  # Compute approximate quantiles of values in each group
-)
-"""Available [native aggs] we haven't used.
-
-[native aggs]: https://arrow.apache.org/docs/python/compute.html#grouped-aggregations
-"""
-
-
-REQUIRES_PYARROW_20: tuple[
-    Literal["kurtosis"], Literal["pivot_wider"], Literal["skew"]
-] = (
+REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = (
     "kurtosis",  # Compute the kurtosis of values in each group
-    "pivot_wider",  # Pivot values according to a pivot key column
     "skew",  # Compute the skewness of values in each group
 )
-"""https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations"""
+"""They don't show in [our version of the stubs], but are possible in [`pyarrow>=20`].
+
+[our version of the stubs]: https://github.com/narwhals-dev/narwhals/issues/2124#issuecomment-3191374210
+[`pyarrow>=20`]: https://arrow.apache.org/docs/20.0/python/compute.html#grouped-aggregations
+"""
 
 
 def group_by_error(
