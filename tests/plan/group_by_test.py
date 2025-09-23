@@ -629,3 +629,17 @@ def test_group_by_series_lit_22103() -> None:
     df = dataframe(data)
     with pytest.raises(NotImplementedError, match=re.escape("foo=lit(Series)")):
         df.group_by("g").agg(foo=series)
+
+
+def test_group_by_named() -> None:
+    """Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/04dbc94c36f75ed05bb19587f2226e240ec1775f/py-polars/tests/unit/operations/test_group_by.py#L878-884
+    """
+    data = {"a": [1, 1, 2, 2, 3, 3], "b": range(6)}
+    df = dataframe(data)
+    result = df.group_by(z=nwp.col("a") * 2).agg(nwp.col("b").min()).sort("b")
+    expected = (
+        df.group_by((nwp.col("a") * 2).alias("z")).agg(nwp.col("b").min()).sort("b")
+    )
+    assert_equal_data(result, expected.to_dict(as_series=False))
