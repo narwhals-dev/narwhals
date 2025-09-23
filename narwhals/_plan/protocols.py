@@ -612,13 +612,10 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
     def by_names(
         cls, df: DataFrameT, names: Seq[str], /, *, drop_null_keys: bool = False
     ) -> DataFrameGroupBy[DataFrameT]: ...
-
-    # TODO @dangotbanned: Plan how projection should work
     @classmethod
     def by_named_irs(
         cls, df: DataFrameT, irs: Seq[NamedIR], /
     ) -> DataFrameGroupBy[DataFrameT]: ...
-
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
     @property
     def keys(self) -> Seq[NamedIR]:
