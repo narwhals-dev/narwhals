@@ -30,9 +30,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan.expressions import ExprIR, NamedIR
-    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
-    from narwhals.schema import Schema
 
 
 class GroupBy(Generic[DataFrameT]):
@@ -88,20 +87,10 @@ class _TempGroupByStuff(NamedTuple):
 
 
 def resolve_group_by(
-    input_keys: Seq[ExprIR], input_aggs: Seq[ExprIR], schema: Schema
+    input_keys: Seq[ExprIR], input_aggs: Seq[ExprIR], input_schema: IntoFrozenSchema
 ) -> _TempGroupByStuff:
-    # > Initialize schema from keys
-    keys, input_schema = prepare_projection(input_keys, schema=schema)
+    keys, schema = prepare_projection(input_keys, schema=input_schema)
     keys_names = tuple(e.name for e in keys)
-    output_schema = input_schema.select(keys)
-
-    # > Add aggregation column(s)
-    aggs, _ = prepare_projection(input_aggs, keys_names, schema=input_schema)
-    aggs_schema = input_schema.select(aggs)
-    # > Final output_schema
-    result_schema = output_schema.merge(aggs_schema)
-
-    # > Make sure aggregation columns do not contain keys or index columns
-    # TODO @dangotbanned: Probably just the keys part?
-    #     *index columns* seems to be rolling/dynamic only
+    aggs, _ = prepare_projection(input_aggs, keys_names, schema=schema)
+    result_schema = schema.select(keys).merge(schema.select(aggs))
     return _TempGroupByStuff(keys, aggs, keys_names, result_schema)
