@@ -11,7 +11,7 @@ To write a dataframe-agnostic function, the steps you'll want to follow are:
 
     ```python
     import narwhals as nw
-    
+
     df = nw.from_native(your_dataframe)
     if df.implementation.is_eager_allowed():
         # Safe to use eager_only=True
