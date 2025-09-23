@@ -7,6 +7,20 @@ To write a dataframe-agnostic function, the steps you'll want to follow are:
 
     Note: if you need eager execution, make sure to pass `eager_only=True` to `nw.from_native`.
 
+    You can check if your dataframe's implementation supports eager evaluation using the `is_eager_allowed()` method:
+
+    ```python
+    import narwhals as nw
+    
+    df = nw.from_native(your_dataframe)
+    if df.implementation.is_eager_allowed():
+        # Safe to use eager_only=True
+        df_eager = nw.from_native(your_dataframe, eager_only=True)
+    else:
+        # Implementation only supports lazy evaluation
+        df_lazy = nw.from_native(your_dataframe)
+    ```
+
 2. Express your logic using the subset of the Polars API supported by Narwhals.
 3. If you need to return a dataframe to the user in its original library, call `nw.to_native`.
 

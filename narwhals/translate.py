@@ -286,6 +286,10 @@ def from_native(  # noqa: D417
 
             - `False` (default): don't require `native_object` to be eager
             - `True`: only convert to Narwhals if `native_object` is eager
+
+            To check if an implementation supports eager evaluation, use the
+            `.implementation.is_eager_allowed()` method on a Narwhals object.
+            Eager-compatible implementations include: pandas, Polars, PyArrow, cuDF, and Modin.
         series_only: Whether to only allow Series
 
             - `False` (default): don't require `native_object` to be a Series
