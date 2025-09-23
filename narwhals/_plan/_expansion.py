@@ -322,11 +322,10 @@ def prepare_excluded(
     origin: ExprIR, keys: GroupByKeys, flags: ExpansionFlags, /
 ) -> Excluded:
     """Huge simplification of https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555."""
-    exclude: set[str] = set()
-    if flags.has_exclude:
-        exclude.update(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
-    exclude.update(keys)
-    return frozenset(exclude)
+    gb_keys = frozenset(keys)
+    if not flags.has_exclude:
+        return gb_keys
+    return gb_keys.union(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
 
 
 def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:
