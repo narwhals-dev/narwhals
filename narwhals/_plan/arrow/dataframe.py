@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
@@ -111,7 +112,7 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         if subset is None:
             native = self.native.drop_null()
         else:
-            to_drop = reduce(pc.or_, (pc.field(name).is_null() for name in subset))
+            to_drop = reduce(operator.or_, (pc.field(name).is_null() for name in subset))
             native = self.native.filter(~to_drop)
         return self._with_native(native)
 
