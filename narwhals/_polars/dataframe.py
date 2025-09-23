@@ -336,8 +336,17 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
         if not data and schema is None:
             native = pl.DataFrame()
+        elif cls._implementation._backend_version() >= (1, 30, 0) or (
+            (first := next(iter(data), None)) and isinstance(first, dict)
+        ):
+            native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
         else:
-            native = pl.from_dicts(data, pl_schema)
+            # We need to convert mappings to dicts if we are below 1.30
+            def _to_dict(row: Mapping[str, Any]) -> dict[str, Any]:
+                return {k: v for k, v in row.items()}  # noqa: C416
+
+            native = pl.from_dicts([_to_dict(row) for row in data], pl_schema)
+
         return cls.from_native(native, context=context)
 
     @staticmethod
