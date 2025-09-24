@@ -8,6 +8,7 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
+    FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
     native_to_narwhals_dtype,
@@ -336,12 +337,12 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
         if not data and schema is None:
             native = pl.DataFrame()
-        elif cls._implementation._backend_version() >= (1, 30, 0) or (
+        elif FROM_DICTS_ACCEPTS_MAPPINGS or (
             (first := next(iter(data), None)) and isinstance(first, dict)
         ):
             native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
         else:
-            # We need to convert mappings to dicts if we are below 1.30
+
             def _to_dict(row: Mapping[str, Any]) -> dict[str, Any]:
                 return {k: v for k, v in row.items()}  # noqa: C416
 
