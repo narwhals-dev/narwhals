@@ -339,12 +339,11 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             native = pl.DataFrame(schema=pl_schema)
         elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
             native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
-        else:
-
-            def _to_dict(row: Mapping[str, Any]) -> dict[str, Any]:
-                return {k: v for k, v in row.items()}  # noqa: C416
-
-            native = pl.from_dicts([_to_dict(row) for row in data], pl_schema)
+        else:  # pragma: no cover
+            columns = pl_schema or tuple(data[0])
+            native = pl.DataFrame(
+                (tuple(row.values()) for row in data), schema=columns, orient="row"
+            )
 
         return cls.from_native(native, context=context)
 
