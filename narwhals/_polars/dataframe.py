@@ -335,11 +335,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         from narwhals.schema import Schema
 
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
-        if not data and schema is None:
-            native = pl.DataFrame()
-        elif FROM_DICTS_ACCEPTS_MAPPINGS or (
-            (first := next(iter(data), None)) and isinstance(first, dict)
-        ):
+        if not data:
+            native = pl.DataFrame(schema=pl_schema)
+        elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
             native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
         else:
 
