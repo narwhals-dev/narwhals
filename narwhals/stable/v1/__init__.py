@@ -84,6 +84,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -136,7 +137,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     def from_dicts(
         cls,
         data: Sequence[Any],
-        schema: Mapping[str, DType] | Schema | None = None,
+        schema: IntoSchema | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -1274,7 +1275,7 @@ def from_dict(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
