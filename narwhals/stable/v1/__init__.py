@@ -1272,13 +1272,11 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
-@deprecate_native_namespace()
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
     schema: Mapping[str, DType] | Schema | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
-    native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
