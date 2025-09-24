@@ -356,9 +356,6 @@ def from_dicts(
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-    Returns:
-        A new DataFrame.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
