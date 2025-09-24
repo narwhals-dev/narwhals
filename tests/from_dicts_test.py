@@ -7,6 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -23,8 +24,8 @@ def test_from_dicts(
     rows = {"c": 1, "d": 5}, {"c": 2, "d": 6}
     data = [into_mapping(row) for row in rows]
     result = nw.from_dicts(data, backend=eager_backend)
-    expected = [{"c": 1, "d": 5}, {"c": 2, "d": 6}]
-    assert result.rows(named=True) == expected
+    expected = {"c": [1, 2], "d": [5, 6]}
+    assert_equal_data(result, expected)
     assert isinstance(result, nw.DataFrame)
 
 
