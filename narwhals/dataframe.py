@@ -640,15 +640,24 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> data = [{"c": 5, "d": 1}, {"c": 2, "d": 4}]
-            >>> nw.DataFrame.from_dicts(data, backend="pandas")
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |        c  d      |
-            |     0  5  1      |
-            |     1  2  4      |
-            └──────────────────┘
+            >>> data = [
+            ...     {"item": "apple", "weight": 80, "price": 0.60},
+            ...     {"item": "egg", "weight": 55, "price": 0.40},
+            ... ]
+            >>> nw.DataFrame.from_dicts(data, backend="polars")
+            ┌──────────────────────────┐
+            |    Narwhals DataFrame    |
+            |--------------------------|
+            |shape: (2, 3)             |
+            |┌───────┬────────┬───────┐|
+            |│ item  ┆ weight ┆ price │|
+            |│ ---   ┆ ---    ┆ ---   │|
+            |│ str   ┆ i64    ┆ f64   │|
+            |╞═══════╪════════╪═══════╡|
+            |│ apple ┆ 80     ┆ 0.6   │|
+            |│ egg   ┆ 55     ┆ 0.4   │|
+            |└───────┴────────┴───────┘|
+            └──────────────────────────┘
         """
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
