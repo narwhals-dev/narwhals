@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -1118,35 +1118,7 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
-def from_dicts(
-    data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | None = None,
-    *,
-    backend: IntoBackend[EagerAllowed],
-) -> DataFrame[Any]:
-    """Instantiate DataFrame from a sequence of dictionaries representing rows.
-
-    Notes:
-        For pandas-like dataframes, conversion to schema is applied after dataframe
-        creation.
-
-    Arguments:
-        data: Sequence with dictionaries mapping column name to value.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library.
-        backend: Specifies which eager backend instantiate to.
-
-            `backend` can be specified in various ways
-
-            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
-    """
-    return DataFrame.from_dicts(data, schema, backend=backend)
+from_dicts: Final = DataFrame.from_dicts
 
 
 def from_numpy(

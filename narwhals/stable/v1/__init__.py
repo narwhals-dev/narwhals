@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -1273,19 +1273,7 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
-def from_dicts(
-    data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | None = None,
-    *,
-    backend: IntoBackend[EagerAllowed],
-) -> DataFrame[Any]:
-    """Instantiate DataFrame from a sequence of dictionaries representing rows.
-
-    See `narwhals.from_dicts` for full docstring. Note that `native_namespace` is
-    an is the same as `backend` but only accepts module types - for new code, we
-    recommend using `backend`, as that's available beyond just `narwhals.stable.v1`.
-    """
-    return DataFrame.from_dicts(data, schema, backend=backend)
+from_dicts: Final = DataFrame.from_dicts
 
 
 @deprecate_native_namespace(required=True)
