@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_numpy_array_1d
@@ -18,7 +18,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from typing_extensions import Never, ParamSpec, TypeIs
+    from typing_extensions import Never, TypeIs
 
     from narwhals._compliant import CompliantExpr, CompliantFrameT
     from narwhals._compliant.typing import (
@@ -31,10 +31,6 @@ if TYPE_CHECKING:
     from narwhals.expr import Expr
     from narwhals.series import Series
     from narwhals.typing import IntoExpr, NonNestedLiteral, _1DArray
-
-    T = TypeVar("T")
-    PS = ParamSpec("PS")
-    R = TypeVar("R")
 
 
 def is_expr(obj: Any) -> TypeIs[Expr]:

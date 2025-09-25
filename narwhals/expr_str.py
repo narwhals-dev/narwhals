@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
-
-    PS = ParamSpec("PS")
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
