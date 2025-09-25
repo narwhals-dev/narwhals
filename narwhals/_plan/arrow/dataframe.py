@@ -34,6 +34,9 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
+    _native: pa.Table
+    _version: Version
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 

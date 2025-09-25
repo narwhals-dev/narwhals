@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
@@ -8,10 +7,8 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
-from narwhals._plan.common import replace, temp
 from narwhals._plan.expressions import aggregation as agg
-from narwhals._plan.protocols import DataFrameGroupBy
-from narwhals._plan.schema import freeze_schema
+from narwhals._plan.protocols import EagerDataFrameGroupBy
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
@@ -23,7 +20,7 @@ if TYPE_CHECKING:
         AggregateOptions,
         Aggregation,
     )
-    from narwhals._plan.arrow.dataframe import ArrowDataFrame
+    from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
@@ -153,45 +150,20 @@ class ArrowAggExpr:
         return self
 
 
-class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
-    _df: ArrowDataFrame
+class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
+    _df: Frame
     _keys: Seq[NamedIR]
-    _keys_names: Seq[str]
-    _keys_names_original: Seq[str]
-
-    @classmethod
-    def by_names(
-        cls, df: ArrowDataFrame, names: Seq[str], /, *, drop_null_keys: bool = False
-    ) -> Self:
-        obj = cls.__new__(cls)
-        if drop_null_keys:
-            df = df.drop_nulls(names)
-        obj._df = df
-        obj._keys = ()
-        obj._keys_names = names
-        obj._keys_names_original = ()
-        return obj
-
-    @classmethod
-    def by_named_irs(cls, df: ArrowDataFrame, irs: Seq[NamedIR], /) -> Self:
-        obj = cls.__new__(cls)
-        keys_names = tuple(key.name for key in irs)
-        unique_names = temp.column_names(chain(keys_names, df.columns))
-        safe_keys = tuple(replace(key, name=name) for key, name in zip(irs, unique_names))
-        obj._df = df.with_columns(freeze_schema(df.schema).with_columns_irs(safe_keys))
-        obj._keys = safe_keys
-        obj._keys_names = ()
-        obj._keys_names_original = keys_names
-        return obj
+    _key_names: Seq[str]
+    _key_names_original: Seq[str]
 
     @property
-    def compliant(self) -> ArrowDataFrame:
+    def compliant(self) -> Frame:
         return self._df
 
-    def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         raise NotImplementedError
 
-    def agg(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
+    def agg(self, irs: Seq[NamedIR]) -> Frame:
         aggs: list[AceroAggSpec] = []
         use_threads: bool = True
         for e in irs:
@@ -199,8 +171,8 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
             use_threads = use_threads and expr.use_threads
             aggs.append(expr.spec)
         result = self.compliant._with_native(self._agg(aggs, use_threads=use_threads))
-        if original := self._keys_names_original:
-            return result.rename(dict(zip(self.keys_names, original)))
+        if original := self._key_names_original:
+            return result.rename(dict(zip(self.key_names, original)))
         return result
 
     def _agg(self, agg_specs: list[AceroAggSpec], /, *, use_threads: bool) -> pa.Table:
@@ -219,7 +191,7 @@ class ArrowGroupBy(DataFrameGroupBy["ArrowDataFrame"]):
         """
         df = self.compliant.native
         # NOTE: Stubs are (incorrectly) invariant
-        keys: Incomplete = list(self.keys_names)
+        keys: Incomplete = list(self.key_names)
         aggs: Incomplete = agg_specs
         decls = [
             pac.Declaration("table_source", pac.TableSourceNodeOptions(df)),
