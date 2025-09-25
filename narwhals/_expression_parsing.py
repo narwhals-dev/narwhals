@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast, overload
 
 from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_numpy_array_1d
@@ -18,7 +18,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from typing_extensions import Never, TypeIs
+    from typing_extensions import Never, ParamSpec, TypeIs
 
     from narwhals._compliant import CompliantExpr, CompliantFrameT
     from narwhals._compliant.typing import (

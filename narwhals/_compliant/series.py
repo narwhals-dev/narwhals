@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     from typing_extensions import NotRequired, Self, TypedDict
 
     from narwhals._compliant.dataframe import CompliantDataFrame
-    from narwhals._compliant.expr import CompliantExpr
     from narwhals._compliant.namespace import EagerNamespace
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -96,8 +95,6 @@ class CompliantSeries(
 
     def _with_native(self, series: Any) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
-
-    def _to_expr(self) -> CompliantExpr[Any, Self]: ...
 
     # NOTE: `polars`
     @property
