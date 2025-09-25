@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.expr import _parse_sort_by
-from narwhals._plan.group_by import GroupBy
+from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
@@ -158,8 +158,9 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
         drop_null_keys: bool = False,
         **named_by: IntoExpr,
     ) -> GroupBy[Self]:
-        exprs = _parse.parse_into_seq_of_expr_ir(*by, **named_by)
-        return GroupBy(self, exprs, drop_null_keys=drop_null_keys)
+        return Grouped.by(*by, drop_null_keys=drop_null_keys, **named_by).to_group_by(
+            self
+        )
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
         return self._from_compliant(self._compliant.drop(columns, strict=strict))
