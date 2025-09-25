@@ -406,11 +406,7 @@ class ExprMetadata:
             return self.with_aggregation(node)
         if node.kind is ExprKind.ELEMENTWISE:
             return combine_metadata(
-                ce,
-                *ces,
-                str_as_lit=node.str_as_lit,
-                to_single_output=False,
-                nodes=(*ce._metadata.nodes, node),
+                ce, *ces, to_single_output=False, nodes=(*ce._metadata.nodes, node)
             )
         if node.kind is ExprKind.FILTRATION:
             return self.with_filtration(node)
@@ -472,9 +468,7 @@ class ExprMetadata:
     def from_elementwise(
         cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
     ) -> ExprMetadata:
-        return combine_metadata(
-            *ces, str_as_lit=False, to_single_output=True, nodes=(node,)
-        )
+        return combine_metadata(*ces, to_single_output=True, nodes=(node,))
 
     @property
     def is_filtration(self) -> bool:
@@ -620,7 +614,7 @@ class ExprMetadata:
         )
 
     def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
-        if self.is_scalar_like:
+        if self.is_scalar_like:  # pragma: no cover
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
@@ -643,16 +637,12 @@ class ExprMetadata:
 
 
 def combine_metadata(
-    *args: IntoExpr | object | None,
-    str_as_lit: bool,
-    to_single_output: bool,
-    nodes: tuple[ExprNode, ...],
+    *args: IntoExpr | object | None, to_single_output: bool, nodes: tuple[ExprNode, ...]
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
     Arguments:
         args: Arguments, maybe expressions, literals, or Series.
-        str_as_lit: Whether to interpret strings as literals or as column names.
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         nodes: Nodes of result node.
@@ -671,29 +661,24 @@ def combine_metadata(
     result_is_literal = True
 
     for i, arg in enumerate(args):
-        if (isinstance(arg, str) and not str_as_lit) or is_series(arg):
-            result_preserves_length = True
-            result_is_scalar_like = False
-            result_is_literal = False
-        elif is_compliant_expr(arg):
-            metadata = arg._metadata
-            assert metadata is not None  # noqa: S101
-            if metadata.expansion_kind.is_multi_output():
-                expansion_kind = metadata.expansion_kind
-                if not to_single_output:
-                    result_expansion_kind = (
-                        result_expansion_kind & expansion_kind
-                        if i > 0
-                        else expansion_kind
-                    )
+        if not is_compliant_expr(arg):
+            continue
+        metadata = arg._metadata
+        assert metadata is not None  # noqa: S101
+        if metadata.expansion_kind.is_multi_output():
+            expansion_kind = metadata.expansion_kind
+            if not to_single_output:
+                result_expansion_kind = (
+                    result_expansion_kind & expansion_kind if i > 0 else expansion_kind
+                )
 
-            result_has_windows |= metadata.has_windows
-            result_n_orderable_ops += metadata.n_orderable_ops
-            result_preserves_length |= metadata.preserves_length
-            result_is_elementwise &= metadata.is_elementwise
-            result_is_scalar_like &= metadata.is_scalar_like
-            result_is_literal &= metadata.is_literal
-            n_filtrations += int(metadata.is_filtration)
+        result_has_windows |= metadata.has_windows
+        result_n_orderable_ops += metadata.n_orderable_ops
+        result_preserves_length |= metadata.preserves_length
+        result_is_elementwise &= metadata.is_elementwise
+        result_is_scalar_like &= metadata.is_scalar_like
+        result_is_literal &= metadata.is_literal
+        n_filtrations += int(metadata.is_filtration)
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise InvalidOperationError(msg)
