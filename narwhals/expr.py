@@ -120,7 +120,7 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [], "b": [4, 5]})
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4, 5]})
             >>> df = nw.from_native(df_native)
             >>> df.select((nw.col("b") + 10).alias("c"))
             ┌──────────────────┐
