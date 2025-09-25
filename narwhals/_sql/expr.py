@@ -22,7 +22,7 @@ from narwhals._utils import Implementation, Version, not_implemented
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._expression_parsing import ExprMetadata
@@ -290,10 +290,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return func
 
-    @classmethod
-    def _is_expr(cls, obj: Self | Any) -> TypeIs[Self]:
-        return hasattr(obj, "__narwhals_expr__")
-
     @property
     def _backend_version(self) -> tuple[int, ...]:
         return self._implementation._backend_version()
@@ -489,25 +485,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         lower_bound: Self | NumericLiteral | TemporalLiteral | None,
         upper_bound: Self | NumericLiteral | TemporalLiteral | None,
     ) -> Self:
-        def _clip_lower(expr: NativeExprT, lower_bound: Any) -> NativeExprT:
-            return self._function("greatest", expr, lower_bound)
-
-        def _clip_upper(expr: NativeExprT, upper_bound: Any) -> NativeExprT:
-            return self._function("least", expr, upper_bound)
-
-        def _clip_both(
-            expr: NativeExprT, lower_bound: Any, upper_bound: Any
+        def _clip(
+            expr: NativeExprT, lower_bound: NativeExprT, upper_bound: NativeExprT
         ) -> NativeExprT:
             return self._function(
                 "greatest", self._function("least", expr, upper_bound), lower_bound
             )
 
-        if lower_bound is None:
-            return self._with_elementwise(_clip_upper, upper_bound=upper_bound)
-        if upper_bound is None:
-            return self._with_elementwise(_clip_lower, lower_bound=lower_bound)
         return self._with_elementwise(
-            _clip_both, lower_bound=lower_bound, upper_bound=upper_bound
+            _clip, lower_bound=lower_bound, upper_bound=upper_bound
         )
 
     def is_null(self) -> Self:

@@ -1796,7 +1796,7 @@ class not_implemented:  # noqa: N801
         return self.__get__("raise")
 
     @classmethod
-    def deprecated(cls, message: LiteralString, /) -> Self:
+    def deprecated(cls, message: LiteralString, /) -> Self:  # pragma: no cover
         """Alt constructor, wraps with `@deprecated`.
 
         Arguments:

@@ -44,8 +44,6 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         self, value: str | IbisExpr, pattern: str, *, literal: bool
     ) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
-        if isinstance(value, str):
-            return self.compliant._with_callable(fn(pattern, value))
         return self.compliant._with_elementwise(
             lambda expr, value: fn(pattern, value)(expr), value=value
         )

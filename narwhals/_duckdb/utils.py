@@ -84,10 +84,6 @@ def evaluate_exprs_and_aliases(
     return native_results
 
 
-def evaluate_exprs(df: DuckDBLazyFrame, /, *exprs: DuckDBExpr) -> list[Expression]:
-    return [item for expr in exprs for item in expr(df)]
-
-
 class DeferredTimeZone:
     """Object which gets passed between `native_to_narwhals_dtype` calls.
 

@@ -171,14 +171,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
 
-        def window_func(
-            df: SparkLikeLazyFrame, _window_inputs: WindowInputs[Column]
-        ) -> list[Column]:
-            return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
-
         return cls(
             func,
-            window_func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,

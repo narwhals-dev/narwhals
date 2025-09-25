@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
 
 import polars as pl
 
-from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     SERIES_ACCEPTS_PD_INDEX,
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
@@ -150,10 +148,6 @@ class PolarsSeries:
     def __init__(self, series: pl.Series, *, version: Version) -> None:
         self._native_series = series
         self._version = version
-
-    def _to_expr(self) -> CompliantExprAny:
-        # Polars can treat Series as Expr, so just pass down `self.native`.
-        return PolarsExpr(self.native, version=self._version)  # type: ignore[arg-type]
 
     @property
     def _backend_version(self) -> tuple[int, ...]:

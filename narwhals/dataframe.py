@@ -173,7 +173,7 @@ class BaseFrame(Generic[_FrameT]):
         return check_columns_exist(subset, available=self.columns)
 
     @abstractmethod
-    def _validate_metadata(self, metadata: ExprMetadata) -> None:
+    def _validate_metadata(self, metadata: ExprMetadata) -> None:  # pragma: no cover
         pass
 
     @property

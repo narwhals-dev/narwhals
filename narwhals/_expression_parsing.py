@@ -393,8 +393,8 @@ class ExprMetadata:
             return ExprMetadata.from_selector_multi_unnamed(node)
         if node.kind is ExprKind.ELEMENTWISE:
             return ExprMetadata.from_elementwise(node, *ces)
-        msg = f"Unexpected node kind: {node.kind}"
-        raise AssertionError(msg)
+        msg = f"Unexpected node kind: {node.kind}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     def with_node(  # noqa: PLR0911,C901
         self,
@@ -409,7 +409,6 @@ class ExprMetadata:
                 ce,
                 *ces,
                 str_as_lit=node.str_as_lit,
-                allow_multi_output=node.allow_multi_output,
                 to_single_output=False,
                 nodes=(*ce._metadata.nodes, node),
             )
@@ -423,8 +422,6 @@ class ExprMetadata:
             return self.with_orderable_aggregation(node)
         if node.kind is ExprKind.WINDOW:
             return self.with_window(node)
-        if node.kind is ExprKind.SELECTOR:
-            return self
         if node.kind is ExprKind.OVER:
             if node.kwargs["order_by"]:
                 return self.with_ordered_over(node)
@@ -432,8 +429,8 @@ class ExprMetadata:
                 msg = "At least one of `partition_by` or `order_by` must be specified."
                 raise InvalidOperationError(msg)
             return self.with_partitioned_over(node)
-        msg = f"Unexpected node kind: {node.kind}"
-        raise AssertionError(msg)
+        msg = f"Unexpected node kind: {node.kind}"  # pragma: no cover
+        raise AssertionError(msg)  # pragma: no cover
 
     @classmethod
     def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
@@ -476,11 +473,7 @@ class ExprMetadata:
         cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
     ) -> ExprMetadata:
         return combine_metadata(
-            *ces,
-            str_as_lit=False,
-            allow_multi_output=True,
-            to_single_output=True,
-            nodes=(node,),
+            *ces, str_as_lit=False, to_single_output=True, nodes=(node,)
         )
 
     @property
@@ -515,18 +508,6 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
-            nodes=(*self.nodes, node),
-        )
-
-    def with_elementwise_op(self, node: ExprNode) -> ExprMetadata:
-        return ExprMetadata(
-            self.expansion_kind,
-            has_windows=self.has_windows,
-            n_orderable_ops=self.n_orderable_ops,
-            preserves_length=self.preserves_length,
-            is_elementwise=self.is_elementwise,
-            is_scalar_like=self.is_scalar_like,
-            is_literal=self.is_literal,
             nodes=(*self.nodes, node),
         )
 
@@ -664,7 +645,6 @@ class ExprMetadata:
 def combine_metadata(
     *args: IntoExpr | object | None,
     str_as_lit: bool,
-    allow_multi_output: bool,
     to_single_output: bool,
     nodes: tuple[ExprNode, ...],
 ) -> ExprMetadata:
@@ -673,7 +653,6 @@ def combine_metadata(
     Arguments:
         args: Arguments, maybe expressions, literals, or Series.
         str_as_lit: Whether to interpret strings as literals or as column names.
-        allow_multi_output: Whether to allow multi-output inputs.
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
         nodes: Nodes of result node.
@@ -701,13 +680,6 @@ def combine_metadata(
             assert metadata is not None  # noqa: S101
             if metadata.expansion_kind.is_multi_output():
                 expansion_kind = metadata.expansion_kind
-                if i > 0 and not allow_multi_output:
-                    # Left-most argument is always allowed to be multi-output.
-                    msg = (
-                        "Multi-output expressions (e.g. nw.col('a', 'b'), nw.all()) "
-                        "are not supported in this context."
-                    )
-                    raise MultiOutputExpressionError(msg)
                 if not to_single_output:
                     result_expansion_kind = (
                         result_expansion_kind & expansion_kind
@@ -750,25 +722,6 @@ def check_expressions_preserve_length(
     if not all((is_compliant_expr(x) and x._metadata.preserves_length) for x in args):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise InvalidOperationError(msg)
-
-
-def all_exprs_are_scalar_like(mds: Sequence[ExprMetadata]) -> bool:
-    # Raise if any argument in `args` isn't an aggregation or literal.
-    # For Series input, we don't raise (yet), we let such checks happen later,
-    # as this function works lazily and so can't evaluate lengths.
-    return all(md.is_scalar_like for md in mds)
-
-
-def apply_binary(
-    plx: CompliantNamespaceAny,
-    name: str,
-    ce: CompliantExprAny,
-    other: IntoExpr | NonNestedLiteral | _1DArray,
-) -> CompliantExprAny:
-    parse = plx.evaluate_expr
-    other_compliant = parse(other)
-    compliant_exprs = [ce, other_compliant]
-    return getattr(compliant_exprs[0], name)(compliant_exprs[1])
 
 
 @overload
@@ -890,11 +843,6 @@ def evaluate_node(
         func = getattr(getattr(ce, accessor), method)
     else:
         func = getattr(ce, node.name)
-    if not node.allow_multi_output and any(
-        x._metadata.expansion_kind.is_multi_output() for x in ces if is_compliant_expr(x)
-    ):
-        msg = "multi-output expressions are not allowed as arguments to Expr methods."
-        raise MultiOutputExpressionError(msg)
     ret = cast("CompliantExprAny", func(*ces, **node.kwargs))
     ret._opt_metadata = md
     return ret

@@ -337,7 +337,7 @@ class EagerDataFrame(
     def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
         result: Sequence[EagerSeriesT] = expr(self)
-        if len(result) != 1:
+        if len(result) != 1:  # pragma: no cover
             msg = "multi-output expressions not allowed in this context"
             raise MultiOutputExpressionError(msg)
         return result[0]

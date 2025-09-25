@@ -42,7 +42,7 @@ class SQLLazyFrame(
 
     def _evaluate_expr(self, expr: SQLExpr[Self, NativeExprT], /) -> NativeExprT:
         result = expr(self)
-        if len(result) != 1:
+        if len(result) != 1:  # pragma: no cover
             msg = "multi-output expressions not allowed in this context"
             raise MultiOutputExpressionError(msg)
         return result[0]
