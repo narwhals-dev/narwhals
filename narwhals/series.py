@@ -13,7 +13,7 @@ from typing import (
     overload,
 )
 
-from narwhals._expression_parsing import ExprKind, ExprNode, is_series
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
     Implementation,
     Version,
@@ -2715,10 +2715,7 @@ class Series(Generic[IntoSeriesT]):
             "Self",
             self.to_frame().select(
                 col(self.name).is_close(
-                    other._to_expr() if is_series(other) else other,
-                    abs_tol=abs_tol,
-                    rel_tol=rel_tol,
-                    nans_equal=nans_equal,
+                    other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
                 )
             )[self.name],
         )

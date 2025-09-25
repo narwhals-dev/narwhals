@@ -2088,7 +2088,7 @@ class Expr:
 
     def is_close(  # noqa: PLR0914
         self,
-        other: Self | NumericLiteral,
+        other: IntoExpr | NumericLiteral,
         *,
         abs_tol: float = 0.0,
         rel_tol: float = 1e-09,

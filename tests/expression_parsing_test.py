@@ -4,7 +4,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("polars")
 
@@ -87,6 +87,8 @@ import polars as pl
 def test_over_pushdown(
     constructor: Constructor, expr: nw.Expr, pl_expr: pl.Expr, expected: list[float]
 ) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).lazy()
     result = df.select("i", a=expr).sort("i").select("a")
@@ -121,6 +123,8 @@ def test_over_pushdown(
     ],
 )
 def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     df = nw.from_native(
         constructor({"a": [-1, 2, 3], "b": [1, 1, 1], "c": [2, 2, 2], "i": [0, 1, 2]})
     ).lazy()
