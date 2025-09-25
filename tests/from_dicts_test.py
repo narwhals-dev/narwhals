@@ -52,3 +52,24 @@ def test_from_dicts_empty_with_schema(eager_backend: EagerAllowed) -> None:
     schema = nw.Schema({"a": nw.String(), "b": nw.Int8()})
     result = nw.from_dicts([], schema, backend=eager_backend)
     assert result.schema == schema
+
+
+@pytest.mark.parametrize("n_first_schema", [0, 1, 99, 100])
+def test_from_dicts_inconsistent_keys(
+    eager_implementation: EagerAllowed,
+    request: pytest.FixtureRequest,
+    n_first_schema: int,
+) -> None:
+    # pyarrow only checks 1 row
+    if "pyarrow" in str(eager_implementation) and n_first_schema >= 1:
+        request.applymarker(pytest.mark.xfail)
+    # polars checks 100 rows
+    if "polars" in str(eager_implementation) and n_first_schema >= 100:
+        request.applymarker(pytest.mark.xfail)
+    # no xfail for pandas as it always scans all rows
+
+    # first n rows have columns ["a"], the next row has columns ["a", "b"]
+    data = [*({"a": i} for i in range(n_first_schema)), {"a": n_first_schema, "b": 0}]
+
+    result = nw.from_dicts(data, backend=eager_implementation)
+    assert result.columns == ["a", "b"]
