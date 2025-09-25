@@ -62,7 +62,7 @@ class BaseFrame(Generic[NativeFrameT]):
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self.schema
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
         return self._from_compliant(self._compliant.select(schema.select_irs(named_irs)))
 
@@ -71,7 +71,7 @@ class BaseFrame(Generic[NativeFrameT]):
     # - Doing some gymnastics to workaround for now
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self.schema
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
         return self._from_compliant(
             self._compliant.with_columns(schema.with_columns_irs(named_irs))
@@ -87,7 +87,7 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        named_irs, _ = prepare_projection(sort, schema=self.schema)
+        named_irs, _ = prepare_projection(sort, schema=self)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:

@@ -49,9 +49,7 @@ class GroupBy(Generic[DataFrameT]):
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
         frame = self._frame
         resolved = resolve_group_by(
-            self._keys,
-            _parse.parse_into_seq_of_expr_ir(*aggs, **named_aggs),
-            frame.schema,
+            self._keys, _parse.parse_into_seq_of_expr_ir(*aggs, **named_aggs), frame
         )
         compliant = frame._compliant
         compliant_gb = compliant._group_by

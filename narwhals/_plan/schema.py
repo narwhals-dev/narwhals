@@ -4,23 +4,25 @@ from collections.abc import Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
 from narwhals._plan._expr_ir import NamedIR
 from narwhals._plan._immutable import _IMMUTABLE_HASH_NAME, Immutable
+from narwhals._utils import _hasattr_static
 from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
     from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
-    from typing_extensions import Never, TypeAlias
+    from typing_extensions import Never, TypeAlias, TypeIs
 
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoSchema
 
 
 IntoFrozenSchema: TypeAlias = (
-    "Mapping[str, DType] | Iterator[tuple[str, DType]] | FrozenSchema"
+    "IntoSchema | Iterator[tuple[str, DType]] | FrozenSchema | HasSchema"
 )
 """A schema to freeze, or an already frozen one.
 
@@ -138,6 +140,15 @@ class FrozenSchema(Immutable):
         return f"{type(self).__name__}([{nl}{indent}{items}{sep}{nl}])"
 
 
+class HasSchema(Protocol):
+    @property
+    def schema(self) -> IntoSchema: ...
+
+
+def has_schema(obj: Any) -> TypeIs[HasSchema]:
+    return _hasattr_static(obj, "schema")
+
+
 @overload
 def freeze_schema(mapping: IntoFrozenSchema, /) -> FrozenSchema: ...
 @overload
@@ -147,7 +158,7 @@ def freeze_schema(
 ) -> FrozenSchema:
     if isinstance(iterable, FrozenSchema):
         return iterable
-    into = iterable or schema
+    into = iterable.schema if has_schema(iterable) else (iterable or schema)
     hashable = tuple(into.items() if isinstance(into, Mapping) else into)
     return _freeze_schema_cache(hashable)
 
