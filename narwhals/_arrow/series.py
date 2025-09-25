@@ -489,9 +489,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self.native.to_numpy()
 
     def alias(self, name: str) -> Self:
-        result = self.__class__(self.native, name=name, version=self._version)
-        result._broadcast = self._broadcast
-        return result
+        return self.__class__(self.native, name=name, version=self._version)
 
     @property
     def dtype(self) -> DType:
@@ -868,8 +866,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             name=col_token, normalize=False, sort=False, parallel=False
         )
         result = counts.filter(
-            plx.col(col_token)
-            == plx.col(col_token).max().broadcast(kind=ExprKind.AGGREGATION)
+            plx.col([col_token])
+            == plx.col([col_token]).max().broadcast(kind=ExprKind.AGGREGATION)
         ).get_column(self.name)
         return result.head(1) if keep == "any" else result
 

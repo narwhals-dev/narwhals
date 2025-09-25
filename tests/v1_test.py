@@ -894,8 +894,9 @@ def test_unique_series_v1() -> None:
 
 
 def test_head_aggregation() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2]}))
     with pytest.raises(InvalidOperationError):
-        nw_v1.col("a").mean().head()
+        df.select(nw_v1.col("a").mean().head())
 
 
 def test_deprecated_expr_methods() -> None:

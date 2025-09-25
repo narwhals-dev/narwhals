@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
 
 import polars as pl
 
+from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     SERIES_ACCEPTS_PD_INDEX,
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias, TypeIs
 
+    from narwhals._compliant.typing import CompliantExprAny
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._utils import Version, _LimitedContext
@@ -43,7 +45,6 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
-        NumericLiteral,
         _1DArray,
     )
 
@@ -149,6 +150,10 @@ class PolarsSeries:
     def __init__(self, series: pl.Series, *, version: Version) -> None:
         self._native_series = series
         self._version = version
+
+    def _to_expr(self) -> CompliantExprAny:
+        # Polars can treat Series as Expr, so just pass down `self.native`.
+        return PolarsExpr(self.native, version=self._version)  # type: ignore[arg-type]
 
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -496,30 +501,6 @@ class PolarsSeries:
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> PolarsSeries:
-        if self._backend_version < (1, 32, 0):
-            name = self.name
-            ns = self.__narwhals_namespace__()
-            other_expr = (
-                ns.lit(other.native, None) if isinstance(other, PolarsSeries) else other
-            )
-            expr = ns.col(name).is_close(
-                other_expr, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-            )
-            return self.to_frame().select(expr).get_column(name)
-        other_series = other.native if isinstance(other, PolarsSeries) else other
-        result = self.native.is_close(
-            other_series, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-        )
-        return self._with_native(result)
-
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
         return self._with_native(result.head(1) if keep == "any" else result)
@@ -768,7 +749,17 @@ class PolarsSeriesStringNamespace(
     def zfill(self, width: int) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
+        return self.to_frame().select(ns.col([name]).str.zfill(width)).get_column(name)
+
+    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> PolarsSeries:
+        return self.compliant._with_native(
+            self.native.str.replace(pattern, extract_native(value), literal=literal, n=n)
+        )
+
+    def replace_all(self, value: str, pattern: str, *, literal: bool) -> PolarsSeries:
+        return self.compliant._with_native(
+            self.native.str.replace_all(pattern, extract_native(value), literal=literal)
+        )
 
 
 class PolarsSeriesCatNamespace(
@@ -782,12 +773,12 @@ class PolarsSeriesListNamespace(
     def len(self) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col(name).list.len()).get_column(name)
+        return self.to_frame().select(ns.col([name]).list.len()).get_column(name)
 
     def contains(self, item: NonNestedLiteral) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
+        return self.to_frame().select(ns.col([name]).list.contains(item)).get_column(name)
 
 
 class PolarsSeriesStructNamespace(

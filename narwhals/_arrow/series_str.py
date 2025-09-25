@@ -18,7 +18,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> ArrowSeries:
+    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> ArrowSeries:
         fn = pc.replace_substring if literal else pc.replace_substring_regex
         try:
             arr = fn(self.native, pattern, replacement=value, max_replacements=n)
@@ -29,9 +29,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
             raise
         return self.with_native(arr)
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> ArrowSeries:
+    def replace_all(self, value: str, pattern: str, *, literal: bool) -> ArrowSeries:
         try:
-            return self.replace(pattern, value, literal=literal, n=-1)
+            return self.replace(value, pattern, literal=literal, n=-1)
         except TypeError as e:
             if not isinstance(value, str):
                 msg = "PyArrow backed `.str.replace_all` only supports str replacement values."

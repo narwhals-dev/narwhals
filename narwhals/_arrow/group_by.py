@@ -71,10 +71,10 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, exclude
             )
-
-            if expr._depth == 0:
+            md = expr._metadata
+            if len(list(md.op_nodes_reversed())) == 1:
                 # e.g. `agg(nw.len())`
-                if expr._function_name != "len":  # pragma: no cover
+                if next(md.op_nodes_reversed()).name != "len":  # pragma: no cover
                     msg = "Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues"
                     raise AssertionError(msg)
 
@@ -85,8 +85,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
 
             function_name = self._leaf_name(expr)
             if function_name in {"std", "var"}:
-                assert "ddof" in expr._scalar_kwargs  # noqa: S101
-                option: Any = pc.VarianceOptions(ddof=expr._scalar_kwargs["ddof"])
+                last_node = next(md.op_nodes_reversed())
+                option: Any = pc.VarianceOptions(**last_node.kwargs)
             elif function_name in {"len", "n_unique"}:
                 option = pc.CountOptions(mode="all")
             elif function_name == "count":

@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Literal, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Literal,
+    cast,
+    overload,
+)
 
+from narwhals._expression_parsing import ExprKind, ExprNode, is_series
 from narwhals._utils import (
     Implementation,
     Version,
@@ -20,6 +30,7 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.expr import Expr
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
@@ -88,6 +99,11 @@ class Series(Generic[IntoSeriesT]):
         from narwhals.dataframe import DataFrame
 
         return DataFrame
+
+    def _to_expr(self) -> Expr:
+        return Expr(
+            ExprNode(ExprKind.SERIES, "_expr._from_series", series=self._compliant)
+        )
 
     def __init__(
         self, series: Any, *, level: Literal["full", "lazy", "interchange"]
@@ -2687,28 +2703,24 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        from narwhals.functions import col
+
         if not self.dtype.is_numeric():
             msg = (
                 f"is_close operation not supported for dtype `{self.dtype}`\n\n"
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-
-        if abs_tol < 0:
-            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
-            raise ComputeError(msg)
-
-        if not (0 <= rel_tol < 1):
-            msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"
-            raise ComputeError(msg)
-
-        return self._with_compliant(
-            self._compliant_series.is_close(
-                self._extract_native(other),
-                abs_tol=abs_tol,
-                rel_tol=rel_tol,
-                nans_equal=nans_equal,
-            )
+        return cast(
+            "Self",
+            self.to_frame().select(
+                col(self.name).is_close(
+                    other._to_expr() if is_series(other) else other,
+                    abs_tol=abs_tol,
+                    rel_tol=rel_tol,
+                    nans_equal=nans_equal,
+                )
+            )[self.name],
         )
 
     @property

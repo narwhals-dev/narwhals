@@ -16,12 +16,10 @@ if TYPE_CHECKING:
 
 class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["DaskExpr"]):
     def len_chars(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.len(), "len")
+        return self.compliant._with_callable(lambda expr: expr.str.len())
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> DaskExpr:
-        def _replace(
-            expr: dx.Series, pattern: str, value: str, *, literal: bool, n: int
-        ) -> dx.Series:
+    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> DaskExpr:
+        def _replace(expr: dx.Series, value: str) -> dx.Series:
             try:
                 return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
                     pattern, value, regex=not literal, n=n
@@ -32,14 +30,10 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
                     raise TypeError(msg) from e
                 raise
 
-        return self.compliant._with_callable(
-            _replace, "replace", pattern=pattern, value=value, literal=literal, n=n
-        )
+        return self.compliant._with_callable(_replace, value=value)
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> DaskExpr:
-        def _replace_all(
-            expr: dx.Series, pattern: str, value: str, *, literal: bool
-        ) -> dx.Series:
+    def replace_all(self, value: str, pattern: str, *, literal: bool) -> DaskExpr:
+        def _replace_all(expr: dx.Series, value: str) -> dx.Series:
             try:
                 return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
                     pattern, value, regex=not literal, n=-1
@@ -50,72 +44,44 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
                     raise TypeError(msg) from e
                 raise
 
-        return self.compliant._with_callable(
-            _replace_all, "replace", pattern=pattern, value=value, literal=literal
-        )
+        return self.compliant._with_callable(_replace_all, value=value)
 
     def strip_chars(self, characters: str | None) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr, characters: expr.str.strip(characters),
-            "strip",
-            characters=characters,
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.strip(characters))
 
     def starts_with(self, prefix: str) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr, prefix: expr.str.startswith(prefix), "starts_with", prefix=prefix
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.startswith(prefix))
 
     def ends_with(self, suffix: str) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr, suffix: expr.str.endswith(suffix), "ends_with", suffix=suffix
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.endswith(suffix))
 
     def contains(self, pattern: str, *, literal: bool) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr, pattern, literal: expr.str.contains(
-                pat=pattern, regex=not literal
-            ),
-            "contains",
-            pattern=pattern,
-            literal=literal,
+            lambda expr: expr.str.contains(pat=pattern, regex=not literal)
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr, offset, length: expr.str.slice(
+            lambda expr: expr.str.slice(
                 start=offset, stop=offset + length if length else None
-            ),
-            "slice",
-            offset=offset,
-            length=length,
+            )
         )
 
     def split(self, by: str) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr, by: expr.str.split(pat=by), "split", by=by
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.split(pat=by))
 
     def to_datetime(self, format: str | None) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr, format: dd.to_datetime(expr, format=format),
-            "to_datetime",
-            format=format,
+            lambda expr: dd.to_datetime(expr, format=format)
         )
 
     def to_uppercase(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.str.upper(), "to_uppercase"
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.upper())
 
     def to_lowercase(self) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.str.lower(), "to_lowercase"
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.lower())
 
     def zfill(self, width: int) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr, width: expr.str.zfill(width), "zfill", width=width
-        )
+        return self.compliant._with_callable(lambda expr: expr.str.zfill(width))
 
     to_date = not_implemented()

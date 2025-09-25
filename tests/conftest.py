@@ -124,6 +124,7 @@ def cudf_constructor(obj: Data) -> NativeDataFrame:  # pragma: no cover
 
 
 def polars_eager_constructor(obj: Data) -> pl.DataFrame:
+    pytest.importorskip("polars")
     import polars as pl
 
     return pl.DataFrame(obj)
@@ -137,11 +138,11 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
 
 def duckdb_lazy_constructor(obj: Data) -> duckdb.DuckDBPyRelation:
     import duckdb
-    import polars as pl
+    import pyarrow as pa
 
     duckdb.sql("""set timezone = 'UTC'""")
 
-    _df = pl.LazyFrame(obj)
+    _df = pa.table(obj)
     return duckdb.table("_df")
 
 
@@ -207,9 +208,11 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 
 
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
+    pytest.importorskip("polars")
+    pytest.importorskip("ibis")
     import polars as pl
 
-    ldf = pl.from_dict(obj).lazy()
+    ldf = pl.LazyFrame(obj)
     table_name = str(uuid.uuid4())
     return _ibis_backend().create_table(table_name, ldf)
 

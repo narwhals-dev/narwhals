@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from narwhals._compliant import LazyNamespace
 from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
+from narwhals._expression_parsing import is_expr
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
+from narwhals.functions import lit
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import PythonLiteral
+    from narwhals.expr import Expr
+    from narwhals.typing import NonNestedLiteral, PythonLiteral
 
 
 class SQLNamespace(
@@ -27,6 +30,13 @@ class SQLNamespace(
         otherwise: NativeExprT | None = None,
     ) -> NativeExprT: ...
     def _coalesce(self, *exprs: NativeExprT) -> NativeExprT: ...
+
+    def evaluate_expr(self, data: Expr | NonNestedLiteral | Any, /) -> SQLExprT:
+        if is_expr(data):
+            expr = data(self)
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
+        return cast("SQLExprT", lit(data)(self))
 
     # Horizontal functions
     def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
@@ -71,3 +81,18 @@ class SQLNamespace(
             return self._coalesce(*cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
+    def when_then(
+        self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
+    ) -> SQLExprT:
+        def func(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0])
+
+        def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0], cols[2])
+
+        if otherwise is None:
+            return self._expr._from_elementwise_horizontal_op(func, then, predicate)
+        return self._expr._from_elementwise_horizontal_op(
+            func_with_otherwise, then, predicate, otherwise
+        )

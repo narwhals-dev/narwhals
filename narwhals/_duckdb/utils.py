@@ -68,12 +68,12 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
     return F("concat_ws", lit(separator), *exprs) if separator else F("concat", *exprs)
 
 
-def evaluate_exprs(
+def evaluate_exprs_and_aliases(
     df: DuckDBLazyFrame, /, *exprs: DuckDBExpr
 ) -> list[tuple[str, Expression]]:
     native_results: list[tuple[str, Expression]] = []
     for expr in exprs:
-        native_series_list = expr._call(df)
+        native_series_list = expr(df)
         output_names = expr._evaluate_output_names(df)
         if expr._alias_output_names is not None:
             output_names = expr._alias_output_names(output_names)
@@ -82,6 +82,10 @@ def evaluate_exprs(
             raise AssertionError(msg)
         native_results.extend(zip(output_names, native_series_list))
     return native_results
+
+
+def evaluate_exprs(df: DuckDBLazyFrame, /, *exprs: DuckDBExpr) -> list[Expression]:
+    return [item for expr in exprs for item in expr(df)]
 
 
 class DeferredTimeZone:

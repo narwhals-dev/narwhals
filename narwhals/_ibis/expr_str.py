@@ -41,7 +41,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         return fn
 
     def replace_all(
-        self, pattern: str, value: str | IbisExpr, *, literal: bool
+        self, value: str | IbisExpr, pattern: str, *, literal: bool
     ) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
         if isinstance(value, str):

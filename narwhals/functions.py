@@ -3,22 +3,14 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from functools import partial
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
-from narwhals._expression_parsing import (
-    ExprKind,
-    ExprMetadata,
-    apply_n_ary_operation,
-    combine_metadata,
-    is_scalar_like,
-)
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
     flatten,
-    is_compliant_expr,
     is_eager_allowed,
     is_sequence_but_not_str,
     normalize_path,
@@ -41,7 +33,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -56,7 +47,6 @@ if TYPE_CHECKING:
         NativeLazyFrame,
         NativeSeries,
         NonNestedLiteral,
-        _1DArray,
         _2DArray,
     )
 
@@ -931,16 +921,7 @@ def col(*names: str | Iterable[str]) -> Expr:
         └──────────────────┘
     """
     flat_names = flatten(names)
-
-    def func(plx: Any) -> Any:
-        return plx.col(*flat_names)
-
-    return Expr(
-        func,
-        ExprMetadata.selector_single()
-        if len(flat_names) == 1
-        else ExprMetadata.selector_multi_named(),
-    )
+    return Expr(ExprNode(ExprKind.COL, "col", names=flat_names))
 
 
 def exclude(*names: str | Iterable[str]) -> Expr:
@@ -972,12 +953,9 @@ def exclude(*names: str | Iterable[str]) -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-    exclude_names = frozenset(flatten(names))
-
-    def func(plx: Any) -> Any:
-        return plx.exclude(exclude_names)
-
-    return Expr(func, ExprMetadata.selector_multi_unnamed())
+    flat_names = flatten(names)
+    exclude_names = frozenset(flat_names)
+    return Expr(ExprNode(ExprKind.EXCLUDE, "exclude", names=exclude_names))
 
 
 def nth(*indices: int | Sequence[int]) -> Expr:
@@ -1011,16 +989,8 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         └──────────────────┘
     """
     flat_indices = flatten(indices)
-
-    def func(plx: Any) -> Any:
-        return plx.nth(*flat_indices)
-
-    return Expr(
-        func,
-        ExprMetadata.selector_single()
-        if len(flat_indices) == 1
-        else ExprMetadata.selector_multi_unnamed(),
-    )
+    node = ExprNode(ExprKind.NTH, "nth", indices=flat_indices)
+    return Expr(node)
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1044,7 +1014,8 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    return Expr(lambda plx: plx.all(), ExprMetadata.selector_multi_unnamed())
+    node = ExprNode(ExprKind.ALL, "all")
+    return Expr(node)
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1073,11 +1044,8 @@ def len_() -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-
-    def func(plx: Any) -> Any:
-        return plx.len()
-
-    return Expr(func, ExprMetadata.aggregation())
+    node = ExprNode(ExprKind.AGGREGATION, "len")
+    return Expr(node)
 
 
 def sum(*columns: str) -> Expr:
@@ -1236,22 +1204,12 @@ def max(*columns: str) -> Expr:
     return col(*columns).max()
 
 
-def _expr_with_n_ary_op(
-    func_name: str,
-    operation_factory: Callable[
-        [CompliantNamespace[Any, Any]], Callable[..., CompliantExpr[Any, Any]]
-    ],
-    *exprs: IntoExpr,
-) -> Expr:
+def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr:
     if not exprs:
-        msg = f"At least one expression must be passed to `{func_name}`"
+        msg = f"At least one expression must be passed to `{name}`"
         raise ValueError(msg)
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, operation_factory(plx), *exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*exprs),
-    )
+    node = ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
+    return Expr(node)
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1288,9 +1246,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴─────┘|
         └────────────────────┘
     """
-    return _expr_with_n_ary_op(
-        "sum_horizontal", lambda plx: plx.sum_horizontal, *flatten(exprs)
-    )
+    flat_exprs = flatten(exprs)
+    return _expr_with_horizontal_op("sum_horizontal", *flat_exprs)
 
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1325,9 +1282,7 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | h_min: [[1,5,3]] |
         └──────────────────┘
     """
-    return _expr_with_n_ary_op(
-        "min_horizontal", lambda plx: plx.min_horizontal, *flatten(exprs)
-    )
+    return _expr_with_horizontal_op("min_horizontal", *flatten(exprs))
 
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1364,73 +1319,30 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         |└─────┴──────┴───────┘|
         └──────────────────────┘
     """
-    return _expr_with_n_ary_op(
-        "max_horizontal", lambda plx: plx.max_horizontal, *flatten(exprs)
-    )
+    return _expr_with_horizontal_op("max_horizontal", *flatten(exprs))
 
 
 class When:
     def __init__(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> None:
         self._predicate = all_horizontal(*flatten(predicates), ignore_nulls=False)
 
-    def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if self._predicate._metadata.is_scalar_like and not kind.is_scalar_like:
-            msg = (
-                "If you pass a scalar-like predicate to `nw.when`, then "
-                "the `then` value must also be scalar-like."
-            )
-            raise InvalidOperationError(msg)
-
+    def then(self, value: IntoExpr | NonNestedLiteral) -> Then:
         return Then(
-            lambda plx: apply_n_ary_operation(
-                plx,
-                lambda *args: plx.when(args[0]).then(args[1]),
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "when_then",
                 self._predicate,
                 value,
-                str_as_lit=False,
-            ),
-            combine_metadata(
-                self._predicate,
-                value,
-                str_as_lit=False,
                 allow_multi_output=False,
-                to_single_output=False,
-            ),
+            )
         )
 
 
 class Then(Expr):
-    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        kind = ExprKind.from_into_expr(value, str_as_lit=False)
-        if self._metadata.is_scalar_like and not is_scalar_like(kind):
-            msg = (
-                "If you pass a scalar-like predicate to `nw.when`, then "
-                "the `otherwise` value must also be scalar-like."
-            )
-            raise InvalidOperationError(msg)
-
-        def func(plx: CompliantNamespace[Any, Any]) -> CompliantExpr[Any, Any]:
-            compliant_expr = self._to_compliant_expr(plx)
-            compliant_value = plx.parse_into_expr(value, str_as_lit=False)
-            if (
-                not self._metadata.is_scalar_like
-                and is_scalar_like(kind)
-                and is_compliant_expr(compliant_value)
-            ):
-                compliant_value = compliant_value.broadcast(kind)
-            return compliant_expr.otherwise(compliant_value)  # type: ignore[attr-defined, no-any-return]
-
-        return Expr(
-            func,
-            combine_metadata(
-                self,
-                value,
-                str_as_lit=False,
-                allow_multi_output=False,
-                to_single_output=False,
-            ),
-        )
+    def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
+        # eject latest node, replace with `when_then_otherwise`
+        node = self._nodes[0]
+        return Expr(ExprNode(ExprKind.ELEMENTWISE, "when_then", *node.exprs, value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1517,10 +1429,9 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         └─────────────────────────────────────────┘
 
     """
-    return _expr_with_n_ary_op(
-        "all_horizontal",
-        lambda plx: partial(plx.all_horizontal, ignore_nulls=ignore_nulls),
-        *flatten(exprs),
+    flat_exprs = flatten(exprs)
+    return _expr_with_horizontal_op(
+        "all_horizontal", *flat_exprs, ignore_nulls=ignore_nulls
     )
 
 
@@ -1560,7 +1471,8 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    return Expr(lambda plx: plx.lit(value, dtype), ExprMetadata.literal())
+    node = ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype)
+    return Expr(node)
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
@@ -1609,10 +1521,9 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |└───────┴───────┴───────┘|
         └─────────────────────────┘
     """
-    return _expr_with_n_ary_op(
-        "any_horizontal",
-        lambda plx: partial(plx.any_horizontal, ignore_nulls=ignore_nulls),
-        *flatten(exprs),
+    flat_exprs = flatten(exprs)
+    return _expr_with_horizontal_op(
+        "any_horizontal", *flat_exprs, ignore_nulls=ignore_nulls
     )
 
 
@@ -1646,9 +1557,7 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         | a: [[2.5,6.5,3]] |
         └──────────────────┘
     """
-    return _expr_with_n_ary_op(
-        "mean_horizontal", lambda plx: plx.mean_horizontal, *flatten(exprs)
-    )
+    return _expr_with_horizontal_op("mean_horizontal", *flatten(exprs))
 
 
 def concat_str(
@@ -1700,12 +1609,8 @@ def concat_str(
         └──────────────────┘
     """
     flat_exprs = flatten([*flatten([exprs]), *more_exprs])
-    return _expr_with_n_ary_op(
-        "concat_str",
-        lambda plx: lambda *args: plx.concat_str(
-            *args, separator=separator, ignore_nulls=ignore_nulls
-        ),
-        *flat_exprs,
+    return _expr_with_horizontal_op(
+        "concat_str", *flat_exprs, separator=separator, ignore_nulls=ignore_nulls
     )
 
 
@@ -1767,9 +1672,5 @@ def coalesce(
         )
         raise TypeError(msg)
 
-    return Expr(
-        lambda plx: apply_n_ary_operation(
-            plx, lambda *args: plx.coalesce(*args), *flat_exprs, str_as_lit=False
-        ),
-        ExprMetadata.from_horizontal_op(*flat_exprs),
-    )
+    node = ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs)
+    return Expr(node)

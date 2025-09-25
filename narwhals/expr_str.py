@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar
 
-from narwhals._expression_parsing import apply_n_ary_operation
+from narwhals._expression_parsing import ExprKind, ExprNode
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
+
+    PS = ParamSpec("PS")
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -38,9 +40,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└───────┴───────────┘|
             └─────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.len_chars()
-        )
+        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.len_chars"))
 
     def replace(
         self, pattern: str, value: str | ExprT, *, literal: bool = False, n: int = 1
@@ -67,17 +67,15 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123   abc123|
             └──────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: (
-                apply_n_ary_operation(
-                    plx,
-                    lambda self, value: self.str.replace(
-                        pattern, value, literal=literal, n=n
-                    ),
-                    self._expr,
-                    value,
-                    str_as_lit=True,
-                )
+        return self._expr._with_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "str.replace",
+                value,
+                pattern=pattern,
+                literal=literal,
+                n=n,
+                str_as_lit=True,
             )
         )
 
@@ -105,17 +103,14 @@ class ExprStringNamespace(Generic[ExprT]):
             |1  abc abc123      123|
             └──────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: (
-                apply_n_ary_operation(
-                    plx,
-                    lambda self, value: self.str.replace_all(
-                        pattern, value, literal=literal
-                    ),
-                    self._expr,
-                    value,
-                    str_as_lit=True,
-                )
+        return self._expr._with_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "str.replace_all",
+                value,
+                pattern=pattern,
+                literal=literal,
+                str_as_lit=True,
             )
         )
 
@@ -138,8 +133,8 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': ['apple', '\nmango'], 'stripped': ['apple', 'mango']}
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.strip_chars(characters)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
     def starts_with(self, prefix: str) -> ExprT:
@@ -163,8 +158,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.starts_with(prefix)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
         )
 
     def ends_with(self, suffix: str) -> ExprT:
@@ -188,8 +183,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2   None       None|
             └───────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.ends_with(suffix)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
         )
 
     def contains(self, pattern: str, *, literal: bool = False) -> ExprT:
@@ -218,9 +213,9 @@ class ExprStringNamespace(Generic[ExprT]):
             default_match: [[true,false,true]]
             case_insensitive_match: [[true,false,true]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.contains(
-                pattern, literal=literal
+        return self._expr._with_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.contains", pattern=pattern, literal=literal
             )
         )
 
@@ -247,10 +242,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.slice(
-                offset=offset, length=length
-            )
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )
 
     def split(self, by: str) -> ExprT:
@@ -279,9 +272,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────┴────────────────┘|
             └────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.split(by=by)
-        )
+        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.split", by=by))
 
     def head(self, n: int = 5) -> ExprT:
         r"""Take the first n elements of each string.
@@ -305,8 +296,8 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.slice(0, n)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=0, length=n)
         )
 
     def tail(self, n: int = 5) -> ExprT:
@@ -331,10 +322,8 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_tail: [["taata","atata","kkyun"]]
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.slice(
-                offset=-n, length=None
-            )
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=None)
         )
 
     def to_datetime(self, format: str | None = None) -> ExprT:
@@ -375,8 +364,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |└─────────────────────┘|
             └───────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_datetime(format=format)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.to_datetime", format=format)
         )
 
     def to_date(self, format: str | None = None) -> ExprT:
@@ -404,8 +393,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |a: [[2020-01-01,2020-01-02]]|
             └────────────────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_date(format=format)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.to_date", format=format)
         )
 
     def to_uppercase(self) -> ExprT:
@@ -430,9 +419,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_uppercase()
-        )
+        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_uppercase"))
 
     def to_lowercase(self) -> ExprT:
         r"""Transform string to lowercase variant.
@@ -451,9 +438,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |1   None      None|
             └──────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
-        )
+        return self._expr._with_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_lowercase"))
 
     def zfill(self, width: int) -> ExprT:
         """Transform string to zero-padded variant.
@@ -479,6 +464,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |3   None      None|
             └──────────────────┘
         """
-        return self._expr._with_elementwise(
-            lambda plx: self._expr._to_compliant_expr(plx).str.zfill(width)
+        return self._expr._with_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )

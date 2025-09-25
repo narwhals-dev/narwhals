@@ -35,6 +35,7 @@ from narwhals._utils import (
     zip_strict,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
+from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
@@ -90,7 +91,14 @@ class CompliantExpr(
     _implementation: Implementation
     _evaluate_output_names: EvalNames[CompliantFrameT]
     _alias_output_names: AliasNames | None
-    _metadata: ExprMetadata | None
+    _opt_metadata: ExprMetadata | None
+
+    @property
+    def _metadata(self) -> ExprMetadata:
+        # This should be set with extreme care, and only at the Narwhals level or in
+        # `_expression_parsing.py`, and never from within any compliant class.
+        assert self._opt_metadata is not None  # noqa: S101
+        return self._opt_metadata
 
     def __call__(
         self, df: CompliantFrameT
@@ -116,6 +124,7 @@ class CompliantExpr(
     ) -> Self: ...
 
     # NOTE: `polars`
+    def alias(self, name: str) -> Self: ...
     def all(self) -> Self: ...
     def any(self) -> Self: ...
     def count(self) -> Self: ...
@@ -170,9 +179,6 @@ class DepthTrackingExpr(
     ImplExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
     Protocol[CompliantFrameT, CompliantSeriesOrNativeExprT_co],
 ):
-    _depth: int
-    _function_name: str
-
     # NOTE: pyright bug?
     # Method "from_column_names" overrides class "CompliantExpr" in an incompatible manner
     # Parameter 2 type mismatch: base parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]", override parameter is type "EvalNames[CompliantFrameT@DepthTrackingExpr]"
@@ -186,7 +192,6 @@ class DepthTrackingExpr(
         /,
         *,
         context: _LimitedContext,
-        function_name: str = "",
     ) -> Self: ...
 
     def _is_elementary(self) -> bool:
@@ -204,10 +209,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return self._depth < 2
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return f"{type(self).__name__}(depth={self._depth}, function_name={self._function_name})"
+        return len(list(self._metadata.op_nodes_reversed())) <= 2
 
 
 class EagerExpr(
@@ -215,19 +217,15 @@ class EagerExpr(
     Protocol[EagerDataFrameT, EagerSeriesT],
 ):
     _call: EvalSeries[EagerDataFrameT, EagerSeriesT]
-    _scalar_kwargs: ScalarKwargs
 
     def __init__(
         self,
         call: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
-        depth: int,
-        function_name: str,
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         implementation: Implementation,
         version: Version,
-        scalar_kwargs: ScalarKwargs | None = None,
     ) -> None: ...
 
     def __call__(self, df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
@@ -241,30 +239,22 @@ class EagerExpr(
         cls,
         func: EvalSeries[EagerDataFrameT, EagerSeriesT],
         *,
-        depth: int,
-        function_name: str,
         evaluate_output_names: EvalNames[EagerDataFrameT],
         alias_output_names: AliasNames | None,
         context: _LimitedContext,
-        scalar_kwargs: ScalarKwargs | None = None,
     ) -> Self:
         return cls(
             func,
-            depth=depth,
-            function_name=function_name,
             evaluate_output_names=evaluate_output_names,
             alias_output_names=alias_output_names,
             implementation=context._implementation,
             version=context._version,
-            scalar_kwargs=scalar_kwargs,
         )
 
     @classmethod
     def _from_series(cls, series: EagerSeriesT) -> Self:
         return cls(
             lambda _df: [series],
-            depth=0,
-            function_name="series",
             evaluate_output_names=lambda _df: [series.name],
             alias_output_names=None,
             implementation=series._implementation,
@@ -300,13 +290,10 @@ class EagerExpr(
 
         return self.__class__(
             func,
-            depth=self._depth,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
             implementation=self._implementation,
             version=self._version,
-            scalar_kwargs=self._scalar_kwargs,
         )
 
     def _reuse_series(
@@ -314,7 +301,6 @@ class EagerExpr(
         method_name: str,
         *,
         returns_scalar: bool = False,
-        scalar_kwargs: ScalarKwargs | None = None,
         **expressifiable_args: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
@@ -326,8 +312,6 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
-            scalar_kwargs: non-expressifiable args which we may need to reuse in `agg` or `over`,
-                such as `ddof` for `std` and `var`.
             expressifiable_args: keyword arguments to pass to function, which may
                 be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
         """
@@ -335,16 +319,12 @@ class EagerExpr(
             self._reuse_series_inner,
             method_name=method_name,
             returns_scalar=returns_scalar,
-            scalar_kwargs=scalar_kwargs or {},
             expressifiable_args=expressifiable_args,
         )
         return self._from_callable(
             func,
-            depth=self._depth + 1,
-            function_name=f"{self._function_name}->{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            scalar_kwargs=scalar_kwargs,
             context=self,
         )
 
@@ -365,15 +345,13 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        scalar_kwargs: ScalarKwargs,
         expressifiable_args: dict[str, Any],
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
-            **scalar_kwargs,
             **{
                 name: df._evaluate_expr(value) if self._is_expr(value) else value
                 for name, value in expressifiable_args.items()
-            },
+            }
         }
         method = methodcaller(
             method_name,
@@ -424,11 +402,8 @@ class EagerExpr(
 
         return self._from_callable(
             inner,
-            depth=self._depth + 1,
-            function_name=f"{self._function_name}->{series_namespace}.{method_name}",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
-            scalar_kwargs=self._scalar_kwargs,
             context=self,
         )
 
@@ -445,13 +420,10 @@ class EagerExpr(
 
         return type(self)(
             func,
-            depth=self._depth,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             implementation=self._implementation,
             version=self._version,
-            scalar_kwargs=self._scalar_kwargs,
         )
 
     def cast(self, dtype: IntoDType) -> Self:
@@ -547,14 +519,10 @@ class EagerExpr(
         return self._reuse_series("median", returns_scalar=True)
 
     def std(self, *, ddof: int) -> Self:
-        return self._reuse_series(
-            "std", returns_scalar=True, scalar_kwargs={"ddof": ddof}
-        )
+        return self._reuse_series("std", returns_scalar=True, ddof=ddof)
 
     def var(self, *, ddof: int) -> Self:
-        return self._reuse_series(
-            "var", returns_scalar=True, scalar_kwargs={"ddof": ddof}
-        )
+        return self._reuse_series("var", returns_scalar=True, ddof=ddof)
 
     def skew(self) -> Self:
         return self._reuse_series("skew", returns_scalar=True)
@@ -607,7 +575,7 @@ class EagerExpr(
         limit: int | None,
     ) -> Self:
         return self._reuse_series(
-            "fill_null", value=value, scalar_kwargs={"strategy": strategy, "limit": limit}
+            "fill_null", value=value, strategy=strategy, limit=limit
         )
 
     def is_in(self, other: Any) -> Self:
@@ -663,20 +631,15 @@ class EagerExpr(
         def alias_output_names(names: Sequence[str]) -> Sequence[str]:
             if len(names) != 1:
                 msg = f"Expected function with single output, found output names: {names}"
-                raise ValueError(msg)
+                raise MultiOutputExpressionError(msg)
             return [name]
 
-        # Define this one manually, so that we can
-        # override `output_names` and not increase depth
         return type(self)(
             lambda df: [series.alias(name) for series in self(df)],
-            depth=self._depth,
-            function_name=self._function_name,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=alias_output_names,
             implementation=self._implementation,
             version=self._version,
-            scalar_kwargs=self._scalar_kwargs,
         )
 
     def is_unique(self) -> Self:
@@ -694,14 +657,15 @@ class EagerExpr(
         return self._reuse_series(
             "quantile",
             returns_scalar=True,
-            scalar_kwargs={"quantile": quantile, "interpolation": interpolation},
+            quantile=quantile,
+            interpolation=interpolation,
         )
 
     def head(self, n: int) -> Self:
-        return self._reuse_series("head", scalar_kwargs={"n": n})
+        return self._reuse_series("head", n=n)
 
     def tail(self, n: int) -> Self:
-        return self._reuse_series("tail", scalar_kwargs={"n": n})
+        return self._reuse_series("tail", n=n)
 
     def round(self, decimals: int) -> Self:
         return self._reuse_series("round", decimals=decimals)
@@ -713,7 +677,7 @@ class EagerExpr(
         return self._reuse_series("gather_every", n=n, offset=offset)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
-        return self._reuse_series("mode", scalar_kwargs={"keep": keep})
+        return self._reuse_series("mode", keep=keep)
 
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
@@ -721,11 +685,9 @@ class EagerExpr(
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
             "rolling_mean",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-            },
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
         )
 
     def rolling_std(
@@ -733,22 +695,15 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "rolling_std",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-                "ddof": ddof,
-            },
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            ddof=ddof,
         )
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
-            "rolling_sum",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-            },
+            "rolling_sum", window_size=window_size, min_samples=min_samples, center=center
         )
 
     def rolling_var(
@@ -756,12 +711,10 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "rolling_var",
-            scalar_kwargs={
-                "window_size": window_size,
-                "min_samples": min_samples,
-                "center": center,
-                "ddof": ddof,
-            },
+            window_size=window_size,
+            min_samples=min_samples,
+            center=center,
+            ddof=ddof,
         )
 
     def map_batches(
@@ -805,35 +758,31 @@ class EagerExpr(
 
         return self._from_callable(
             func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->map_batches",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             context=self,
         )
 
     def shift(self, n: int) -> Self:
-        return self._reuse_series("shift", scalar_kwargs={"n": n})
+        return self._reuse_series("shift", n=n)
 
     def cum_sum(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_sum", scalar_kwargs={"reverse": reverse})
+        return self._reuse_series("cum_sum", reverse=reverse)
 
     def cum_count(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_count", scalar_kwargs={"reverse": reverse})
+        return self._reuse_series("cum_count", reverse=reverse)
 
     def cum_min(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_min", scalar_kwargs={"reverse": reverse})
+        return self._reuse_series("cum_min", reverse=reverse)
 
     def cum_max(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_max", scalar_kwargs={"reverse": reverse})
+        return self._reuse_series("cum_max", reverse=reverse)
 
     def cum_prod(self, *, reverse: bool) -> Self:
-        return self._reuse_series("cum_prod", scalar_kwargs={"reverse": reverse})
+        return self._reuse_series("cum_prod", reverse=reverse)
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
-        return self._reuse_series(
-            "rank", scalar_kwargs={"method": method, "descending": descending}
-        )
+        return self._reuse_series("rank", method=method, descending=descending)
 
     def log(self, base: float) -> Self:
         return self._reuse_series("log", base=base)
@@ -849,22 +798,6 @@ class EagerExpr(
     ) -> Self:
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
-        )
-
-    def is_close(
-        self,
-        other: Self | NumericLiteral,
-        *,
-        abs_tol: float,
-        rel_tol: float,
-        nans_equal: bool,
-    ) -> Self:
-        return self._reuse_series(
-            "is_close",
-            other=other,
-            abs_tol=abs_tol,
-            rel_tol=rel_tol,
-            nans_equal=nans_equal,
         )
 
     @property
@@ -1099,12 +1032,12 @@ class EagerExprStringNamespace(
     def len_chars(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "len_chars")
 
-    def replace(self, pattern: str, value: str, *, literal: bool, n: int) -> EagerExprT:
+    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "replace", pattern=pattern, value=value, literal=literal, n=n
         )
 
-    def replace_all(self, pattern: str, value: str, *, literal: bool) -> EagerExprT:
+    def replace_all(self, value: str, pattern: str, *, literal: bool) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "replace_all", pattern=pattern, value=value, literal=literal
         )

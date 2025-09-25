@@ -13,7 +13,7 @@ from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import cast_to_comparable_string_types
-from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -23,8 +23,7 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-    from narwhals._arrow.typing import ArrayOrScalar, ChunkedArrayAny, Incomplete
-    from narwhals._compliant.typing import ScalarKwargs
+    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -55,8 +54,6 @@ class ArrowNamespace(
             lambda df: [
                 ArrowSeries.from_iterable([len(df.native)], name="len", context=self)
             ],
-            depth=0,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
@@ -73,8 +70,6 @@ class ArrowNamespace(
 
         return self._expr(
             lambda df: [_lit_arrow_series(df)],
-            depth=0,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             version=self._version,
@@ -90,8 +85,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -107,8 +100,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -123,8 +114,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -144,8 +133,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -165,8 +152,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -186,8 +171,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -220,9 +203,6 @@ class ArrowNamespace(
     def selectors(self) -> ArrowSelectorNamespace:
         return ArrowSelectorNamespace.from_namespace(self)
 
-    def when(self, predicate: ArrowExpr) -> ArrowWhen:
-        return ArrowWhen.from_expr(predicate, context=self)
-
     def concat_str(
         self, *exprs: ArrowExpr, separator: str, ignore_nulls: bool
     ) -> ArrowExpr:
@@ -250,8 +230,6 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -271,33 +249,16 @@ class ArrowNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
 
-
-class ArrowWhen(EagerWhen[ArrowDataFrame, ArrowSeries, ArrowExpr, "ChunkedArrayAny"]):
-    @property
-    def _then(self) -> type[ArrowThen]:
-        return ArrowThen
-
     def _if_then_else(
         self,
         when: ChunkedArrayAny,
         then: ChunkedArrayAny,
-        otherwise: ArrayOrScalar | NonNestedLiteral,
-        /,
+        otherwise: ChunkedArrayAny | None = None,
     ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when, then, otherwise)
-
-
-class ArrowThen(
-    CompliantThen[ArrowDataFrame, ArrowSeries, ArrowExpr, ArrowWhen], ArrowExpr
-):
-    _depth: int = 0
-    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
-    _function_name: str = "whenthen"

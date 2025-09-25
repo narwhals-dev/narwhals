@@ -64,7 +64,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
+        self._opt_metadata: ExprMetadata | None = None
         self._window_function: IbisWindowFunction | None = window_function
 
     @property
@@ -198,18 +198,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
         return self._with_callable(lambda expr: expr.quantile(quantile))
-
-    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        def _clip(
-            expr: ir.NumericValue, lower: Any | None = None, upper: Any | None = None
-        ) -> ir.NumericValue:
-            return expr.clip(lower=lower, upper=upper)
-
-        if lower_bound is None:
-            return self._with_callable(_clip, upper=upper_bound)
-        if upper_bound is None:
-            return self._with_callable(_clip, lower=lower_bound)
-        return self._with_callable(_clip, lower=lower_bound, upper=upper_bound)
 
     def n_unique(self) -> Self:
         return self._with_callable(

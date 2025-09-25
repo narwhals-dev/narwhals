@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from datetime import timezone
 
-    from narwhals._compliant import CompliantSelectorNamespace, CompliantWhen
+    from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
@@ -37,13 +37,9 @@ if TYPE_CHECKING:
 class PolarsNamespace:
     all: Method[PolarsExpr]
     coalesce: Method[PolarsExpr]
-    col: Method[PolarsExpr]
-    exclude: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
-
-    when: Method[CompliantWhen[PolarsDataFrame, PolarsSeries, PolarsExpr]]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -54,6 +50,15 @@ class PolarsNamespace:
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def evaluate_expr(
+        self, data: Expr | NonNestedLiteral | Any, /
+    ) -> PolarsExpr | NonNestedLiteral:
+        if is_expr(data):
+            expr = data(self)
+            assert isinstance(expr, self._expr)  # noqa: S101
+            return expr
+        return data
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -93,12 +98,14 @@ class PolarsNamespace:
             # NOTE: To avoid `pl.lit(None)` failing this `None` check
             # https://github.com/pola-rs/polars/blob/58dd8e5770f16a9bef9009a1c05f00e15a5263c7/py-polars/polars/expr/expr.py#L2870-L2872
             return data
+        if isinstance(data, PolarsExpr):
+            return data
         if is_expr(data):
-            expr = data._to_compliant_expr(self)
+            expr = data(self)
             assert isinstance(expr, self._expr)  # noqa: S101
             return expr
         if isinstance(data, str) and not str_as_lit:
-            return self.col(data)
+            return self.col([data])
         return self.lit(data.to_native() if is_series(data) else data, None)
 
     @overload
@@ -137,10 +144,16 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    def col(self, names: Sequence[str]) -> PolarsExpr:
+        return self._expr(pl.col(*names), version=self._version)
+
+    def exclude(self, names: Sequence[str]) -> PolarsExpr:
+        return self._expr(pl.exclude(*names), version=self._version)
+
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
     )
-    def nth(self, *indices: int) -> PolarsExpr:
+    def nth(self, indices: Sequence[int]) -> PolarsExpr:
         return self._expr(pl.nth(*indices), version=self._version)
 
     def len(self) -> PolarsExpr:
@@ -222,6 +235,22 @@ class PolarsNamespace:
 
         return self._expr(
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
+            version=self._version,
+        )
+
+    def when_then(
+        self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
+    ) -> PolarsExpr:
+        if otherwise is None:
+            (when_native, then_native), _ = extract_args_kwargs((when, then), {})
+            return self._expr(
+                pl.when(when_native).then(then_native), version=self._version
+            )
+        (when_native, then_native, otherwise_native), _ = extract_args_kwargs(
+            (when, then, otherwise), {}
+        )
+        return self._expr(
+            pl.when(when_native).then(then_native).otherwise(otherwise_native),
             version=self._version,
         )
 

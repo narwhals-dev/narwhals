@@ -66,7 +66,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._metadata: ExprMetadata | None = None
+        self._opt_metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
     def _count_star(self) -> Expression:
@@ -117,8 +117,14 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             return [col(name) for name in evaluate_column_names(df)]
 
+        def window_func(
+            df: DuckDBLazyFrame, _window_inputs: WindowInputs[Expression]
+        ) -> list[Expression]:
+            return [col(name) for name in evaluate_column_names(df)]
+
         return cls(
             func,
+            window_func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,

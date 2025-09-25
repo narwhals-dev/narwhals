@@ -58,7 +58,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         self._alias_output_names = alias_output_names
         self._version = version
         self._implementation = implementation
-        self._metadata: ExprMetadata | None = None
+        self._opt_metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {
@@ -171,8 +171,14 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
 
+        def window_func(
+            df: SparkLikeLazyFrame, _window_inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            return [df._F.col(col_name) for col_name in evaluate_column_names(df)]
+
         return cls(
             func,
+            window_func,
             evaluate_output_names=evaluate_column_names,
             alias_output_names=None,
             version=context._version,

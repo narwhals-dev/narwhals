@@ -6,7 +6,7 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._compliant import CompliantThen, EagerNamespace, EagerWhen
+from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
     from narwhals.typing import IntoDType, NonNestedLiteral
 
@@ -80,8 +79,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="coalesce",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -101,8 +98,6 @@ class PandasLikeNamespace(
 
         return PandasLikeExpr(
             lambda df: [_lit_pandas_series(df)],
-            depth=0,
-            function_name="lit",
             evaluate_output_names=lambda _df: ["literal"],
             alias_output_names=None,
             implementation=self._implementation,
@@ -116,8 +111,6 @@ class PandasLikeNamespace(
                     [len(df._native_frame)], name="len", index=[0], context=self
                 )
             ],
-            depth=0,
-            function_name="len",
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             implementation=self._implementation,
@@ -135,8 +128,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="sum_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -168,8 +159,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="all_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -201,8 +190,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="any_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -220,8 +207,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="mean_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -245,8 +230,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="min_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -270,8 +253,6 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="max_horizontal",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
@@ -322,9 +303,6 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def when(self, predicate: PandasLikeExpr) -> PandasWhen[NativeSeriesT]:
-        return PandasWhen[NativeSeriesT].from_expr(predicate, context=self)
-
     def concat_str(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
@@ -366,12 +344,19 @@ class PandasLikeNamespace(
 
         return self._expr._from_callable(
             func=func,
-            depth=max(x._depth for x in exprs) + 1,
-            function_name="concat_str",
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def _if_then_else(
+        self,
+        when: NativeSeriesT,
+        then: NativeSeriesT,
+        otherwise: NativeSeriesT | None = None,
+    ) -> NativeSeriesT:
+        where: Incomplete = then.where
+        return where(when) if otherwise is None else where(when, otherwise)
 
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
@@ -411,31 +396,3 @@ class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
         axis: Axis,
         copy: bool | None = None,
     ) -> NativeDataFrameT | NativeSeriesT: ...
-
-
-class PandasWhen(
-    EagerWhen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, NativeSeriesT]
-):
-    @property
-    # Signature of "_then" incompatible with supertype "CompliantWhen"
-    # ArrowWhen seems to follow the same pattern, but no mypy complaint there?
-    def _then(self) -> type[PandasThen]:  # type: ignore[override]
-        return PandasThen
-
-    def _if_then_else(
-        self,
-        when: NativeSeriesT,
-        then: NativeSeriesT,
-        otherwise: NativeSeriesT | NonNestedLiteral,
-    ) -> NativeSeriesT:
-        where: Incomplete = then.where
-        return where(when) if otherwise is None else where(when, otherwise)
-
-
-class PandasThen(
-    CompliantThen[PandasLikeDataFrame, PandasLikeSeries, PandasLikeExpr, PandasWhen],
-    PandasLikeExpr,
-):
-    _depth: int = 0
-    _scalar_kwargs: ScalarKwargs = {}  # noqa: RUF012
-    _function_name: str = "whenthen"

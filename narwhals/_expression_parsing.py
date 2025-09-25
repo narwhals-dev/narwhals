@@ -5,15 +5,18 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, ParamSpec, TypeVar, cast, overload
 
 from narwhals._utils import is_compliant_expr, zip_strict
-from narwhals.dependencies import is_narwhals_series, is_numpy_array, is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
+from narwhals.dependencies import is_numpy_array_1d
+from narwhals.exceptions import (
+    InvalidIntoExprError,
+    InvalidOperationError,
+    MultiOutputExpressionError,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from typing_extensions import Never, TypeIs
 
@@ -30,6 +33,8 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoExpr, NonNestedLiteral, _1DArray
 
     T = TypeVar("T")
+    PS = ParamSpec("PS")
+    R = TypeVar("R")
 
 
 def is_expr(obj: Any) -> TypeIs[Expr]:
@@ -44,13 +49,6 @@ def is_series(obj: Any) -> TypeIs[Series[Any]]:
     from narwhals.series import Series
 
     return isinstance(obj, Series)
-
-
-def is_into_expr_eager(obj: Any) -> TypeIs[Expr | Series[Any] | str | _1DArray]:
-    from narwhals.expr import Expr
-    from narwhals.series import Series
-
-    return isinstance(obj, (Series, Expr, str)) or is_numpy_array_1d(obj)
 
 
 def combine_evaluate_output_names(
@@ -89,16 +87,14 @@ def evaluate_output_names_and_aliases(
         if expr._alias_output_names is None
         else expr._alias_output_names(output_names)
     )
-    if exclude:
-        assert expr._metadata is not None  # noqa: S101
-        if expr._metadata.expansion_kind.is_multi_unnamed():
-            output_names, aliases = zip_strict(
-                *[
-                    (x, alias)
-                    for x, alias in zip_strict(output_names, aliases)
-                    if x not in exclude
-                ]
-            )
+    if exclude and expr._metadata.expansion_kind.is_multi_unnamed():
+        output_names, aliases = zip_strict(
+            *[
+                (x, alias)
+                for x, alias in zip_strict(output_names, aliases)
+                if x not in exclude
+            ]
+        )
     return output_names, aliases
 
 
@@ -132,6 +128,27 @@ class ExprKind(Enum):
     OVER = auto()
     """Results from calling `.over` on expression."""
 
+    COL = auto()
+    """Results from calling `nw.col`."""
+
+    NTH = auto()
+    """Results from calling `nw.nth`."""
+
+    EXCLUDE = auto()
+    """Results from calling `nw.exclude`."""
+
+    ALL = auto()
+    """Results from calling `nw.all`."""
+
+    SELECTOR = auto()
+    """Results from creating an expression with a selector."""
+
+    WHEN_THEN = auto()
+    """Results from `when/then expression`, possibly followed by `otherwise`."""
+
+    SERIES = auto()
+    """Results from converting a Series to Expr."""
+
     UNKNOWN = auto()
     """Based on the information we have, we can't determine the ExprKind."""
 
@@ -140,12 +157,20 @@ class ExprKind(Enum):
         return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
 
     @property
-    def is_orderable_window(self) -> bool:
-        return self in {ExprKind.ORDERABLE_WINDOW, ExprKind.ORDERABLE_AGGREGATION}
+    def is_orderable(self) -> bool:
+        # Any operation which may be affected by `order_by`, such as `cum_sum`,
+        # `diff`, `rank`, `arg_max`, ...
+        return self in {
+            ExprKind.ORDERABLE_WINDOW,
+            ExprKind.ORDERABLE_AGGREGATION,
+            ExprKind.FILTRATION,
+            ExprKind.WINDOW,
+        }
 
     @classmethod
-    def from_expr(cls, obj: Expr) -> ExprKind:
+    def from_expr(cls, obj: CompliantExprAny) -> ExprKind:
         meta = obj._metadata
+        assert meta is not None  # noqa: S101
         if meta.is_literal:
             return ExprKind.LITERAL
         if meta.is_scalar_like:
@@ -155,17 +180,9 @@ class ExprKind(Enum):
         return ExprKind.UNKNOWN
 
     @classmethod
-    def from_into_expr(
-        cls, obj: IntoExpr | NonNestedLiteral | _1DArray, *, str_as_lit: bool
-    ) -> ExprKind:
-        if is_expr(obj):
+    def from_into_expr(cls, obj: CompliantExprAny | NonNestedLiteral) -> ExprKind:
+        if is_compliant_expr(obj):
             return cls.from_expr(obj)
-        if (
-            is_narwhals_series(obj)
-            or is_numpy_array(obj)
-            or (isinstance(obj, str) and not str_as_lit)
-        ):
-            return ExprKind.ELEMENTWISE
         return ExprKind.LITERAL
 
 
@@ -202,6 +219,82 @@ class ExpansionKind(Enum):
         raise AssertionError(msg)  # pragma: no cover
 
 
+class ExprNode:
+    def __init__(
+        self,
+        kind: ExprKind,
+        name: str,
+        /,
+        *exprs: IntoExpr | NonNestedLiteral,
+        str_as_lit: bool = False,
+        allow_multi_output: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        self.kind: ExprKind = kind
+        self.name: str = name
+        self.exprs: Sequence[IntoExpr | NonNestedLiteral] = exprs
+        self.kwargs: dict[str, Any] = kwargs
+        self.str_as_lit: bool = str_as_lit
+        self.allow_multi_output: bool = allow_multi_output
+
+        # Cached methods.
+        self._is_orderable_cached: bool | None = None
+
+    def __repr__(self) -> str:
+        if self.name == "col":
+            names = ", ".join(str(x) for x in self.kwargs["names"])
+            return f"col({names})"
+        arg_str = []
+        expr_repr = ", ".join(str(x) for x in self.exprs)
+        kwargs_repr = ", ".join(f"{key}={value}" for key, value in self.kwargs.items())
+        if self.exprs:
+            arg_str.append(expr_repr)
+        if self.kwargs:
+            arg_str.append(kwargs_repr)
+        return f"{self.name}({', '.join(arg_str)})"
+
+    def _with_kwargs(self, **kwargs: Any) -> ExprNode:
+        return self.__class__(
+            self.kind, self.name, *self.exprs, str_as_lit=self.str_as_lit, **kwargs
+        )
+
+    def _push_down_over_node_in_place(
+        self, over_node: ExprNode, over_node_without_order_by: ExprNode
+    ) -> None:
+        exprs = []
+        # Note: please keep this as a for-loop (rather than a list-comprehension)
+        # so that pytest-cov highlights any uncovered branches.
+        for expr in self.exprs:
+            if not is_expr(expr):
+                exprs.append(expr)
+            elif over_node.kwargs["order_by"] and any(
+                expr_node.is_orderable() for expr_node in expr._nodes
+            ):
+                exprs.append(expr._with_node(over_node))
+            elif over_node_without_order_by.kwargs["partition_by"]:
+                exprs.append(expr._with_node(over_node_without_order_by))
+            else:
+                # If there's no `partition_by`, then `over_node_without_order_by` is a no-op.
+                exprs.append(expr)
+        self.exprs = exprs
+
+    def is_orderable(self) -> bool:
+        if self._is_orderable_cached is None:
+            # Note: don't combine these if/then statements so that pytest-cov shows if
+            # anything is uncovered.
+            if self.kind.is_orderable:  # noqa: SIM114
+                self._is_orderable_cached = True
+            elif any(
+                any(node.is_orderable() for node in expr._nodes)
+                for expr in self.exprs
+                if is_expr(expr)
+            ):
+                self._is_orderable_cached = True
+            else:
+                self._is_orderable_cached = False
+        return self._is_orderable_cached
+
+
 class ExprMetadata:
     """Expression metadata.
 
@@ -212,7 +305,6 @@ class ExprMetadata:
             of the other rows around it.
         is_literal: Whether it is just a literal wrapped in an expression.
         is_scalar_like: Whether it is a literal or an aggregation.
-        last_node: The ExprKind of the last node.
         n_orderable_ops: The number of order-dependent operations. In the
             lazy case, this number must be `0` by the time the expression
             is evaluated.
@@ -225,15 +317,14 @@ class ExprMetadata:
         "is_elementwise",
         "is_literal",
         "is_scalar_like",
-        "last_node",
         "n_orderable_ops",
+        "nodes",
         "preserves_length",
     )
 
     def __init__(
         self,
         expansion_kind: ExpansionKind,
-        last_node: ExprKind,
         *,
         has_windows: bool = False,
         n_orderable_ops: int = 0,
@@ -241,19 +332,20 @@ class ExprMetadata:
         is_elementwise: bool = True,
         is_scalar_like: bool = False,
         is_literal: bool = False,
+        nodes: tuple[ExprNode, ...],
     ) -> None:
         if is_literal:
             assert is_scalar_like  # noqa: S101  # debug assertion
         if is_elementwise:
             assert preserves_length  # noqa: S101  # debug assertion
         self.expansion_kind: ExpansionKind = expansion_kind
-        self.last_node: ExprKind = last_node
         self.has_windows: bool = has_windows
         self.n_orderable_ops: int = n_orderable_ops
         self.is_elementwise: bool = is_elementwise
         self.preserves_length: bool = preserves_length
         self.is_scalar_like: bool = is_scalar_like
         self.is_literal: bool = is_literal
+        self.nodes: tuple[ExprNode, ...] = nodes
 
     def __init_subclass__(cls, /, *args: Any, **kwds: Any) -> Never:  # pragma: no cover
         msg = f"Cannot subclass {cls.__name__!r}"
@@ -263,71 +355,188 @@ class ExprMetadata:
         return (
             f"ExprMetadata(\n"
             f"  expansion_kind: {self.expansion_kind},\n"
-            f"  last_node: {self.last_node},\n"
             f"  has_windows: {self.has_windows},\n"
             f"  n_orderable_ops: {self.n_orderable_ops},\n"
             f"  is_elementwise: {self.is_elementwise},\n"
             f"  preserves_length: {self.preserves_length},\n"
             f"  is_scalar_like: {self.is_scalar_like},\n"
             f"  is_literal: {self.is_literal},\n"
+            f"  nodes: {self.nodes},\n"
             ")"
+        )
+
+    @classmethod
+    def from_node(  # noqa: PLR0911
+        cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
+    ) -> ExprMetadata:
+        if node.kind is ExprKind.SERIES:
+            return cls.from_selector_single(node)
+        if node.kind is ExprKind.COL:
+            return (
+                ExprMetadata.from_selector_single(node)
+                if len(node.kwargs["names"]) == 1
+                else ExprMetadata.from_selector_multi_named(node)
+            )
+        if node.kind is ExprKind.NTH:
+            return (
+                ExprMetadata.from_selector_single(node)
+                if len(node.kwargs["indices"]) == 1
+                else ExprMetadata.from_selector_multi_unnamed(node)
+            )
+        if node.kind in {ExprKind.ALL, ExprKind.EXCLUDE}:
+            return ExprMetadata.from_selector_multi_unnamed(node)
+        if node.kind is ExprKind.AGGREGATION:
+            return ExprMetadata.from_aggregation(node)
+        if node.kind is ExprKind.LITERAL:
+            return ExprMetadata.from_literal(node)
+        if node.kind is ExprKind.SELECTOR:
+            return ExprMetadata.from_selector_multi_unnamed(node)
+        if node.kind is ExprKind.ELEMENTWISE:
+            return ExprMetadata.from_elementwise(node, *ces)
+        msg = f"Unexpected node kind: {node.kind}"
+        raise AssertionError(msg)
+
+    def with_node(  # noqa: PLR0911,C901
+        self,
+        node: ExprNode,
+        ce: CompliantExprAny,
+        *ces: CompliantExprAny | NonNestedLiteral,
+    ) -> ExprMetadata:
+        if node.kind is ExprKind.AGGREGATION:
+            return self.with_aggregation(node)
+        if node.kind is ExprKind.ELEMENTWISE:
+            return combine_metadata(
+                ce,
+                *ces,
+                str_as_lit=node.str_as_lit,
+                allow_multi_output=node.allow_multi_output,
+                to_single_output=False,
+                nodes=(*ce._metadata.nodes, node),
+            )
+        if node.kind is ExprKind.FILTRATION:
+            return self.with_filtration(node)
+        if node.kind is ExprKind.ORDERABLE_WINDOW:
+            return self.with_orderable_window(node)
+        if node.kind is ExprKind.ORDERABLE_FILTRATION:
+            return self.with_orderable_filtration(node)
+        if node.kind is ExprKind.ORDERABLE_AGGREGATION:
+            return self.with_orderable_aggregation(node)
+        if node.kind is ExprKind.WINDOW:
+            return self.with_window(node)
+        if node.kind is ExprKind.SELECTOR:
+            return self
+        if node.kind is ExprKind.OVER:
+            if node.kwargs["order_by"]:
+                return self.with_ordered_over(node)
+            if not node.kwargs["partition_by"]:  # pragma: no cover
+                msg = "At least one of `partition_by` or `order_by` must be specified."
+                raise InvalidOperationError(msg)
+            return self.with_partitioned_over(node)
+        msg = f"Unexpected node kind: {node.kind}"
+        raise AssertionError(msg)
+
+    @classmethod
+    def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
+        return cls(
+            ExpansionKind.SINGLE,
+            is_elementwise=False,
+            preserves_length=False,
+            is_scalar_like=True,
+            nodes=(node,),
+        )
+
+    @classmethod
+    def from_literal(cls, node: ExprNode) -> ExprMetadata:
+        return cls(
+            ExpansionKind.SINGLE,
+            is_elementwise=False,
+            preserves_length=False,
+            is_literal=True,
+            is_scalar_like=True,
+            nodes=(node,),
+        )
+
+    @classmethod
+    def from_selector_single(cls, node: ExprNode) -> ExprMetadata:
+        # e.g. `nw.col('a')`, `nw.nth(0)`
+        return cls(ExpansionKind.SINGLE, nodes=(node,))
+
+    @classmethod
+    def from_selector_multi_named(cls, node: ExprNode) -> ExprMetadata:
+        # e.g. `nw.col('a', 'b')`
+        return cls(ExpansionKind.MULTI_NAMED, nodes=(node,))
+
+    @classmethod
+    def from_selector_multi_unnamed(cls, node: ExprNode) -> ExprMetadata:
+        # e.g. `nw.all()`
+        return cls(ExpansionKind.MULTI_UNNAMED, nodes=(node,))
+
+    @classmethod
+    def from_elementwise(
+        cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
+    ) -> ExprMetadata:
+        return combine_metadata(
+            *ces,
+            str_as_lit=False,
+            allow_multi_output=True,
+            to_single_output=True,
+            nodes=(node,),
         )
 
     @property
     def is_filtration(self) -> bool:
         return not self.preserves_length and not self.is_scalar_like
 
-    def with_aggregation(self) -> ExprMetadata:
+    def with_aggregation(self, node: ExprNode) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.AGGREGATION,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_orderable_aggregation(self) -> ExprMetadata:
+    def with_orderable_aggregation(self, node: ExprNode) -> ExprMetadata:
         # Deprecated, used only in stable.v1.
         if self.is_scalar_like:  # pragma: no cover
             msg = "Can't apply aggregations to scalar-like expressions."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.ORDERABLE_AGGREGATION,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_elementwise=False,
             is_scalar_like=True,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_elementwise_op(self) -> ExprMetadata:
+    def with_elementwise_op(self, node: ExprNode) -> ExprMetadata:
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.ELEMENTWISE,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=self.preserves_length,
             is_elementwise=self.is_elementwise,
             is_scalar_like=self.is_scalar_like,
             is_literal=self.is_literal,
+            nodes=(*self.nodes, node),
         )
 
-    def with_window(self) -> ExprMetadata:
+    def with_window(self, node: ExprNode) -> ExprMetadata:
         # Window function which may (but doesn't have to) be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply window (e.g. `rank`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.WINDOW,
             has_windows=self.has_windows,
             # The function isn't order-dependent (but, users can still use `order_by` if they wish!),
             # so we don't increment `n_orderable_ops`.
@@ -336,25 +545,26 @@ class ExprMetadata:
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_orderable_window(self) -> ExprMetadata:
+    def with_orderable_window(self, node: ExprNode) -> ExprMetadata:
         # Window function which must be used with `over(order_by=...)`.
         if self.is_scalar_like:
             msg = "Can't apply orderable window (e.g. `diff`, `shift`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.ORDERABLE_WINDOW,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=self.preserves_length,
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_ordered_over(self) -> ExprMetadata:
+    def with_ordered_over(self, node: ExprNode) -> ExprMetadata:
         if self.has_windows:
             msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
@@ -365,7 +575,10 @@ class ExprMetadata:
             )
             raise InvalidOperationError(msg)
         n_orderable_ops = self.n_orderable_ops
-        if not n_orderable_ops and self.last_node is not ExprKind.WINDOW:
+        if (
+            not n_orderable_ops
+            and next(self.op_nodes_reversed()).kind is not ExprKind.WINDOW
+        ):
             msg = (
                 "Cannot use `order_by` in `over` on expression which isn't orderable.\n"
                 "If your expression is orderable, then make sure that `over(order_by=...)`\n"
@@ -376,20 +589,20 @@ class ExprMetadata:
                 "  + `nw.col('price').diff().over(order_by='date') + 1`\n"
             )
             raise InvalidOperationError(msg)
-        if self.last_node.is_orderable_window:
+        if next(self.op_nodes_reversed()).kind.is_orderable and n_orderable_ops > 0:
             n_orderable_ops -= 1
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.OVER,
             has_windows=True,
             n_orderable_ops=n_orderable_ops,
             preserves_length=True,
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_partitioned_over(self) -> ExprMetadata:
+    def with_partitioned_over(self, node: ExprNode) -> ExprMetadata:
         if self.has_windows:
             msg = "Cannot nest `over` statements."
             raise InvalidOperationError(msg)
@@ -401,94 +614,51 @@ class ExprMetadata:
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.OVER,
             has_windows=True,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=True,
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_filtration(self) -> ExprMetadata:
+    def with_filtration(self, node: ExprNode) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.FILTRATION,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops,
             preserves_length=False,
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    def with_orderable_filtration(self) -> ExprMetadata:
+    def with_orderable_filtration(self, node: ExprNode) -> ExprMetadata:
         if self.is_scalar_like:
             msg = "Can't apply filtration (e.g. `drop_nulls`) to scalar-like expression."
             raise InvalidOperationError(msg)
         return ExprMetadata(
             self.expansion_kind,
-            ExprKind.ORDERABLE_FILTRATION,
             has_windows=self.has_windows,
             n_orderable_ops=self.n_orderable_ops + 1,
             preserves_length=False,
             is_elementwise=False,
             is_scalar_like=False,
             is_literal=False,
+            nodes=(*self.nodes, node),
         )
 
-    @staticmethod
-    def aggregation() -> ExprMetadata:
-        return ExprMetadata(
-            ExpansionKind.SINGLE,
-            ExprKind.AGGREGATION,
-            is_elementwise=False,
-            preserves_length=False,
-            is_scalar_like=True,
-        )
-
-    @staticmethod
-    def literal() -> ExprMetadata:
-        return ExprMetadata(
-            ExpansionKind.SINGLE,
-            ExprKind.LITERAL,
-            is_elementwise=False,
-            preserves_length=False,
-            is_literal=True,
-            is_scalar_like=True,
-        )
-
-    @staticmethod
-    def selector_single() -> ExprMetadata:
-        # e.g. `nw.col('a')`, `nw.nth(0)`
-        return ExprMetadata(ExpansionKind.SINGLE, ExprKind.ELEMENTWISE)
-
-    @staticmethod
-    def selector_multi_named() -> ExprMetadata:
-        # e.g. `nw.col('a', 'b')`
-        return ExprMetadata(ExpansionKind.MULTI_NAMED, ExprKind.ELEMENTWISE)
-
-    @staticmethod
-    def selector_multi_unnamed() -> ExprMetadata:
-        # e.g. `nw.all()`
-        return ExprMetadata(ExpansionKind.MULTI_UNNAMED, ExprKind.ELEMENTWISE)
-
-    @classmethod
-    def from_binary_op(cls, lhs: Expr, rhs: IntoExpr, /) -> ExprMetadata:
-        # We may be able to allow multi-output rhs in the future:
-        # https://github.com/narwhals-dev/narwhals/issues/2244.
-        return combine_metadata(
-            lhs, rhs, str_as_lit=True, allow_multi_output=False, to_single_output=False
-        )
-
-    @classmethod
-    def from_horizontal_op(cls, *exprs: IntoExpr) -> ExprMetadata:
-        return combine_metadata(
-            *exprs, str_as_lit=False, allow_multi_output=True, to_single_output=True
-        )
+    def op_nodes_reversed(self) -> Iterator[ExprNode]:
+        for node in reversed(self.nodes):
+            if node.name.startswith("name.") or node.name == "alias":
+                # Skip nodes which only do aliasing.
+                continue
+            yield node
 
 
 def combine_metadata(
@@ -496,6 +666,7 @@ def combine_metadata(
     str_as_lit: bool,
     allow_multi_output: bool,
     to_single_output: bool,
+    nodes: tuple[ExprNode, ...],
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
@@ -505,6 +676,7 @@ def combine_metadata(
         allow_multi_output: Whether to allow multi-output inputs.
         to_single_output: Whether the result is always single-output, regardless
             of the inputs (e.g. `nw.sum_horizontal`).
+        nodes: Nodes of result node.
     """
     n_filtrations = 0
     result_expansion_kind = ExpansionKind.SINGLE
@@ -524,8 +696,9 @@ def combine_metadata(
             result_preserves_length = True
             result_is_scalar_like = False
             result_is_literal = False
-        elif is_expr(arg):
+        elif is_compliant_expr(arg):
             metadata = arg._metadata
+            assert metadata is not None  # noqa: S101
             if metadata.expansion_kind.is_multi_output():
                 expansion_kind = metadata.expansion_kind
                 if i > 0 and not allow_multi_output:
@@ -549,67 +722,179 @@ def combine_metadata(
             result_is_scalar_like &= metadata.is_scalar_like
             result_is_literal &= metadata.is_literal
             n_filtrations += int(metadata.is_filtration)
-
     if n_filtrations > 1:
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise InvalidOperationError(msg)
     if result_preserves_length and n_filtrations:
         msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
         raise InvalidOperationError(msg)
-
     return ExprMetadata(
         result_expansion_kind,
-        # n-ary operations align positionally, and so the last node is elementwise.
-        ExprKind.ELEMENTWISE,
         has_windows=result_has_windows,
         n_orderable_ops=result_n_orderable_ops,
         preserves_length=result_preserves_length,
         is_elementwise=result_is_elementwise,
         is_scalar_like=result_is_scalar_like,
         is_literal=result_is_literal,
+        nodes=nodes,
     )
 
 
-def check_expressions_preserve_length(*args: IntoExpr, function_name: str) -> None:
+def check_expressions_preserve_length(
+    *args: CompliantExprAny | NonNestedLiteral, function_name: str
+) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
-    from narwhals.series import Series
 
-    if not all(
-        (is_expr(x) and x._metadata.preserves_length) or isinstance(x, (str, Series))
-        for x in args
-    ):
+    if not all((is_compliant_expr(x) and x._metadata.preserves_length) for x in args):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise InvalidOperationError(msg)
 
 
-def all_exprs_are_scalar_like(*args: IntoExpr, **kwargs: IntoExpr) -> bool:
+def all_exprs_are_scalar_like(mds: Sequence[ExprMetadata]) -> bool:
     # Raise if any argument in `args` isn't an aggregation or literal.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
-    exprs = chain(args, kwargs.values())
-    return all(is_expr(x) and x._metadata.is_scalar_like for x in exprs)
+    return all(md.is_scalar_like for md in mds)
 
 
-def apply_n_ary_operation(
+def apply_binary(
     plx: CompliantNamespaceAny,
-    n_ary_function: Callable[..., CompliantExprAny],
-    *comparands: IntoExpr | NonNestedLiteral | _1DArray,
-    str_as_lit: bool,
+    name: str,
+    ce: CompliantExprAny,
+    other: IntoExpr | NonNestedLiteral | _1DArray,
 ) -> CompliantExprAny:
-    parse = plx.parse_into_expr
-    compliant_exprs = (parse(into, str_as_lit=str_as_lit) for into in comparands)
-    kinds = [
-        ExprKind.from_into_expr(comparand, str_as_lit=str_as_lit)
-        for comparand in comparands
-    ]
+    parse = plx.evaluate_expr
+    other_compliant = parse(other)
+    compliant_exprs = [ce, other_compliant]
+    return getattr(compliant_exprs[0], name)(compliant_exprs[1])
 
+
+@overload
+def _parse_into_expr(
+    arg: IntoExpr | NonNestedLiteral | _1DArray,
+    *,
+    str_as_lit: bool = False,
+    backend: Any = None,
+    allow_literal: Literal[False],
+) -> Expr: ...
+
+
+@overload
+def _parse_into_expr(
+    arg: IntoExpr | NonNestedLiteral | _1DArray,
+    *,
+    str_as_lit: bool = False,
+    backend: Any = None,
+    allow_literal: Literal[True] = ...,
+) -> Expr | NonNestedLiteral: ...
+
+
+def _parse_into_expr(
+    arg: IntoExpr | NonNestedLiteral | _1DArray,
+    *,
+    str_as_lit: bool = False,
+    backend: Any = None,
+    allow_literal: bool = True,
+) -> Expr | NonNestedLiteral:
+    from narwhals.functions import col, new_series
+
+    if isinstance(arg, str) and not str_as_lit:
+        return col(arg)
+    if is_numpy_array_1d(arg):
+        return new_series("", arg, backend=backend)._to_expr()
+    if is_series(arg):
+        return arg._to_expr()
+    if is_expr(arg):
+        return arg
+    if not allow_literal:
+        raise InvalidIntoExprError.from_invalid_type(type(arg))
+    return arg
+
+
+def evaluate_into_exprs(
+    *exprs: IntoExpr | NonNestedLiteral | _1DArray,
+    ns: CompliantNamespaceAny,
+    str_as_lit: bool,
+    allow_multi_output: bool,
+) -> Iterator[CompliantExprAny | NonNestedLiteral]:
+    for expr in exprs:
+        ret = ns.evaluate_expr(
+            _parse_into_expr(expr, str_as_lit=str_as_lit, backend=ns._implementation)
+        )
+        if (
+            not allow_multi_output
+            and is_compliant_expr(ret)
+            and ret._metadata.expansion_kind.is_multi_output()
+        ):
+            msg = "Multi-output expressions are not allowed in this context."
+            raise MultiOutputExpressionError(msg)
+        yield ret
+
+
+def maybe_broadcast_ces(
+    *ces: CompliantExprAny | NonNestedLiteral,
+) -> list[CompliantExprAny | NonNestedLiteral]:
+    kinds = [ExprKind.from_into_expr(comparand) for comparand in ces]
     broadcast = any(not kind.is_scalar_like for kind in kinds)
-    compliant_exprs = (
-        compliant_expr.broadcast(kind)
-        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind)
-        else compliant_expr
-        for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
+    results: list[CompliantExprAny | NonNestedLiteral] = []
+    for compliant_expr, kind in zip_strict(ces, kinds):
+        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind):
+            _compliant_expr: CompliantExprAny = compliant_expr.broadcast(kind)
+            # Make sure to preserve metadata.
+            _compliant_expr._opt_metadata = compliant_expr._metadata
+            results.append(_compliant_expr)
+        else:
+            results.append(compliant_expr)
+    return results
+
+
+def evaluate_root_node(node: ExprNode, ns: CompliantNamespaceAny) -> CompliantExprAny:
+    if "." in node.name:
+        module, method = node.name.split(".")
+        func = getattr(getattr(ns, module), method)
+    else:
+        func = getattr(ns, node.name)
+    ces = maybe_broadcast_ces(
+        *evaluate_into_exprs(
+            *node.exprs,
+            ns=ns,
+            str_as_lit=node.str_as_lit,
+            allow_multi_output=node.allow_multi_output,
+        )
     )
-    return n_ary_function(*compliant_exprs)
+    ce = cast("CompliantExpr[Any, Any]", func(*ces, **node.kwargs))
+    md = ExprMetadata.from_node(node, *ces)
+    ce._opt_metadata = md
+    return ce
+
+
+def evaluate_node(
+    compliant_expr: CompliantExprAny, node: ExprNode, ns: CompliantNamespaceAny
+) -> CompliantExprAny:
+    md = compliant_expr._metadata
+    ce, *ces = maybe_broadcast_ces(
+        compliant_expr,
+        *evaluate_into_exprs(
+            *node.exprs,
+            ns=ns,
+            str_as_lit=node.str_as_lit,
+            allow_multi_output=node.allow_multi_output,
+        ),
+    )
+    assert is_compliant_expr(ce)  # noqa: S101
+    md = md.with_node(node, ce, *ces)
+    if "." in node.name:
+        accessor, method = node.name.split(".")
+        func = getattr(getattr(ce, accessor), method)
+    else:
+        func = getattr(ce, node.name)
+    if not node.allow_multi_output and any(
+        x._metadata.expansion_kind.is_multi_output() for x in ces if is_compliant_expr(x)
+    ):
+        msg = "multi-output expressions are not allowed as arguments to Expr methods."
+        raise MultiOutputExpressionError(msg)
+    ret = cast("CompliantExprAny", func(*ces, **node.kwargs))
+    ret._opt_metadata = md
+    return ret
