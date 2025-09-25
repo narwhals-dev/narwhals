@@ -13,7 +13,7 @@ from narwhals.dtypes import Unknown
 if TYPE_CHECKING:
     from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import Never, TypeAlias
 
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
@@ -38,6 +38,10 @@ class FrozenSchema(Immutable):
 
     __slots__ = ("_mapping",)
     _mapping: MappingProxyType[str, DType]
+
+    def __init_subclass__(cls, *_: Never, **__: Never) -> Never:
+        msg = f"Cannot subclass {cls.__name__!r}"
+        raise TypeError(msg)
 
     def merge(self, other: FrozenSchema, /) -> FrozenSchema:
         """Return a new schema, merging `other` with `self` (see [upstream]).
@@ -90,7 +94,9 @@ class FrozenSchema(Immutable):
 
     @staticmethod
     def _from_mapping(mapping: MappingProxyType[str, DType], /) -> FrozenSchema:
-        return FrozenSchema(_mapping=mapping)
+        obj = FrozenSchema.__new__(FrozenSchema)
+        object.__setattr__(obj, "_mapping", mapping)
+        return obj
 
     @staticmethod
     def _from_hash_safe(items: _FrozenSchemaHash, /) -> FrozenSchema:
