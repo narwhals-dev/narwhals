@@ -4,8 +4,6 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from typing_extensions import Self
-
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import flatten_hash_safe, replace, temp
