@@ -638,7 +638,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
             >>> data = [
             ...     {"item": "apple", "weight": 80, "price": 0.60},
