@@ -5,6 +5,7 @@ from decimal import Decimal
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
+from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
 from narwhals._namespace import (
     is_native_arrow,
@@ -15,8 +16,6 @@ from narwhals._namespace import (
 from narwhals._utils import (
     Implementation,
     Version,
-    _is_native_plugin,
-    discover_entrypoints,
     has_native_namespace,
     is_compliant_dataframe,
     is_compliant_lazyframe,
@@ -565,20 +564,17 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    for entry_point in discover_entrypoints():
-        plugin = entry_point.load()
-        if _is_native_plugin(native_object, plugin):
-            compliant_namespace = plugin.__narwhals_namespace__(version=version)
-            compliant_object = compliant_namespace.from_native(native_object)
-            return _translate_if_compliant(
-                compliant_object,
-                pass_through=pass_through,
-                eager_only=eager_only,
-                eager_or_interchange_only=eager_or_interchange_only,
-                series_only=series_only,
-                allow_series=allow_series,
-                version=version,
-            )
+    compliant_object = plugins.from_native(native_object, version)
+    if compliant_object is not None:
+        return _translate_if_compliant(
+            compliant_object,
+            pass_through=pass_through,
+            eager_only=eager_only,
+            eager_or_interchange_only=eager_or_interchange_only,
+            series_only=series_only,
+            allow_series=allow_series,
+            version=version,
+        )
 
     if not pass_through:
         msg = f"Expected pandas-like dataframe, Polars dataframe, or Polars lazyframe, got: {type(native_object)}"
