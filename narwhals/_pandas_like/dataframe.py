@@ -886,7 +886,7 @@ class PandasLikeDataFrame(
         if to_convert:
             df = self.with_columns(
                 self.__narwhals_namespace__()
-                .col(*to_convert)
+                .col(to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
             ).native
