@@ -187,7 +187,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
             t = self.compliant._with_native(
-                table_w_key.filter(pc.equal(table_w_key[col_token], v)).drop([col_token])
+                table_w_key.filter(pc.field(col_token) == v).drop([col_token])
             )
             # subset this new table to only the actual key name columns
             # then convert the first row to `tuple[pa.Scalar, ...]`
