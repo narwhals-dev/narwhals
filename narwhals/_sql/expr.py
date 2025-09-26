@@ -225,13 +225,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                self._window_expression(
-                    self._function(func_name, expr),
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
-                    rows_end=0,
+                self._when(
+                    ~self._function("isnull", expr),  # type: ignore[operator]
+                    self._window_expression(
+                        self._function(func_name, expr),
+                        inputs.partition_by,
+                        inputs.order_by,
+                        descending=[reverse] * len(inputs.order_by),
+                        nulls_last=[reverse] * len(inputs.order_by),
+                        rows_end=0,
+                    ),
                 )
                 for expr in self(df)
             ]

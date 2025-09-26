@@ -72,7 +72,7 @@ def test_lazy_cum_sum_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [(False, [10, 6, 14, 11, 16, 9, 4]), (True, [7, 12, 5, 6, 2, 10, 16])],
+    [(False, [None, 6, 13, 10, 15, 9, 4]), (True, [None, 11, 5, 6, 2, 9, 15])],
 )
 def test_lazy_cum_sum_ordered_by_nulls(
     constructor: Constructor,
@@ -98,7 +98,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
     df = nw.from_native(
         constructor(
             {
-                "arg entina": [1, 2, 3, 1, 2, 3, 4],
+                "arg entina": [None, 2, 3, 1, 2, 3, 4],
                 "ban gkok": [1, -1, 3, 2, 5, 0, None],
                 "i ran": [0, 1, 2, 3, 4, 5, 6],
                 "g": [1, 1, 1, 1, 1, 1, 1],

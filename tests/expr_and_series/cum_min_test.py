@@ -69,7 +69,7 @@ def test_lazy_cum_min_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [(False, [1, 2, 1, 1, 1, 2, 4]), (True, [1, 1, 2, 1, 2, 1, 1])],
+    [(False, [1, 2, 1, None, 1, 2, 4]), (True, [1, 1, 2, None, 2, 1, 1])],
 )
 def test_lazy_cum_min_ordered_by_nulls(
     constructor: Constructor,
@@ -97,7 +97,7 @@ def test_lazy_cum_min_ordered_by_nulls(
     df = nw.from_native(
         constructor(
             {
-                "a": [1, 2, 3, 1, 2, 3, 4],
+                "a": [1, 2, 3, None, 2, 3, 4],
                 "b": [1, -1, 3, 2, 5, 0, None],
                 "i": [0, 1, 2, 3, 4, 5, 6],
                 "g": [1, 1, 1, 1, 1, 1, 1],
