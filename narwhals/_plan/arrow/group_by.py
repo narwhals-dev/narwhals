@@ -163,23 +163,38 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
+        # random column name
         col_token = temp.column_name(self.compliant)
+        # random null fill value
         null_token = f"__null_{col_token}_value__"
+        # native
         table = self.compliant.native
+        # get key columns, cast everything to str?
+        # make sure all either string or all large_string
+        # separator also has to be that string type
         it, separator_scalar = cast_to_comparable_string_types(
             *(table[key] for key in self.key_names), separator=""
         )
+        # join those strings horizontally to generate a single key column
         concat_str: Incomplete = pc.binary_join_element_wise
         key_values = concat_str(
             *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
-        table = table.add_column(i=0, field_=col_token, column=key_values)
+        # add that column (of `key_values`) back to the table
+        table_w_key = table.add_column(i=0, field_=col_token, column=key_values)
+        # iterate over the unique keys in the `key_values` array
         for v in pc.unique(key_values):
+            # filter the keyed table to rows that have the same key (`t`)
+            # then drop the temporary key on the result
             t = self.compliant._with_native(
-                table.filter(pc.equal(table[col_token], v)).drop([col_token])
+                table_w_key.filter(pc.equal(table_w_key[col_token], v)).drop([col_token])
             )
+            # subset this new table to only the actual key name columns
+            # then convert the first row to `tuple[pa.Scalar, ...]`
             row = t.select_names(*self.key_names).row(0)
+            # convert those scalars to python literals
             group_key = tuple(el.as_py() for el in row)
+            # select (all) columns from (`t`) that we started with at `<df>.group_by()``, ignoring new keys/aliases
             partition = t.select_names(*self._column_names_original)
             yield group_key, partition
 
