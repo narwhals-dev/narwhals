@@ -22,14 +22,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
-from narwhals._plan.protocols import GroupByResolver, Grouper
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan.protocols import GroupByResolver as Resolved, Grouper
 from narwhals._plan.typing import DataFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan.expressions import ExprIR, NamedIR
-    from narwhals._plan.schema import FrozenSchema
+    from typing_extensions import Self
+
+    from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
 
 
@@ -43,9 +45,10 @@ class GroupBy(Generic[DataFrameT]):
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
         frame = self._frame
-        resolved = self._grouper.agg(*aggs, **named_aggs).resolve(frame)
         return frame._from_compliant(
-            frame._compliant.group_by_resolver(resolved).agg(resolved.aggs)
+            self._grouper.agg(*aggs, **named_aggs)
+            .resolve(frame)
+            .evaluate(frame._compliant)
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
@@ -60,20 +63,25 @@ class Grouped(Grouper["Resolved"]):
     _aggs: Seq[ExprIR]
     _drop_null_keys: bool
 
+    @classmethod
+    def by(
+        cls,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
+    ) -> Self:
+        obj = cls.__new__(cls)
+        obj._keys = parse_into_seq_of_expr_ir(*by, **named_by)
+        obj._drop_null_keys = drop_null_keys
+        return obj
+
+    def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> Self:
+        self._aggs = parse_into_seq_of_expr_ir(*aggs, **named_aggs)
+        return self
+
     @property
     def _resolver(self) -> type[Resolved]:
         return Resolved
 
     def to_group_by(self, frame: DataFrameT, /) -> GroupBy[DataFrameT]:
         return GroupBy(frame, self)
-
-
-class Resolved(GroupByResolver):
-    """Narwhals-level `GroupBy` resolver."""
-
-    _schema_in: FrozenSchema
-    _keys: Seq[NamedIR]
-    _aggs: Seq[NamedIR]
-    _key_names: Seq[str]
-    _schema: FrozenSchema
-    _drop_null_keys: bool

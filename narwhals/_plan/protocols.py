@@ -1,3 +1,5 @@
+"""TODO: Split this module up into `narwhals._plan.compliant.*`."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
@@ -591,17 +593,31 @@ class CompliantDataFrame(
 ):
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
+    @property
+    def _grouper(self) -> type[Grouped]:
+        return Grouped
+
     @classmethod
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
-    def group_by(
-        self, *by: OneOrIterable[IntoExpr], **named_by: IntoExpr
-    ) -> DataFrameGroupBy[Self]: ...
-    def group_by_resolver(
-        self, resolver: GroupByResolver, /
-    ) -> DataFrameGroupBy[Self]: ...
-    def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]: ...
+    def group_by_agg(
+        self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
+    ) -> Self:
+        """Compliant-level `group_by(by).agg(agg)`, allows `Expr`."""
+        return self._grouper.by(by).agg(aggs).resolve(self).evaluate(self)
+
+    def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
+        """Compliant-level `group_by`, allowing only `str` keys."""
+        return self._group_by.by_names(self, names)
+
+    def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
+        """Narwhals-level resolved `group_by`.
+
+        `keys`, `aggs` are already parsed and projections planned.
+        """
+        return self._group_by.from_resolver(self, resolver)
+
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
@@ -621,7 +637,7 @@ class CompliantDataFrame(
 class CompliantGroupBy(Protocol[FrameT_co]):
     @property
     def compliant(self) -> FrameT_co: ...
-    def agg(self, *args: Any, **kwds: Any) -> FrameT_co: ...
+    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
 
 
 class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
@@ -641,16 +657,12 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
     def keys(self) -> Seq[NamedIR]:
         return self._keys
 
-    # TODO @dangotbanned: Review if this can be dropped/reduced
-    # now it *also* defined in `GroupByResolver`
     @property
     def key_names(self) -> Seq[str]:
         if names := self._key_names:
             return names
         msg = "at least one key is required in a group_by operation"
         raise ComputeError(msg)
-
-    def agg(self, irs: Seq[NamedIR]) -> DataFrameT: ...
 
 
 class EagerDataFrame(
@@ -660,23 +672,6 @@ class EagerDataFrame(
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
-    def group_by(
-        self, *by: OneOrIterable[IntoExpr], **named_by: IntoExpr
-    ) -> EagerDataFrameGroupBy[Self]:
-        msg = (
-            "Not Implemented `EagerDataFrame.group_by`.\n\n"
-            "TODO: Just needs a lil bit of planning.\nShould be quite similar to narwhals-level version, (excluding `drop_null_keys`)"
-        )
-        raise NotImplementedError(msg)
-
-    def group_by_resolver(
-        self, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[Self]:
-        return self._group_by.from_resolver(self, resolver)
-
-    def group_by_names(self, names: Seq[str], /) -> EagerDataFrameGroupBy[Self]:
-        return self._group_by.by_names(self, names)
-
     def select(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
 
@@ -789,19 +784,13 @@ class Grouper(Protocol[ResolverT_co]):
     _drop_null_keys: bool
 
     @classmethod
-    def by(
-        cls,
-        *by: OneOrIterable[IntoExpr],
-        drop_null_keys: bool = False,
-        **named_by: IntoExpr,
-    ) -> Self:
+    def by(cls, *by: OneOrIterable[IntoExpr]) -> Self:
         obj = cls.__new__(cls)
-        obj._keys = parse_into_seq_of_expr_ir(*by, **named_by)
-        obj._drop_null_keys = drop_null_keys
+        obj._keys = parse_into_seq_of_expr_ir(*by)
         return obj
 
-    def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> Self:
-        self._aggs = parse_into_seq_of_expr_ir(*aggs, **named_aggs)
+    def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
+        self._aggs = parse_into_seq_of_expr_ir(*aggs)
         return self
 
     @property
@@ -811,7 +800,9 @@ class Grouper(Protocol[ResolverT_co]):
         return self._resolver.from_grouper(self, context)
 
 
-class GroupByResolver(Protocol):
+class GroupByResolver:
+    """Narwhals-level `GroupBy` resolver."""
+
     _schema_in: FrozenSchema
     _keys: Seq[NamedIR]
     _aggs: Seq[NamedIR]
@@ -840,6 +831,9 @@ class GroupByResolver(Protocol):
     def schema(self) -> FrozenSchema:
         return self._schema
 
+    def evaluate(self, frame: DataFrameT) -> DataFrameT:
+        return frame.group_by_resolver(self).agg(self.aggs)
+
     @classmethod
     def from_grouper(cls, grouper: Grouper[Self], context: IntoFrozenSchema, /) -> Self:
         obj = cls.__new__(cls)
@@ -866,3 +860,21 @@ class GroupByResolver(Protocol):
                 raise NotImplementedError(msg)
             return True
         return False
+
+
+class Grouped(Grouper["Resolved"]):
+    """Compliant-level `GroupBy` builder."""
+
+    _keys: Seq[ExprIR]
+    _aggs: Seq[ExprIR]
+    _drop_null_keys: bool = False
+
+    @property
+    def _resolver(self) -> type[Resolved]:
+        return Resolved
+
+
+class Resolved(GroupByResolver):
+    """Compliant-level `GroupBy` resolver."""
+
+    _drop_null_keys: bool = False
