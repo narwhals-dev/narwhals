@@ -18,7 +18,6 @@ from narwhals._dask.utils import (
     validate_comparand,
 )
 from narwhals._expression_parsing import (
-    ExprKind,
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
@@ -288,7 +287,7 @@ class DaskNamespace(
                 )
             ):
                 new_df = df._with_native(condition.to_frame())
-                condition = predicate.broadcast(ExprKind.AGGREGATION)(df)[0]
+                condition = predicate.broadcast()(df)[0]
                 df = new_df
 
             if otherwise is None:
