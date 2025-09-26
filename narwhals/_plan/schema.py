@@ -77,6 +77,10 @@ class FrozenSchema(Immutable):
         return freeze_schema(self._mapping | miss)
 
     def with_columns_irs(self, exprs: Seq[NamedIR]) -> Seq[NamedIR]:
+        """Required for `_concat_horizontal`-based `with_columns`.
+
+        Fills in any unreferenced columns present in `self`, but not in `exprs` as selections.
+        """
         named: dict[str, NamedIR[Any]] = {e.name: e for e in exprs}
         it = (named.pop(name, NamedIR.from_name(name)) for name in self)
         return tuple(chain(it, named.values()))

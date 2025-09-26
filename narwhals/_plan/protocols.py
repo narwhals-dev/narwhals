@@ -840,6 +840,10 @@ class GroupByResolver:
 
     @classmethod
     def from_grouper(cls, grouper: Grouper[Self], context: IntoFrozenSchema, /) -> Self:
+        """Loosely based on [`resolve_group_by`].
+
+        [`resolve_group_by`]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1125-L1227
+        """
         obj = cls.__new__(cls)
         keys, schema_in = prepare_projection(grouper._keys, schema=context)
         obj._keys, obj._schema_in = keys, schema_in

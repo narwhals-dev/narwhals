@@ -66,9 +66,6 @@ class BaseFrame(Generic[NativeFrameT]):
         )
         return self._from_compliant(self._compliant.select(schema.select_irs(named_irs)))
 
-    # NOTE: Want to be able to call `with_columns` at compliant level - and still get the right schema
-    # - Currently it acts like select in `group_by`
-    # - Doing some gymnastics to workaround for now
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self

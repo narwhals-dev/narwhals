@@ -88,10 +88,9 @@ Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
 GroupByKeys: TypeAlias = "Seq[str]"
-"""Represents group_by keys.
+"""Represents `group_by` keys.
 
-- Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
-- Not fully utilized in `narwhals` version yet
+They need to be excluded from expansion.
 """
 
 OutputNames: TypeAlias = "Seq[str]"
