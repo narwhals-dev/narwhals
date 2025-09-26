@@ -6,7 +6,9 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 
+from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._plan import expressions as ir
+from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
 from narwhals._utils import Implementation
@@ -161,7 +163,25 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
-        raise NotImplementedError
+        col_token = temp.column_name(self.compliant)
+        null_token = f"__null_{col_token}_value__"
+        table = self.compliant.native
+        it, separator_scalar = cast_to_comparable_string_types(
+            *(table[key] for key in self.key_names), separator=""
+        )
+        concat_str: Incomplete = pc.binary_join_element_wise
+        key_values = concat_str(
+            *it, separator_scalar, null_handling="replace", null_replacement=null_token
+        )
+        table = table.add_column(i=0, field_=col_token, column=key_values)
+        for v in pc.unique(key_values):
+            t = self.compliant._with_native(
+                table.filter(pc.equal(table[col_token], v)).drop([col_token])
+            )
+            row = t.select_names(*self.key_names).row(0)
+            group_key = tuple(el.as_py() for el in row)
+            partition = t.select_names(*self.compliant.columns)
+            yield group_key, partition
 
     def agg(self, irs: Seq[NamedIR]) -> Frame:
         aggs: list[AceroAggSpec] = []

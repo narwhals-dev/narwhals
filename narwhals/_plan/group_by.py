@@ -52,8 +52,10 @@ class GroupBy(Generic[DataFrameT]):
         )
 
     def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]:
-        msg = "Not Implemented `GroupBy.__iter__`"
-        raise NotImplementedError(msg)
+        frame = self._frame
+        resolver = self._grouper.agg().resolve(frame)
+        for key, df in frame._compliant.group_by_resolver(resolver):
+            yield key, frame._from_compliant(df)
 
 
 class Grouped(Grouper["Resolved"]):

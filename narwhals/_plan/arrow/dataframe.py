@@ -141,3 +141,9 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
             else:
                 native = native.append_column(name, chunked)
         return self._with_native(native)
+
+    def select_names(self, *column_names: str) -> Self:
+        return self._with_native(self.native.select(list(column_names)))
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        return tuple(col[index] for col in self.native.itercolumns())

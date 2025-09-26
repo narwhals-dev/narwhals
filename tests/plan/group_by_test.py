@@ -30,8 +30,7 @@ def assert_equal_data(result: nwp.DataFrame, expected: Mapping[str, Any]) -> Non
     _assert_equal_data(result.to_dict(as_series=False), expected)
 
 
-@pytest.mark.xfail(reason="Not implemented `__iter__`", raises=NotImplementedError)
-def test_group_by_iter() -> None:  # pragma: no cover
+def test_group_by_iter() -> None:
     data = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
     df = dataframe(data)
     expected_keys: list[tuple[int, ...]] = [(1,), (3,)]
@@ -212,8 +211,7 @@ def test_key_with_nulls_ignored() -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(reason="Not implemented `__iter__`", raises=NotImplementedError)
-def test_key_with_nulls_iter() -> None:  # pragma: no cover
+def test_key_with_nulls_iter() -> None:
     data = {
         "b": [None, "4", "5", None, "7"],
         "a": [None, 1, 2, 3, 4],
