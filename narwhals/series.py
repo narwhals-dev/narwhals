@@ -2711,14 +2711,12 @@ class Series(Generic[IntoSeriesT]):
                 "Hint: `is_close` is only supported for numeric types"
             )
             raise InvalidOperationError(msg)
-        return cast(
-            "Self",
-            self.to_frame().select(
-                col(self.name).is_close(
-                    other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
-                )
-            )[self.name],
+        ret_df = self.to_frame().select(
+            col(self.name).is_close(
+                other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal
+            )
         )
+        return cast("Self", ret_df[self.name])
 
     @property
     def str(self) -> SeriesStringNamespace[Self]:
