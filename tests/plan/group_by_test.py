@@ -229,6 +229,32 @@ def test_key_with_nulls_iter() -> None:
     assert len(result) == 4
 
 
+@pytest.mark.xfail(
+    reason="Temporary alias column present in result", raises=AssertionError
+)
+def test_group_by_expr_iter() -> None:
+    data = {
+        "b": [None, "4", "5", None, "7"],
+        "a": [None, 1, 2, 3, 4],
+        "c": ["1", "4", "3", "1", "1"],
+    }
+
+    expected = {
+        ("1",): {"b": [None, None, "7"], "a": [None, 3, 4], "c": ["1", "1", "1"]},
+        ("3",): {"b": ["5"], "a": [2], "c": ["3"]},
+        ("4",): {"b": ["4"], "a": [1], "c": ["4"]},
+    }
+    grouped = dataframe(data).group_by(nwp.col("c").alias("d"))
+    result = dict(sorted((k, df.sort("c").to_dict(as_series=False)) for k, df in grouped))
+    assert len(result) == len(expected)
+    assert result.keys() == expected.keys()
+    # NOTE: The bug means that zipping will break, as one side has more columns
+    result_p1 = next(iter(result.values()))
+    expected_p1 = next(iter(expected.values()))
+    assert result_p1 == expected_p1
+    _assert_equal_data(result, expected)  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize(
     "keys", [[nwp.col("a").abs()], ["a", nwp.col("a").abs().alias("a_test")]]
 )
