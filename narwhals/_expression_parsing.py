@@ -269,7 +269,7 @@ class ExprNode:
     def _push_down_over_node_in_place(
         self, over_node: ExprNode, over_node_without_order_by: ExprNode
     ) -> None:
-        exprs = []
+        exprs: list[IntoExpr | NonNestedLiteral] = []
         # Note: please keep this as a for-loop (rather than a list-comprehension)
         # so that pytest-cov highlights any uncovered branches.
         for expr in self.exprs:
