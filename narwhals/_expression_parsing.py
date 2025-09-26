@@ -182,10 +182,10 @@ class ExprKind(Enum):
         return ExprKind.LITERAL
 
 
-def is_scalar_like(
-    obj: ExprKind,
-) -> TypeIs[Literal[ExprKind.LITERAL, ExprKind.AGGREGATION]]:
-    return obj.is_scalar_like
+def is_scalar_like(obj: CompliantExprAny | NonNestedLiteral) -> bool:
+    if is_compliant_expr(obj):
+        return obj._metadata.is_scalar_like
+    return True
 
 
 class ExpansionKind(Enum):
@@ -782,12 +782,15 @@ def evaluate_into_exprs(
 def maybe_broadcast_ces(
     *ces: CompliantExprAny | NonNestedLiteral,
 ) -> list[CompliantExprAny | NonNestedLiteral]:
-    kinds = [ExprKind.from_into_expr(comparand) for comparand in ces]
-    broadcast = any(not kind.is_scalar_like for kind in kinds)
+    broadcast = any(not is_scalar_like(ce) for ce in ces)
     results: list[CompliantExprAny | NonNestedLiteral] = []
-    for compliant_expr, kind in zip_strict(ces, kinds):
-        if broadcast and is_compliant_expr(compliant_expr) and is_scalar_like(kind):
-            _compliant_expr: CompliantExprAny = compliant_expr.broadcast(kind)
+    for compliant_expr in ces:
+        if (
+            broadcast
+            and is_compliant_expr(compliant_expr)
+            and is_scalar_like(compliant_expr)
+        ):
+            _compliant_expr: CompliantExprAny = compliant_expr.broadcast()
             # Make sure to preserve metadata.
             _compliant_expr._opt_metadata = compliant_expr._metadata
             results.append(_compliant_expr)

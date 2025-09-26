@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 import ibis
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
@@ -117,7 +117,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return IbisNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Ibis does its own broadcasting.
         return self
 

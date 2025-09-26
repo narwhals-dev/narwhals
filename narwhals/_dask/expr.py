@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ from narwhals._dask.utils import (
     maybe_evaluate_expr,
     narwhals_to_native_dtype,
 )
-from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
 from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     )
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
@@ -78,7 +78,7 @@ class DaskExpr(
 
         return DaskNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             # result.loc[0][0] is a workaround for dask~<=2024.10.0/dask_expr~<=1.1.16
             #   that raised a KeyError for result[0] during collection.

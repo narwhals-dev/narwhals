@@ -143,11 +143,10 @@ class BaseFrame(Generic[_FrameT]):
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
-    ) -> tuple[list[CompliantExprAny], list[ExprKind]]:
+    ) -> list[CompliantExprAny]:
         # Process `args` and `kwargs`, extracting underlying objects as we go.
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
-        out_kinds = []
         ns = self.__narwhals_namespace__()
         parse = partial(
             _parse_into_expr, backend=self._compliant._implementation, allow_literal=False
@@ -159,9 +158,8 @@ class BaseFrame(Generic[_FrameT]):
         for expr in all_exprs:
             ce = expr(ns)
             out_exprs.append(ce)
-            out_kinds.append(ExprKind.from_expr(ce))
             self._validate_metadata(ce._metadata)
-        return out_exprs, out_kinds
+        return out_exprs
 
     def _extract_compliant_frame(self, other: Self | Any, /) -> Any:
         if isinstance(other, type(self)):
@@ -204,10 +202,12 @@ class BaseFrame(Generic[_FrameT]):
     def with_columns(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
     ) -> Self:
-        compliant_exprs, kinds = self._flatten_and_extract(*exprs, **named_exprs)
+        compliant_exprs = self._flatten_and_extract(*exprs, **named_exprs)
         compliant_exprs = [
-            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
+            compliant_expr.broadcast()
+            if is_scalar_like(compliant_expr)
+            else compliant_expr
+            for compliant_expr in compliant_exprs
         ]
         return self._with_compliant(self._compliant_frame.with_columns(*compliant_exprs))
 
@@ -226,12 +226,14 @@ class BaseFrame(Generic[_FrameT]):
                 if error := self._check_columns_exist(flat_exprs):
                     raise error from e
                 raise
-        compliant_exprs, kinds = self._flatten_and_extract(*flat_exprs, **named_exprs)
-        if compliant_exprs and all(x.is_scalar_like for x in kinds):
+        compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
-            compliant_expr.broadcast(kind) if is_scalar_like(kind) else compliant_expr
-            for compliant_expr, kind in zip_strict(compliant_exprs, kinds)
+            compliant_expr.broadcast()
+            if is_scalar_like(compliant_expr)
+            else compliant_expr
+            for compliant_expr in compliant_exprs
         ]
         return self._with_compliant(self._compliant_frame.select(*compliant_exprs))
 
@@ -257,11 +259,11 @@ class BaseFrame(Generic[_FrameT]):
 
             flat_predicates = flatten(predicates)
             plx = self.__narwhals_namespace__()
-            compliant_predicates, _kinds = self._flatten_and_extract(*flat_predicates)
+            compliant_predicates = self._flatten_and_extract(*flat_predicates)
             check_expressions_preserve_length(
                 *compliant_predicates, function_name="filter"
             )
-            compliant_constraints, _ = self._flatten_and_extract(
+            compliant_constraints = self._flatten_and_extract(
                 *[col(name) == v for name, v in constraints.items()]
             )
             predicate = plx.all_horizontal(
@@ -1720,9 +1722,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             k if is_expr else col(k)
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
+        expr_flat_keys = self._flatten_and_extract(*_keys)
 
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
+        if not all(x._metadata.is_elementwise for x in expr_flat_keys):
             from narwhals.exceptions import ComputeError
 
             msg = (

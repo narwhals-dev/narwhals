@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
 
 import polars as pl
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import Accessor
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._polars.series import PolarsSeries
@@ -92,7 +92,7 @@ class PolarsExpr:
 
         return func
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Let Polars do its thing.
         return self
 

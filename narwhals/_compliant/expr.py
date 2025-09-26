@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
     from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
-    from narwhals._expression_parsing import ExprKind, ExprMetadata
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.typing import (
         ClosedInterval,
@@ -119,9 +119,7 @@ class CompliantExpr(
         *,
         context: _LimitedContext,
     ) -> Self: ...
-    def broadcast(
-        self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]
-    ) -> Self: ...
+    def broadcast(self) -> Self: ...
 
     # NOTE: `polars`
     def alias(self, name: str) -> Self: ...
@@ -407,7 +405,7 @@ class EagerExpr(
             context=self,
         )
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
+    def broadcast(self) -> Self:
         # Mark the resulting Series with `_broadcast = True`.
         # Then, when extracting native objects, `extract_native` will
         # know what to do.

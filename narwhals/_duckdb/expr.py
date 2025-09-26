@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from duckdb import CoalesceOperator, StarExpression
 
@@ -18,7 +18,6 @@ from narwhals._duckdb.utils import (
     when,
     window_expression,
 )
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version
 
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
@@ -98,8 +98,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return DuckDBNamespace(version=self._version)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
+    def broadcast(self) -> Self:
+        if self._metadata.is_literal:
             return self
         if self._backend_version < (1, 3):
             msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."

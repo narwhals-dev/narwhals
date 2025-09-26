@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 import dask.dataframe as dd
 
 from narwhals._dask.utils import add_row_index, evaluate_exprs
-from narwhals._expression_parsing import ExprKind
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -223,7 +222,7 @@ class DaskLazyFrame(
             return self._with_native(add_row_index(self.native, name))
         plx = self.__narwhals_namespace__()
         columns = self.columns
-        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
+        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast()
         row_index_expr = (
             plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
             - 1

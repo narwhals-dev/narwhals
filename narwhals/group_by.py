@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
+from narwhals._expression_parsing import is_scalar_like
 from narwhals._utils import tupleify
 from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import DataFrameT
@@ -71,8 +72,8 @@ class GroupBy(Generic[DataFrameT]):
             2  b  3  2
             3  c  3  1
         """
-        compliant_aggs, kinds = self._df._flatten_and_extract(*aggs, **named_aggs)
-        if not all(x.is_scalar_like for x in kinds):
+        compliant_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        if not all(is_scalar_like(x) for x in compliant_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"
@@ -157,8 +158,8 @@ class LazyGroupBy(Generic[LazyFrameT]):
             |└─────┴─────┴─────┘|
             └───────────────────┘
         """
-        compliant_aggs, kinds = self._df._flatten_and_extract(*aggs, **named_aggs)
-        if not all(x.is_scalar_like for x in kinds):
+        compliant_aggs = self._df._flatten_and_extract(*aggs, **named_aggs)
+        if not all(is_scalar_like(x) for x in compliant_aggs):
             msg = (
                 "Found expression which does not aggregate.\n\n"
                 "All expressions passed to GroupBy.agg must aggregate.\n"

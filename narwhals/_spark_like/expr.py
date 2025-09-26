@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
-from narwhals._expression_parsing import ExprKind, ExprMetadata
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
+    from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
@@ -96,8 +96,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
-    def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
-        if kind is ExprKind.LITERAL:
+    def broadcast(self) -> Self:
+        if self._metadata.is_literal:
             return self
         return self.over([self._F.lit(1)], [])
 
