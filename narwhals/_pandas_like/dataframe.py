@@ -410,7 +410,7 @@ class PandasLikeDataFrame(
                 self.native.dropna(axis=0), validate_column_names=False
             )
         plx = self.__narwhals_namespace__()
-        mask = ~plx.any_horizontal(plx.col(subset).is_null(), ignore_nulls=True)
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
     def estimated_size(self, unit: SizeUnit) -> int | float:
@@ -886,7 +886,7 @@ class PandasLikeDataFrame(
         if to_convert:
             df = self.with_columns(
                 self.__narwhals_namespace__()
-                .col(to_convert)
+                .col(*to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
             ).native

@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals.dtypes import DType
+    from narwhals.series import Series
     from narwhals.typing import (
         ClosedInterval,
         FillNullStrategy,
@@ -2088,7 +2089,7 @@ class Expr:
 
     def is_close(  # noqa: PLR0914
         self,
-        other: IntoExpr | NumericLiteral,
+        other: Expr | Series[Any] | NumericLiteral,
         *,
         abs_tol: float = 0.0,
         rel_tol: float = 1e-09,
@@ -2158,10 +2159,10 @@ class Expr:
 
         from decimal import Decimal
 
-        other_abs: Self | NumericLiteral
-        other_is_nan: Self | bool
-        other_is_inf: Self | bool
-        other_is_not_inf: Self | bool
+        other_abs: Expr | Series[Any] | NumericLiteral
+        other_is_nan: Expr | Series[Any] | bool
+        other_is_inf: Expr | Series[Any] | bool
+        other_is_not_inf: Expr | Series[Any] | bool
 
         if isinstance(other, (float, int, Decimal)):
             from math import isinf, isnan
