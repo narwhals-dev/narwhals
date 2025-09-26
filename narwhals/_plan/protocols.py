@@ -684,6 +684,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
     _df: EagerDataFrameT
     _key_names: Seq[str]
     _key_names_original: Seq[str]
+    _column_names_original: Seq[str]
 
     @classmethod
     def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
@@ -692,6 +693,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         obj._keys = ()
         obj._key_names = names
         obj._key_names_original = ()
+        obj._column_names_original = tuple(df.columns)
         return obj
 
     @classmethod
@@ -711,6 +713,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         obj._keys = safe_keys
         obj._key_names = tuple(e.name for e in safe_keys)
         obj._key_names_original = key_names
+        obj._column_names_original = resolver._schema_in.names
         return obj
 
 

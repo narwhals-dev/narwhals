@@ -229,9 +229,6 @@ def test_key_with_nulls_iter() -> None:
     assert len(result) == 4
 
 
-@pytest.mark.xfail(
-    reason="Temporary alias column present in result", raises=AssertionError
-)
 def test_group_by_expr_iter() -> None:
     data = {
         "b": [None, "4", "5", None, "7"],

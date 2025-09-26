@@ -180,7 +180,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             )
             row = t.select_names(*self.key_names).row(0)
             group_key = tuple(el.as_py() for el in row)
-            partition = t.select_names(*self.compliant.columns)
+            partition = t.select_names(*self._column_names_original)
             yield group_key, partition
 
     def agg(self, irs: Seq[NamedIR]) -> Frame:
