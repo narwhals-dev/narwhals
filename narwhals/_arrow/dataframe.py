@@ -424,7 +424,7 @@ class ArrowDataFrame(
         if subset is None:
             return self._with_native(self.native.drop_null(), validate_column_names=False)
         plx = self.__narwhals_namespace__()
-        mask = ~plx.any_horizontal(plx.col(subset).is_null(), ignore_nulls=True)
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
@@ -496,7 +496,7 @@ class ArrowDataFrame(
                 plx._series.from_iterable(data, context=self, name=name)
             )
         else:
-            rank = plx.col([order_by[0]]).rank("ordinal", descending=False)
+            rank = plx.col(order_by[0]).rank("ordinal", descending=False)
             row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
         return self.select(row_index, plx.all())
 

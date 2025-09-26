@@ -193,7 +193,7 @@ class DaskLazyFrame(
         if subset is None:
             return self._with_native(self.native.dropna())
         plx = self.__narwhals_namespace__()
-        mask = ~plx.any_horizontal(plx.col(subset).is_null(), ignore_nulls=True)
+        mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
     @property
@@ -225,12 +225,10 @@ class DaskLazyFrame(
         columns = self.columns
         const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast(ExprKind.LITERAL)
         row_index_expr = (
-            plx.col([name])
-            .cum_sum(reverse=False)
-            .over(partition_by=[], order_by=order_by)
+            plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
             - 1
         )
-        return self.with_columns(const_expr).select(row_index_expr, plx.col(columns))
+        return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
@@ -484,8 +482,8 @@ class DaskLazyFrame(
         return (
             self.with_row_index(row_index_token, order_by=None)
             .filter(
-                (plx.col([row_index_token]) >= offset)
-                & ((plx.col([row_index_token]) - offset) % n == 0)
+                (plx.col(row_index_token) >= offset)
+                & ((plx.col(row_index_token) - offset) % n == 0)
             )
             .drop([row_index_token], strict=False)
         )

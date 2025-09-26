@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 class PolarsNamespace:
     all: Method[PolarsExpr]
     coalesce: Method[PolarsExpr]
+    col: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
@@ -120,9 +121,6 @@ class PolarsNamespace:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
-
-    def col(self, names: Sequence[str]) -> PolarsExpr:
-        return self._expr(pl.col(*names), version=self._version)
 
     def exclude(self, names: Sequence[str]) -> PolarsExpr:
         return self._expr(pl.exclude(*names), version=self._version)

@@ -255,7 +255,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
-                    df = df.with_columns(~plx.col(output_names).is_null())
+                    df = df.with_columns(~plx.col(*output_names).is_null())
 
                 if function_name.startswith("cum_"):
                     assert "reverse" in scalar_kwargs  # noqa: S101

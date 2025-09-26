@@ -216,6 +216,18 @@ class ExpansionKind(Enum):
 
 
 class ExprNode:
+    """An operation to create or modify an expression.
+
+    Parameters:
+        kind: ExprKind of operation.
+        name: Name of function, as defined in the compliant protocols.
+        exprs: Expressifiable arguments to function.
+        str_as_lit: Whether to interpret strings as literals when they
+            are present in `exprs`.
+        allow_multi_output: Whether to allow any of `exprs` to be multi-output.
+        kwargs: Other (non-expressifiable) arguments to function.
+    """
+
     def __init__(
         self,
         kind: ExprKind,
@@ -785,20 +797,25 @@ def maybe_broadcast_ces(
 
 
 def evaluate_root_node(node: ExprNode, ns: CompliantNamespaceAny) -> CompliantExprAny:
-    if "." in node.name:
-        module, method = node.name.split(".")
-        func = getattr(getattr(ns, module), method)
+    if node.name == "col":
+        # There's too much potential for Sequence[str] vs str bugs.
+        ce = getattr(ns, node.name)(*node.kwargs["names"])
+        ces = []
     else:
-        func = getattr(ns, node.name)
-    ces = maybe_broadcast_ces(
-        *evaluate_into_exprs(
-            *node.exprs,
-            ns=ns,
-            str_as_lit=node.str_as_lit,
-            allow_multi_output=node.allow_multi_output,
+        if "." in node.name:
+            module, method = node.name.split(".")
+            func = getattr(getattr(ns, module), method)
+        else:
+            func = getattr(ns, node.name)
+        ces = maybe_broadcast_ces(
+            *evaluate_into_exprs(
+                *node.exprs,
+                ns=ns,
+                str_as_lit=node.str_as_lit,
+                allow_multi_output=node.allow_multi_output,
+            )
         )
-    )
-    ce = cast("CompliantExpr[Any, Any]", func(*ces, **node.kwargs))
+        ce = cast("CompliantExprAny", func(*ces, **node.kwargs))
     md = ExprMetadata.from_node(node, *ces)
     ce._opt_metadata = md
     return ce

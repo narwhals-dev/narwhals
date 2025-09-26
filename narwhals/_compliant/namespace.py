@@ -74,8 +74,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def all(self) -> CompliantExprT:
         return self._expr.from_column_names(get_column_names, context=self)
 
-    def col(self, names: Sequence[str]) -> CompliantExprT:
-        assert not isinstance(names, str)  # noqa: S101  # debug assertion
+    def col(self, *names: str) -> CompliantExprT:
         return self._expr.from_column_names(passthrough_column_names(names), context=self)
 
     def exclude(self, names: Sequence[str]) -> CompliantExprT:
@@ -118,7 +117,7 @@ class DepthTrackingNamespace(
     def all(self) -> DepthTrackingExprT:
         return self._expr.from_column_names(get_column_names, context=self)
 
-    def col(self, names: Sequence[str]) -> DepthTrackingExprT:
+    def col(self, *names: str) -> DepthTrackingExprT:
         return self._expr.from_column_names(passthrough_column_names(names), context=self)
 
     def exclude(self, names: Sequence[str]) -> DepthTrackingExprT:

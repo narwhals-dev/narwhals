@@ -743,7 +743,7 @@ class PolarsSeriesStringNamespace(
     def zfill(self, width: int) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col([name]).str.zfill(width)).get_column(name)
+        return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
     def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> PolarsSeries:
         return self.compliant._with_native(
@@ -767,12 +767,12 @@ class PolarsSeriesListNamespace(
     def len(self) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col([name]).list.len()).get_column(name)
+        return self.to_frame().select(ns.col(name).list.len()).get_column(name)
 
     def contains(self, item: NonNestedLiteral) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()
-        return self.to_frame().select(ns.col([name]).list.contains(item)).get_column(name)
+        return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
 
 
 class PolarsSeriesStructNamespace(
