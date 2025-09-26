@@ -76,13 +76,12 @@ class Expr:
                 # node could not be pushed down, just append as-is
                 new_nodes.append(node)
                 return self.__class__(*new_nodes)
-            if i > 0:
-                if node.kwargs["order_by"] and any(
-                    node.is_orderable() for node in new_nodes[:i]
-                ):
-                    new_nodes.insert(i, node)
-                elif node.kwargs["partition_by"]:
-                    new_nodes.insert(i, node_without_order_by)
+            if node.kwargs["order_by"] and any(
+                node.is_orderable() for node in new_nodes[:i]
+            ):
+                new_nodes.insert(i, node)
+            elif node.kwargs["partition_by"]:
+                new_nodes.insert(i, node_without_order_by)
             return self.__class__(*new_nodes)
         return self.__class__(*self._nodes, node)
 
