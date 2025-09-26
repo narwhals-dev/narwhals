@@ -149,10 +149,6 @@ class ExprKind(Enum):
     """Based on the information we have, we can't determine the ExprKind."""
 
     @property
-    def is_scalar_like(self) -> bool:
-        return self in {ExprKind.LITERAL, ExprKind.AGGREGATION}
-
-    @property
     def is_orderable(self) -> bool:
         # Any operation which may be affected by `order_by`, such as `cum_sum`,
         # `diff`, `rank`, `arg_max`, ...
@@ -163,29 +159,17 @@ class ExprKind(Enum):
             ExprKind.WINDOW,
         }
 
-    @classmethod
-    def from_expr(cls, obj: CompliantExprAny) -> ExprKind:
-        meta = obj._metadata
-        assert meta is not None  # noqa: S101
-        if meta.is_literal:
-            return ExprKind.LITERAL
-        if meta.is_scalar_like:
-            return ExprKind.AGGREGATION
-        if meta.is_elementwise:
-            return ExprKind.ELEMENTWISE
-        return ExprKind.UNKNOWN
-
-    @classmethod
-    def from_into_expr(cls, obj: CompliantExprAny | NonNestedLiteral) -> ExprKind:
-        if is_compliant_expr(obj):
-            return cls.from_expr(obj)
-        return ExprKind.LITERAL
-
 
 def is_scalar_like(obj: CompliantExprAny | NonNestedLiteral) -> bool:
     if is_compliant_expr(obj):
         return obj._metadata.is_scalar_like
     return True
+
+
+def is_elementwise(obj: CompliantExprAny | NonNestedLiteral) -> bool:
+    if is_compliant_expr(obj):
+        return obj._metadata.is_elementwise
+    return False
 
 
 class ExpansionKind(Enum):

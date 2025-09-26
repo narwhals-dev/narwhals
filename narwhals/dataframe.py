@@ -18,9 +18,9 @@ from typing import (
 
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
-    ExprKind,
     _parse_into_expr,
     check_expressions_preserve_length,
+    is_elementwise,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -2958,8 +2958,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         _keys = [
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
+        expr_flat_keys = self._flatten_and_extract(*_keys)
+        if not all(is_elementwise(x) for x in expr_flat_keys):
             from narwhals.exceptions import ComputeError
 
             msg = (
