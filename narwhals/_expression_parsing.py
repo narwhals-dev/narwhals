@@ -797,8 +797,9 @@ def maybe_broadcast_ces(
 
 
 def evaluate_root_node(node: ExprNode, ns: CompliantNamespaceAny) -> CompliantExprAny:
-    if node.name == "col":
-        # There's too much potential for Sequence[str] vs str bugs.
+    if node.name in {"col", "exclude"}:
+        # There's too much potential for Sequence[str] vs str bugs, so we pass down
+        # `names` positionally rather than as a sequence of strings.
         ce = getattr(ns, node.name)(*node.kwargs["names"])
         ces = []
     else:

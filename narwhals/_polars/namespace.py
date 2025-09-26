@@ -36,6 +36,7 @@ class PolarsNamespace:
     all: Method[PolarsExpr]
     coalesce: Method[PolarsExpr]
     col: Method[PolarsExpr]
+    exclude: Method[PolarsExpr]
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
@@ -121,9 +122,6 @@ class PolarsNamespace:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
-
-    def exclude(self, names: Sequence[str]) -> PolarsExpr:
-        return self._expr(pl.exclude(*names), version=self._version)
 
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
