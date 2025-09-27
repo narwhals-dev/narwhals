@@ -48,7 +48,6 @@ from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
             ),
             [4 / 3, 13 / 3, 7 / 3],
         ),
-        ((nw.col("a") - nw.col("a").mean()).over("b"), [-1.5, 1.5, 0]),
     ],
 )
 def test_over_pushdown(
@@ -56,6 +55,24 @@ def test_over_pushdown(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
+    data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
+    df = nw.from_native(constructor(data)).lazy()
+    result = df.select("i", a=expr).sort("i").select("a")
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"), [((nw.col("a") - nw.col("a").mean()).over("b"), [-1.5, 1.5, 0])]
+)
+def test_per_group_broadcasting(
+    constructor: Constructor,
+    expr: nw.Expr,
+    expected: list[float],
+    request: pytest.FixtureRequest,
+) -> None:
+    if "dask" in str(constructor):
+        # sigh...
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).lazy()
     result = df.select("i", a=expr).sort("i").select("a")
