@@ -36,7 +36,6 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._ibis.dataframe import IbisLazyFrame
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._utils import _LimitedContext
@@ -64,7 +63,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._opt_metadata: ExprMetadata | None = None
         self._window_function: IbisWindowFunction | None = window_function
 
     @property

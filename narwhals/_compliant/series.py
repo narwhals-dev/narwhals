@@ -322,7 +322,7 @@ class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
 ): ...
 
 
-class EagerSeriesListNamespace(
+class EagerSeriesListNamespace(  # pyright: ignore[reportInvalidTypeVarUse]
     _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
     ListNamespace[EagerSeriesT],
     Protocol[EagerSeriesT, NativeSeriesT_co],

@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
@@ -66,7 +65,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._opt_metadata: ExprMetadata | None = None
         self._window_function: DuckDBWindowFunction | None = window_function
 
     def _count_star(self) -> Expression:

@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         EvalSeries,
         WindowFunction,
     )
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
@@ -58,7 +57,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         self._alias_output_names = alias_output_names
         self._version = version
         self._implementation = implementation
-        self._opt_metadata: ExprMetadata | None = None
         self._window_function: SparkWindowFunction | None = window_function
 
     _REMAP_RANK_METHOD: ClassVar[Mapping[RankMethod, NativeRankMethod]] = {

@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant.typing import AliasNames, WindowFunction
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
@@ -44,7 +43,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     _alias_output_names: AliasNames | None
     _version: Version
     _implementation: Implementation
-    _opt_metadata: ExprMetadata | None
     _window_function: WindowFunction[SQLLazyFrameT, NativeExprT] | None
 
     def __init__(

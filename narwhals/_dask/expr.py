@@ -37,7 +37,6 @@ if TYPE_CHECKING:
     )
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
@@ -68,7 +67,6 @@ class DaskExpr(
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._opt_metadata: ExprMetadata | None = None
 
     def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
         return self._call(df)

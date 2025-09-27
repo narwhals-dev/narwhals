@@ -19,7 +19,6 @@ if TYPE_CHECKING:
         EvalSeries,
         NarwhalsAggregation,
     )
-    from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._utils import Implementation, Version, _LimitedContext
@@ -126,7 +125,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
         self._alias_output_names = alias_output_names
         self._implementation = implementation
         self._version = version
-        self._opt_metadata: ExprMetadata | None = None
 
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
         from narwhals._pandas_like.namespace import PandasLikeNamespace

@@ -20,8 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
-    from narwhals._expression_parsing import ExprMetadata
+    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
     from narwhals._utils import Version, _LimitedContext
 
 
@@ -35,14 +34,12 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         evaluate_output_names: EvalNames[ArrowDataFrame],
         alias_output_names: AliasNames | None,
         version: Version,
-        scalar_kwargs: ScalarKwargs | None = None,
-        implementation: Implementation | None = None,
+        implementation: Implementation = Implementation.PYARROW,
     ) -> None:
         self._call = call
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
-        self._opt_metadata: ExprMetadata | None = None
 
     @classmethod
     def from_column_names(
