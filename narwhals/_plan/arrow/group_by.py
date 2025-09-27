@@ -181,13 +181,10 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         return self._df
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
-        # random column name
         temp_name = temp.column_name(self.compliant)
         temp_expr = pc.field(temp_name)
-
-        native = self.compliant.native
-        composite_values = concat_str(native, self.key_names)
-        re_keyed = native.add_column(0, temp_name, composite_values)
+        composite_values = concat_str(self.compliant.native, self.key_names)
+        re_keyed = self.compliant.native.add_column(0, temp_name, composite_values)
         from_native = self.compliant._with_native
         for v in composite_values.unique():
             # filter the keyed table to rows that have the same key (`t`)
