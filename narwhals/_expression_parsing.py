@@ -166,12 +166,6 @@ def is_scalar_like(obj: CompliantExprAny | NonNestedLiteral) -> bool:
     return True
 
 
-def is_elementwise(obj: CompliantExprAny | NonNestedLiteral) -> bool:
-    if is_compliant_expr(obj):
-        return obj._metadata.is_elementwise
-    return False
-
-
 class ExpansionKind(Enum):
     """Describe what kind of expansion the expression performs."""
 
