@@ -322,14 +322,14 @@ class EagerSeriesDateTimeNamespace(  # type: ignore[misc]
 ): ...
 
 
-class EagerSeriesListNamespace(  # type: ignore[misc]
+class EagerSeriesListNamespace(
     _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
     ListNamespace[EagerSeriesT],
     Protocol[EagerSeriesT, NativeSeriesT_co],
 ): ...
 
 
-class EagerSeriesStringNamespace(  # type: ignore[misc]
+class EagerSeriesStringNamespace(
     _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
     StringNamespace[EagerSeriesT],
     Protocol[EagerSeriesT, NativeSeriesT_co],

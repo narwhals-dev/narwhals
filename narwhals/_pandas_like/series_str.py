@@ -18,15 +18,10 @@ class PandasLikeSeriesStringNamespace(
     def replace(
         self, value: PandasLikeSeries | str, pattern: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
-        try:
-            series = self.native.str.replace(
-                pat=pattern, repl=value, n=n, regex=not literal
-            )
-        except TypeError as e:
-            if not isinstance(value, str):
-                msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
-                raise TypeError(msg) from e
-            raise
+        if not isinstance(value, str):
+            msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
+            raise TypeError(msg)
+        series = self.native.str.replace(pat=pattern, repl=value, n=n, regex=not literal)
         return self.with_native(series)
 
     def replace_all(

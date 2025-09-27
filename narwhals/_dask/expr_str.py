@@ -21,32 +21,28 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def replace(
         self, value: DaskExpr | str, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
-        def _replace(expr: dx.Series, value: str) -> dx.Series:
-            try:
-                return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
-                    pattern, value, regex=not literal, n=n
+        def _replace(expr: dx.Series, value: dx.Series | str) -> dx.Series:
+            if not isinstance(value, str):
+                msg = (
+                    "dask backed `Expr.str.replace` only supports str replacement values"
                 )
-            except TypeError as e:
-                if not isinstance(value, str):
-                    msg = "dask backed `Expr.str.replace` only supports str replacement values"
-                    raise TypeError(msg) from e
-                raise
+                raise TypeError(msg)
+            return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
+                pattern, value, regex=not literal, n=n
+            )
 
         return self.compliant._with_callable(_replace, value=value)
 
     def replace_all(
         self, value: DaskExpr | str, pattern: str, *, literal: bool
     ) -> DaskExpr:
-        def _replace_all(expr: dx.Series, value: str) -> dx.Series:
-            try:
-                return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
-                    pattern, value, regex=not literal, n=-1
-                )
-            except TypeError as e:
-                if not isinstance(value, str):
-                    msg = "dask backed `Expr.str.replace_all` only supports str replacement values."
-                    raise TypeError(msg) from e
-                raise
+        def _replace_all(expr: dx.Series, value: dx.Series | str) -> dx.Series:
+            if not isinstance(value, str):
+                msg = "dask backed `Expr.str.replace_all` only supports str replacement values."
+                raise TypeError(msg)
+            return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
+                pattern, value, regex=not literal, n=-1
+            )
 
         return self.compliant._with_callable(_replace_all, value=value)
 
