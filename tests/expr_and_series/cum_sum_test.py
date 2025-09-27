@@ -87,7 +87,7 @@ def test_lazy_cum_sum_ordered_by_nulls(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "pandas_nullable" in str(constructor):
+    if "pandas_nullable" in str(constructor) and not reverse:
         # https://github.com/pandas-dev/pandas/issues/62473
         request.applymarker(pytest.mark.xfail)
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
