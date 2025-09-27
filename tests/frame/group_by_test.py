@@ -525,7 +525,7 @@ def test_group_by_raise_if_not_preserves_length(
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.group_by(keys).agg(nw.col("x").max())
 
 

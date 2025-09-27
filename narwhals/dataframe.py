@@ -1722,7 +1722,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
-        check_expressions_preserve_length(*_keys, function_name="DataFrame.group_by")
+        check_expressions_preserve_length(
+            *expr_flat_keys, function_name="DataFrame.group_by"
+        )
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2950,7 +2952,9 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
-        check_expressions_preserve_length(*_keys, function_name="LazyFrame.group_by")
+        check_expressions_preserve_length(
+            *expr_flat_keys, function_name="LazyFrame.group_by"
+        )
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
