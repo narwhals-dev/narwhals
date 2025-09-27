@@ -40,9 +40,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
 
         return fn
 
-    def replace_all(
-        self, value: str | IbisExpr, pattern: str, *, literal: bool
-    ) -> IbisExpr:
+    def replace_all(self, value: IbisExpr, pattern: str, *, literal: bool) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
         return self.compliant._with_elementwise(
             lambda expr, value: fn(pattern, value)(expr), value=value

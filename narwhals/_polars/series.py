@@ -745,14 +745,20 @@ class PolarsSeriesStringNamespace(
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
-    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> PolarsSeries:
+    def replace(
+        self, value: PolarsSeries | str, pattern: str, *, literal: bool, n: int
+    ) -> PolarsSeries:
+        value_native = value if isinstance(value, str) else extract_native(value)
         return self.compliant._with_native(
-            self.native.str.replace(pattern, extract_native(value), literal=literal, n=n)
+            self.native.str.replace(pattern, value_native, literal=literal, n=n)  # type: ignore[arg-type]
         )
 
-    def replace_all(self, value: str, pattern: str, *, literal: bool) -> PolarsSeries:
+    def replace_all(
+        self, value: PolarsSeries | str, pattern: str, *, literal: bool
+    ) -> PolarsSeries:
+        value_native = value if isinstance(value, str) else extract_native(value)
         return self.compliant._with_native(
-            self.native.str.replace_all(pattern, extract_native(value), literal=literal)
+            self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
         )
 
 

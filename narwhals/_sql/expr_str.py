@@ -37,9 +37,7 @@ class SQLExprStringNamespace(
             lambda expr: self._function("length", expr)
         )
 
-    def replace_all(
-        self, value: str | SQLExprT, pattern: str, *, literal: bool
-    ) -> SQLExprT:
+    def replace_all(self, value: SQLExprT, pattern: str, *, literal: bool) -> SQLExprT:
         fname: str = "replace" if literal else "regexp_replace"
 
         options: list[Any] = []

@@ -18,7 +18,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def len_chars(self) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.len())
 
-    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> DaskExpr:
+    def replace(
+        self, value: DaskExpr | str, pattern: str, *, literal: bool, n: int
+    ) -> DaskExpr:
         def _replace(expr: dx.Series, value: str) -> dx.Series:
             try:
                 return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
@@ -32,7 +34,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
 
         return self.compliant._with_callable(_replace, value=value)
 
-    def replace_all(self, value: str, pattern: str, *, literal: bool) -> DaskExpr:
+    def replace_all(
+        self, value: DaskExpr | str, pattern: str, *, literal: bool
+    ) -> DaskExpr:
         def _replace_all(expr: dx.Series, value: str) -> dx.Series:
             try:
                 return expr.str.replace(  # pyright: ignore[reportAttributeAccessIssue]
