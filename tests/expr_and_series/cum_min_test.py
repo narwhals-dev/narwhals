@@ -83,6 +83,9 @@ def test_lazy_cum_min_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
+    if "pandas_nullable" in str(constructor):
+        # https://github.com/pandas-dev/pandas/issues/62473
+        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
