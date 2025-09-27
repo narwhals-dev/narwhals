@@ -145,9 +145,6 @@ class ExprKind(Enum):
     SERIES = auto()
     """Results from converting a Series to Expr."""
 
-    UNKNOWN = auto()
-    """Based on the information we have, we can't determine the ExprKind."""
-
     @property
     def is_orderable(self) -> bool:
         # Any operation which may be affected by `order_by`, such as `cum_sum`,
@@ -157,6 +154,22 @@ class ExprKind(Enum):
             ExprKind.ORDERABLE_AGGREGATION,
             ExprKind.FILTRATION,
             ExprKind.WINDOW,
+        }
+
+    @property
+    def is_elementwise(self) -> bool:
+        # Any operation which can operate on each row independently
+        # of the rows around it, e.g. `abs(), __add__, sum_horizontal, ...`
+        return self in {
+            ExprKind.ALL,
+            ExprKind.COL,
+            ExprKind.ELEMENTWISE,
+            ExprKind.EXCLUDE,
+            ExprKind.LITERAL,
+            ExprKind.NTH,
+            ExprKind.SELECTOR,
+            ExprKind.SERIES,
+            ExprKind.WHEN_THEN,
         }
 
 
@@ -225,6 +238,7 @@ class ExprNode:
 
         # Cached methods.
         self._is_orderable_cached: bool | None = None
+        self._is_elementwise_cached: bool | None = None
 
     def __repr__(self) -> str:
         if self.name == "col":
@@ -257,7 +271,9 @@ class ExprNode:
                 expr_node.is_orderable() for expr_node in expr._nodes
             ):
                 exprs.append(expr._with_node(over_node))
-            elif over_node_without_order_by.kwargs["partition_by"]:
+            elif over_node_without_order_by.kwargs["partition_by"] and not all(
+                expr_node.is_elementwise() for expr_node in expr._nodes
+            ):
                 exprs.append(expr._with_node(over_node_without_order_by))
             else:
                 # If there's no `partition_by`, then `over_node_without_order_by` is a no-op.
@@ -279,6 +295,20 @@ class ExprNode:
             else:
                 self._is_orderable_cached = False
         return self._is_orderable_cached
+
+    def is_elementwise(self) -> bool:
+        if self._is_elementwise_cached is None:
+            # Note: don't combine these if/then statements so that pytest-cov shows if
+            # anything is uncovered.
+            if not self.kind.is_elementwise or not all(
+                all(node.is_elementwise() for node in expr._nodes)
+                for expr in self.exprs
+                if is_expr(expr)
+            ):
+                self._is_elementwise_cached = False
+            else:
+                self._is_elementwise_cached = True
+        return self._is_elementwise_cached
 
 
 class ExprMetadata:

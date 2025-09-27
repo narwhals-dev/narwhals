@@ -48,6 +48,7 @@ from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
             ),
             [4 / 3, 13 / 3, 7 / 3],
         ),
+        ((nw.col("a") - nw.col("a").mean()).over("b"), [-1.5, 1.5, 0]),
     ],
 )
 def test_over_pushdown(
@@ -78,7 +79,6 @@ def test_over_pushdown(
         nw.col("a").mean().rank(),
         nw.col("a").mean().is_unique(),
         nw.col("a").mean().diff(),
-        nw.col("a").fill_null(3).over("b"),
         nw.col("a").drop_nulls().over("b"),
         nw.col("a").drop_nulls().over("b", order_by="i"),
         nw.col("a").diff().drop_nulls().over("b", order_by="i"),
@@ -92,3 +92,9 @@ def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
     ).lazy()
     with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.select(a=expr)
+
+
+def test_invalid_elementwise_over() -> None:
+    # This one raises before it's even evaluated.
+    with pytest.raises(InvalidOperationError):
+        nw.col("a").fill_null(3).over("b")

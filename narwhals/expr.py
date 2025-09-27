@@ -12,7 +12,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten
 from narwhals.dtypes import _validate_dtype
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
@@ -80,8 +80,13 @@ class Expr:
                 node.is_orderable() for node in new_nodes[:i]
             ):
                 new_nodes.insert(i, node)
-            elif node.kwargs["partition_by"]:
+            elif node.kwargs["partition_by"] and not all(
+                node.is_elementwise() for node in new_nodes[:i]
+            ):
                 new_nodes.insert(i, node_without_order_by)
+            elif all(node.is_elementwise() for node in new_nodes):
+                msg = "Cannot apply `over` to elementwise expression."
+                raise InvalidOperationError(msg)
             return self.__class__(*new_nodes)
         return self.__class__(*self._nodes, node)
 
