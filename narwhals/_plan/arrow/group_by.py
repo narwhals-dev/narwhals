@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -148,6 +148,9 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
     _key_names_original: Seq[str]
+    _ITER_CONCAT_STR: ClassVar[pc.JoinOptions] = pc.JoinOptions(
+        null_handling="replace", null_replacement="__nw_null_value__"
+    )
 
     @property
     def compliant(self) -> Frame:
@@ -156,8 +159,6 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         # random column name
         col_token = temp.column_name(self.compliant)
-        # random null fill value
-        null_token = f"__null_{col_token}_value__"
         # native
         table: pa.Table = self.compliant.native
         # get key columns, cast everything to str?
@@ -168,9 +169,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         )
         # join those strings horizontally to generate a single key column
         concat_str: Incomplete = pc.binary_join_element_wise
-        key_values = concat_str(
-            *it, separator_scalar, null_handling="replace", null_replacement=null_token
-        )
+        key_values = concat_str(*it, separator_scalar, options=self._ITER_CONCAT_STR)
         # add that column (of `key_values`) back to the table
         table_w_key = table.add_column(i=0, field_=col_token, column=key_values)
         # iterate over the unique keys in the `key_values` array
