@@ -53,7 +53,8 @@ AggKeys: TypeAlias = "Iterable[Field] | None"
 
 Target: TypeAlias = OneOrListOrTuple[Field]
 Aggregation: TypeAlias = "_Aggregation"
-Opts: TypeAlias = "_AggregateOptions | None"
+AggregateOptions: TypeAlias = "_AggregateOptions"
+Opts: TypeAlias = "AggregateOptions | None"
 OutputName: TypeAlias = str
 AggSpec: TypeAlias = tuple[Target, Aggregation, Opts, OutputName]
 

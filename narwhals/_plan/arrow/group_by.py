@@ -6,7 +6,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow import acero, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
@@ -93,36 +93,28 @@ class ArrowAggExpr:
     def _parse_agg_expr(
         self, expr: agg.AggExpr
     ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
-        if agg_name := SUPPORTED_AGG.get(type(expr)):
-            option: acero.Opts = None
-            if isinstance(expr, (agg.Std, agg.Var)):
-                # NOTE: Only branch which needs an instance (for `ddof`)
-                option = pc.VarianceOptions(ddof=expr.ddof)
-            elif isinstance(expr, (agg.NUnique, agg.Len)):
-                option = pc.CountOptions(mode="all")
-            elif isinstance(expr, agg.Count):
-                option = pc.CountOptions(mode="only_valid")
-            elif isinstance(expr, (agg.First, agg.Last)):
-                option = pc.ScalarAggregateOptions(skip_nulls=False)
-                self.use_threads = False
-            if isinstance(expr.expr, ir.Column):
-                return [expr.expr.name], agg_name, option
+        tp = type(expr)
+        if not (agg_name := SUPPORTED_AGG.get(tp)):
+            raise group_by_error(self, "unsupported aggregation")
+        if not isinstance(expr.expr, ir.Column):
             raise group_by_error(self, "too complex")
-        raise group_by_error(self, "unsupported aggregation")
+        if issubclass(tp, agg.OrderableAggExpr):
+            self.use_threads = False
+        option = (
+            options.variance(expr.ddof)
+            if isinstance(expr, (agg.Std, agg.Var))
+            else options.AGG.get(tp)
+        )
+        return ([expr.expr.name], agg_name, option)
 
     def _parse_function_expr(
         self, expr: ir.FunctionExpr
     ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
-        func = expr.function
-        if agg_name := SUPPORTED_FUNCTION.get(type(func)):
-            if isinstance(func, (ir.boolean.All, ir.boolean.Any)):
-                option = pc.ScalarAggregateOptions(min_count=0)
-            else:
-                option = None
-        else:
+        tp = type(expr.function)
+        if not (agg_name := SUPPORTED_FUNCTION.get(tp)):
             raise group_by_error(self, "unsupported function")
         if len(expr.input) == 1 and isinstance(expr.input[0], ir.Column):
-            return [expr.input[0].name], agg_name, option
+            return [expr.input[0].name], agg_name, options.FUNCTION.get(tp)
         raise group_by_error(self, "too complex")
 
     def parse(self) -> Self:
@@ -153,7 +145,7 @@ def concat_str(
     subset: Seq[str],
     *,
     separator: str = "",
-    options: pc.JoinOptions = _NULL_FILL,
+    join_options: pc.JoinOptions = _NULL_FILL,
 ) -> ChunkedArray:
     # get key columns, casting everything to str
     # docs says "list-like", runtime supports iterable
@@ -167,7 +159,7 @@ def concat_str(
     schema = pa.schema((name, dtype) for name in schema.names)
     sep = fn.lit(separator, dtype)
     concat: Incomplete = pc.binary_join_element_wise
-    return concat(*df.cast(schema).itercolumns(), sep, options=options)  # type: ignore[no-any-return]
+    return concat(*df.cast(schema).itercolumns(), sep, options=join_options)  # type: ignore[no-any-return]
 
 
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
@@ -186,7 +178,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         composite_values = concat_str(self.compliant.native, self.key_names)
         re_keyed = self.compliant.native.add_column(0, temp_name, composite_values)
         from_native = self.compliant._with_native
-        for v in composite_values.unique():
+        for v in composite_values.unique():  # TODO @dangotbanned: Can more of the stuff inside the loop be done in `acero`?
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
             t = from_native(acero.filter_table(re_keyed, temp_expr == v))
