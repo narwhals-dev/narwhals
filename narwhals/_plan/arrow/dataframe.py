@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
@@ -146,4 +147,5 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         return self._with_native(self.native.select(list(column_names)))
 
     def row(self, index: int) -> tuple[Any, ...]:
-        return tuple(col[index] for col in self.native.itercolumns())
+        row = self.native.slice(index, 1)
+        return tuple(chain.from_iterable(row.to_pydict().values()))

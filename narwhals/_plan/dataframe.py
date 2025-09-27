@@ -165,3 +165,6 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
     def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
         return self._from_compliant(self._compliant.drop_nulls(subset))
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        return self._compliant.row(index)

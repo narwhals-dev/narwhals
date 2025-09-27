@@ -183,10 +183,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             # then drop the temporary key on the result
             t = from_native(acero.filter_table(re_keyed, temp_expr == v))
             # subset this new table to only the actual key name columns
-            # then convert the first row to `tuple[pa.Scalar, ...]`
-            row = t.select_names(*self.key_names).row(0)
-            # convert those scalars to python literals
-            group_key = tuple(el.as_py() for el in row)
+            group_key = t.select_names(*self.key_names).row(0)
             # select (all) columns from (`t`) that we started with at `<df>.group_by()``, ignoring new keys/aliases
             partition = t.select_names(*self._column_names_original)
             yield group_key, partition

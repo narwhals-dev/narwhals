@@ -522,6 +522,23 @@ def test_first_last_expr_with_columns(
     assert_equal_data(result, {"result": expected_broadcast})
 
 
+@pytest.mark.parametrize(
+    ("index", "expected"), [(3, (None, 12, 0.9, 3, 3)), (1, (2, 5, 1.0, 1, 1))]
+)
+def test_row_is_py_literal(
+    data_indexed: dict[str, Any], index: int, expected: tuple[PythonLiteral, ...]
+) -> None:
+    frame = nwp.DataFrame.from_native(pa.table(data_indexed))
+    result = frame.row(index)
+    assert all(v is None or isinstance(v, (int, float)) for v in result)
+    assert result == expected
+    pytest.importorskip("polars")
+    import polars as pl
+
+    polars_result = pl.DataFrame(data_indexed).row(index)
+    assert result == polars_result
+
+
 if TYPE_CHECKING:
 
     def test_protocol_expr() -> None:
