@@ -11,7 +11,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -511,42 +511,34 @@ def test_group_by_expr(
 
 
 @pytest.mark.parametrize(
-    ("keys", "lazy_context"),
+    "keys",
     [
-        (
-            [nw.col("a").drop_nulls()],
-            pytest.raises((InvalidOperationError, NotImplementedError)),
-        ),  # Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
-            pytest.raises((InvalidOperationError, NotImplementedError)),
-        ),  # Transform and Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").max()],
-            pytest.raises((ComputeError, NotImplementedError)),
-        ),  # Transform and Aggregation
-        (
-            [nw.col("a").alias("foo"), nw.col("a").cum_max()],
-            pytest.raises((InvalidOperationError, NotImplementedError)),
-        ),  # Transform and Window
-        ([nw.lit(42)], pytest.raises((ComputeError, NotImplementedError))),  # Literal
-        (
-            [nw.lit(42).abs()],
-            pytest.raises((ComputeError, NotImplementedError)),
-        ),  # Literal
+        [nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
+        [nw.lit(42)],  # Literal
+        [nw.lit(42).abs()],  # Literal
     ],
 )
-def test_group_by_raise_if_not_elementwise(
-    constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
+def test_group_by_raise_if_not_preserves_length(
+    constructor: Constructor, keys: list[nw.Expr]
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
-
-    context: Any = (
-        lazy_context if isinstance(df, nw.LazyFrame) else pytest.raises(ComputeError)
-    )
-    with context:
+    with pytest.raises(InvalidOperationError):
         df.group_by(keys).agg(nw.col("x").max())
+
+
+def test_group_by_window(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(nw.col("a").mean().over("b"))
+        .agg(nw.col("x").max())
+        .sort("a", nulls_last=True)
+    )
+    expected = {"a": [1.5, 2.0], "x": [2, 4]}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
