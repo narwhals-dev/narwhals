@@ -206,7 +206,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
     def over(  # noqa: C901, PLR0915
         self, partition_by: Sequence[str], order_by: Sequence[str]
     ) -> Self:
-        nodes = self._metadata.nodes
+        op_nodes_reversed = list(self._metadata.op_nodes_reversed())
         if not partition_by:
             # e.g. `nw.col('a').cum_sum().order_by(key)`
             # We can always easily support this as it doesn't require grouping.
@@ -222,7 +222,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
                 return results
-        elif len(nodes) > 2:
+        elif len(op_nodes_reversed) > 2:
             msg = (
                 "Only elementary expressions are supported for `.over` in pandas-like backends.\n\n"
                 "Please see: "
@@ -230,8 +230,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
             raise NotImplementedError(msg)
         else:
-            assert nodes  # noqa: S101
-            leaf_node = nodes[-1]
+            assert op_nodes_reversed  # noqa: S101
+            leaf_node = op_nodes_reversed[0]
             function_name = leaf_node.name
             pandas_agg = PandasLikeGroupBy._REMAP_AGGS.get(
                 cast("NarwhalsAggregation", function_name)
