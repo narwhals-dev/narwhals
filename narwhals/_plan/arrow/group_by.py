@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
-from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._plan import expressions as ir
-from narwhals._plan.arrow import acero
+from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
+    from narwhals._plan.arrow.typing import ChunkedArray
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
@@ -143,14 +143,38 @@ class ArrowAggExpr:
         return self
 
 
+_NULL_FILL: Final = pc.JoinOptions(
+    null_handling="replace", null_replacement="__nw_null_value__"
+)
+
+
+def concat_str(
+    native: pa.Table,
+    subset: Seq[str],
+    *,
+    separator: str = "",
+    options: pc.JoinOptions = _NULL_FILL,
+) -> ChunkedArray:
+    # get key columns, casting everything to str
+    # docs says "list-like", runtime supports iterable
+    df = native.select(subset)  # pyright: ignore[reportArgumentType]
+    schema = df.schema
+    dtype = (
+        pa.string()
+        if not any(pa.types.is_large_string(tp) for tp in schema.types)
+        else pa.large_string()
+    )
+    schema = pa.schema((name, dtype) for name in schema.names)
+    sep = fn.lit(separator, dtype)
+    concat: Incomplete = pc.binary_join_element_wise
+    return concat(*df.cast(schema).itercolumns(), sep, options=options)  # type: ignore[no-any-return]
+
+
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _df: Frame
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
     _key_names_original: Seq[str]
-    _ITER_CONCAT_STR: ClassVar[pc.JoinOptions] = pc.JoinOptions(
-        null_handling="replace", null_replacement="__nw_null_value__"
-    )
 
     @property
     def compliant(self) -> Frame:
@@ -160,22 +184,12 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         # random column name
         temp_name = temp.column_name(self.compliant)
         temp_expr = pc.field(temp_name)
-        # native
-        table: pa.Table = self.compliant.native
-        key_names = self.key_names
-        # get key columns, cast everything to str?
-        # make sure all either string or all large_string
-        # separator also has to be that string type
-        it, separator = cast_to_comparable_string_types(
-            *(table[key] for key in key_names), separator=""
-        )
-        # join those strings horizontally to generate a single key column
-        concat_str: Incomplete = pc.binary_join_element_wise
-        composite_values = concat_str(*it, separator, options=self._ITER_CONCAT_STR)
-        # add that column (of `composite_values`) back to the table
-        re_keyed = table.add_column(0, temp_name, composite_values)
-        # iterate over the unique keys in the `composite_values` array
+
+        native = self.compliant.native
+        composite_values = concat_str(native, self.key_names)
+        re_keyed = native.add_column(0, temp_name, composite_values)
         from_native = self.compliant._with_native
+        # iterate over the unique keys in the `composite_values` array
         for v in pc.unique(composite_values):
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
@@ -183,7 +197,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             t = from_native(acero.filter_table(re_keyed, predicate).remove_column(0))
             # subset this new table to only the actual key name columns
             # then convert the first row to `tuple[pa.Scalar, ...]`
-            row = t.select_names(*key_names).row(0)
+            row = t.select_names(*self.key_names).row(0)
             # convert those scalars to python literals
             group_key = tuple(el.as_py() for el in row)
             # select (all) columns from (`t`) that we started with at `<df>.group_by()``, ignoring new keys/aliases
