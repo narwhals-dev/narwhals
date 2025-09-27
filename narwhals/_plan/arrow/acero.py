@@ -111,7 +111,7 @@ def group_by(keys: AggKeys, aggs: Iterable[AggSpec], /) -> Decl:
 
 
 def filter(*predicates: Expr, **constraints: IntoExpr) -> Decl:
-    """Selects rows where all expressions evaulate to True.
+    """Selects rows where all expressions evaluate to True.
 
     Arguments:
         predicates: [`Expression`](s) which must all have a return type of boolean.
