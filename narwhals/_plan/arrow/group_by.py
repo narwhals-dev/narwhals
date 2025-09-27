@@ -189,7 +189,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         for v in composite_values.unique():
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
-            t = from_native(acero.filter_table(re_keyed, temp_expr == v).remove_column(0))
+            t = from_native(acero.filter_table(re_keyed, temp_expr == v))
             # subset this new table to only the actual key name columns
             # then convert the first row to `tuple[pa.Scalar, ...]`
             row = t.select_names(*self.key_names).row(0)
