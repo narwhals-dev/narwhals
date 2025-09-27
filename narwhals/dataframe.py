@@ -1715,16 +1715,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             k if is_expr else col(k)
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
-
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="DataFrame.group_by")
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -2961,15 +2953,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         _keys = [
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="LazyFrame.group_by")
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
