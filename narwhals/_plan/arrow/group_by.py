@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
-import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import cast_to_comparable_string_types
 from narwhals._plan import expressions as ir
+from narwhals._plan.arrow import acero
 from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
@@ -18,27 +18,16 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        AggregateOptions,
-        Aggregation,
-    )
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.typing import Seq
 
 Incomplete: TypeAlias = Any
 
-AceroTarget: TypeAlias = "tuple[()] | list[str]"
-NativeAggSpec: TypeAlias = "tuple[AceroTarget, Aggregation, AggregateOptions | None]"
-OutputName: TypeAlias = str
-AceroAggSpec: TypeAlias = (
-    "tuple[AceroTarget, Aggregation, AggregateOptions | None, OutputName]"
-)
-
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
-SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
+SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.Sum: "hash_sum",
     agg.Mean: "hash_mean",
     agg.Median: "hash_approximate_median",
@@ -52,11 +41,11 @@ SUPPORTED_AGG: Mapping[type[agg.AggExpr], Aggregation] = {
     agg.First: "hash_first",
     agg.Last: "hash_last",
 }
-SUPPORTED_IR: Mapping[type[ir.ExprIR], Aggregation] = {
+SUPPORTED_IR: Mapping[type[ir.ExprIR], acero.Aggregation] = {
     ir.Len: "hash_count_all",
     ir.Column: "hash_list",
 }
-SUPPORTED_FUNCTION: Mapping[type[ir.Function], Aggregation] = {
+SUPPORTED_FUNCTION: Mapping[type[ir.Function], acero.Aggregation] = {
     ir.boolean.All: "hash_all",
     ir.boolean.Any: "hash_any",
     ir.functions.Unique: "hash_distinct",
@@ -95,17 +84,17 @@ class ArrowAggExpr:
         self.named_ir: NamedIR = named_ir
         self.use_threads: bool = True
         """See https://github.com/apache/arrow/issues/36709"""
-        self.spec: AceroAggSpec
+        self.spec: acero.AggSpec
 
     @property
-    def output_name(self) -> OutputName:
+    def output_name(self) -> acero.OutputName:
         return self.named_ir.name
 
     def _parse_agg_expr(
         self, expr: agg.AggExpr
-    ) -> tuple[AceroTarget, Aggregation, AggregateOptions | None]:
+    ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
         if agg_name := SUPPORTED_AGG.get(type(expr)):
-            option: AggregateOptions | None = None
+            option: acero.Opts = None
             if isinstance(expr, (agg.Std, agg.Var)):
                 # NOTE: Only branch which needs an instance (for `ddof`)
                 option = pc.VarianceOptions(ddof=expr.ddof)
@@ -121,7 +110,9 @@ class ArrowAggExpr:
             raise group_by_error(self, "too complex")
         raise group_by_error(self, "unsupported aggregation")
 
-    def _parse_function_expr(self, expr: ir.FunctionExpr) -> NativeAggSpec:
+    def _parse_function_expr(
+        self, expr: ir.FunctionExpr
+    ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
         func = expr.function
         if agg_name := SUPPORTED_FUNCTION.get(type(func)):
             if isinstance(func, (ir.boolean.All, ir.boolean.Any)):
@@ -136,8 +127,8 @@ class ArrowAggExpr:
 
     def parse(self) -> Self:
         expr = self.named_ir.expr
-        input_name: AceroTarget = ()
-        option: AggregateOptions | None = None
+        input_name: acero.Target = ()
+        option: acero.Opts = None
         if isinstance(expr, agg.AggExpr):
             input_name, agg_name, option = self._parse_agg_expr(expr)
         elif isinstance(expr, ir.FunctionExpr):
@@ -168,7 +159,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         # random null fill value
         null_token = f"__null_{col_token}_value__"
         # native
-        table = self.compliant.native
+        table: pa.Table = self.compliant.native
         # get key columns, cast everything to str?
         # make sure all either string or all large_string
         # separator also has to be that string type
@@ -187,7 +178,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
             t = self.compliant._with_native(
-                table_w_key.filter(pc.field(col_token) == v).remove_column(0)
+                acero.filter_table(table_w_key, pc.field(col_token) == v).remove_column(0)
             )
             # subset this new table to only the actual key name columns
             # then convert the first row to `tuple[pa.Scalar, ...]`
@@ -199,37 +190,17 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             yield group_key, partition
 
     def agg(self, irs: Seq[NamedIR]) -> Frame:
-        aggs: list[AceroAggSpec] = []
+        aggs: list[acero.AggSpec] = []
         use_threads: bool = True
         for e in irs:
             expr = ArrowAggExpr(e).parse()
             use_threads = use_threads and expr.use_threads
             aggs.append(expr.spec)
-        result = self.compliant._with_native(self._agg(aggs, use_threads=use_threads))
+        native = self.compliant.native
+        key_names = self.key_names
+        result = self.compliant._with_native(
+            acero.group_by_table(native, key_names, aggs, use_threads=use_threads)
+        )
         if original := self._key_names_original:
-            return result.rename(dict(zip(self.key_names, original)))
+            return result.rename(dict(zip(key_names, original)))
         return result
-
-    def _agg(self, agg_specs: list[AceroAggSpec], /, *, use_threads: bool) -> pa.Table:
-        """Adapted from [`pa.TableGroupBy.aggregate`] and [`pa.acero._group_by`].
-
-        - Backport of [apache/arrow#36768].
-          - `first` and `last` were [broken in `pyarrow==13`].
-        - Also allows us to specify our own aliases for aggregate output columns.
-          - Fixes [narwhals-dev/narwhals#1612]
-
-        [`pa.TableGroupBy.aggregate`]: https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/table.pxi#L6600-L6626
-        [`pa.acero._group_by`]: https://github.com/apache/arrow/blob/0e7e70cfdef4efa287495272649c071a700c34fa/python/pyarrow/acero.py#L412-L418
-        [apache/arrow#36768]: https://github.com/apache/arrow/pull/36768
-        [broken in `pyarrow==13`]: https://github.com/apache/arrow/issues/36709
-        [narwhals-dev/narwhals#1612]: https://github.com/narwhals-dev/narwhals/issues/1612
-        """
-        df = self.compliant.native
-        # NOTE: Stubs are (incorrectly) invariant
-        keys: Incomplete = list(self.key_names)
-        aggs: Incomplete = agg_specs
-        decls = [
-            pac.Declaration("table_source", pac.TableSourceNodeOptions(df)),
-            pac.Declaration("aggregate", pac.AggregateNodeOptions(aggs, keys=keys)),
-        ]
-        return pac.Declaration.from_sequence(decls).to_table(use_threads=use_threads)
