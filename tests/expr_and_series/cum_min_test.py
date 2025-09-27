@@ -10,6 +10,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_windows,
 )
 
 data = {"a": [3, 1, None, 2]}
@@ -95,6 +96,9 @@ def test_lazy_cum_min_ordered_by_nulls(
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
