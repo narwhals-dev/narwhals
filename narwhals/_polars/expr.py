@@ -80,6 +80,10 @@ class PolarsExpr:
     def _with_native(self, expr: pl.Expr) -> Self:
         return self.__class__(expr, self._version)
 
+    def broadcast(self) -> Self:
+        # Let Polars do its thing.
+        return self
+
     @property
     def _metadata(self) -> ExprMetadata:
         assert self._opt_metadata is not None  # noqa: S101
@@ -91,10 +95,6 @@ class PolarsExpr:
             return self._with_native(getattr(self.native, attr)(*pos, **kwds))
 
         return func
-
-    def broadcast(self) -> Self:
-        # Let Polars do its thing.
-        return self
 
     def _renamed_min_periods(self, min_samples: int, /) -> dict[str, Any]:
         name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"

@@ -989,8 +989,7 @@ def nth(*indices: int | Sequence[int]) -> Expr:
         └──────────────────┘
     """
     flat_indices = flatten(indices)
-    node = ExprNode(ExprKind.NTH, "nth", indices=flat_indices)
-    return Expr(node)
+    return Expr(ExprNode(ExprKind.NTH, "nth", indices=flat_indices))
 
 
 # Add underscore so it doesn't conflict with builtin `all`
@@ -1014,8 +1013,7 @@ def all_() -> Expr:
         |   1  4  0.246    |
         └──────────────────┘
     """
-    node = ExprNode(ExprKind.ALL, "all")
-    return Expr(node)
+    return Expr(ExprNode(ExprKind.ALL, "all"))
 
 
 # Add underscore so it doesn't conflict with builtin `len`
@@ -1044,8 +1042,7 @@ def len_() -> Expr:
         |  └─────┘         |
         └──────────────────┘
     """
-    node = ExprNode(ExprKind.AGGREGATION, "len")
-    return Expr(node)
+    return Expr(ExprNode(ExprKind.AGGREGATION, "len"))
 
 
 def sum(*columns: str) -> Expr:
@@ -1208,8 +1205,9 @@ def _expr_with_horizontal_op(name: str, *exprs: IntoExpr, **kwargs: Any) -> Expr
     if not exprs:
         msg = f"At least one expression must be passed to `{name}`"
         raise ValueError(msg)
-    node = ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
-    return Expr(node)
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, name, *exprs, **kwargs, allow_multi_output=True)
+    )
 
 
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
@@ -1340,7 +1338,6 @@ class When:
 
 class Then(Expr):
     def otherwise(self, value: IntoExpr | NonNestedLiteral) -> Expr:
-        # eject latest node, replace with `when_then_otherwise`
         node = self._nodes[0]
         return Expr(ExprNode(ExprKind.ELEMENTWISE, "when_then", *node.exprs, value))
 
@@ -1471,8 +1468,7 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         msg = f"Nested datatypes are not supported yet. Got {value}"
         raise NotImplementedError(msg)
 
-    node = ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype)
-    return Expr(node)
+    return Expr(ExprNode(ExprKind.LITERAL, "lit", value=value, dtype=dtype))
 
 
 def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) -> Expr:
@@ -1672,5 +1668,4 @@ def coalesce(
         )
         raise TypeError(msg)
 
-    node = ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs)
-    return Expr(node)
+    return Expr(ExprNode(ExprKind.ELEMENTWISE, "coalesce", *flat_exprs))
