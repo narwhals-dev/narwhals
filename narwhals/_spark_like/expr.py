@@ -97,8 +97,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return expr.over(window)
 
     def broadcast(self) -> Self:
-        if self._metadata.is_literal:
-            return self
         return self.over([self._F.lit(1)], [])
 
     @property

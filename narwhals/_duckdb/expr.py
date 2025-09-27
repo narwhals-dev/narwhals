@@ -99,11 +99,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return DuckDBNamespace(version=self._version)
 
     def broadcast(self) -> Self:
-        if self._metadata.is_literal:
-            return self
-        if self._backend_version < (1, 3):
-            msg = "At least version 1.3 of DuckDB is required for binary operations between aggregates and columns."
-            raise NotImplementedError(msg)
         return self.over([lit(1)], [])
 
     @classmethod

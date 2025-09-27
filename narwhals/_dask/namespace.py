@@ -273,7 +273,6 @@ class DaskNamespace(
             condition = predicate(df)[0]
             # re-evaluate DataFrame if the condition aggregates to force
             # then/otherwise to be evaluated against the aggregated frame
-            assert predicate._metadata is not None  # noqa: S101
             if all(
                 x._metadata.is_scalar_like
                 for x in (
