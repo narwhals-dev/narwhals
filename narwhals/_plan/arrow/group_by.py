@@ -158,30 +158,32 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         # random column name
-        col_token = temp.column_name(self.compliant)
+        temp_name = temp.column_name(self.compliant)
+        temp_expr = pc.field(temp_name)
         # native
         table: pa.Table = self.compliant.native
+        key_names = self.key_names
         # get key columns, cast everything to str?
         # make sure all either string or all large_string
         # separator also has to be that string type
-        it, separator_scalar = cast_to_comparable_string_types(
-            *(table[key] for key in self.key_names), separator=""
+        it, separator = cast_to_comparable_string_types(
+            *(table[key] for key in key_names), separator=""
         )
         # join those strings horizontally to generate a single key column
         concat_str: Incomplete = pc.binary_join_element_wise
-        key_values = concat_str(*it, separator_scalar, options=self._ITER_CONCAT_STR)
-        # add that column (of `key_values`) back to the table
-        table_w_key = table.add_column(i=0, field_=col_token, column=key_values)
-        # iterate over the unique keys in the `key_values` array
-        for v in pc.unique(key_values):
+        composite_values = concat_str(*it, separator, options=self._ITER_CONCAT_STR)
+        # add that column (of `composite_values`) back to the table
+        re_keyed = table.add_column(0, temp_name, composite_values)
+        # iterate over the unique keys in the `composite_values` array
+        from_native = self.compliant._with_native
+        for v in pc.unique(composite_values):
             # filter the keyed table to rows that have the same key (`t`)
             # then drop the temporary key on the result
-            t = self.compliant._with_native(
-                acero.filter_table(table_w_key, pc.field(col_token) == v).remove_column(0)
-            )
+            predicate = temp_expr == v
+            t = from_native(acero.filter_table(re_keyed, predicate).remove_column(0))
             # subset this new table to only the actual key name columns
             # then convert the first row to `tuple[pa.Scalar, ...]`
-            row = t.select_names(*self.key_names).row(0)
+            row = t.select_names(*key_names).row(0)
             # convert those scalars to python literals
             group_key = tuple(el.as_py() for el in row)
             # select (all) columns from (`t`) that we started with at `<df>.group_by()``, ignoring new keys/aliases
