@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -18,7 +18,7 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
@@ -220,5 +220,10 @@ def test_is_close_expr_with_scalar(
         .sort("idx")
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
-        expected = [v if v is not None else False for v in expected]
+        expected: list[Any] = [v if v is not None else False for v in expected]
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+        expected = [
+            v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
+            for i, v in enumerate(expected)
+        ]
     assert_equal_data(result, {"idx": data["idx"], "result": expected})
