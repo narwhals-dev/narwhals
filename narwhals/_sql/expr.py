@@ -495,6 +495,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def n_unique(self) -> Self:
         F = self._function
+        W = self._window_expression  # noqa: N806
 
         def func(expr: NativeExprT) -> NativeExprT:
             return op.add(  # type: ignore[no-any-return]
@@ -507,10 +508,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         ) -> Sequence[NativeExprT]:
             return [
                 op.add(
-                    self._window_expression(
-                        F("count_distinct", expr), inputs.partition_by
-                    ),
-                    self._window_expression(
+                    W(F("count_distinct", expr), inputs.partition_by),
+                    W(
                         F(
                             "max",
                             self._when(F("isnull", expr), self._lit(1), self._lit(0)),
