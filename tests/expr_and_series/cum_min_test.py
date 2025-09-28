@@ -10,6 +10,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_windows,
 )
 
 data = {"a": [3, 1, None, 2]}
@@ -69,7 +70,7 @@ def test_lazy_cum_min_grouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [(False, [1, 2, 1, 1, 1, 2, 4]), (True, [1, 1, 2, 1, 2, 1, 1])],
+    [(False, [1, 2, 1, None, 1, 2, 4]), (True, [1, 1, 2, None, 2, 1, 1])],
 )
 def test_lazy_cum_min_ordered_by_nulls(
     constructor: Constructor,
@@ -83,6 +84,9 @@ def test_lazy_cum_min_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
+    if "pandas_nullable" in str(constructor):
+        # https://github.com/pandas-dev/pandas/issues/62473
+        request.applymarker(pytest.mark.xfail)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
@@ -93,11 +97,14 @@ def test_lazy_cum_min_ordered_by_nulls(
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
+    if "pyarrow" in str(constructor) and is_windows():
+        # https://github.com/pandas-dev/pandas/issues/62477
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
         constructor(
             {
-                "a": [1, 2, 3, 1, 2, 3, 4],
+                "a": [1, 2, 3, None, 2, 3, 4],
                 "b": [1, -1, 3, 2, 5, 0, None],
                 "i": [0, 1, 2, 3, 4, 5, 6],
                 "g": [1, 1, 1, 1, 1, 1, 1],

@@ -320,14 +320,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def kurtosis(self) -> Self:
         return self._with_callable(self._F.kurtosis)
 
-    def n_unique(self) -> Self:
-        def _n_unique(expr: Column) -> Column:
-            return self._F.count_distinct(expr) + self._F.max(
-                self._F.isnull(expr).cast(self._native_dtypes.IntegerType())
-            )
-
-        return self._with_callable(_n_unique)
-
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:
             return self._F.when(self._F.isnull(expr), None).otherwise(self._F.isnan(expr))
