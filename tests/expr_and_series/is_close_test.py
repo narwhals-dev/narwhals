@@ -32,7 +32,7 @@ NON_NULLABLE_CONSTRUCTORS = (
 NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
 INF_POS, INF_NEG = float("inf"), float("-inf")
 
-data = {
+data: dict[str, Any] = {
     "x": [1.001, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, INF_NEG, INF_POS],
     "y": [1.005, NULL_PLACEHOLDER, NAN_PLACEHOLDER, INF_POS, 3.0, INF_NEG],
     "non_numeric": list("number"),
