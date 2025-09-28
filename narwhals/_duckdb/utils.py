@@ -367,4 +367,11 @@ def catch_duckdb_exception(
 def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
+    if name == "count_distinct":
+        try:
+            from duckdb import SQLExpression
+        except ModuleNotFoundError as exc:  # pragma: no cover
+            msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+            raise NotImplementedError(msg) from exc
+        return SQLExpression(f"count(distinct {args[0]})")
     return F(name, *args)

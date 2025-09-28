@@ -14,6 +14,7 @@ from narwhals._dask.utils import (
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
+from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
 from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
@@ -514,7 +515,7 @@ class DaskExpr(
     ) -> Self:
         if interpolation == "linear":
 
-            def func(expr: dx.Series, quantile: float) -> dx.Series:
+            def func(expr: dx.Series) -> dx.Series:
                 if expr.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
@@ -522,7 +523,11 @@ class DaskExpr(
                     q=quantile, method="dask"
                 ).to_series()  # pragma: no cover
 
-            return self._with_callable(func, "quantile", quantile=quantile)
+            return self._with_callable(
+                func,
+                "quantile",
+                scalar_kwargs={"quantile": quantile, "interpolation": "linear"},
+            )
         msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
         raise NotImplementedError(msg)
 
@@ -599,6 +604,9 @@ class DaskExpr(
                     f"Supported functions are {', '.join(PandasLikeGroupBy._REMAP_AGGS)}\n"
                 )
                 raise NotImplementedError(msg) from None
+            dask_kwargs = window_kwargs_to_pandas_equivalent(
+                function_name, self._scalar_kwargs
+            )
 
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
@@ -616,11 +624,11 @@ class DaskExpr(
                             msg = "Safety check failed, please report a bug."
                             raise AssertionError(msg)
                         res_native = grouped.transform(
-                            dask_function_name, **self._scalar_kwargs
+                            dask_function_name, **dask_kwargs
                         ).to_frame(output_names[0])
                     else:
                         res_native = grouped[list(output_names)].transform(
-                            dask_function_name, **self._scalar_kwargs
+                            dask_function_name, **dask_kwargs
                         )
                 result_frame = df._with_native(
                     res_native.rename(columns=dict(zip(output_names, aliases)))

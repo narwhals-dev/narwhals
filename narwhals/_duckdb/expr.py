@@ -176,15 +176,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_callable(func)
 
-    def n_unique(self) -> Self:
-        def func(expr: Expression) -> Expression:
-            # https://stackoverflow.com/a/79338887/4451315
-            return F("array_unique", F("array_agg", expr)) + F(
-                "max", when(expr.isnotnull(), lit(0)).otherwise(lit(1))
-            )
-
-        return self._with_callable(func)
-
     def len(self) -> Self:
         return self._with_callable(lambda _expr: F("count"))
 
