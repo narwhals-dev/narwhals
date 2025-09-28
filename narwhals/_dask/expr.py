@@ -560,7 +560,7 @@ class DaskExpr(
                 )
                 raise NotImplementedError(msg) from None
             dask_kwargs = window_kwargs_to_pandas_equivalent(
-                function_name, self._scalar_kwargs
+                function_name, leaf_node.kwargs
             )
 
             def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
@@ -574,10 +574,6 @@ class DaskExpr(
                         category=UserWarning,
                     )
                     grouped = df.native.groupby(partition_by)
-                    kwargs = leaf_node.kwargs
-                    pandas_kwargs = window_kwargs_to_pandas_equivalent(
-                        function_name, kwargs
-                    )
                     if dask_function_name == "size":
                         if len(output_names) != 1:  # pragma: no cover
                             msg = "Safety check failed, please report a bug."
