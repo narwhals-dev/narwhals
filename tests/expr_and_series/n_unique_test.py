@@ -13,6 +13,16 @@ def test_n_unique(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_n_unique_over(constructor: Constructor) -> None:
+    data = {"a": [1, None, None, 1, 2, 2, 2, None, 3], "b": [1, 1, 1, 1, 1, 1, 1, 2, 2]}
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(
+        nw.all().n_unique(), a_over_b=nw.col("a").n_unique().over("b")
+    ).sort("a_over_b")
+    expected = {"a": [4] * 9, "b": [2] * 9, "a_over_b": [2, 2, 3, 3, 3, 3, 3, 3, 3]}
+    assert_equal_data(result, expected)
+
+
 def test_n_unique_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected = {"a": [3], "b": [4]}
