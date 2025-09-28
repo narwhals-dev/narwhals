@@ -24,7 +24,7 @@ from pyarrow.acero import Declaration as Decl
 from narwhals.typing import SingleColSelector
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Collection, Iterable
 
     from typing_extensions import TypeAlias
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
         AggregateOptions as _AggregateOptions,
         Aggregation as _Aggregation,
     )
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
 T = TypeVar("T")
@@ -134,7 +134,28 @@ def select(*exprs: IntoExpr, **named_exprs: IntoExpr) -> Decl:
     raise NotImplementedError
 
 
-# TODO @dangotbanned: Docs (currently copy/paste from `pyarrow`)
+def select_names(column_names: OneOrIterable[str], *more_names: str) -> Decl:
+    """`select` where all args are column names."""
+    if not more_names:
+        if isinstance(column_names, str):
+            return _project((pc.field(column_names),), (column_names,))
+        more_names = tuple(column_names)
+    elif isinstance(column_names, str):
+        more_names = column_names, *more_names
+    else:
+        msg = f"Passing both iterable and positional inputs is not supported.\n{column_names=}\n{more_names=}"
+        raise NotImplementedError(msg)
+    return _project([pc.field(name) for name in more_names], more_names)
+
+
+def _project(exprs: Collection[Expr], names: Collection[str]) -> Decl:
+    # NOTE: Both just need to be `Sized` and `Iterable`
+    exprs_: Incomplete = exprs
+    names_: Incomplete = names
+    return Decl("project", options=pac.ProjectNodeOptions(exprs_, names_))
+
+
+# TODO @dangotbanned: Docs
 def project(**named_exprs: Expr) -> Decl:
     """Make a node which executes expressions on input batches, producing batches of the same length with new columns.
 
@@ -148,10 +169,7 @@ def project(**named_exprs: Expr) -> Decl:
     that return one value for each input row independent of the value
     of all other rows).
     """
-    # NOTE: Both just need to be sized and iterable
-    names: Incomplete = named_exprs.keys()
-    exprs: Incomplete = named_exprs.values()
-    return Decl("project", options=pac.ProjectNodeOptions(exprs, names))
+    return _project(names=named_exprs.keys(), exprs=named_exprs.values())
 
 
 # TODO @dangotbanned: Find which option class this uses
@@ -195,3 +213,9 @@ def group_by_table(
 # TODO @dangotbanned: Docs?
 def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.Table:
     return collect(table_source(native), filter(*predicates, **constraints))
+
+
+def select_names_table(
+    native: pa.Table, column_names: OneOrIterable[str], *more_names: str
+) -> pa.Table:
+    return collect(table_source(native), select_names(column_names, *more_names))

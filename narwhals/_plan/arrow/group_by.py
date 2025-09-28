@@ -135,13 +135,9 @@ class ArrowAggExpr:
         return self
 
 
-def concat_str(
-    native: pa.Table, subset: Seq[str], *, separator: str = ""
-) -> ChunkedArray:
-    # NOTE: docs says "list-like", runtime supports iterable
-    df = native.select(subset)  # pyright: ignore[reportArgumentType]
-    dtype = fn.string_type(df.schema.types)
-    it = fn.cast_table(df, dtype).itercolumns()
+def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
+    dtype = fn.string_type(native.schema.types)
+    it = fn.cast_table(native, dtype).itercolumns()
     concat: Incomplete = pc.binary_join_element_wise
     join = options.join_replace_nulls()
     return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
@@ -159,10 +155,11 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
 
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         temp_name = temp.column_name(self.compliant)
-        composite_values = concat_str(self.compliant.native, self.key_names)
-        re_keyed = self.compliant.native.add_column(0, temp_name, composite_values)
+        native = self.compliant.native
+        composite_values = concat_str(acero.select_names_table(native, self.key_names))
+        re_keyed = native.add_column(0, temp_name, composite_values)
         from_native = self.compliant._with_native
-        for v in composite_values.unique():  # TODO @dangotbanned: Can more of the stuff inside the loop be done in `acero`?
+        for v in composite_values.unique():
             t = from_native(acero.filter_table(re_keyed, pc.field(temp_name) == v))
             yield (
                 t.select_names(*self.key_names).row(0),
