@@ -19,6 +19,9 @@ def test_n_unique_over(constructor: Constructor, request: pytest.FixtureRequest)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/10550
         request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        # "Distinct window functions are not supported"
+        request.applymarker(pytest.mark.xfail)
     data = {"a": [1, None, None, 1, 2, 2, 2, None, 3], "b": [1, 1, 1, 1, 1, 1, 1, 2, 2]}
     df = nw.from_native(constructor(data))
     result = df.with_columns(
