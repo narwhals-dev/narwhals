@@ -497,7 +497,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         F = self._function
 
         def func(expr: NativeExprT) -> NativeExprT:
-            return op.add(
+            return op.add(  # type: ignore[no-any-return]
                 F("count_distinct", expr),
                 F("max", self._when(F("isnull", expr), self._lit(1), self._lit(0))),
             )
