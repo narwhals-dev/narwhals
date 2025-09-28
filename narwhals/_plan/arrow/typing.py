@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._typing_compat import TypeVar
@@ -14,8 +14,8 @@ if TYPE_CHECKING:
         Int16Type,
         Int32Type,
         Int64Type,
-        LargeStringType,
-        StringType,
+        LargeStringType as LargeStringType,  # noqa: PLC0414
+        StringType as StringType,  # noqa: PLC0414
         Uint8Type,
         Uint16Type,
         Uint32Type,
@@ -117,3 +117,4 @@ ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 StoresNativeT_co = TypeVar("StoresNativeT_co", bound=StoresNative[Any], covariant=True)
+DataTypeRemap: TypeAlias = Mapping[DataType, DataType]

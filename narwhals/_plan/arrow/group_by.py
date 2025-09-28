@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -135,31 +135,16 @@ class ArrowAggExpr:
         return self
 
 
-_NULL_FILL: Final = pc.JoinOptions(
-    null_handling="replace", null_replacement="__nw_null_value__"
-)
-
-
 def concat_str(
-    native: pa.Table,
-    subset: Seq[str],
-    *,
-    separator: str = "",
-    join_options: pc.JoinOptions = _NULL_FILL,
+    native: pa.Table, subset: Seq[str], *, separator: str = ""
 ) -> ChunkedArray:
-    # get key columns, casting everything to str
-    # docs says "list-like", runtime supports iterable
+    # NOTE: docs says "list-like", runtime supports iterable
     df = native.select(subset)  # pyright: ignore[reportArgumentType]
-    schema = df.schema
-    dtype = (
-        pa.string()
-        if not any(pa.types.is_large_string(tp) for tp in schema.types)
-        else pa.large_string()
-    )
-    schema = pa.schema((name, dtype) for name in schema.names)
-    sep = fn.lit(separator, dtype)
+    dtype = fn.string_type(df.schema.types)
+    it = fn.cast_table(df, dtype).itercolumns()
     concat: Incomplete = pc.binary_join_element_wise
-    return concat(*df.cast(schema).itercolumns(), sep, options=join_options)  # type: ignore[no-any-return]
+    join = options.join_replace_nulls()
+    return concat(*it, fn.lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):

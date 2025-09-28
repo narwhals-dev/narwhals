@@ -15,7 +15,15 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import aggregation as agg
 
 
-__all__ = ["AGG", "FUNCTION", "count", "scalar_aggregate", "variance"]
+__all__ = [
+    "AGG",
+    "FUNCTION",
+    "count",
+    "join",
+    "join_replace_nulls",
+    "scalar_aggregate",
+    "variance",
+]
 
 
 AGG: Mapping[type[agg.AggExpr], acero.AggregateOptions]
@@ -43,6 +51,16 @@ def scalar_aggregate(
     *, ignore_nulls: bool = False, min_count: int = 0
 ) -> pc.ScalarAggregateOptions:
     return pc.ScalarAggregateOptions(skip_nulls=ignore_nulls, min_count=min_count)
+
+
+@functools.cache
+def join(*, ignore_nulls: bool = False) -> pc.JoinOptions:
+    return pc.JoinOptions(null_handling="skip" if ignore_nulls else "emit_null")
+
+
+@functools.cache
+def join_replace_nulls(*, replacement: str = "__nw_null_value__") -> pc.JoinOptions:
+    return pc.JoinOptions(null_handling="replace", null_replacement=replacement)
 
 
 # ruff: noqa: PLW0603
