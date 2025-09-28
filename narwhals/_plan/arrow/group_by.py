@@ -6,11 +6,11 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._plan import expressions as ir
+from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
-from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -23,9 +23,6 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
 
 Incomplete: TypeAlias = Any
-
-
-BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 SUPPORTED_AGG: Mapping[type[agg.AggExpr], acero.Aggregation] = {
     agg.Sum: "hash_sum",
@@ -62,8 +59,73 @@ REQUIRES_PYARROW_20: tuple[Literal["kurtosis"], Literal["skew"]] = (
 """
 
 
+class AggSpec:
+    __slots__ = ("agg", "name", "option", "target")
+
+    def __init__(
+        self,
+        target: acero.Target,
+        agg: acero.Aggregation,
+        option: acero.Opts = None,
+        name: acero.OutputName = "",
+    ) -> None:
+        self.target = target
+        self.agg = agg
+        self.option = option
+        self.name = name or str(target)
+
+    @property
+    def use_threads(self) -> bool:
+        """See https://github.com/apache/arrow/issues/36709."""
+        return acero.can_thread(self.agg)
+
+    def __iter__(self) -> Iterator[acero.Target | acero.Aggregation | acero.Opts]:
+        """Let's us duck-type as a 4-tuple."""
+        yield from (self.target, self.agg, self.option, self.name)
+
+    @classmethod
+    def from_named_ir(cls, named_ir: NamedIR) -> Self:
+        return cls.from_expr_ir(named_ir.expr, named_ir.name)
+
+    @classmethod
+    def from_agg_expr(cls, expr: agg.AggExpr, name: acero.OutputName) -> Self:
+        tp = type(expr)
+        if not (agg_name := SUPPORTED_AGG.get(tp)):
+            raise group_by_error(name, expr, "unsupported aggregation")
+        if not isinstance(expr.expr, ir.Column):
+            raise group_by_error(name, expr, "too complex")
+        option = (
+            options.variance(expr.ddof)
+            if isinstance(expr, (agg.Std, agg.Var))
+            else options.AGG.get(tp)
+        )
+        return cls([expr.expr.name], agg_name, option, name)
+
+    @classmethod
+    def from_function_expr(cls, expr: ir.FunctionExpr, name: acero.OutputName) -> Self:
+        tp = type(expr.function)
+        if not (fn_name := SUPPORTED_FUNCTION.get(tp)):
+            raise group_by_error(name, expr, "unsupported function")
+        args = expr.input
+        if not (len(args) == 1 and isinstance(args[0], ir.Column)):
+            raise group_by_error(name, expr, "too complex")
+        return cls(args[0].name, fn_name, options.FUNCTION.get(tp), name)
+
+    @classmethod
+    def from_expr_ir(cls, expr: ir.ExprIR, name: acero.OutputName) -> Self:
+        if is_agg_expr(expr):
+            return cls.from_agg_expr(expr, name)
+        if is_function_expr(expr):
+            return cls.from_function_expr(expr, name)
+        if not isinstance(expr, (ir.Len, ir.Column)):
+            raise group_by_error(name, expr, "unsupported expression")
+        fn_name = SUPPORTED_IR[type(expr)]
+        return cls([expr.name] if isinstance(expr, ir.Column) else (), fn_name, name=name)
+
+
 def group_by_error(
-    expr: ArrowAggExpr,
+    name: str,
+    expr: ir.ExprIR,
     reason: Literal[
         "too complex",
         "unsupported aggregation",
@@ -75,64 +137,8 @@ def group_by_error(
         msg = "Non-trivial complex aggregation found"
     else:
         msg = reason.title()
-    msg = f"{msg} in 'pyarrow.Table':\n\n{expr.named_ir!r}"
+    msg = f"{msg} in 'pyarrow.Table':\n\n{name}={expr!r}"
     return NotImplementedError(msg)
-
-
-class ArrowAggExpr:
-    def __init__(self, named_ir: NamedIR, /) -> None:
-        self.named_ir: NamedIR = named_ir
-        self.use_threads: bool = True
-        """See https://github.com/apache/arrow/issues/36709"""
-        self.spec: acero.AggSpec
-
-    @property
-    def output_name(self) -> acero.OutputName:
-        return self.named_ir.name
-
-    def _parse_agg_expr(
-        self, expr: agg.AggExpr
-    ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
-        tp = type(expr)
-        if not (agg_name := SUPPORTED_AGG.get(tp)):
-            raise group_by_error(self, "unsupported aggregation")
-        if not isinstance(expr.expr, ir.Column):
-            raise group_by_error(self, "too complex")
-        if issubclass(tp, agg.OrderableAggExpr):
-            self.use_threads = False
-        option = (
-            options.variance(expr.ddof)
-            if isinstance(expr, (agg.Std, agg.Var))
-            else options.AGG.get(tp)
-        )
-        return ([expr.expr.name], agg_name, option)
-
-    def _parse_function_expr(
-        self, expr: ir.FunctionExpr
-    ) -> tuple[acero.Target, acero.Aggregation, acero.Opts]:
-        tp = type(expr.function)
-        if not (agg_name := SUPPORTED_FUNCTION.get(tp)):
-            raise group_by_error(self, "unsupported function")
-        if len(expr.input) == 1 and isinstance(expr.input[0], ir.Column):
-            return [expr.input[0].name], agg_name, options.FUNCTION.get(tp)
-        raise group_by_error(self, "too complex")
-
-    def parse(self) -> Self:
-        expr = self.named_ir.expr
-        input_name: acero.Target = ()
-        option: acero.Opts = None
-        if isinstance(expr, agg.AggExpr):
-            input_name, agg_name, option = self._parse_agg_expr(expr)
-        elif isinstance(expr, ir.FunctionExpr):
-            input_name, agg_name, option = self._parse_function_expr(expr)
-        elif isinstance(expr, (ir.Len, ir.Column)):
-            agg_name = SUPPORTED_IR[type(expr)]
-            if isinstance(expr, ir.Column):
-                input_name = [expr.name]
-        else:
-            raise group_by_error(self, "unsupported expression")
-        self.spec = input_name, agg_name, option, self.output_name
-        return self
 
 
 def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:
@@ -167,17 +173,11 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             )
 
     def agg(self, irs: Seq[NamedIR]) -> Frame:
-        aggs: list[acero.AggSpec] = []
-        use_threads: bool = True
-        for e in irs:
-            expr = ArrowAggExpr(e).parse()
-            use_threads = use_threads and expr.use_threads
-            aggs.append(expr.spec)
-        native = self.compliant.native
+        compliant = self.compliant
+        native = compliant.native
         key_names = self.key_names
-        result = self.compliant._with_native(
-            acero.group_by_table(native, key_names, aggs, use_threads=use_threads)
-        )
+        specs = (AggSpec.from_named_ir(e) for e in irs)
+        result = compliant._with_native(acero.group_by_table(native, key_names, specs))
         if original := self._key_names_original:
             return result.rename(dict(zip(key_names, original)))
         return result

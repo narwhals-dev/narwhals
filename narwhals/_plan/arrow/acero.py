@@ -11,10 +11,11 @@ This module aligns some apis to look more like `polars`.
 
 from __future__ import annotations
 
+import functools
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, Union
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
         AggregateOptions as _AggregateOptions,
         Aggregation as _Aggregation,
     )
+    from narwhals._plan.arrow.group_by import AggSpec
     from narwhals._plan.typing import OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -51,12 +53,24 @@ Field: TypeAlias = Union[Expr, SingleColSelector]
 
 AggKeys: TypeAlias = "Iterable[Field] | None"
 
-Target: TypeAlias = OneOrListOrTuple[Field]
+Target: TypeAlias = (
+    "OneOrListOrTuple[Expr] | OneOrListOrTuple[str] | OneOrListOrTuple[int]"
+)
 Aggregation: TypeAlias = "_Aggregation"
 AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"
 OutputName: TypeAlias = str
-AggSpec: TypeAlias = tuple[Target, Aggregation, Opts, OutputName]
+
+_THREAD_UNSAFE: Final = frozenset[Aggregation](
+    ("hash_first", "hash_last", "first", "last")
+)
+
+
+# NOTE: ATOW there are 304 valid function names, 46 can be used for some kind of agg
+# Due to expr expansion, it is very likely that we have repeat runs
+@functools.lru_cache(maxsize=128)
+def can_thread(function_name: str, /) -> bool:
+    return function_name not in _THREAD_UNSAFE
 
 
 # TODO @dangotbanned: Rename
@@ -191,9 +205,7 @@ def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
 
 
 # NOTE: Composite functions are suffixed with `_table`
-def group_by_table(
-    native: pa.Table, keys: AggKeys, aggs: Iterable[AggSpec], *, use_threads: bool
-) -> pa.Table:
+def group_by_table(native: pa.Table, keys: AggKeys, aggs: Iterable[AggSpec]) -> pa.Table:
     """Adapted from [`pa.TableGroupBy.aggregate`] and [`pa.acero._group_by`].
 
     - Backport of [apache/arrow#36768].
@@ -207,6 +219,8 @@ def group_by_table(
     [broken in `pyarrow==13`]: https://github.com/apache/arrow/issues/36709
     [narwhals-dev/narwhals#1612]: https://github.com/narwhals-dev/narwhals/issues/1612
     """
+    aggs = tuple(aggs)
+    use_threads = all(spec.use_threads for spec in aggs)
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
 
 
