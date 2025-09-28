@@ -515,7 +515,7 @@ class DaskExpr(
     ) -> Self:
         if interpolation == "linear":
 
-            def func(expr: dx.Series, quantile: float) -> dx.Series:
+            def func(expr: dx.Series) -> dx.Series:
                 if expr.npartitions > 1:
                     msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
                     raise NotImplementedError(msg)
@@ -523,7 +523,11 @@ class DaskExpr(
                     q=quantile, method="dask"
                 ).to_series()  # pragma: no cover
 
-            return self._with_callable(func, "quantile", quantile=quantile)
+            return self._with_callable(
+                func,
+                "quantile",
+                scalar_kwargs={"quantile": quantile, "interpolation": "linear"},
+            )
         msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
         raise NotImplementedError(msg)
 
