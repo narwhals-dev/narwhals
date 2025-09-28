@@ -258,7 +258,7 @@ def extract_native(
 def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     # The following lines are adapted from pandas' pyarrow implementation.
     # Ref: https://github.com/pandas-dev/pandas/blob/262fcfbffcee5c3116e86a951d8b693f90411e68/pandas/core/arrays/arrow/array.py#L124-L154
-
+    # We modify it to add `safe_mask` so as to align with Polars' behaviour when dividing by zero.
     safe_mask = pc.not_equal(right, lit(0, type=right.type))
     safe_right = pc.if_else(safe_mask, right, lit(1, type=right.type))  # Dummy value
     non_safe_result = lit(None, type=left.type)
