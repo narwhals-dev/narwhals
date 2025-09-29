@@ -8,9 +8,11 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan import expressions as ir
 from narwhals._plan._guards import is_agg_expr, is_function_expr
 from narwhals._plan.arrow import acero, functions as fn, options
-from narwhals._plan.common import temp
+from narwhals._plan.common import dispatch_method_name, temp
 from narwhals._plan.expressions import aggregation as agg
 from narwhals._plan.protocols import EagerDataFrameGroupBy
+from narwhals._utils import Implementation
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -91,7 +93,7 @@ class AggSpec:
     def from_agg_expr(cls, expr: agg.AggExpr, name: acero.OutputName) -> Self:
         tp = type(expr)
         if not (agg_name := SUPPORTED_AGG.get(tp)):
-            raise group_by_error(name, expr, "unsupported aggregation")
+            raise group_by_error(name, expr)
         if not isinstance(expr.expr, ir.Column):
             raise group_by_error(name, expr, "too complex")
         option = (
@@ -105,7 +107,7 @@ class AggSpec:
     def from_function_expr(cls, expr: ir.FunctionExpr, name: acero.OutputName) -> Self:
         tp = type(expr.function)
         if not (fn_name := SUPPORTED_FUNCTION.get(tp)):
-            raise group_by_error(name, expr, "unsupported function")
+            raise group_by_error(name, expr)
         args = expr.input
         if not (len(args) == 1 and isinstance(args[0], ir.Column)):
             raise group_by_error(name, expr, "too complex")
@@ -118,27 +120,25 @@ class AggSpec:
         if is_function_expr(expr):
             return cls.from_function_expr(expr, name)
         if not isinstance(expr, (ir.Len, ir.Column)):
-            raise group_by_error(name, expr, "unsupported expression")
+            raise group_by_error(name, expr)
         fn_name = SUPPORTED_IR[type(expr)]
         return cls(expr.name if isinstance(expr, ir.Column) else (), fn_name, name=name)
 
 
 def group_by_error(
-    name: str,
-    expr: ir.ExprIR,
-    reason: Literal[
-        "too complex",
-        "unsupported aggregation",
-        "unsupported function",
-        "unsupported expression",
-    ],
-) -> NotImplementedError:
+    column_name: str, expr: ir.ExprIR, reason: Literal["too complex"] | None = None
+) -> InvalidOperationError:
+    backend = Implementation.PYARROW
     if reason == "too complex":
-        msg = "Non-trivial complex aggregation found"
+        msg = "Non-trivial complex aggregation found, which"
     else:
-        msg = reason.title()
-    msg = f"{msg} in 'pyarrow.Table':\n\n{name}={expr!r}"
-    return NotImplementedError(msg)
+        if is_function_expr(expr):
+            func_name = repr(expr.function)
+        else:
+            func_name = dispatch_method_name(type(expr))
+        msg = f"`{func_name}()`"
+    msg = f"{msg} is not supported in a `group_by` context for {backend!r}:\n{column_name}={expr!r}"
+    return InvalidOperationError(msg)
 
 
 def concat_str(native: pa.Table, *, separator: str = "") -> ChunkedArray:

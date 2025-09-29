@@ -293,12 +293,34 @@ def test_group_by_categorical() -> None:
     assert_equal_data(result, data)
 
 
-# TODO @dangotbanned: Align the error to `InvalidOperation`
-def test_group_by_shift_raises() -> None:
-    data = {"a": [1, 2, 3], "b": [1, 1, 2]}
-    df = dataframe(data)
-    with pytest.raises((InvalidOperationError, NotImplementedError)):
-        df.group_by("b").agg(nwp.col("a").shift(1))
+@pytest.mark.parametrize(
+    ("agg", "message_body", "expected_repr"),
+    [
+        (nwp.col("a").shift(1), r"shift.+not.+group_by.+pyarrow.+", "col('a').shift("),
+        (
+            nwp.col("a").arg_max(),
+            r"arg_max.+not.+group_by.+pyarrow.+",
+            "col('a').arg_max(",
+        ),
+        (
+            nwp.col("a").max().over("b"),
+            r"over.+not.+group_by.+pyarrow.+",
+            "col('a').max().over([col('b')])",
+        ),
+        (
+            nwp.col("a").drop_nulls().abs().mean(),
+            r"complex aggregation found.+not.+group_by.+pyarrow.+",
+            "col('a').drop_nulls().abs().mean()",
+        ),
+    ],
+)
+def test_group_by_unsupported_raises(
+    agg: nwp.Expr, message_body: str, expected_repr: str
+) -> None:
+    df = dataframe({"a": [1, 2, 3], "b": [1, 1, 2]})
+    pat = re.compile(rf"{message_body}{re.escape(expected_repr)}", re.DOTALL)
+    with pytest.raises(InvalidOperationError, match=pat):
+        df.group_by("b").agg(agg)
 
 
 def test_double_same_aggregation() -> None:
@@ -648,7 +670,7 @@ def test_group_by_series_lit_22103() -> None:
     data = {"g": [0, 1]}
     series = nwp.Series.from_native(pa.chunked_array([[42, 2, 3]]))
     df = dataframe(data)
-    with pytest.raises(NotImplementedError, match=re.escape("foo=lit(Series)")):
+    with pytest.raises(InvalidOperationError, match=re.escape("foo=lit(Series)")):
         df.group_by("g").agg(foo=series)
 
 
