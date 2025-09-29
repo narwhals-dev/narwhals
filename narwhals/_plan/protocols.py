@@ -636,37 +636,6 @@ class CompliantDataFrame(
     def row(self, index: int) -> tuple[Any, ...]: ...
 
 
-class CompliantGroupBy(Protocol[FrameT_co]):
-    @property
-    def compliant(self) -> FrameT_co: ...
-    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
-
-
-class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
-    _keys: Seq[NamedIR]
-    _key_names: Seq[str]
-
-    @classmethod
-    def from_resolver(
-        cls, df: DataFrameT, resolver: GroupByResolver, /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
-    @classmethod
-    def by_names(
-        cls, df: DataFrameT, names: Seq[str], /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
-    @property
-    def keys(self) -> Seq[NamedIR]:
-        return self._keys
-
-    @property
-    def key_names(self) -> Seq[str]:
-        if names := self._key_names:
-            return names
-        msg = "at least one key is required in a group_by operation"
-        raise ComputeError(msg)
-
-
 class EagerDataFrame(
     CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
@@ -679,43 +648,6 @@ class EagerDataFrame(
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
-
-
-class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
-    _df: EagerDataFrameT
-    _key_names: Seq[str]
-    _key_names_original: Seq[str]
-    _column_names_original: Seq[str]
-
-    @classmethod
-    def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
-        obj = cls.__new__(cls)
-        obj._df = df
-        obj._keys = ()
-        obj._key_names = names
-        obj._key_names_original = ()
-        obj._column_names_original = tuple(df.columns)
-        return obj
-
-    @classmethod
-    def from_resolver(
-        cls, df: EagerDataFrameT, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[EagerDataFrameT]:
-        key_names = resolver.key_names
-        if not resolver.requires_projection():
-            df = df.drop_nulls(key_names) if resolver._drop_null_keys else df
-            return cls.by_names(df, key_names)
-        obj = cls.__new__(cls)
-        unique_names = temp.column_names(chain(key_names, df.columns))
-        safe_keys = tuple(
-            replace(key, name=name) for key, name in zip(resolver.keys, unique_names)
-        )
-        obj._df = df.with_columns(resolver._schema_in.with_columns_irs(safe_keys))
-        obj._keys = safe_keys
-        obj._key_names = tuple(e.name for e in safe_keys)
-        obj._key_names_original = key_names
-        obj._column_names_original = resolver._schema_in.names
-        return obj
 
 
 class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
@@ -775,6 +707,74 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
 
     def to_list(self) -> list[Any]: ...
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
+
+
+class CompliantGroupBy(Protocol[FrameT_co]):
+    @property
+    def compliant(self) -> FrameT_co: ...
+    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
+
+
+class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
+    _keys: Seq[NamedIR]
+    _key_names: Seq[str]
+
+    @classmethod
+    def from_resolver(
+        cls, df: DataFrameT, resolver: GroupByResolver, /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+    @classmethod
+    def by_names(
+        cls, df: DataFrameT, names: Seq[str], /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    @property
+    def keys(self) -> Seq[NamedIR]:
+        return self._keys
+
+    @property
+    def key_names(self) -> Seq[str]:
+        if names := self._key_names:
+            return names
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
+
+
+class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
+    _df: EagerDataFrameT
+    _key_names: Seq[str]
+    _key_names_original: Seq[str]
+    _column_names_original: Seq[str]
+
+    @classmethod
+    def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
+        obj = cls.__new__(cls)
+        obj._df = df
+        obj._keys = ()
+        obj._key_names = names
+        obj._key_names_original = ()
+        obj._column_names_original = tuple(df.columns)
+        return obj
+
+    @classmethod
+    def from_resolver(
+        cls, df: EagerDataFrameT, resolver: GroupByResolver, /
+    ) -> EagerDataFrameGroupBy[EagerDataFrameT]:
+        key_names = resolver.key_names
+        if not resolver.requires_projection():
+            df = df.drop_nulls(key_names) if resolver._drop_null_keys else df
+            return cls.by_names(df, key_names)
+        obj = cls.__new__(cls)
+        unique_names = temp.column_names(chain(key_names, df.columns))
+        safe_keys = tuple(
+            replace(key, name=name) for key, name in zip(resolver.keys, unique_names)
+        )
+        obj._df = df.with_columns(resolver._schema_in.with_columns_irs(safe_keys))
+        obj._keys = safe_keys
+        obj._key_names = tuple(e.name for e in safe_keys)
+        obj._key_names_original = key_names
+        obj._column_names_original = resolver._schema_in.names
+        return obj
 
 
 class Grouper(Protocol[ResolverT_co]):
@@ -873,7 +873,13 @@ class GroupByResolver:
         return False
 
 
-class Grouped(Grouper["Resolved"]):
+class Resolved(GroupByResolver):
+    """Compliant-level `GroupBy` resolver."""
+
+    _drop_null_keys: bool = False
+
+
+class Grouped(Grouper[Resolved]):
     """Compliant-level `GroupBy` builder."""
 
     _keys: Seq[ExprIR]
@@ -883,9 +889,3 @@ class Grouped(Grouper["Resolved"]):
     @property
     def _resolver(self) -> type[Resolved]:
         return Resolved
-
-
-class Resolved(GroupByResolver):
-    """Compliant-level `GroupBy` resolver."""
-
-    _drop_null_keys: bool = False
