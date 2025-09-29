@@ -8,6 +8,7 @@ import polars as pl
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
+    FROM_DICTS_ACCEPTS_MAPPINGS,
     catch_polars_exception,
     extract_args_kwargs,
     native_to_narwhals_dtype,
@@ -321,6 +322,30 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
         pl_schema = Schema(schema).to_polars() if schema is not None else schema
         return cls.from_native(pl.from_dict(data, pl_schema), context=context)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self:
+        from narwhals.schema import Schema
+
+        pl_schema = Schema(schema).to_polars() if schema is not None else schema
+        if not data:
+            native = pl.DataFrame(schema=pl_schema)
+        elif FROM_DICTS_ACCEPTS_MAPPINGS or isinstance(data[0], dict):
+            native = pl.from_dicts(data, pl_schema)  # type: ignore[arg-type]
+        else:  # pragma: no cover
+            columns = pl_schema or tuple(data[0])
+            native = pl.DataFrame(
+                (tuple(row.values()) for row in data), schema=columns, orient="row"
+            )
+
+        return cls.from_native(native, context=context)
 
     @staticmethod
     def _is_native(obj: pl.DataFrame | Any) -> TypeIs[pl.DataFrame]:

@@ -58,6 +58,12 @@ Includes `SERIES_ACCEPTS_PD_INDEX`.
 SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
 """`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
+FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
+"""`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638
+
+Typing fix in https://github.com/pola-rs/polars/pull/24584
+"""
+
 
 @overload
 def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
