@@ -29,7 +29,7 @@ from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import SingleColSelector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable
+    from collections.abc import Callable, Collection, Iterable, Iterator
 
     from typing_extensions import TypeAlias
 
@@ -80,6 +80,15 @@ def _parse_into_expr(into: IntoExpr, /, *, str_as_lit: bool = False) -> Expr:
     return lit(into)
 
 
+def _parse_into_iter_expr(inputs: Iterable[IntoExpr], /) -> Iterator[Expr]:
+    for into_expr in inputs:
+        yield _parse_into_expr(into_expr)
+
+
+def _parse_into_seq_of_expr(inputs: Iterable[IntoExpr], /) -> Seq[Expr]:
+    return tuple(_parse_into_iter_expr(inputs))
+
+
 def _parse_all_horizontal(predicates: Seq[Expr], constraints: dict[str, Any], /) -> Expr:
     if not constraints and len(predicates) == 1:
         return predicates[0]
@@ -90,9 +99,11 @@ def _parse_all_horizontal(predicates: Seq[Expr], constraints: dict[str, Any], /)
     return reduce(operator.and_, chain(predicates, it))
 
 
-# TODO @dangotbanned: Docs (currently copy/paste from `pyarrow`)
 def table_source(native: pa.Table, /) -> Decl:
-    """A Source node which accepts a table."""
+    """Start building a logical plan, using `native` as the source table.
+
+    All calls to `collect` must use this as the first `Declaration`.
+    """
     return Decl("table_source", options=pac.TableSourceNodeOptions(native))
 
 
@@ -154,21 +165,25 @@ def _project(exprs: Collection[Expr], names: Collection[str]) -> Decl:
     return Decl("project", options=pac.ProjectNodeOptions(exprs_, names_))
 
 
-# TODO @dangotbanned: Docs
-def project(**named_exprs: Expr) -> Decl:
-    """Make a node which executes expressions on input batches, producing batches of the same length with new columns.
+def project(**named_exprs: IntoExpr) -> Decl:
+    """Similar to `select`, but more rigid.
 
-    This is the option class for the "project" node factory.
+    Arguments:
+        **named_exprs: Inputs composed of any combination of
 
-    The "project" operation rearranges, deletes, transforms, and
-    creates columns. Each output column is computed by evaluating
-    an expression against the source record batch. These must be
-    scalar expressions (expressions consisting of scalar literals,
-    field references and scalar functions, i.e. elementwise functions
-    that return one value for each input row independent of the value
-    of all other rows).
+            - Column names or `pc.field`
+            - Python literals or `pc.scalar` (for `str` literals)
+            - [Scalar functions] applied to the above
+
+    Notes:
+        - [`Expression`]s have no concept of aliasing, therefore, all inputs must be `**named_exprs`.
+        - Always returns a table with the same length, scalar literals are broadcast unconditionally.
+
+    [`Expression`]: https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html
+    [Scalar functions]: https://arrow.apache.org/docs/cpp/compute.html#element-wise-scalar-functions
     """
-    return _project(names=named_exprs.keys(), exprs=named_exprs.values())
+    exprs = _parse_into_seq_of_expr(named_exprs.values())
+    return _project(names=named_exprs.keys(), exprs=exprs)
 
 
 def _order_by(
@@ -228,7 +243,7 @@ def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.
 
     Arguments:
         native: source table
-        predicates: [`Expression`](s) which must all have a return type of boolean.
+        predicates: [`Expression`]s which must all have a return type of boolean.
         constraints: Column filters; use `name = value` to filter columns by the supplied value.
 
     Notes:
