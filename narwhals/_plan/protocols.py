@@ -778,7 +778,7 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
 
 
 class Grouper(Protocol[ResolverT_co]):
-    """Revised interface focused on the state change + expression projections.
+    """`GroupBy` helper for collecting and forwarding `Expr`s for projection.
 
     - Uses `Expr` everywhere (no need to duplicate layers)
     - Resolver only needs schema (neither needs a frame, but can use one to get `schema`)
@@ -802,6 +802,7 @@ class Grouper(Protocol[ResolverT_co]):
     def _resolver(self) -> type[ResolverT_co]: ...
 
     def resolve(self, context: IntoFrozenSchema, /) -> ResolverT_co:
+        """Project keys and aggs in `context`, expanding all `Expr` -> `NamedIR`."""
         return self._resolver.from_grouper(self, context)
 
 
@@ -837,6 +838,7 @@ class GroupByResolver:
         return self._schema
 
     def evaluate(self, frame: DataFrameT) -> DataFrameT:
+        """Perform the `group_by` on `frame`."""
         return frame.group_by_resolver(self).agg(self.aggs)
 
     @classmethod
