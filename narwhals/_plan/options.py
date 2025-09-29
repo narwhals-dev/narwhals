@@ -9,10 +9,12 @@ from narwhals._plan._immutable import Immutable
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
+    import pyarrow.acero
     import pyarrow.compute as pc
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.typing import Accessor, OneOrIterable, Seq
+    from narwhals._plan.arrow.typing import NullPlacement
+    from narwhals._plan.typing import Accessor, OneOrIterable, Order, Seq
     from narwhals.typing import RankMethod
 
 DispatchOrigin: TypeAlias = Literal["expr", "__narwhals_namespace__"]
@@ -193,9 +195,9 @@ class SortMultipleOptions(Immutable):
         nulls = (nulls_last,) if isinstance(nulls_last, bool) else tuple(nulls_last)
         return SortMultipleOptions(descending=desc, nulls_last=nulls)
 
-    def to_arrow(self, by: Sequence[str]) -> pc.SortOptions:
-        import pyarrow.compute as pc
-
+    def _to_arrow_args(
+        self, by: Sequence[str]
+    ) -> tuple[Sequence[tuple[str, Order]], NullPlacement]:
         first = self.nulls_last[0]
         if len(self.nulls_last) != 1 and any(x != first for x in self.nulls_last[1:]):
             msg = f"pyarrow doesn't support multiple values for `nulls_last`, got: {self.nulls_last!r}"
@@ -204,12 +206,23 @@ class SortMultipleOptions(Immutable):
             descending: Iterable[bool] = repeat(self.descending[0], len(by))
         else:
             descending = self.descending
-        sorting: list[tuple[str, Literal["ascending", "descending"]]] = [
+        sorting = tuple[tuple[str, "Order"]](
             (key, "descending" if desc else "ascending")
             for key, desc in zip(by, descending)
-        ]
-        placement: Literal["at_start", "at_end"] = "at_end" if first else "at_start"
-        return pc.SortOptions(sort_keys=sorting, null_placement=placement)
+        )
+        return sorting, "at_end" if first else "at_start"
+
+    def to_arrow(self, by: Sequence[str]) -> pc.SortOptions:
+        import pyarrow.compute as pc
+
+        sort_keys, placement = self._to_arrow_args(by)
+        return pc.SortOptions(sort_keys=sort_keys, null_placement=placement)
+
+    def to_arrow_acero(self, by: Sequence[str]) -> pyarrow.acero.Declaration:
+        from narwhals._plan.arrow import acero
+
+        sort_keys, placement = self._to_arrow_args(by)
+        return acero._order_by(sort_keys, null_placement=placement)
 
 
 class RankOptions(Immutable):

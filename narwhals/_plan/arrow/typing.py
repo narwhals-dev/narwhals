@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import _StoresNative as StoresNative
@@ -118,3 +118,4 @@ NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 StoresNativeT_co = TypeVar("StoresNativeT_co", bound=StoresNative[Any], covariant=True)
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
+NullPlacement: TypeAlias = Literal["at_start", "at_end"]

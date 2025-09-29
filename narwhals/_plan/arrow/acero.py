@@ -15,7 +15,7 @@ import functools
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Final, TypeVar, Union
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
@@ -34,7 +34,8 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.typing import OneOrIterable, Seq
+    from narwhals._plan.arrow.typing import NullPlacement
+    from narwhals._plan.typing import OneOrIterable, Order, Seq
     from narwhals.typing import NonNestedLiteral
 
 T = TypeVar("T")
@@ -186,15 +187,22 @@ def project(**named_exprs: Expr) -> Decl:
     return _project(names=named_exprs.keys(), exprs=named_exprs.values())
 
 
-# TODO @dangotbanned: Find which option class this uses
-def order_by(
-    sort_keys: tuple[tuple[str, Literal["ascending", "descending"]], ...] = (),
+def _order_by(
+    sort_keys: Iterable[tuple[str, Order]] = (),
     *,
-    null_placement: Literal["at_start", "at_end"] = "at_end",
+    null_placement: NullPlacement = "at_end",
 ) -> Decl:
-    return Decl(
-        "order_by", pac.OrderByNodeOptions(sort_keys, null_placement=null_placement)
-    )
+    # NOTE: There's no runtime type checking of `sort_keys` wrt shape
+    # Just need to be `Iterable`and unpack like a 2-tuple
+    # https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_compute.pyx#L77-L88
+    keys: Incomplete = sort_keys
+    return Decl("order_by", pac.OrderByNodeOptions(keys, null_placement=null_placement))
+
+
+# TODO @dangotbanned: Utilize `SortMultipleOptions.to_arrow_acero`
+def sort_by(*args: Any, **kwds: Any) -> Decl:
+    msg = "Should convert from polars args -> use `_order_by"
+    raise NotImplementedError(msg)
 
 
 # TODO @dangotbanned: Docs

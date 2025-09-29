@@ -110,3 +110,5 @@ IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 OneOrIterable: TypeAlias = "T | t.Iterable[T]"
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
+
+Order: TypeAlias = t.Literal["ascending", "descending"]
