@@ -170,7 +170,7 @@ class SortOptions(Immutable):
             nulls: Seq[bool] = (self.nulls_last,)
         else:
             desc = tuple(repeat(self.descending, n_repeat))
-            nulls = tuple(repeat(self.nulls_last))
+            nulls = tuple(repeat(self.nulls_last, n_repeat))
         return SortMultipleOptions(descending=desc, nulls_last=nulls)
 
 
