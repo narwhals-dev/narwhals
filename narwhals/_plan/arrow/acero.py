@@ -5,6 +5,9 @@ quite verbose when used directly.
 
 This module aligns some apis to look more like `polars`.
 
+Notes:
+    - Functions suffixed with `_table` all handle composition and collection internally
+
 [Acero]: https://arrow.apache.org/docs/cpp/acero/overview.html
 [`pyarrow.acero`]: https://arrow.apache.org/docs/python/api/acero.html
 """
@@ -15,7 +18,7 @@ import functools
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Union
+from typing import TYPE_CHECKING, Any, Final, Union, cast
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
@@ -26,7 +29,7 @@ from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import SingleColSelector
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Callable, Collection, Iterable
 
     from typing_extensions import TypeAlias
 
@@ -57,6 +60,9 @@ OutputName: TypeAlias = str
 _THREAD_UNSAFE: Final = frozenset[Aggregation](
     ("hash_first", "hash_last", "first", "last")
 )
+col = pc.field
+lit = cast("Callable[[NonNestedLiteral], Expr]", pc.scalar)
+"""Alias for `pyarrow.compute.scalar`."""
 
 
 # NOTE: ATOW there are 304 valid function names, 46 can be used for some kind of agg
@@ -66,21 +72,20 @@ def can_thread(function_name: str, /) -> bool:
     return function_name not in _THREAD_UNSAFE
 
 
-# TODO @dangotbanned: Rename
-def pc_expr(into: IntoExpr, /, *, str_as_lit: bool = False) -> Expr:
+def _parse_into_expr(into: IntoExpr, /, *, str_as_lit: bool = False) -> Expr:
     if isinstance(into, pc.Expression):
         return into
     if isinstance(into, str) and not str_as_lit:
-        return pc.field(into)
-    arg: Incomplete = into
-    return pc.scalar(arg)
+        return col(into)
+    return lit(into)
 
 
 def _parse_all_horizontal(predicates: Seq[Expr], constraints: dict[str, Any], /) -> Expr:
     if not constraints and len(predicates) == 1:
         return predicates[0]
     it = (
-        pc.field(name) == pc_expr(v, str_as_lit=True) for name, v in constraints.items()
+        col(name) == _parse_into_expr(v, str_as_lit=True)
+        for name, v in constraints.items()
     )
     return reduce(operator.and_, chain(predicates, it))
 
@@ -119,19 +124,6 @@ def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
 
 
 def filter(*predicates: Expr, **constraints: IntoExpr) -> Decl:
-    """Selects rows where all expressions evaluate to True.
-
-    Arguments:
-        predicates: [`Expression`](s) which must all have a return type of boolean.
-        constraints: Column filters; use `name = value` to filter columns by the supplied value.
-
-    Notes:
-        - Uses logic similar to [`polars`] for an AND-reduction
-        - Elements where the filter does not evaluate to True are discarded, **including nulls**
-
-    [`Expression`]: https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html
-    [`polars`]: https://github.com/pola-rs/polars/blob/d0914d416ce4e1dfcb5f946875ffd1181e31c493/py-polars/polars/_utils/parse/expr.py#L199-L242
-    """
     expr = _parse_all_horizontal(predicates, constraints)
     return Decl("filter", options=pac.FilterNodeOptions(expr))
 
@@ -145,14 +137,14 @@ def select_names(column_names: OneOrIterable[str], *more_names: str) -> Decl:
     """`select` where all args are column names."""
     if not more_names:
         if isinstance(column_names, str):
-            return _project((pc.field(column_names),), (column_names,))
+            return _project((col(column_names),), (column_names,))
         more_names = tuple(column_names)
     elif isinstance(column_names, str):
         more_names = column_names, *more_names
     else:
         msg = f"Passing both iterable and positional inputs is not supported.\n{column_names=}\n{more_names=}"
         raise NotImplementedError(msg)
-    return _project([pc.field(name) for name in more_names], more_names)
+    return _project([col(name) for name in more_names], more_names)
 
 
 def _project(exprs: Collection[Expr], names: Collection[str]) -> Decl:
@@ -197,14 +189,19 @@ def sort_by(*args: Any, **kwds: Any) -> Decl:
     raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Docs
 def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
+    """Compose and evaluate a logical plan.
+
+    Arguments:
+        *declarations: One or more `Declaration` nodes to execute as a pipeline.
+            **The first node must be a `table_source`**.
+        use_threads: Pass `False` if `declarations` contains any order-dependent aggregation(s).
+    """
     # NOTE: stubs + docs say `list`, but impl allows any iterable
     decls: Incomplete = declarations
     return Decl.from_sequence(decls).to_table(use_threads=use_threads)
 
 
-# NOTE: Composite functions are suffixed with `_table`
 def group_by_table(
     native: pa.Table, keys: Iterable[Field], aggs: Iterable[AggSpec]
 ) -> pa.Table:
@@ -226,8 +223,21 @@ def group_by_table(
     return collect(table_source(native), group_by(keys, aggs), use_threads=use_threads)
 
 
-# TODO @dangotbanned: Docs?
 def filter_table(native: pa.Table, *predicates: Expr, **constraints: Any) -> pa.Table:
+    """Selects rows where all expressions evaluate to True.
+
+    Arguments:
+        native: source table
+        predicates: [`Expression`](s) which must all have a return type of boolean.
+        constraints: Column filters; use `name = value` to filter columns by the supplied value.
+
+    Notes:
+        - Uses logic similar to [`polars`] for an AND-reduction
+        - Elements where the filter does not evaluate to True are discarded, **including nulls**
+
+    [`Expression`]: https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html
+    [`polars`]: https://github.com/pola-rs/polars/blob/d0914d416ce4e1dfcb5f946875ffd1181e31c493/py-polars/polars/_utils/parse/expr.py#L199-L242
+    """
     return collect(table_source(native), filter(*predicates, **constraints))
 
 
