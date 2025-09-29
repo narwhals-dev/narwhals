@@ -245,7 +245,7 @@ def test_group_by_expr_iter() -> None:
     result = dict(sorted((k, df.sort("c").to_dict(as_series=False)) for k, df in grouped))
     assert len(result) == len(expected)
     assert result.keys() == expected.keys()
-    # NOTE: The bug means that zipping will break, as one side has more columns
+    # NOTE: The bug this is trying to avoid regressing on would break zipping, as one side has more columns
     result_p1 = next(iter(result.values()))
     expected_p1 = next(iter(expected.values()))
     assert result_p1 == expected_p1
@@ -278,7 +278,7 @@ def test_no_agg() -> None:
         "https://github.com/narwhals-dev/narwhals/issues/1078"
     ),
 )
-def test_group_by_categorical() -> None:  # pragma: no cover
+def test_group_by_categorical() -> None:
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
     df = dataframe(data)
     result = (
