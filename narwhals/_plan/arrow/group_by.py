@@ -99,7 +99,7 @@ class AggSpec:
             if isinstance(expr, (agg.Std, agg.Var))
             else options.AGG.get(tp)
         )
-        return cls([expr.expr.name], agg_name, option, name)
+        return cls(expr.expr.name, agg_name, option, name)
 
     @classmethod
     def from_function_expr(cls, expr: ir.FunctionExpr, name: acero.OutputName) -> Self:
@@ -120,7 +120,7 @@ class AggSpec:
         if not isinstance(expr, (ir.Len, ir.Column)):
             raise group_by_error(name, expr, "unsupported expression")
         fn_name = SUPPORTED_IR[type(expr)]
-        return cls([expr.name] if isinstance(expr, ir.Column) else (), fn_name, name=name)
+        return cls(expr.name if isinstance(expr, ir.Column) else (), fn_name, name=name)
 
 
 def group_by_error(

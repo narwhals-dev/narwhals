@@ -97,7 +97,7 @@ MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"
 
 T = TypeVar("T")
 
-Seq: TypeAlias = "tuple[T,...]"
+Seq: TypeAlias = tuple[T, ...]
 """Immutable Sequence.
 
 Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
@@ -109,6 +109,7 @@ Udf: TypeAlias = "t.Callable[[t.Any], t.Any]"
 IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "NonNestedLiteral | IntoExprColumn"
 OneOrIterable: TypeAlias = "T | t.Iterable[T]"
+OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 
 Order: TypeAlias = t.Literal["ascending", "descending"]

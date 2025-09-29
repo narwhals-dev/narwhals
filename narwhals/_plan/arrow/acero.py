@@ -15,13 +15,14 @@ import functools
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Final, Union
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
+from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import SingleColSelector
 
 if TYPE_CHECKING:
@@ -38,11 +39,6 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable, Order, Seq
     from narwhals.typing import NonNestedLiteral
 
-T = TypeVar("T")
-OneOrListOrTuple: TypeAlias = Union[T, list[T], tuple[T, ...]]
-"""WARNING: Don't use this unless there is a runtime check for exactly `list | tuple`."""
-
-
 Incomplete: TypeAlias = Any
 Expr: TypeAlias = pc.Expression
 IntoExpr: TypeAlias = "Expr | NonNestedLiteral"
@@ -52,11 +48,7 @@ Field: TypeAlias = Union[Expr, SingleColSelector]
 [`_compute._ensure_field_ref`]: https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_compute.pyx#L1507-L1531
 """
 
-AggKeys: TypeAlias = "Iterable[Field] | None"
-
-Target: TypeAlias = (
-    "OneOrListOrTuple[Expr] | OneOrListOrTuple[str] | OneOrListOrTuple[int]"
-)
+Target: TypeAlias = OneOrSeq[Field]
 Aggregation: TypeAlias = "_Aggregation"
 AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"
@@ -99,11 +91,11 @@ def table_source(native: pa.Table, /) -> Decl:
     return Decl("table_source", options=pac.TableSourceNodeOptions(native))
 
 
-def _aggregate(agg_specs: Iterable[AggSpec], /, keys: AggKeys = None) -> Decl:
+def _aggregate(aggs: Iterable[AggSpec], /, keys: Iterable[Field] | None = None) -> Decl:
     # NOTE: See https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_acero.pyx#L167-L192
-    aggs: Incomplete = agg_specs
+    aggs_: Incomplete = aggs
     keys_: Incomplete = keys
-    return Decl("aggregate", pac.AggregateNodeOptions(aggs, keys=keys_))
+    return Decl("aggregate", pac.AggregateNodeOptions(aggs_, keys=keys_))
 
 
 # TODO @dangotbanned: Plan
@@ -117,7 +109,7 @@ def aggregate(aggs: Iterable[AggSpec], /) -> Decl:
 
 
 # TODO @dangotbanned: Docs (currently copy/paste from `pyarrow`)
-def group_by(keys: AggKeys, aggs: Iterable[AggSpec], /) -> Decl:
+def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
     """Hash aggregate.
 
     Like GROUP BY in SQL and first partition data based on one or more key columns,
@@ -213,7 +205,9 @@ def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
 
 
 # NOTE: Composite functions are suffixed with `_table`
-def group_by_table(native: pa.Table, keys: AggKeys, aggs: Iterable[AggSpec]) -> pa.Table:
+def group_by_table(
+    native: pa.Table, keys: Iterable[Field], aggs: Iterable[AggSpec]
+) -> pa.Table:
     """Adapted from [`pa.TableGroupBy.aggregate`] and [`pa.acero._group_by`].
 
     - Backport of [apache/arrow#36768].
