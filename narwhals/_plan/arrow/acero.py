@@ -114,22 +114,18 @@ def _aggregate(aggs: Iterable[AggSpec], /, keys: Iterable[Field] | None = None) 
     return Decl("aggregate", pac.AggregateNodeOptions(aggs_, keys=keys_))
 
 
-# TODO @dangotbanned: Plan
-# TODO @dangotbanned: Docs (currently copy/paste from `pyarrow`)
 def aggregate(aggs: Iterable[AggSpec], /) -> Decl:
-    """Scalar aggregate.
+    """May only use [Scalar aggregate] functions.
 
-    Reduce an array or scalar input to a single scalar output (e.g. computing the mean of a column)
+    [Scalar aggregate]: https://arrow.apache.org/docs/cpp/compute.html#aggregations
     """
     return _aggregate(aggs)
 
 
-# TODO @dangotbanned: Docs (currently copy/paste from `pyarrow`)
 def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
-    """Hash aggregate.
+    """May only use [Hash aggregate] functions, requires grouping.
 
-    Like GROUP BY in SQL and first partition data based on one or more key columns,
-    then reduce the data in each partition.
+    [Hash aggregate]: https://arrow.apache.org/docs/cpp/compute.html#grouped-aggregations-group-by
     """
     return _aggregate(aggs, keys=keys)
 
@@ -137,11 +133,6 @@ def group_by(keys: Iterable[Field], aggs: Iterable[AggSpec], /) -> Decl:
 def filter(*predicates: Expr, **constraints: IntoExpr) -> Decl:
     expr = _parse_all_horizontal(predicates, constraints)
     return Decl("filter", options=pac.FilterNodeOptions(expr))
-
-
-# TODO @dangotbanned: Plan
-def select(*exprs: IntoExpr, **named_exprs: IntoExpr) -> Decl:
-    raise NotImplementedError
 
 
 def select_names(column_names: OneOrIterable[str], *more_names: str) -> Decl:
