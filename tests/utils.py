@@ -6,7 +6,7 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import pandas as pd
 import pyarrow as pa
@@ -16,7 +16,7 @@ from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import pytest
     from pyspark.sql import SparkSession
@@ -42,16 +42,29 @@ DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
+PANDAS_LT_1_5: bool = PANDAS_VERSION < (1, 5, 0)
+"""`pandas<1.5`.
+
+https://pandas.pydata.org/pandas-docs/stable/whatsnew/v1.5.0.html
+"""
+PANDAS_LT_2: bool = PANDAS_VERSION < (2, 0, 0)
+"""`pandas<2.0`.
+
+https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html
+"""
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | NativeDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "NativeDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
-ID_PANDAS_LIKE = frozenset(
+IDPandasLike: TypeAlias = Literal[
+    "pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf"
+]
+ID_PANDAS_LIKE = frozenset[IDPandasLike](
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
 )
-ID_CUDF = frozenset(("cudf",))
+ID_CUDF = frozenset[IDPandasLike](("cudf",))
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
     ("constructor_eager", "constructor", "constructor_pandas_like")
 )
@@ -228,15 +241,21 @@ def maybe_collect(df: Frame) -> Frame:
     return df.collect() if isinstance(df, nw.LazyFrame) else df
 
 
-def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
-    """Replace `time_unit` with one that is supported by the requested backend."""
+def _ensure_test_has_constructor(
+    request: pytest.FixtureRequest, /, utility_name: str
+) -> None:
     if _CONSTRUCTOR_FIXTURE_NAMES.isdisjoint(request.fixturenames):  # pragma: no cover
         msg = (
-            f"`time_unit_compat` requires the test function to use a `constructor*` fixture.\n"
+            f"`{utility_name}` requires the test function to use a `constructor*` fixture.\n"
             f"Hint:\n\n"
             f"Try adding one of these as a parameter:\n    {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
         )
         raise NotImplementedError(msg)
+
+
+def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
+    """Replace `time_unit` with one that is supported by the requested backend."""
+    _ensure_test_has_constructor(request, "time_unit_compat")
     request_id = request.node.callspec.id
     if "duckdb" in request_id:
         return "us"
@@ -244,3 +263,15 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
         return "ns"
     return time_unit
+
+
+def is_pandas(
+    request: pytest.FixtureRequest, /, exclude: Iterable[IDPandasLike] = ()
+) -> bool:
+    """Return True if requested backend is pandas-like.
+
+    Optionally, pass `exclude=<subset>` to treat those constructors as not pandas-like.
+    """
+    _ensure_test_has_constructor(request, "is_pandas")
+    request_id = request.node.callspec.id
+    return any(name in request_id for name in ID_PANDAS_LIKE.difference(exclude))

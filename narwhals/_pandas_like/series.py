@@ -12,6 +12,7 @@ from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
+    PandasLikeToPandas,
     align_and_extract_native,
     get_dtype_backend,
     import_array_module,
@@ -107,7 +108,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
 }
 
 
-class PandasLikeSeries(EagerSeries[Any]):
+class PandasLikeSeries(PandasLikeToPandas["pd.Series[Any]"], EagerSeries[Any]):
     def __init__(
         self, native_series: Any, *, implementation: Implementation, version: Version
     ) -> None:
@@ -713,16 +714,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
             dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
         return s.to_numpy(dtype=dtype, **kwargs)
-
-    def to_pandas(self) -> pd.Series[Any]:
-        if self._implementation is Implementation.PANDAS:
-            return self.native
-        if self._implementation is Implementation.CUDF:  # pragma: no cover
-            return self.native.to_pandas()
-        if self._implementation is Implementation.MODIN:
-            return self.native._to_pandas()
-        msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
-        raise AssertionError(msg)
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
