@@ -637,6 +637,14 @@ class DataFrame(BaseFrame[DataFrameT]):
                 - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
                 - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
+        Tip:
+            If you expect non-uniform keys in `data`, consider passing `schema` for
+            more consistent results, as **inference varies between backends**:
+
+            - pandas uses all rows
+            - polars uses the first 100 rows
+            - pyarrow uses only the first row
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw

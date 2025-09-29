@@ -68,8 +68,9 @@ def test_from_dicts_inconsistent_keys(
         request.applymarker(pytest.mark.xfail)
     # no xfail for pandas as it always scans all rows
 
-    # first n rows have columns ["a"], the next row has columns ["a", "b"]
-    data = [*({"a": i} for i in range(n_first_schema)), {"a": n_first_schema, "b": 0}]
+    incomplete = ({"a": i} for i in range(n_first_schema))
+    complete = {"a": n_first_schema, "b": 0}
+    data = (*incomplete, complete)
 
     result = nw.DataFrame.from_dicts(data, backend=eager_implementation)
     assert result.columns == ["a", "b"]
