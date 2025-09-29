@@ -88,10 +88,11 @@ class BaseFrame(Generic[NativeFrameT]):
         return self._from_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
-        raise NotImplementedError
+        return self._from_compliant(self._compliant.drop(columns, strict=strict))
 
     def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
-        raise NotImplementedError
+        subset = [subset] if isinstance(subset, str) else subset
+        return self._from_compliant(self._compliant.drop_nulls(subset))
 
 
 class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
@@ -158,13 +159,6 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
         return Grouped.by(*by, drop_null_keys=drop_null_keys, **named_by).to_group_by(
             self
         )
-
-    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
-        return self._from_compliant(self._compliant.drop(columns, strict=strict))
-
-    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
-        subset = [subset] if isinstance(subset, str) else subset
-        return self._from_compliant(self._compliant.drop_nulls(subset))
 
     def row(self, index: int) -> tuple[Any, ...]:
         return self._compliant.row(index)
