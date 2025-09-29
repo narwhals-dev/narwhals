@@ -1,4 +1,8 @@
-"""Cached `pyarrow.compute` options classes, using `polars` defaults."""
+"""Cached `pyarrow.compute` options classes, using `polars` defaults.
+
+Important:
+    `AGG` and `FUNCTION` mappings are constructed on first `__getattr__` access.
+"""
 
 from __future__ import annotations
 
@@ -63,31 +67,39 @@ def join_replace_nulls(*, replacement: str = "__nw_null_value__") -> pc.JoinOpti
     return pc.JoinOptions(null_handling="replace", null_replacement=replacement)
 
 
+def _generate_agg() -> Mapping[type[agg.AggExpr], acero.AggregateOptions]:
+    from narwhals._plan.expressions import aggregation as agg
+
+    return {
+        agg.NUnique: count("all"),
+        agg.Len: count("all"),
+        agg.Count: count("only_valid"),
+        agg.First: scalar_aggregate(),
+        agg.Last: scalar_aggregate(),
+    }
+
+
+def _generate_function() -> Mapping[type[ir.Function], acero.AggregateOptions]:
+    from narwhals._plan.expressions import boolean
+
+    return {
+        boolean.All: scalar_aggregate(ignore_nulls=True),
+        boolean.Any: scalar_aggregate(ignore_nulls=True),
+    }
+
+
 # ruff: noqa: PLW0603
 # NOTE: Using globals for lazy-loading cache
 if not TYPE_CHECKING:
 
     def __getattr__(name: str) -> Any:
         if name == "AGG":
-            from narwhals._plan.expressions import aggregation as agg
-
             global AGG
-            AGG = {
-                agg.NUnique: count("all"),
-                agg.Len: count("all"),
-                agg.Count: count("only_valid"),
-                agg.First: scalar_aggregate(),
-                agg.Last: scalar_aggregate(),
-            }
+            AGG = _generate_agg()
             return AGG
         if name == "FUNCTION":
-            from narwhals._plan.expressions import boolean
-
             global FUNCTION
-            FUNCTION = {
-                boolean.All: scalar_aggregate(ignore_nulls=True),
-                boolean.Any: scalar_aggregate(ignore_nulls=True),
-            }
+            FUNCTION = _generate_function()
             return FUNCTION
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
