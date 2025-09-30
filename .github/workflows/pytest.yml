@@ -84,11 +84,10 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
+        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
       - name: install-test-plugin
         run: uv pip install -e tests/test_plugin --system
-        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
