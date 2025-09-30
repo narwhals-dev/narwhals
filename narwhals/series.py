@@ -899,6 +899,18 @@ class Series(Generic[IntoSeriesT]):
             5    3
             dtype: int64
         """
+        if lower_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_upper(
+                    upper_bound=self._extract_native(upper_bound)
+                )
+            )
+        if upper_bound is None:
+            return self._with_compliant(
+                self._compliant_series.clip_lower(
+                    lower_bound=self._extract_native(lower_bound)
+                )
+            )
         return self._with_compliant(
             self._compliant_series.clip(
                 lower_bound=self._extract_native(lower_bound),

@@ -285,6 +285,19 @@ class PolarsSeries:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
+    def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(extract_native(lower_bound), extract_native(upper_bound))
+        )
+
+    def clip_lower(self, lower_bound: PolarsSeries) -> Self:
+        return self._with_native(self.native.clip(extract_native(lower_bound)))
+
+    def clip_upper(self, upper_bound: PolarsSeries) -> Self:
+        return self._with_native(
+            self.native.clip(upper_bound=extract_native(upper_bound))
+        )
+
     @requires.backend_version((1,))
     def replace_strict(
         self,
