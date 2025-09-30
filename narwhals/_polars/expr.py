@@ -104,6 +104,17 @@ class PolarsExpr:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
+    def clip(self, lower_bound: PolarsExpr, upper_bound: PolarsExpr) -> Self:
+        lower_native = extract_native(lower_bound)
+        upper_native = extract_native(upper_bound)
+        if self._backend_version < (1,):
+            # Work around a bug in old Polars versions.
+            if lower_bound._metadata.is_literal:
+                lower_native = pl.select(lower_native).item()
+            if upper_bound._metadata.is_literal:
+                upper_native = pl.select(upper_native).item()
+        return self._with_native(self.native.clip(lower_native, upper_native))
+
     def ewm_mean(
         self,
         *,
@@ -307,7 +318,6 @@ class PolarsExpr:
     arg_max: Method[Self]
     arg_min: Method[Self]
     arg_true: Method[Self]
-    clip: Method[Self]
     count: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
