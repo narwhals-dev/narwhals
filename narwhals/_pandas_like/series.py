@@ -49,11 +49,9 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        TemporalLiteral,
         _1DArray,
         _SliceIndex,
     )
@@ -823,11 +821,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def gather_every(self, n: int, offset: int) -> Self:
         return self._with_native(self.native.iloc[offset::n])
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         _, lower = (
             align_and_extract_native(self, lower_bound)
             if lower_bound is not None

@@ -53,10 +53,8 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
-        TemporalLiteral,
         TimeUnit,
     )
 
@@ -548,11 +546,7 @@ class EagerExpr(
 
     # Other
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
@@ -1030,13 +1024,15 @@ class EagerExprStringNamespace(
     def len_chars(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "len_chars")
 
-    def replace(self, value: str, pattern: str, *, literal: bool, n: int) -> EagerExprT:
+    def replace(
+        self, value: EagerExprT, pattern: str, *, literal: bool, n: int
+    ) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "replace", pattern=pattern, value=value, literal=literal, n=n
         )
 
     def replace_all(
-        self, value: EagerExprT | str, pattern: str, *, literal: bool
+        self, value: EagerExprT, pattern: str, *, literal: bool
     ) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "replace_all", pattern=pattern, value=value, literal=literal

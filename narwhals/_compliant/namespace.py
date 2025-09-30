@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Protocol, overload
+from typing import TYPE_CHECKING, Any, Protocol, cast, overload
 
 from narwhals._compliant.typing import (
     CompliantExprT,
@@ -59,16 +59,14 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
-    def evaluate_expr(
-        self, data: Expr | NonNestedLiteral | Any, /
-    ) -> CompliantExprT | NonNestedLiteral:
+    def evaluate_expr(self, data: Expr | NonNestedLiteral, /) -> CompliantExprT:
         if is_expr(data):
-            expr = data(self)
-            assert isinstance(expr, self._expr)  # noqa: S101
-            return expr
-        # TODO(marco): it would be nice to return `lit(data)` here,
-        # but for pandas and Dask this causes some issues.
-        return data
+            ret = data(self)
+        else:
+            from narwhals.functions import lit
+
+            ret = lit(data)(self)
+        return cast("CompliantExprT", ret)
 
     # NOTE: `polars`
     def all(self) -> CompliantExprT:

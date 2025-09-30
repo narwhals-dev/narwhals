@@ -23,14 +23,10 @@ else:
         import dask_expr as dx
 
 
-def maybe_evaluate_expr(df: DaskLazyFrame, obj: DaskExpr | object) -> dx.Series | object:
-    from narwhals._dask.expr import DaskExpr
-
-    if isinstance(obj, DaskExpr):
-        results = obj._call(df)
-        assert len(results) == 1  # debug assertion  # noqa: S101
-        return results[0]
-    return obj
+def evaluate_expr(df: DaskLazyFrame, obj: DaskExpr) -> dx.Series:
+    results = obj._call(df)
+    assert len(results) == 1  # debug assertion  # noqa: S101
+    return results[0]
 
 
 def evaluate_exprs(df: DaskLazyFrame, /, *exprs: DaskExpr) -> list[tuple[str, dx.Series]]:

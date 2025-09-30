@@ -28,13 +28,7 @@ if TYPE_CHECKING:
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
-    from narwhals.typing import (
-        ModeKeepStrategy,
-        NumericLiteral,
-        PythonLiteral,
-        RankMethod,
-        TemporalLiteral,
-    )
+    from narwhals.typing import ModeKeepStrategy, PythonLiteral, RankMethod
 
 
 class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, NativeExprT]):
@@ -518,11 +512,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def abs(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("abs", expr))
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         def _clip(
             expr: NativeExprT, lower_bound: NativeExprT, upper_bound: NativeExprT
         ) -> NativeExprT:

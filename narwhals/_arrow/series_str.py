@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import ArrowSeriesNamespace, lit, parse_datetime_format
+from narwhals._arrow.utils import (
+    ArrowSeriesNamespace,
+    extract_native,
+    lit,
+    parse_datetime_format,
+)
 from narwhals._compliant.any_namespace import StringNamespace
 
 if TYPE_CHECKING:
@@ -22,21 +27,25 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         self, value: ArrowSeries | str, pattern: str, *, literal: bool, n: int
     ) -> ArrowSeries:
         fn = pc.replace_substring if literal else pc.replace_substring_regex
-        if not isinstance(value, str):
+        _, value_native = extract_native(self.compliant, value)
+        if not isinstance(value_native, pa.StringScalar):
             msg = "PyArrow backed `.str.replace` only supports str replacement values"
             raise TypeError(msg)
-        arr = fn(self.native, pattern, replacement=value, max_replacements=n)
+        arr = fn(
+            self.native, pattern, replacement=value_native.as_py(), max_replacements=n
+        )
         return self.with_native(arr)
 
     def replace_all(
         self, value: ArrowSeries | str, pattern: str, *, literal: bool
     ) -> ArrowSeries:
-        if not isinstance(value, str):
+        _, value_native = extract_native(self.compliant, value)
+        if not isinstance(value_native, pa.StringScalar):
             msg = (
                 "PyArrow backed `.str.replace_all` only supports str replacement values."
             )
             raise TypeError(msg)
-        return self.replace(value, pattern, literal=literal, n=-1)
+        return self.replace(value_native.as_py(), pattern, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(

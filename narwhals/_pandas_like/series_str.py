@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace, is_dtype_pyarrow
+from narwhals._pandas_like.utils import (
+    PandasLikeSeriesNamespace,
+    align_and_extract_native,
+    is_dtype_pyarrow,
+)
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -18,10 +22,13 @@ class PandasLikeSeriesStringNamespace(
     def replace(
         self, value: PandasLikeSeries | str, pattern: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
-        if not isinstance(value, str):
+        _, value_native = align_and_extract_native(self.compliant, value)
+        if not isinstance(value_native, str):
             msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
             raise TypeError(msg)
-        series = self.native.str.replace(pat=pattern, repl=value, n=n, regex=not literal)
+        series = self.native.str.replace(
+            pat=pattern, repl=value_native, n=n, regex=not literal
+        )
         return self.with_native(series)
 
     def replace_all(

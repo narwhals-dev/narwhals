@@ -11,7 +11,7 @@ from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
     align_series_full_broadcast,
-    maybe_evaluate_expr,
+    evaluate_expr,
     narwhals_to_native_dtype,
 )
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -44,9 +44,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         RollingInterpolationMethod,
-        TemporalLiteral,
     )
 
 
@@ -139,7 +137,7 @@ class DaskExpr(
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
-                key: maybe_evaluate_expr(df, value)
+                key: evaluate_expr(df, value)
                 for key, value in expressifiable_args.items()
             }
             for native_series in native_series_list:
@@ -215,7 +213,7 @@ class DaskExpr(
             return (series.__floordiv__(other)).where(other != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_series = maybe_evaluate_expr(df, other)
+            other_series = evaluate_expr(df, other)
             return [_floordiv(df, series, other_series) for series in self(df)]
 
         return self.__class__(
@@ -269,7 +267,8 @@ class DaskExpr(
             return (other.__floordiv__(series)).where(series != 0, None)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            return [_rfloordiv(df, series, other) for series in self(df)]
+            other_native = evaluate_expr(df, other)
+            return [_rfloordiv(df, series, other_native) for series in self(df)]
 
         return self.__class__(
             func,
@@ -463,17 +462,23 @@ class DaskExpr(
 
         return self._with_callable(func)
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
-        return self._with_callable(
-            lambda expr, lower_bound, upper_bound: expr.clip(
-                lower=lower_bound, upper=upper_bound
-            ),
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            lower_native: dx.Series = evaluate_expr(df, lower_bound)
+            upper_native: dx.Series = evaluate_expr(df, upper_bound)
+            if lower_native.dtype == "O":
+                # `lower_bound` was `lit(None)`
+                return [series.clip(upper=upper_native) for series in self(df)]
+            if upper_native.dtype == "O":
+                # `lower_bound` was `lit(None)`
+                return [series.clip(lower_native) for series in self(df)]
+            return [series.clip(lower_native, upper_native) for series in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
         )
 
     def diff(self) -> Self:

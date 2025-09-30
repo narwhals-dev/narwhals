@@ -67,12 +67,10 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NumericLiteral,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,
-        TemporalLiteral,
         _1DArray,
         _2DArray,
         _SliceIndex,
@@ -835,11 +833,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self._with_native(self.native[offset::n])
 
-    def clip(
-        self,
-        lower_bound: Self | NumericLiteral | TemporalLiteral | None,
-        upper_bound: Self | NumericLiteral | TemporalLiteral | None,
-    ) -> Self:
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         _, lower = (
             extract_native(self, lower_bound) if lower_bound is not None else (None, None)
         )
@@ -847,9 +841,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             extract_native(self, upper_bound) if upper_bound is not None else (None, None)
         )
 
-        if lower is None:
+        if lower is None or isinstance(lower, pa.NullScalar):
             return self._with_native(pc.min_element_wise(self.native, upper))
-        if upper is None:
+        if upper is None or isinstance(upper, pa.NullScalar):
             return self._with_native(pc.max_element_wise(self.native, lower))
         return self._with_native(
             pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)

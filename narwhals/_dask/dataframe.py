@@ -222,10 +222,10 @@ class DaskLazyFrame(
             return self._with_native(add_row_index(self.native, name))
         plx = self.__narwhals_namespace__()
         columns = self.columns
-        const_expr = plx.lit(value=1, dtype=None).alias(name).broadcast()
+        const_expr = plx.lit(1, dtype=None).alias(name).broadcast()
         row_index_expr = (
             plx.col(name).cum_sum(reverse=False).over(partition_by=[], order_by=order_by)
-            - 1
+            - plx.lit(1, dtype=None).broadcast()
         )
         return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
@@ -478,11 +478,14 @@ class DaskLazyFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         row_index_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         plx = self.__narwhals_namespace__()
+        offset_expr = plx.lit(offset, dtype=None).broadcast()
+        n_expr = plx.lit(n, dtype=None).broadcast()
+        zero_expr = plx.lit(0, dtype=None).broadcast()
         return (
             self.with_row_index(row_index_token, order_by=None)
             .filter(
-                (plx.col(row_index_token) >= offset)
-                & ((plx.col(row_index_token) - offset) % n == 0)
+                (plx.col(row_index_token) >= offset_expr)
+                & ((plx.col(row_index_token) - offset_expr) % n_expr == zero_expr)
             )
             .drop([row_index_token], strict=False)
         )
