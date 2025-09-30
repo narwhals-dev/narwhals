@@ -220,8 +220,6 @@ class DaskExpr(
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->__floordiv__",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
@@ -275,8 +273,6 @@ class DaskExpr(
 
         return self.__class__(
             func,
-            depth=self._depth + 1,
-            function_name=self._function_name + "->__rfloordiv__",
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
