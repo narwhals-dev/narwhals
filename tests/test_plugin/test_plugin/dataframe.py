@@ -31,6 +31,9 @@ class DictLazyFrame(
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def _with_native(self, df: DictFrame) -> Self:
+        return self.__class__(df, version=self._version)
+
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self._native_frame, version=version)
 
