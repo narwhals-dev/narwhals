@@ -264,6 +264,62 @@ In Narwhals, here's what we do:
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
   ends up being a simple one.
 
+## Nodes
+
+If we have a Narwhals expression, we can look at the operations which make it up by accessing `_nodes`:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+import narwhals as nw
+
+expr = nw.col("a").abs().std(ddof=1) + nw.col("b")
+print(expr._nodes)
+```
+
+Each node represents an operation. Here, we have 4 operations:
+
+1. Given some dataframe, select column `'a'`.
+2. Take its absolute value.
+3. Take its standard deviation, with `ddof=1`.
+4. Sum column `'b'`.
+
+Let's take a look at a couple of these nodes. Let's start with the third one:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[2].as_dict())
+```
+
+This tells us a few things:
+
+- We're performing an aggregation.
+- The name of the function is `'std'`. This will be looked up in the compliant object.
+- It takes keyword arguments `ddof=1`.
+- We'll look at the others later.
+
+In order for the evaluation to succeed, then `PandasLikeExpr` must have a `std` method defined
+on it, which takes a `ddof` argument. And this is what the `CompliantExpr` Protocol is for: so
+long as a backend's implementation complies with the protocol, then Narwhals will be able to
+unpack a `ExprNode` and turn it into a valid call.
+
+Let's take a look at the fourth node:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[3].as_dict())
+```
+
+Note how now, the `exprs` attribute is populated. Indeed, we are summing another expression: `col('b')`.
+The `exprs` parameter holds arguments which are either expressions, or should be interpreted as expressions.
+The `str_as_lit` parameter tells us whether string literals should be interpreted as literals (e.g. `lit('foo')`)
+or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-outuput expressions
+(more on this in the next section) are allowed to appear in `exprs`.
+
+Node that the expression in `exprs` also has its own nodes:
+
+```python exec="1" result="python" session="pandas_impl" source="above"
+print(expr._nodes[3].exprs[0]._nodes)
+```
+
+It's nodes all the way down!
+
 ## Expression Metadata
 
 Let's try printing out some compliant expressions' metadata to see what it shows us:
@@ -307,7 +363,7 @@ Here's a brief description of each piece of metadata:
   only on literal values, like `nw.lit(1)`.
 - `nodes`: List of operations which this expression applies when evaluated.
 
-#### Chaining
+### Chaining
 
 Say we have `expr.expr_method()`. How does `expr`'s `ExprMetadata` change?
 This depends on `expr_method`. Details can be found in `narwhals/_expression_parsing`,
@@ -351,7 +407,7 @@ is:
   then `n_orderable_ops` is decreased by 1. This is the only way that
   `n_orderable_ops` can decrease.
 
-### Broadcasting
+## Broadcasting
 
 When performing comparisons between columns and aggregations or scalars, we operate as if the
 aggregation or scalar was broadcasted to the length of the whole column. For example, if we
@@ -373,7 +429,7 @@ Narwhals triggers a broadcast in these situations:
 Each backend is then responsible for doing its own broadcasting, as defined in each
 `CompliantExpr.broadcast` method.
 
-### Elementwise push-down
+## Elementwise push-down
 
 SQL is picky about `over` operations. For example:
 

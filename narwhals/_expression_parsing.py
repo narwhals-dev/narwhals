@@ -253,6 +253,17 @@ class ExprNode:
             arg_str.append(kwargs_repr)
         return f"{self.name}({', '.join(arg_str)})"
 
+    def as_dict(self) -> dict[str, Any]:  # pragma: no cover
+        # Just for debugging.
+        return {
+            "kind": self.kind,
+            "name": self.name,
+            "exprs": self.exprs,
+            "kwargs": self.kwargs,
+            "str_as_lit": self.str_as_lit,
+            "allow_multi_output": self.allow_multi_output,
+        }
+
     def _with_kwargs(self, **kwargs: Any) -> ExprNode:
         return self.__class__(
             self.kind, self.name, *self.exprs, str_as_lit=self.str_as_lit, **kwargs
