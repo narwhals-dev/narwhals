@@ -16,7 +16,6 @@ from narwhals._compliant.typing import (
     NativeFrameT_co,
     NativeSeriesT,
 )
-from narwhals._expression_parsing import is_expr
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
@@ -59,13 +58,8 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
-    def evaluate_expr(self, data: Expr | NonNestedLiteral, /) -> CompliantExprT:
-        if is_expr(data):
-            ret = data(self)
-        else:
-            from narwhals.functions import lit
-
-            ret = lit(data)(self)
+    def evaluate_expr(self, data: Expr) -> CompliantExprT:
+        ret = data(self)
         return cast("CompliantExprT", ret)
 
     # NOTE: `polars`
