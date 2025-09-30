@@ -58,7 +58,7 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
 
     @property
     def _expr(self) -> type[CompliantExprT]: ...
-    def evaluate_expr(self, data: Expr) -> CompliantExprT:
+    def evaluate_expr(self, data: Expr, /) -> CompliantExprT:
         ret = data(self)
         return cast("CompliantExprT", ret)
 

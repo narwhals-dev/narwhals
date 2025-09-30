@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
-from narwhals._expression_parsing import is_expr
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
@@ -22,14 +21,7 @@ if TYPE_CHECKING:
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
     from narwhals.expr import Expr
-    from narwhals.typing import (
-        Into1DArray,
-        IntoDType,
-        IntoSchema,
-        NonNestedLiteral,
-        TimeUnit,
-        _2DArray,
-    )
+    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -51,14 +43,10 @@ class PolarsNamespace:
     def __init__(self, *, version: Version) -> None:
         self._version = version
 
-    def evaluate_expr(
-        self, data: Expr | NonNestedLiteral | Any, /
-    ) -> PolarsExpr | NonNestedLiteral:
-        if is_expr(data):
-            expr = data(self)
-            assert isinstance(expr, self._expr)  # noqa: S101
-            return expr
-        return data
+    def evaluate_expr(self, data: Expr, /) -> PolarsExpr:
+        expr = data(self)
+        assert isinstance(expr, self._expr)  # noqa: S101
+        return expr
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:

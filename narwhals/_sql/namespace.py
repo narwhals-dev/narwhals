@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import LazyNamespace
 from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
-from narwhals._expression_parsing import is_expr
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
-from narwhals.functions import lit
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.expr import Expr
-    from narwhals.typing import NonNestedLiteral, PythonLiteral
+    from narwhals.typing import PythonLiteral
 
 
 class SQLNamespace(
@@ -30,13 +27,6 @@ class SQLNamespace(
         otherwise: NativeExprT | None = None,
     ) -> NativeExprT: ...
     def _coalesce(self, *exprs: NativeExprT) -> NativeExprT: ...
-
-    def evaluate_expr(self, data: Expr | NonNestedLiteral | Any, /) -> SQLExprT:
-        if is_expr(data):
-            expr = data(self)
-            assert isinstance(expr, self._expr)  # noqa: S101
-            return expr
-        return cast("SQLExprT", lit(data)(self))
 
     # Horizontal functions
     def any_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from narwhals._utils import is_compliant_expr, zip_strict
 from narwhals.dependencies import is_numpy_array_1d
@@ -173,10 +173,8 @@ class ExprKind(Enum):
         }
 
 
-def is_scalar_like(obj: CompliantExprAny | NonNestedLiteral) -> bool:
-    if is_compliant_expr(obj):
-        return obj._metadata.is_scalar_like
-    return True
+def is_scalar_like(obj: CompliantExprAny) -> bool:
+    return obj._metadata.is_scalar_like
 
 
 class ExpansionKind(Enum):
@@ -736,33 +734,13 @@ def check_expressions_preserve_length(
         raise InvalidOperationError(msg)
 
 
-@overload
-def _parse_into_expr(
-    arg: IntoExpr | NonNestedLiteral | _1DArray,
-    *,
-    str_as_lit: bool = False,
-    backend: Any = None,
-    allow_literal: Literal[False],
-) -> Expr: ...
-
-
-@overload
-def _parse_into_expr(
-    arg: IntoExpr | NonNestedLiteral | _1DArray,
-    *,
-    str_as_lit: bool = False,
-    backend: Any = None,
-    allow_literal: Literal[True] = ...,
-) -> Expr | NonNestedLiteral: ...
-
-
 def _parse_into_expr(
     arg: IntoExpr | NonNestedLiteral | _1DArray,
     *,
     str_as_lit: bool = False,
     backend: Any = None,
     allow_literal: bool = True,
-) -> Expr | NonNestedLiteral:
+) -> Expr:
     from narwhals.functions import col, lit, new_series
 
     if isinstance(arg, str) and not str_as_lit:
@@ -783,7 +761,7 @@ def evaluate_into_exprs(
     ns: CompliantNamespaceAny,
     str_as_lit: bool,
     allow_multi_output: bool,
-) -> Iterator[CompliantExprAny | NonNestedLiteral]:
+) -> Iterator[CompliantExprAny]:
     for expr in exprs:
         ret = ns.evaluate_expr(
             _parse_into_expr(expr, str_as_lit=str_as_lit, backend=ns._implementation)
@@ -798,11 +776,9 @@ def evaluate_into_exprs(
         yield ret
 
 
-def maybe_broadcast_ces(
-    *ces: CompliantExprAny | NonNestedLiteral,
-) -> list[CompliantExprAny | NonNestedLiteral]:
+def maybe_broadcast_ces(*ces: CompliantExprAny) -> list[CompliantExprAny]:
     broadcast = any(not is_scalar_like(ce) for ce in ces)
-    results: list[CompliantExprAny | NonNestedLiteral] = []
+    results: list[CompliantExprAny] = []
     for compliant_expr in ces:
         if (
             broadcast
