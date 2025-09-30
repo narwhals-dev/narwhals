@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from narwhals._utils import is_compliant_expr, zip_strict
+from narwhals._utils import zip_strict
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import (
     InvalidIntoExprError,
@@ -52,10 +52,6 @@ def combine_evaluate_output_names(
 ) -> EvalNames[CompliantFrameT]:
     # Follow left-hand-rule for naming. E.g. `nw.sum_horizontal(expr1, expr2)` takes the
     # first name of `expr1`.
-    if not is_compliant_expr(exprs[0]):  # pragma: no cover
-        msg = f"Safety assertion failed, expected expression, got: {type(exprs[0])}. Please report a bug."
-        raise AssertionError(msg)
-
     def evaluate_output_names(df: CompliantFrameT) -> Sequence[str]:
         return exprs[0]._evaluate_output_names(df)[:1]
 
@@ -392,7 +388,7 @@ class ExprMetadata:
 
     @classmethod
     def from_node(  # noqa: PLR0911
-        cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
+        cls, node: ExprNode, *ces: CompliantExprAny
     ) -> ExprMetadata:
         if node.kind is ExprKind.SERIES:
             return cls.from_selector_single(node)
@@ -422,10 +418,7 @@ class ExprMetadata:
         raise AssertionError(msg)  # pragma: no cover
 
     def with_node(  # noqa: PLR0911,C901
-        self,
-        node: ExprNode,
-        ce: CompliantExprAny,
-        *ces: CompliantExprAny | NonNestedLiteral,
+        self, node: ExprNode, ce: CompliantExprAny, *ces: CompliantExprAny
     ) -> ExprMetadata:
         if node.kind is ExprKind.AGGREGATION:
             return self.with_aggregation(node)
@@ -490,9 +483,7 @@ class ExprMetadata:
         return cls(ExpansionKind.MULTI_UNNAMED, nodes=(node,))
 
     @classmethod
-    def from_elementwise(
-        cls, node: ExprNode, *ces: CompliantExprAny | NonNestedLiteral
-    ) -> ExprMetadata:
+    def from_elementwise(cls, node: ExprNode, *ces: CompliantExprAny) -> ExprMetadata:
         return combine_metadata(*ces, to_single_output=True, nodes=(node,))
 
     @property
@@ -662,7 +653,7 @@ class ExprMetadata:
 
 
 def combine_metadata(
-    *args: IntoExpr | object | None, to_single_output: bool, nodes: tuple[ExprNode, ...]
+    *args: CompliantExprAny, to_single_output: bool, nodes: tuple[ExprNode, ...]
 ) -> ExprMetadata:
     """Combine metadata from `args`.
 
@@ -686,8 +677,6 @@ def combine_metadata(
     result_is_literal = True
 
     for i, arg in enumerate(args):
-        if not is_compliant_expr(arg):
-            continue
         metadata = arg._metadata
         assert metadata is not None  # noqa: S101
         if metadata.expansion_kind.is_multi_output():
@@ -723,13 +712,13 @@ def combine_metadata(
 
 
 def check_expressions_preserve_length(
-    *args: CompliantExprAny | NonNestedLiteral, function_name: str
+    *args: CompliantExprAny, function_name: str
 ) -> None:
     # Raise if any argument in `args` isn't length-preserving.
     # For Series input, we don't raise (yet), we let such checks happen later,
     # as this function works lazily and so can't evaluate lengths.
 
-    if not all((is_compliant_expr(x) and x._metadata.preserves_length) for x in args):
+    if not all(x._metadata.preserves_length for x in args):
         msg = f"Expressions which aggregate or change length cannot be passed to '{function_name}'."
         raise InvalidOperationError(msg)
 
@@ -766,11 +755,7 @@ def evaluate_into_exprs(
         ret = ns.evaluate_expr(
             _parse_into_expr(expr, str_as_lit=str_as_lit, backend=ns._implementation)
         )
-        if (
-            not allow_multi_output
-            and is_compliant_expr(ret)
-            and ret._metadata.expansion_kind.is_multi_output()
-        ):
+        if not allow_multi_output and ret._metadata.expansion_kind.is_multi_output():
             msg = "Multi-output expressions are not allowed in this context."
             raise MultiOutputExpressionError(msg)
         yield ret
@@ -780,11 +765,7 @@ def maybe_broadcast_ces(*ces: CompliantExprAny) -> list[CompliantExprAny]:
     broadcast = any(not is_scalar_like(ce) for ce in ces)
     results: list[CompliantExprAny] = []
     for compliant_expr in ces:
-        if (
-            broadcast
-            and is_compliant_expr(compliant_expr)
-            and is_scalar_like(compliant_expr)
-        ):
+        if broadcast and is_scalar_like(compliant_expr):
             _compliant_expr: CompliantExprAny = compliant_expr.broadcast()
             # Make sure to preserve metadata.
             _compliant_expr._opt_metadata = compliant_expr._metadata
@@ -833,7 +814,6 @@ def evaluate_node(
             allow_multi_output=node.allow_multi_output,
         ),
     )
-    assert is_compliant_expr(ce)  # noqa: S101
     md = md.with_node(node, ce, *ces)
     if "." in node.name:
         accessor, method = node.name.split(".")

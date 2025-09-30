@@ -19,7 +19,6 @@ from narwhals._compliant.typing import (
 from narwhals._utils import (
     exclude_column_names,
     get_column_names,
-    is_compliant_expr,
     passthrough_column_names,
 )
 from narwhals.dependencies import is_numpy_array_2d
@@ -155,34 +154,22 @@ class EagerNamespace(
         otherwise: NativeSeriesT | None = None,
     ) -> NativeSeriesT: ...
     def when_then(
-        self,
-        predicate: EagerExprT,
-        then: EagerExprT | NonNestedLiteral,
-        otherwise: EagerExprT | NonNestedLiteral | None = None,
+        self, predicate: EagerExprT, then: EagerExprT, otherwise: EagerExprT | None = None
     ) -> EagerExprT:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT_co]:
             predicate_s = df._evaluate_expr(predicate)
             align = predicate_s._align_full_broadcast
 
-            if is_compliant_expr(then):
-                then_s = df._evaluate_expr(then)
-            else:
-                then_s = predicate_s._from_scalar(then).alias("literal")
-                then_s._broadcast = True
+            then_s = df._evaluate_expr(then)
             if otherwise is None:
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)
 
-            if is_compliant_expr(otherwise):
+            if otherwise is None:
+                predicate_s, then_s = align(predicate_s, then_s)
+                result = self._if_then_else(predicate_s.native, then_s.native)
+            else:
                 otherwise_s = df._evaluate_expr(otherwise)
-            elif otherwise is not None:
-                otherwise_s = predicate_s._from_scalar(otherwise).alias("literal")
-                otherwise_s._broadcast = True
-
-            if otherwise is None:
-                predicate_s, then_s = align(predicate_s, then_s)
-                result = self._if_then_else(predicate_s.native, then_s.native)
-            else:
                 predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
                 result = self._if_then_else(
                     predicate_s.native, then_s.native, otherwise_s.native

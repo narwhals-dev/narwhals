@@ -65,14 +65,7 @@ if TYPE_CHECKING:
         TypeIs,
     )
 
-    from narwhals._compliant import (
-        CompliantExpr,
-        CompliantExprT,
-        CompliantFrameT,
-        CompliantSeriesOrNativeExprT_co,
-        CompliantSeriesT,
-        NativeSeriesT_co,
-    )
+    from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
@@ -1589,12 +1582,6 @@ def is_compliant_series_int(
     obj: CompliantSeries[NativeSeriesT_co] | Any,
 ) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
     return is_compliant_series(obj) and obj.dtype.is_integer()
-
-
-def is_compliant_expr(
-    obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
-) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
-    return hasattr(obj, "__narwhals_expr__")
 
 
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
