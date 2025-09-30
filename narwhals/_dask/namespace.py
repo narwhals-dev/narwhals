@@ -273,10 +273,8 @@ class DaskNamespace(
         self, predicate: DaskExpr, then: DaskExpr, otherwise: DaskExpr | None = None
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            then_value = then(df)[0] if isinstance(then, DaskExpr) else then
-            otherwise_value = (
-                otherwise(df)[0] if isinstance(otherwise, DaskExpr) else otherwise
-            )
+            then_value = then(df)[0]
+            otherwise_value = otherwise(df)[0] if otherwise is not None else otherwise
 
             condition = predicate(df)[0]
             # re-evaluate DataFrame if the condition aggregates to force
@@ -285,12 +283,8 @@ class DaskNamespace(
                 x._metadata.is_scalar_like
                 for x in (
                     (predicate, then)
-                    if (isinstance(then, DaskExpr) and otherwise is None)
+                    if otherwise is None
                     else (predicate, then, otherwise)
-                    if isinstance(then, DaskExpr) and isinstance(otherwise, DaskExpr)
-                    else (predicate, otherwise)
-                    if isinstance(otherwise, DaskExpr)
-                    else (predicate,)
                 )
             ):
                 new_df = df._with_native(condition.to_frame())
