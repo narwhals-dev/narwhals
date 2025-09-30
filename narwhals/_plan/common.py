@@ -156,7 +156,48 @@ class temp:  # noqa: N801
         prefix: str = "nw",
         n_chars: int = 16,
     ) -> str:
-        """Generate a single, unique column name that is not present in `source`."""
+        """Generate a single, unique column name that is not present in `source`.
+
+        Arguments:
+            source: Source of columns to check for uniqueness.
+            prefix: Prepend the name with this string.
+            n_chars: Total number of characters used by the name (including `prefix`).
+
+        Examples:
+            >>> import narwhals as nw
+            >>> from narwhals._plan.common import temp
+            >>> columns = "abc", "xyz"
+            >>> temp.column_name(columns)  # doctest: +SKIP
+            'nwf65daf7ceb3c2f'
+
+            Limit the number of characters that the name uses
+
+            >>> temp.column_name(columns, n_chars=8)  # doctest: +SKIP
+            'nw388b5d'
+
+            Make the name easier to trace back
+
+            >>> temp.column_name(columns, prefix="_its_a_me_")  # doctest: +SKIP
+            '_its_a_me_0ea2b0'
+
+            Pass in a `DataFrame` directly, and let us get the columns for you
+
+            >>> df = nw.from_dict({"foo": [1, 2], "bar": [6.0, 7.0]}, backend="polars")
+            >>> df.with_row_index(temp.column_name(df, prefix="idx_"))  # doctest: +SKIP
+            ┌────────────────────────────────┐
+            |       Narwhals DataFrame       |
+            |--------------------------------|
+            |shape: (2, 3)                   |
+            |┌──────────────────┬─────┬─────┐|
+            |│ idx_bae5e1b22963 ┆ foo ┆ bar │|
+            |│ ---              ┆ --- ┆ --- │|
+            |│ u32              ┆ i64 ┆ f64 │|
+            |╞══════════════════╪═════╪═════╡|
+            |│ 0                ┆ 1   ┆ 6.0 │|
+            |│ 1                ┆ 2   ┆ 7.0 │|
+            |└──────────────────┴─────┴─────┘|
+            └────────────────────────────────┘
+        """
         columns = cls._into_columns(source)
         prefix, n_bytes = cls._parse_prefix_n_bytes(prefix, n_chars)
         for _ in range(cls._MAX_ITERATIONS):
@@ -165,6 +206,7 @@ class temp:  # noqa: N801
                 return token
         raise cls._failed_generation_error(columns, n_chars)
 
+    # TODO @dangotbanned: Write examples
     @classmethod
     def column_names(
         cls,
@@ -177,6 +219,11 @@ class temp:  # noqa: N801
         """Yields unique column names that are not present in `source`.
 
         Any column name returned will be unique among those that preceded it.
+
+        Arguments:
+            source: Source of columns to check for uniqueness.
+            prefix: Prepend the name with this string.
+            n_chars: Total number of characters used by the name (including `prefix`).
         """
         columns = cls._into_columns(source)
         prefix, n_bytes = cls._parse_prefix_n_bytes(prefix, n_chars)
