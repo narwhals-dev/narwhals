@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DASK_VERSION,
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
@@ -17,6 +18,9 @@ from tests.utils import (
 
 
 def test_fill_null(constructor: Constructor) -> None:
+    if "dask" in str(constructor) and DASK_VERSION <= (2024, 10):
+        # Bug in old version of Dask.
+        pytest.skip()
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
