@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -7,7 +8,6 @@ import pytest
 
 import narwhals as nw
 import narwhals.selectors as ncs
-from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -246,7 +246,10 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & ncs.numeric())
 
-    with pytest.raises(MultiOutputExpressionError):
+    with pytest.raises(
+        TypeError,
+        match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
+    ):
         df.select(ncs.boolean() + ncs.numeric())
 
 
