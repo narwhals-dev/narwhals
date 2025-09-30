@@ -676,7 +676,6 @@ class PolarsSeries:
     arg_max: Method[int]
     arg_min: Method[int]
     arg_true: Method[Self]
-    clip: Method[Self]
     count: Method[int]
     cum_max: Method[Self]
     cum_min: Method[Self]
