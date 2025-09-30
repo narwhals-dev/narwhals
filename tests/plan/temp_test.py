@@ -57,11 +57,27 @@ def test_temp_column_name_sources(source: _StoresColumns | Iterable[str]) -> Non
     assert name not in _COLUMNS
 
 
+@sources
+def test_temp_column_names_sources(source: _StoresColumns | Iterable[str]) -> None:
+    it = temp.column_names(source)
+    name = next(it)
+    assert name not in _COLUMNS
+
+
 @given(n_chars=st.integers(6, 106))
 @pytest.mark.slow
 def test_temp_column_name_n_chars(n_chars: int) -> None:
     name = temp.column_name(_COLUMNS, n_chars=n_chars)
     assert name not in _COLUMNS
+
+
+@given(n_new_names=st.integers(10_000, 100_000))
+@pytest.mark.slow
+def test_temp_column_names_always_new_names(n_new_names: int) -> None:
+    it = temp.column_names(_COLUMNS)
+    new_names = set(islice(it, n_new_names))
+    assert len(new_names) == n_new_names
+    assert new_names.isdisjoint(_COLUMNS)
 
 
 @pytest.mark.parametrize(
