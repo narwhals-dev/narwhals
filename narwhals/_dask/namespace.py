@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from datetime import date, datetime
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, cast
@@ -58,6 +59,11 @@ class DaskNamespace(
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
                 native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            elif isinstance(value, date) and not isinstance(value, datetime):
+                # Dask auto-infers this as object type, which causes issues down the line.
+                native_pd_series = pd.Series(
+                    [value], dtype="date32[pyarrow]", name="literal"
+                )
             else:
                 native_pd_series = pd.Series([value], name="literal")
             npartitions = df._native_frame.npartitions
