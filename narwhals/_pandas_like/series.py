@@ -822,16 +822,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.iloc[offset::n])
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
-        _, lower = (
-            align_and_extract_native(self, lower_bound)
-            if lower_bound is not None
-            else (None, None)
-        )
-        _, upper = (
-            align_and_extract_native(self, upper_bound)
-            if upper_bound is not None
-            else (None, None)
-        )
+        _, lower = align_and_extract_native(self, lower_bound)
+        _, upper = align_and_extract_native(self, upper_bound)
         impl = self._implementation
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
@@ -850,16 +842,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result.clip(lower, upper, **kwargs))
 
     def clip_lower(self, lower_bound: Self) -> Self:
-        _, lower = (
-            align_and_extract_native(self, lower_bound)
-            if lower_bound is not None
-            else (None, None)
-        )
+        _, lower = align_and_extract_native(self, lower_bound)
         impl = self._implementation
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
 
-        if not impl.is_pandas() and self._is_native(lower):
+        if not impl.is_pandas() and self._is_native(lower):  # pragma: no cover
             # Workaround for both cudf and modin when clipping with a series
             #   * cudf: https://github.com/rapidsai/cudf/issues/17682
             #   * modin: https://github.com/modin-project/modin/issues/7415
@@ -869,16 +857,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result.clip(lower, **kwargs))
 
     def clip_upper(self, upper_bound: Self) -> Self:
-        _, upper = (
-            align_and_extract_native(self, upper_bound)
-            if upper_bound is not None
-            else (None, None)
-        )
+        _, upper = align_and_extract_native(self, upper_bound)
         impl = self._implementation
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
 
-        if not impl.is_pandas() and self._is_native(upper):
+        if not impl.is_pandas() and self._is_native(upper):  # pragma: no cover
             # Workaround for both cudf and modin when clipping with a series
             #   * cudf: https://github.com/rapidsai/cudf/issues/17682
             #   * modin: https://github.com/modin-project/modin/issues/7415

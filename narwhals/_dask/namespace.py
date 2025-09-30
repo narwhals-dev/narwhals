@@ -59,8 +59,11 @@ class DaskNamespace(
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
                 native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
-            elif isinstance(value, date) and not isinstance(value, datetime):
+            elif isinstance(value, date) and not isinstance(
+                value, datetime
+            ):  # pragma: no cover
                 # Dask auto-infers this as object type, which causes issues down the line.
+                # This shows up in TPC-H q8.
                 native_dtype = "date32[pyarrow]"
                 native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
             else:
