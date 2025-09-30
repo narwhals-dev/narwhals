@@ -220,11 +220,11 @@ class PolarsExpr:
         native = self.native.replace_strict(old, new, return_dtype=return_dtype_pl)
         return self._with_native(native)
 
-    def __eq__(self, other: object) -> Self:  # type: ignore[override]
-        return self._with_native(self.native.__eq__(extract_native(other)))  # type: ignore[operator]
+    def __eq__(self, other: PolarsExpr) -> Self:  # type: ignore[override]
+        return self._with_native(self.native.__eq__(extract_native(other)))
 
-    def __ne__(self, other: object) -> Self:  # type: ignore[override]
-        return self._with_native(self.native.__ne__(extract_native(other)))  # type: ignore[operator]
+    def __ne__(self, other: PolarsExpr) -> Self:  # type: ignore[override]
+        return self._with_native(self.native.__ne__(extract_native(other)))
 
     def __ge__(self, other: Any) -> Self:
         return self._with_native(self.native.__ge__(extract_native(other)))
@@ -239,10 +239,10 @@ class PolarsExpr:
         return self._with_native(self.native.__lt__(extract_native(other)))
 
     def __and__(self, other: PolarsExpr) -> Self:
-        return self._with_native(self.native.__and__(extract_native(other)))  # type: ignore[operator]
+        return self._with_native(self.native.__and__(extract_native(other)))
 
     def __or__(self, other: PolarsExpr) -> Self:
-        return self._with_native(self.native.__or__(extract_native(other)))  # type: ignore[operator]
+        return self._with_native(self.native.__or__(extract_native(other)))
 
     def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
