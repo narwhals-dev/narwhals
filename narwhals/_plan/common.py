@@ -131,6 +131,7 @@ class temp:  # noqa: N801
     """Temporary mini namespace for temporary utils."""
 
     _MAX_ITERATIONS: ClassVar[int] = 100
+    _MIN_RANDOM_CHARS: ClassVar[int] = 4
 
     @classmethod
     def column_name(
@@ -180,18 +181,31 @@ class temp:  # noqa: N801
     def _into_columns(source: _StoresColumns | Iterable[str], /) -> set[str]:
         return set(source.columns if _has_columns(source) else source)
 
-    @staticmethod
-    def _parse_prefix_n_bytes(prefix: str, n_chars: int, /) -> tuple[str, int]:
+    @classmethod
+    def _parse_prefix_n_bytes(cls, prefix: str, n_chars: int, /) -> tuple[str, int]:
         prefix = prefix or "nw"
-        n_bytes = (n_chars - len(prefix)) // 2
-        if n_bytes < 2:
-            msg = (
-                f"Temporary column name generation requires at least 4 characters to store random bytes, \n"
-                f"but not enough room with: {prefix=}, {n_chars=}.\n\n"
-                "Hint: Maybe try\n- a shorter `prefix`?\n- a higher `n_chars`?"
-            )
-            raise NarwhalsError(msg)
-        return prefix, n_bytes
+        if not (available := n_chars - len(prefix)) or available < cls._MIN_RANDOM_CHARS:
+            raise cls._not_enough_room_error(prefix, n_chars)
+        return prefix, available // 2
+
+    @classmethod
+    def _not_enough_room_error(cls, prefix: str, n_chars: int, /) -> NarwhalsError:
+        len_prefix = len(prefix)
+        available_chars = n_chars - len_prefix
+        if available_chars < 0:
+            visualize = ""
+        else:
+            okay = "✔" * available_chars
+            bad = "✖" * (cls._MIN_RANDOM_CHARS - available_chars)
+            visualize = f"\n    Preview: '{prefix}{okay}{bad}'"
+        msg = (
+            f"Temporary column name generation requires {len_prefix} characters for the prefix "
+            f"and at least {cls._MIN_RANDOM_CHARS} more to store random bytes:{visualize}\n\n"
+            f"Hint: Maybe try\n"
+            f"- a shorter `prefix` than {prefix!r}?\n"
+            f"- a higher `n_chars` than {n_chars!r}?"
+        )
+        return NarwhalsError(msg)
 
     @classmethod
     def _failed_generation_error(
