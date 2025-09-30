@@ -16,6 +16,7 @@ from narwhals.exceptions import NarwhalsError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
+    import reprlib
     from collections.abc import Iterator
     from typing import Any, Callable, ClassVar, TypeVar
 
@@ -127,18 +128,24 @@ def _has_columns(obj: Any) -> TypeIs[_StoresColumns]:
     return _hasattr_static(obj, "columns")
 
 
+def _reprlib_repr_backport() -> reprlib.Repr:
+    # 3.12 added `indent` https://github.com/python/cpython/issues/92734
+    # but also a useful constructor https://github.com/python/cpython/issues/94343
+    import reprlib
+
+    if sys.version_info >= (3, 12):
+        return reprlib.Repr(indent=4, maxlist=10)
+    else:  # pragma: no cover  # noqa: RET505
+        obj = reprlib.Repr()
+        obj.maxlist = 10
+        return obj
+
+
 class temp:  # noqa: N801
     """Temporary mini namespace for temporary utils."""
 
     _MAX_ITERATIONS: ClassVar[int] = 100
     _MIN_RANDOM_CHARS: ClassVar[int] = 4
-    _REPRLIB_REPR_KWDS: ClassVar[dict[str, Any]] = (
-        {"indent": 4, "maxlist": 10} if sys.version_info >= (3, 12) else {"maxlist": 10}
-    )
-    """Version-dependent arguments for `reprlib.Repr`.
-
-    See https://github.com/python/cpython/issues/92734
-    """
 
     @classmethod
     def column_name(
@@ -243,10 +250,8 @@ class temp:  # noqa: N801
                 ...,
             ]
         """
-        import reprlib
-
         current = sorted(columns)
-        truncated = reprlib.Repr(**cls._REPRLIB_REPR_KWDS).repr(current)
+        truncated = _reprlib_repr_backport().repr(current)
         msg = (
             "Was unable to generate a column name with "
             f"`{n_bytes=}` within {cls._MAX_ITERATIONS} iterations, \n"
