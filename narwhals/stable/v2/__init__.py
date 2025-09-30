@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -79,6 +79,7 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoFrame,
+        IntoSchema,
         IntoSeries,
         NonNestedLiteral,
         SingleColSelector,
@@ -124,6 +125,17 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
+        return cast("DataFrame[Any]", result)
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        result = super().from_dicts(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
 
     @classmethod
@@ -1106,6 +1118,9 @@ def from_dict(
     return _stableify(nw_f.from_dict(data, schema, backend=backend))
 
 
+from_dicts: Final = DataFrame.from_dicts
+
+
 def from_numpy(
     data: _2DArray,
     schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
@@ -1303,6 +1318,7 @@ __all__ = [
     "exclude",
     "from_arrow",
     "from_dict",
+    "from_dicts",
     "from_native",
     "from_numpy",
     "generate_temporary_column_name",

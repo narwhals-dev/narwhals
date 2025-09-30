@@ -193,6 +193,15 @@ class CompliantDataFrame(
         schema: IntoSchema | None,
     ) -> Self: ...
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self: ...
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,

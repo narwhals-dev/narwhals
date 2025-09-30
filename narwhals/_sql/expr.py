@@ -361,14 +361,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __rtruediv__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: other / expr, other).alias("literal")
 
-    def __floordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__floordiv__(other), other)
-
-    def __rfloordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other // expr, other).alias(
-            "literal"
-        )
-
     def __pow__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__pow__(other), other)
 
@@ -398,6 +390,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
+
+    def __floordiv__(self, other: Self) -> Self:
+        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
+            return self._when(
+                other != self._lit(0), op.floordiv(expr, other), self._lit(None)
+            )
+
+        return self._with_binary(func, other=other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
+            return self._when(
+                expr != self._lit(0), op.floordiv(other, expr), self._lit(None)
+            )
+
+        return self._with_binary(func, other=other).alias("literal")
 
     # Aggregations
     def all(self) -> Self:
