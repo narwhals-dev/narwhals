@@ -1523,6 +1523,14 @@ class Expr:
             | 2  3          3  |
             └──────────────────┘
         """
+        if upper_bound is None:
+            return self._with_node(
+                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", lower_bound)
+            )
+        if lower_bound is None:
+            return self._with_node(
+                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", upper_bound)
+            )
         return self._with_node(
             ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
         )

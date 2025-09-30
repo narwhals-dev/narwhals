@@ -551,6 +551,12 @@ class EagerExpr(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound
         )
 
+    def clip_lower(self, lower_bound: Self) -> Self:
+        return self._reuse_series("clip_lower", lower_bound=lower_bound)
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        return self._reuse_series("clip_upper", upper_bound=upper_bound)
+
     def is_null(self) -> Self:
         return self._reuse_series("is_null")
 

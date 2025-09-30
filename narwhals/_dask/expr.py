@@ -463,22 +463,24 @@ class DaskExpr(
         return self._with_callable(func)
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            lower_native: dx.Series = evaluate_expr(df, lower_bound)
-            upper_native: dx.Series = evaluate_expr(df, upper_bound)
-            if lower_native.dtype == "O":
-                # `lower_bound` was `lit(None)`
-                return [series.clip(upper=upper_native) for series in self(df)]
-            if upper_native.dtype == "O":
-                # `lower_bound` was `lit(None)`
-                return [series.clip(lower_native) for series in self(df)]
-            return [series.clip(lower_native, upper_native) for series in self(df)]
+        return self._with_callable(
+            lambda expr, lower_bound, upper_bound: expr.clip(
+                lower=lower_bound, upper=upper_bound
+            ),
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+        )
 
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+    def clip_lower(self, lower_bound: Self) -> Self:
+        return self._with_callable(
+            lambda expr, lower_bound: expr.clip(lower=lower_bound),
+            lower_bound=lower_bound,
+        )
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        return self._with_callable(
+            lambda expr, upper_bound: expr.clip(upper=upper_bound),
+            upper_bound=upper_bound,
         )
 
     def diff(self) -> Self:

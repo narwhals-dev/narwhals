@@ -849,6 +849,44 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return self._with_native(result.clip(lower, upper, **kwargs))
 
+    def clip_lower(self, lower_bound: Self) -> Self:
+        _, lower = (
+            align_and_extract_native(self, lower_bound)
+            if lower_bound is not None
+            else (None, None)
+        )
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas() and self._is_native(lower):
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            result = result.where(result >= lower, lower)
+            lower = None
+
+        return self._with_native(result.clip(lower, **kwargs))
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        _, upper = (
+            align_and_extract_native(self, upper_bound)
+            if upper_bound is not None
+            else (None, None)
+        )
+        impl = self._implementation
+        kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
+        result = self.native
+
+        if not impl.is_pandas() and self._is_native(upper):
+            # Workaround for both cudf and modin when clipping with a series
+            #   * cudf: https://github.com/rapidsai/cudf/issues/17682
+            #   * modin: https://github.com/modin-project/modin/issues/7415
+            result = result.where(result <= upper, upper)
+            upper = None
+
+        return self._with_native(result.clip(upper=upper, **kwargs))
+
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
             return self.native.to_arrow()
