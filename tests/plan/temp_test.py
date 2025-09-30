@@ -6,7 +6,7 @@ import string
 
 # ruff: noqa: S311
 from collections import deque
-from itertools import product, repeat
+from itertools import islice, product, repeat
 from typing import TYPE_CHECKING, NamedTuple
 
 import hypothesis.strategies as st
@@ -59,7 +59,7 @@ def test_temp_column_name_sources(source: _StoresColumns | Iterable[str]) -> Non
 
 @given(n_chars=st.integers(6, 106))
 @pytest.mark.slow
-def test_column_name_n_chars(n_chars: int) -> None:
+def test_temp_column_name_n_chars(n_chars: int) -> None:
     name = temp.column_name(_COLUMNS, n_chars=n_chars)
     assert name not in _COLUMNS
 
@@ -76,7 +76,7 @@ def test_column_name_n_chars(n_chars: int) -> None:
         ("", random.randint(0, 5)),
     ],
 )
-def test_column_name_requires_more_characters(prefix: str, n_chars: int) -> None:
+def test_temp_column_name_requires_more_characters(prefix: str, n_chars: int) -> None:
     pattern = re.compile(
         rf"temp.+column.+name.+requires.+try.+shorter.+{prefix}.+higher.+{n_chars}",
         re.IGNORECASE | re.DOTALL,
@@ -85,7 +85,7 @@ def test_column_name_requires_more_characters(prefix: str, n_chars: int) -> None
         temp.column_name(_COLUMNS, prefix=prefix, n_chars=n_chars)
 
 
-def test_column_name_failed_unique() -> None:
+def test_temp_column_name_failed_unique() -> None:
     hex_lower = string.hexdigits.strip(string.ascii_uppercase)
     every_possible_name_65k = [
         f"nw{e1}{e2}{e3}{e4}" for e1, e2, e3, e4 in product(*repeat(hex_lower, 4))
@@ -93,7 +93,18 @@ def test_column_name_failed_unique() -> None:
     n_many_columns = len(every_possible_name_65k)
 
     pattern = re.compile(
-        rf"unable.+generate.+name.+within.+existing.+{n_many_columns}.+columns", re.DOTALL
+        rf"unable.+generate.+name.+n_chars=6.+within.+existing.+{n_many_columns}.+columns",
+        re.DOTALL,
     )
     with pytest.raises(NarwhalsError, match=pattern):
         temp.column_name(every_possible_name_65k, prefix="nw", n_chars=6)
+
+
+def test_temp_column_names_failed_unique() -> None:
+    it = temp.column_names(["a", "b", "c"], prefix="long_prefix", n_chars=16)
+    pattern = re.compile(
+        r"unable.+generate.+name.+n_chars=16.+within.+existing.+.+columns.+\.\.\.",
+        re.DOTALL,
+    )
+    with pytest.raises(NarwhalsError, match=pattern):
+        list(islice(it, 100_000))

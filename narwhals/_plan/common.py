@@ -163,7 +163,7 @@ class temp:  # noqa: N801
             token = f"{prefix}{token_hex(n_bytes)}"
             if token not in columns:
                 return token
-        raise cls._failed_generation_error(columns, n_bytes)
+        raise cls._failed_generation_error(columns, n_chars)
 
     @classmethod
     def column_names(
@@ -189,7 +189,7 @@ class temp:  # noqa: N801
                 yield token
             else:
                 n_failed += 1
-        raise cls._failed_generation_error(columns, n_bytes)
+        raise cls._failed_generation_error(columns, n_chars)
 
     @staticmethod
     def _into_columns(source: _StoresColumns | Iterable[str], /) -> set[str]:
@@ -223,38 +223,13 @@ class temp:  # noqa: N801
 
     @classmethod
     def _failed_generation_error(
-        cls, columns: Iterable[str], n_bytes: int, /
+        cls, columns: Iterable[str], n_chars: int, /
     ) -> NarwhalsError:
-        """Takes some work to trigger this, but it's possible 😅.
-
-        Examples:
-            >>> import itertools
-            >>> from narwhals._plan.common import temp
-            >>> it = temp.column_names(["a", "b", "c"], prefix="long_prefix")
-            >>> list(itertools.islice(it, 100_000))  # doctest:+SKIP
-            Traceback (most recent call last):
-                ...
-            NarwhalsError: Was unable to generate a column name with `n_bytes=2` within 100 iterations,
-            that was not present in existing (60246) columns:
-            [
-                'a',
-                'b',
-                'c',
-                'long_prefix0000',
-                'long_prefix0003',
-                'long_prefix0004',
-                'long_prefix0005',
-                'long_prefix0006',
-                'long_prefix0007',
-                'long_prefix0008',
-                ...,
-            ]
-        """
         current = sorted(columns)
         truncated = _reprlib_repr_backport().repr(current)
         msg = (
             "Was unable to generate a column name with "
-            f"`{n_bytes=}` within {cls._MAX_ITERATIONS} iterations, \n"
+            f"`{n_chars=}` within {cls._MAX_ITERATIONS} iterations, \n"
             f"that was not present in existing ({len(current)}) columns:\n{truncated}"
         )
         return NarwhalsError(msg)
