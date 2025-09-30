@@ -512,7 +512,8 @@ class ArrowDataFrame(
             )
         else:
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
-            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+            one = plx.lit(1, None).broadcast()
+            row_index = (rank.over(partition_by=[], order_by=order_by) - one).alias(name)
         return self.select(row_index, plx.all())
 
     def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:

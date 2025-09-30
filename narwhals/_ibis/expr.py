@@ -167,11 +167,11 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=context._version,
         )
 
-    def _with_binary(self, op: Callable[..., ir.Value], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., ir.Value], other: Self) -> Self:
         return self._with_callable(op, other=other)
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self | Any
+        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self
     ) -> Self:
         return self._with_callable(op, **expressifiable_args)
 
@@ -243,7 +243,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(lambda expr: expr.isnull().sum())
 
     def is_nan(self) -> Self:
-        def func(expr: ir.FloatingValue | Any) -> ir.Value:
+        def func(expr: ir.FloatingValue) -> ir.Value:
             otherwise = expr.isnan() if is_floating(expr.type()) else False
             return ibis.ifelse(expr.isnull(), None, otherwise)
 

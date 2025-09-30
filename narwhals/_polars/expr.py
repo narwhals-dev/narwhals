@@ -238,10 +238,10 @@ class PolarsExpr:
     def __lt__(self, other: Any) -> Self:
         return self._with_native(self.native.__lt__(extract_native(other)))
 
-    def __and__(self, other: PolarsExpr | bool | Any) -> Self:
+    def __and__(self, other: PolarsExpr) -> Self:
         return self._with_native(self.native.__and__(extract_native(other)))  # type: ignore[operator]
 
-    def __or__(self, other: PolarsExpr | bool | Any) -> Self:
+    def __or__(self, other: PolarsExpr) -> Self:
         return self._with_native(self.native.__or__(extract_native(other)))  # type: ignore[operator]
 
     def __add__(self, other: Any) -> Self:

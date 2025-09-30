@@ -37,12 +37,7 @@ if TYPE_CHECKING:
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import (
-        FillNullStrategy,
-        IntoDType,
-        NonNestedLiteral,
-        RollingInterpolationMethod,
-    )
+    from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
 
     DuckDBWindowFunction = WindowFunction[DuckDBLazyFrame, Expression]
     DuckDBWindowInputs = WindowInputs[Expression]
@@ -234,10 +229,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
             if self._backend_version < (1, 3):  # pragma: no cover

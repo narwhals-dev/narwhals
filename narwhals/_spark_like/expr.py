@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import FillNullStrategy, IntoDType, NonNestedLiteral, RankMethod
+    from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
@@ -189,19 +189,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             implementation=context._implementation,
         )
 
-    def __truediv__(self, other: SparkLikeExpr) -> Self:
+    def __truediv__(self, other: Self) -> Self:
         def _truediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, expr, other)
 
         return self._with_binary(_truediv, other)
 
-    def __rtruediv__(self, other: SparkLikeExpr) -> Self:
+    def __rtruediv__(self, other: Self) -> Self:
         def _rtruediv(expr: Column, other: Column) -> Column:
             return true_divide(self._F, other, expr)
 
         return self._with_binary(_rtruediv, other).alias("literal")
 
-    def __floordiv__(self, other: SparkLikeExpr) -> Self:
+    def __floordiv__(self, other: Self) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
             F = self._F
             return F.when(
@@ -210,7 +210,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_binary(_floordiv, other)
 
-    def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
+    def __rfloordiv__(self, other: Self) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
             F = self._F
             return F.when(
@@ -333,10 +333,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_nan)
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
 

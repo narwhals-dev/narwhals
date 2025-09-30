@@ -425,70 +425,70 @@ class EagerExpr(
     def cast(self, dtype: IntoDType) -> Self:
         return self._reuse_series("cast", dtype=dtype)
 
-    def _with_binary(self, operator: str, other: Self | Any, /) -> Self:
+    def _with_binary(self, operator: str, other: Self, /) -> Self:
         return self._reuse_series(operator, other=other)
 
-    def _with_binary_right(self, operator: str, other: Self | Any, /) -> Self:
+    def _with_binary_right(self, operator: str, other: Self, /) -> Self:
         return self.alias("literal")._reuse_series(operator, other=other)
 
-    def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
+    def __eq__(self, other: Self) -> Self:  # type: ignore[override]
         return self._with_binary("__eq__", other)
 
-    def __ne__(self, other: Self | Any) -> Self:  # type: ignore[override]
+    def __ne__(self, other: Self) -> Self:  # type: ignore[override]
         return self._with_binary("__ne__", other)
 
-    def __ge__(self, other: Self | Any) -> Self:
+    def __ge__(self, other: Self) -> Self:
         return self._with_binary("__ge__", other)
 
-    def __gt__(self, other: Self | Any) -> Self:
+    def __gt__(self, other: Self) -> Self:
         return self._with_binary("__gt__", other)
 
-    def __le__(self, other: Self | Any) -> Self:
+    def __le__(self, other: Self) -> Self:
         return self._with_binary("__le__", other)
 
-    def __lt__(self, other: Self | Any) -> Self:
+    def __lt__(self, other: Self) -> Self:
         return self._with_binary("__lt__", other)
 
-    def __and__(self, other: Self | bool | Any) -> Self:
+    def __and__(self, other: Self) -> Self:
         return self._with_binary("__and__", other)
 
-    def __or__(self, other: Self | bool | Any) -> Self:
+    def __or__(self, other: Self) -> Self:
         return self._with_binary("__or__", other)
 
-    def __add__(self, other: Self | Any) -> Self:
+    def __add__(self, other: Self) -> Self:
         return self._with_binary("__add__", other)
 
-    def __sub__(self, other: Self | Any) -> Self:
+    def __sub__(self, other: Self) -> Self:
         return self._with_binary("__sub__", other)
 
-    def __rsub__(self, other: Self | Any) -> Self:
+    def __rsub__(self, other: Self) -> Self:
         return self._with_binary_right("__rsub__", other)
 
-    def __mul__(self, other: Self | Any) -> Self:
+    def __mul__(self, other: Self) -> Self:
         return self._with_binary("__mul__", other)
 
-    def __truediv__(self, other: Self | Any) -> Self:
+    def __truediv__(self, other: Self) -> Self:
         return self._with_binary("__truediv__", other)
 
-    def __rtruediv__(self, other: Self | Any) -> Self:
+    def __rtruediv__(self, other: Self) -> Self:
         return self._with_binary_right("__rtruediv__", other)
 
-    def __floordiv__(self, other: Self | Any) -> Self:
+    def __floordiv__(self, other: Self) -> Self:
         return self._with_binary("__floordiv__", other)
 
-    def __rfloordiv__(self, other: Self | Any) -> Self:
+    def __rfloordiv__(self, other: Self) -> Self:
         return self._with_binary_right("__rfloordiv__", other)
 
-    def __pow__(self, other: Self | Any) -> Self:
+    def __pow__(self, other: Self) -> Self:
         return self._with_binary("__pow__", other)
 
-    def __rpow__(self, other: Self | Any) -> Self:
+    def __rpow__(self, other: Self) -> Self:
         return self._with_binary_right("__rpow__", other)
 
-    def __mod__(self, other: Self | Any) -> Self:
+    def __mod__(self, other: Self) -> Self:
         return self._with_binary("__mod__", other)
 
-    def __rmod__(self, other: Self | Any) -> Self:
+    def __rmod__(self, other: Self) -> Self:
         return self._with_binary_right("__rmod__", other)
 
     # Unary
@@ -567,10 +567,7 @@ class EagerExpr(
         return self._reuse_series("fill_nan", value=value)
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         return self._reuse_series(
             "fill_null", value=value, strategy=strategy, limit=limit

@@ -58,7 +58,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
     ) -> EvalSeries[SQLLazyFrameT, NativeExprT]:
         def func(df: SQLLazyFrameT) -> list[NativeExprT]:
             native_series_list = self(df)
@@ -74,7 +74,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return func
 
     def _push_down_window_function(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
     ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def window_f(
             df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
@@ -113,7 +113,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         call: Callable[..., NativeExprT],
         window_func: WindowFunction[SQLLazyFrameT, NativeExprT] | None = None,
         /,
-        **expressifiable_args: Self | Any,
+        **expressifiable_args: Self,
     ) -> Self:
         return self.__class__(
             self._callable_to_eval_series(call, **expressifiable_args),
@@ -125,7 +125,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_elementwise(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
     ) -> Self:
         return self.__class__(
             self._callable_to_eval_series(call, **expressifiable_args),
@@ -136,7 +136,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             implementation=self._implementation,
         )
 
-    def _with_binary(self, op: Callable[..., NativeExprT], other: Self | Any) -> Self:
+    def _with_binary(self, op: Callable[..., NativeExprT], other: Self) -> Self:
         return self.__class__(
             self._callable_to_eval_series(op, other=other),
             self._push_down_window_function(op, other=other),

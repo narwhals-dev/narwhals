@@ -43,7 +43,6 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         ModeKeepStrategy,
-        NonNestedLiteral,
         RollingInterpolationMethod,
     )
 
@@ -131,7 +130,7 @@ class DaskExpr(
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         /,
-        **expressifiable_args: Self | Any,
+        **expressifiable_args: Self,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
@@ -207,7 +206,7 @@ class DaskExpr(
 
     def __floordiv__(self, other: Any) -> Self:
         def _floordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series
         ) -> dx.Series:
             series, other = align_series_full_broadcast(df, series, other)
             return (series.__floordiv__(other)).where(other != 0, None)
@@ -261,7 +260,7 @@ class DaskExpr(
 
     def __rfloordiv__(self, other: Any) -> Self:
         def _rfloordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series | Any
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series
         ) -> dx.Series:
             series, other = align_series_full_broadcast(df, series, other)
             return (other.__floordiv__(series)).where(series != 0, None)
@@ -444,10 +443,7 @@ class DaskExpr(
         return self._with_callable(func)
 
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             if value is not None:
