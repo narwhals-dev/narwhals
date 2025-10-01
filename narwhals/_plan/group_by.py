@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.protocols import GroupByResolver as Resolved, Grouper
+from narwhals._plan.compliant.group_by import GroupByResolver as Resolved, Grouper
 from narwhals._plan.typing import DataFrameT
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class GroupBy(Generic[DataFrameT]):
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> DataFrameT:
         frame = self._frame
-        return frame._from_compliant(
+        return frame._with_compliant(
             self._grouper.agg(*aggs, **named_aggs)
             .resolve(frame)
             .evaluate(frame._compliant)
@@ -35,7 +35,7 @@ class GroupBy(Generic[DataFrameT]):
         frame = self._frame
         resolver = self._grouper.agg().resolve(frame)
         for key, df in frame._compliant.group_by_resolver(resolver):
-            yield key, frame._from_compliant(df)
+            yield key, frame._with_compliant(df)
 
 
 class Grouped(Grouper["Resolved"]):

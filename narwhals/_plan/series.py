@@ -2,23 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
-from narwhals._plan.typing import NativeSeriesT
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
 from narwhals._utils import Version
 from narwhals.dependencies import is_pyarrow_chunked_array
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    import pyarrow as pa
-    from typing_extensions import Self
-
-    from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import NativeSeries
 
 
-class Series(Generic[NativeSeriesT]):
-    _compliant: CompliantSeries[NativeSeriesT]
+class Series(Generic[NativeSeriesT_co]):
+    _compliant: CompliantSeries[NativeSeriesT_co]
     _version: ClassVar[Version] = Version.MAIN
 
     @property
@@ -33,27 +29,21 @@ class Series(Generic[NativeSeriesT]):
     def name(self) -> str:
         return self._compliant.name
 
-    # NOTE: Gave up on trying to get typing working for now
+    def __init__(self, compliant: CompliantSeries[NativeSeriesT_co], /) -> None:
+        self._compliant = compliant
+
     @classmethod
     def from_native(
-        cls, native: NativeSeries, name: str = "", /
-    ) -> Series[pa.ChunkedArray[Any]]:
+        cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /
+    ) -> Series[NativeSeriesT]:
         if is_pyarrow_chunked_array(native):
             from narwhals._plan.arrow.series import ArrowSeries
 
-            return ArrowSeries.from_native(
-                native, name, version=cls._version
-            ).to_narwhals()
+            return cls(ArrowSeries.from_native(native, name, version=cls._version))
 
         raise NotImplementedError(type(native))
 
-    @classmethod
-    def _from_compliant(cls, compliant: CompliantSeries[NativeSeriesT], /) -> Self:
-        obj = cls.__new__(cls)
-        obj._compliant = compliant
-        return obj
-
-    def to_native(self) -> NativeSeriesT:
+    def to_native(self) -> NativeSeriesT_co:
         return self._compliant.native
 
     def to_list(self) -> list[Any]:
@@ -63,5 +53,5 @@ class Series(Generic[NativeSeriesT]):
         yield from self.to_native()
 
 
-class SeriesV1(Series[NativeSeriesT]):
+class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1
