@@ -207,13 +207,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, expr, other))
+            F = self._F
+            return F.when(
+                other != F.lit(0), F.floor(true_divide(F, expr, other))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, other, expr))
+            F = self._F
+            return F.when(
+                expr != F.lit(0), F.floor(true_divide(F, other, expr))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 
@@ -323,14 +329,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def kurtosis(self) -> Self:
         return self._with_callable(self._F.kurtosis)
-
-    def n_unique(self) -> Self:
-        def _n_unique(expr: Column) -> Column:
-            return self._F.count_distinct(expr) + self._F.max(
-                self._F.isnull(expr).cast(self._native_dtypes.IntegerType())
-            )
-
-        return self._with_callable(_n_unique)
 
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:
