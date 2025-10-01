@@ -452,27 +452,9 @@ class ArrowScalar(
             chunked = fn.chunked_array(pa_repeat(scalar, length))
         return Series.from_native(chunked, self.name, version=self.version)
 
-    def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(0), name)
-
-    def arg_max(self, node: ArgMax, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(0), name)
-
-    def n_unique(self, node: NUnique, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(1), name)
-
-    def std(self, node: Std, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(None, pa.null()), name)
-
-    def var(self, node: Var, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(None, pa.null()), name)
-
     def count(self, node: Count, frame: Frame, name: str) -> Scalar:
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
-
-    def len(self, node: Len, frame: Frame, name: str) -> Scalar:
-        return self._with_native(pa.scalar(1), name)
 
     filter = not_implemented()
     over = not_implemented()

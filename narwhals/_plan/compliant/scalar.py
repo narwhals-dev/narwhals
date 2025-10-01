@@ -48,31 +48,25 @@ class CompliantScalar(
         version: Version,
     ) -> Self: ...
     def arg_max(self, node: agg.ArgMax, frame: FrameT_contra, name: str) -> Self:
-        """Returns 0."""
-        ...
+        return self.from_python(0, name, dtype=None, version=self.version)
 
     def arg_min(self, node: agg.ArgMin, frame: FrameT_contra, name: str) -> Self:
-        """Returns 0."""
-        ...
+        return self.from_python(0, name, dtype=None, version=self.version)
 
     def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
         """Returns 0 if null, else 1."""
         ...
 
     def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
     def last(self, node: agg.Last, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
     def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
-        """Returns 1."""
-        ...
+        return self.from_python(1, name, dtype=None, version=self.version)
 
     def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
     def mean(self, node: agg.Mean, frame: FrameT_contra, name: str) -> Self:
@@ -82,12 +76,10 @@ class CompliantScalar(
         return self._cast_float(node.expr, frame, name)
 
     def min(self, node: agg.Min, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
     def n_unique(self, node: agg.NUnique, frame: FrameT_contra, name: str) -> Self:
-        """Returns 1."""
-        ...
+        return self.from_python(1, name, dtype=None, version=self.version)
 
     def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
@@ -99,16 +91,13 @@ class CompliantScalar(
         return self._with_evaluated(self._evaluated, name)
 
     def std(self, node: agg.Std, frame: FrameT_contra, name: str) -> Self:
-        """Returns null."""
-        ...
+        return self.from_python(None, name, dtype=None, version=self.version)
 
     def sum(self, node: agg.Sum, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
     def var(self, node: agg.Var, frame: FrameT_contra, name: str) -> Self:
-        """Returns null."""
-        ...
+        return self.from_python(None, name, dtype=None, version=self.version)
 
     # NOTE: `Filter` behaves the same, (maybe) no need to override
 
