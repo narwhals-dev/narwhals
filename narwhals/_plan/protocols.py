@@ -11,23 +11,14 @@ from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import flatten_hash_safe, replace, temp
 from narwhals._plan.compliant.typing import (
     ColumnT_co,
-    ConcatT1,
-    ConcatT2,
     DataFrameT,
     EagerDataFrameT,
-    EagerExprT_co,
-    EagerScalarT_co,
-    ExprT_co,
-    FrameT,
     FrameT_co,
     FrameT_contra,
-    LazyExprT_co,
-    LazyScalarT_co,
     LengthT,
     NamespaceT_co,
     R_co,
     ResolverT_co,
-    ScalarT_co,
     SeriesT,
     SeriesT_co,
     StoresVersion,
@@ -43,9 +34,10 @@ from narwhals._utils import Version
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import (
         BinaryExpr,
@@ -57,20 +49,11 @@ if TYPE_CHECKING:
         functions as F,
     )
     from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
-    from narwhals._plan.expressions.ranges import IntRange
-    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
-    from narwhals._plan.series import Series
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
-    from narwhals.typing import (
-        ConcatMethod,
-        IntoDType,
-        IntoSchema,
-        NonNestedLiteral,
-        PythonLiteral,
-    )
+    from narwhals.typing import IntoDType, IntoSchema, PythonLiteral
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -388,117 +371,6 @@ class LazyScalar(
     LazyExpr[FrameT_contra, SeriesT, LengthT],
     Protocol[FrameT_contra, SeriesT, LengthT],
 ): ...
-
-
-# NOTE: `mypy` is wrong
-# error: Invariant type variable "ConcatT2" used in protocol where covariant one is expected  [misc]
-class Concat(Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
-    @overload
-    def concat(self, items: Iterable[ConcatT1], *, how: ConcatMethod) -> ConcatT1: ...
-    # Series only supports vertical publicly (like in polars)
-    @overload
-    def concat(
-        self, items: Iterable[ConcatT2], *, how: Literal["vertical"]
-    ) -> ConcatT2: ...
-    def concat(
-        self, items: Iterable[ConcatT1 | ConcatT2], *, how: ConcatMethod
-    ) -> ConcatT1 | ConcatT2: ...
-
-
-class EagerConcat(Concat[ConcatT1, ConcatT2], Protocol[ConcatT1, ConcatT2]):  # type: ignore[misc]
-    def _concat_diagonal(self, items: Iterable[ConcatT1], /) -> ConcatT1: ...
-    # Series can be used here to go from [Series, Series] -> DataFrame
-    # but that is only available privately
-    def _concat_horizontal(self, items: Iterable[ConcatT1 | ConcatT2], /) -> ConcatT1: ...
-    def _concat_vertical(
-        self, items: Iterable[ConcatT1 | ConcatT2], /
-    ) -> ConcatT1 | ConcatT2: ...
-
-
-class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
-    @property
-    def _frame(self) -> type[FrameT]: ...
-    @property
-    def _expr(self) -> type[ExprT_co]: ...
-    @property
-    def _scalar(self) -> type[ScalarT_co]: ...
-    def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
-    def lit(
-        self, node: ir.Literal[Any], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
-    def any_horizontal(
-        self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def all_horizontal(
-        self, node: FunctionExpr[boolean.AllHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def max_horizontal(
-        self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def mean_horizontal(
-        self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def concat_str(
-        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def int_range(
-        self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
-    ) -> ExprT_co: ...
-
-
-class EagerNamespace(
-    EagerConcat[EagerDataFrameT, SeriesT],
-    CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
-):
-    @property
-    def _series(self) -> type[SeriesT]: ...
-    @property
-    def _dataframe(self) -> type[EagerDataFrameT]: ...
-    @property
-    def _frame(self) -> type[EagerDataFrameT]:
-        return self._dataframe
-
-    def _is_series(self, obj: Any) -> TypeIs[SeriesT]:
-        return isinstance(obj, self._series)
-
-    def _is_dataframe(self, obj: Any) -> TypeIs[EagerDataFrameT]:
-        return isinstance(obj, self._dataframe)
-
-    @overload
-    def lit(
-        self, node: ir.Literal[NonNestedLiteral], frame: EagerDataFrameT, name: str
-    ) -> EagerScalarT_co: ...
-    @overload
-    def lit(
-        self, node: ir.Literal[Series[Any]], frame: EagerDataFrameT, name: str
-    ) -> EagerExprT_co: ...
-    def lit(
-        self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
-    ) -> EagerExprT_co | EagerScalarT_co: ...
-    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
-        return self._scalar.from_python(
-            len(frame), name or node.name, dtype=None, version=frame.version
-        )
-
-
-class LazyNamespace(
-    Concat[FrameT, FrameT],
-    CompliantNamespace[FrameT, LazyExprT_co, LazyScalarT_co],
-    Protocol[FrameT, LazyExprT_co, LazyScalarT_co],
-):
-    @property
-    def _lazyframe(self) -> type[FrameT]: ...
-    @property
-    def _frame(self) -> type[FrameT]:
-        return self._lazyframe
 
 
 class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
