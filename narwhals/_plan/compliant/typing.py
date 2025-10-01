@@ -13,17 +13,11 @@ if TYPE_CHECKING:
         CompliantDataFrame,
         EagerDataFrame,
     )
+    from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.compliant.namespace import CompliantNamespace
+    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar, LazyScalar
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._plan.protocols import (
-        CompliantExpr,
-        CompliantScalar,
-        EagerExpr,
-        EagerScalar,
-        LazyExpr,
-        LazyScalar,
-    )
     from narwhals._utils import Version
 
 T = TypeVar("T")
