@@ -293,11 +293,7 @@ class EagerExpr(
         )
 
     def _reuse_series(
-        self,
-        method_name: str,
-        *,
-        returns_scalar: bool = False,
-        **expressifiable_args: Any,
+        self, method_name: str, *, returns_scalar: bool = False, **kwargs: Any
     ) -> Self:
         """Reuse Series implementation for expression.
 
@@ -308,14 +304,13 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
-            expressifiable_args: keyword arguments to pass to function, which may
-                be expressifiable (e.g. `nw.col('a').is_between(3, nw.col('b')))`).
+            kwargs: keyword arguments to pass to function.
         """
         func = partial(
             self._reuse_series_inner,
             method_name=method_name,
             returns_scalar=returns_scalar,
-            expressifiable_args=expressifiable_args,
+            **kwargs,
         )
         return self._from_callable(
             func,
@@ -341,12 +336,12 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
-        expressifiable_args: dict[str, Any],
+        **kwargs: Any,
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
             **{
                 name: df._evaluate_expr(value) if self._is_expr(value) else value
-                for name, value in expressifiable_args.items()
+                for name, value in kwargs.items()
             }
         }
         method = methodcaller(
