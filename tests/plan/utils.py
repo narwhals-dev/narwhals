@@ -36,9 +36,18 @@ def assert_expr_ir_equal(
     """
     lhs = _unwrap_ir(actual)
     if isinstance(expected, str):
-        assert repr(lhs) == expected
+        assert repr(lhs) == expected, (
+            f"\nlhs:\n    {lhs!r}\n\nexpected:\n    {expected!r}"
+        )
     elif isinstance(actual, ir.NamedIR) and isinstance(expected, ir.NamedIR):
-        assert actual == expected
+        assert actual == expected, (
+            f"\nactual:\n    {actual!r}\n\nexpected:\n    {expected!r}"
+        )
     else:
         rhs = expected._ir if isinstance(expected, nwp.Expr) else expected
-        assert lhs == rhs
+        assert lhs == rhs, f"\nlhs:\n    {lhs!r}\n\nrhs:\n    {rhs!r}"
+
+
+def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
+    """Helper constructor for test compare."""
+    return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)

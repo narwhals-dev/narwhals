@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
-from narwhals._plan import _expansion, _parse
-from narwhals._plan.contexts import ExprContext
+from narwhals._plan import _parse
+from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.expr import _parse_sort_by
+from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
@@ -18,13 +19,12 @@ from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.protocols import CompliantBaseFrame, CompliantDataFrame
-    from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq
     from narwhals.typing import NativeFrame
 
 
@@ -60,27 +60,19 @@ class BaseFrame(Generic[NativeFrameT]):
     def to_native(self) -> NativeFrameT:
         return self._compliant.native
 
-    def _project(
-        self,
-        exprs: tuple[OneOrIterable[IntoExpr], ...],
-        named_exprs: dict[str, Any],
-        context: ExprContext,
-        /,
-    ) -> tuple[Seq[NamedIR[ExprIR]], FrozenSchema]:
-        """Temp, while these parts aren't connected, this is easier for testing."""
-        irs, schema_frozen, output_names = _expansion.prepare_projection(
-            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), self.schema
-        )
-        named_irs = _expansion.into_named_irs(irs, output_names)
-        return schema_frozen.project(named_irs, context)
-
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, _ = self._project(exprs, named_exprs, ExprContext.SELECT)
-        return self._from_compliant(self._compliant.select(named_irs))
+        named_irs, schema = prepare_projection(
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+        )
+        return self._from_compliant(self._compliant.select(schema.select_irs(named_irs)))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
-        named_irs, _ = self._project(exprs, named_exprs, ExprContext.WITH_COLUMNS)
-        return self._from_compliant(self._compliant.with_columns(named_irs))
+        named_irs, schema = prepare_projection(
+            _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
+        )
+        return self._from_compliant(
+            self._compliant.with_columns(schema.with_columns_irs(named_irs))
+        )
 
     def sort(
         self,
@@ -92,9 +84,15 @@ class BaseFrame(Generic[NativeFrameT]):
         sort, opts = _parse_sort_by(
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
-        irs, _, output_names = _expansion.prepare_projection(sort, self.schema)
-        named_irs = _expansion.into_named_irs(irs, output_names)
+        named_irs, _ = prepare_projection(sort, schema=self)
         return self._from_compliant(self._compliant.sort(named_irs, opts))
+
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+        return self._from_compliant(self._compliant.drop(columns, strict=strict))
+
+    def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
+        subset = [subset] if isinstance(subset, str) else subset
+        return self._from_compliant(self._compliant.drop_nulls(subset))
 
 
 class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
@@ -138,3 +136,29 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
 
     def __len__(self) -> int:
         return len(self._compliant)
+
+    @overload
+    def group_by(
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: Literal[False] = ...,
+        **named_by: IntoExpr,
+    ) -> GroupBy[Self]: ...
+
+    @overload
+    def group_by(
+        self, *by: OneOrIterable[str], drop_null_keys: Literal[True]
+    ) -> GroupBy[Self]: ...
+
+    def group_by(
+        self,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
+    ) -> GroupBy[Self]:
+        return Grouped.by(*by, drop_null_keys=drop_null_keys, **named_by).to_group_by(
+            self
+        )
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        return self._compliant.row(index)

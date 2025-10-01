@@ -5,6 +5,7 @@ from narwhals._plan._expr_ir import (  # prob should move into package?
     NamedIR,
     SelectorIR,
 )
+from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
     aggregation,
     boolean,
@@ -60,6 +61,7 @@ __all__ = [
     "Exclude",
     "ExprIR",
     "Filter",
+    "Function",
     "FunctionExpr",
     "IndexColumns",
     "InvertSelector",

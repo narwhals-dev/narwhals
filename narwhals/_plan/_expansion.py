@@ -87,11 +87,10 @@ if TYPE_CHECKING:
 Excluded: TypeAlias = "frozenset[str]"
 """Internally use a `set`, then freeze before returning."""
 
-GroupByKeys: TypeAlias = "Seq[ExprIR]"
-"""Represents group_by keys.
+GroupByKeys: TypeAlias = "Seq[str]"
+"""Represents `group_by` keys.
 
-- Originates from `polars_plan::plans::conversion::dsl_to_ir::resolve_group_by`
-- Not fully utilized in `narwhals` version yet
+They need to be excluded from expansion.
 """
 
 OutputNames: TypeAlias = "Seq[str]"
@@ -154,24 +153,23 @@ class ExpansionFlags(Immutable):
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], schema: IntoFrozenSchema
-) -> tuple[Seq[ExprIR], FrozenSchema, OutputNames]:
+    exprs: Sequence[ExprIR], /, keys: GroupByKeys = (), *, schema: IntoFrozenSchema
+) -> tuple[Seq[NamedIR], FrozenSchema]:
     """Expand IRs into named column selections.
 
-    **Primary entry-point**, will be used by `select`, `with_columns`,
+    **Primary entry-point**, for `select`, `with_columns`,
     and any other context that requires resolving expression names.
 
     Arguments:
         exprs: IRs that *may* contain things like `Columns`, `SelectorIR`, `Exclude`, etc.
+        keys: Names of `group_by` columns.
         schema: Scope to expand multi-column selectors in.
-
-    Returns:
-        `exprs`, rewritten using `Column(name)` only.
     """
     frozen_schema = freeze_schema(schema)
-    rewritten = rewrite_projections(tuple(exprs), keys=(), schema=frozen_schema)
+    rewritten = rewrite_projections(tuple(exprs), keys=keys, schema=frozen_schema)
     output_names = ensure_valid_exprs(rewritten, frozen_schema)
-    return rewritten, frozen_schema, output_names
+    named_irs = into_named_irs(rewritten, output_names)
+    return named_irs, frozen_schema
 
 
 def into_named_irs(exprs: Seq[ExprIR], names: OutputNames) -> Seq[NamedIR]:
@@ -202,7 +200,7 @@ def _ensure_output_names_unique(exprs: Seq[ExprIR]) -> OutputNames:
 def expand_function_inputs(origin: ExprIR, /, *, schema: FrozenSchema) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         if is_horizontal_reduction(child):
-            rewrites = rewrite_projections(child.input, keys=(), schema=schema)
+            rewrites = rewrite_projections(child.input, schema=schema)
             return common.replace(child, input=rewrites)
         return child
 
@@ -275,7 +273,7 @@ def expand_selector(selector: SelectorIR, schema: FrozenSchema) -> Columns:
 def rewrite_projections(
     input: Seq[ExprIR],  # `FunctionExpr.input`
     /,
-    keys: GroupByKeys,
+    keys: GroupByKeys = (),
     *,
     schema: FrozenSchema,
 ) -> Seq[ExprIR]:
@@ -323,13 +321,10 @@ def prepare_excluded(
     origin: ExprIR, keys: GroupByKeys, flags: ExpansionFlags, /
 ) -> Excluded:
     """Huge simplification of https://github.com/pola-rs/polars/blob/0fa7141ce718c6f0a4d6ae46865c867b177a59ed/crates/polars-plan/src/plans/conversion/expr_expansion.rs#L484-L555."""
-    exclude: set[str] = set()
-    if flags.has_exclude:
-        exclude.update(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
-    for group_by_key in keys:
-        if name := group_by_key.meta.output_name(raise_if_undetermined=False):
-            exclude.add(name)
-    return frozenset(exclude)
+    gb_keys = frozenset(keys)
+    if not flags.has_exclude:
+        return gb_keys
+    return gb_keys.union(*(e.names for e in origin.iter_left() if isinstance(e, Exclude)))
 
 
 def _all_columns_match(origin: ExprIR, /, columns: Columns) -> bool:

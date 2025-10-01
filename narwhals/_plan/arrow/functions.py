@@ -13,11 +13,12 @@ from narwhals._arrow.utils import (
     chunked_array as _chunked_array,
     floordiv_compat as floordiv,
 )
+from narwhals._plan.arrow import options
 from narwhals._plan.expressions import operators as ops
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Iterable, Mapping
 
     from typing_extensions import TypeIs
 
@@ -38,17 +39,20 @@ if TYPE_CHECKING:
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         DataType,
+        DataTypeRemap,
         DataTypeT,
         IntegerScalar,
         IntegerType,
+        LargeStringType,
         NativeScalar,
         Scalar,
         ScalarAny,
         ScalarT,
         StringScalar,
+        StringType,
         UnaryFunction,
     )
-    from narwhals.typing import ClosedInterval
+    from narwhals.typing import ClosedInterval, IntoArrowSchema
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
@@ -133,6 +137,41 @@ def cast(
     return pc.cast(native, target_type, safe=safe)
 
 
+def cast_schema(
+    native: pa.Schema, target_types: DataType | Mapping[str, DataType] | DataTypeRemap
+) -> pa.Schema:
+    if isinstance(target_types, pa.DataType):
+        return pa.schema((name, target_types) for name in native.names)
+    if _is_into_pyarrow_schema(target_types):
+        new_schema = native
+        for name, dtype in target_types.items():
+            index = native.get_field_index(name)
+            new_schema.set(index, native.field(index).with_type(dtype))
+        return new_schema
+    return pa.schema((fld.name, target_types.get(fld.type, fld.type)) for fld in native)
+
+
+def cast_table(
+    native: pa.Table, target: DataType | IntoArrowSchema | DataTypeRemap
+) -> pa.Table:
+    s = target if isinstance(target, pa.Schema) else cast_schema(native.schema, target)
+    return native.cast(s)
+
+
+def has_large_string(data_types: Iterable[DataType], /) -> bool:
+    return any(pa.types.is_large_string(tp) for tp in data_types)
+
+
+def string_type(data_types: Iterable[DataType] = (), /) -> StringType | LargeStringType:
+    """Return a native string type, compatible with `data_types`.
+
+    Until [apache/arrow#45717] is resolved, we need to upcast `string` to `large_string` when joining.
+
+    [apache/arrow#45717]: https://github.com/apache/arrow/issues/45717
+    """
+    return pa.large_string() if has_large_string(data_types) else pa.string()
+
+
 def any_(native: Any) -> pa.BooleanScalar:
     return pc.any(native, min_count=0)
 
@@ -180,21 +219,11 @@ def binary(
 def concat_str(
     *arrays: ChunkedArrayAny, separator: str = "", ignore_nulls: bool = False
 ) -> ChunkedArray[StringScalar]:
-    fn: Incomplete = pc.binary_join_element_wise
-    it, sep = _cast_to_comparable_string_types(arrays, separator)
-    return fn(*it, sep, null_handling="skip" if ignore_nulls else "emit_null")  # type: ignore[no-any-return]
-
-
-def _cast_to_comparable_string_types(
-    arrays: Sequence[ChunkedArrayAny], /, separator: str
-) -> tuple[Iterator[ChunkedArray[StringScalar]], StringScalar]:
-    # Ensure `chunked_arrays` are either all `string` or all `large_string`.
-    dtype = (
-        pa.string()
-        if not any(pa.types.is_large_string(obj.type) for obj in arrays)
-        else pa.large_string()
-    )
-    return (obj.cast(dtype) for obj in arrays), pa.scalar(separator, dtype)
+    dtype = string_type(obj.type for obj in arrays)
+    it = (obj.cast(dtype) for obj in arrays)
+    concat: Incomplete = pc.binary_join_element_wise
+    join = options.join(ignore_nulls=ignore_nulls)
+    return concat(*it, lit(separator, dtype), options=join)  # type: ignore[no-any-return]
 
 
 def int_range(
@@ -260,3 +289,11 @@ def is_series(obj: t.Any) -> TypeIs[ArrowSeries]:
     from narwhals._plan.arrow.series import ArrowSeries
 
     return isinstance(obj, ArrowSeries)
+
+
+def _is_into_pyarrow_schema(obj: Mapping[Any, Any]) -> TypeIs[Mapping[str, DataType]]:
+    return (
+        (first := next(iter(obj.items())), None)
+        and isinstance(first[0], str)
+        and isinstance(first[1], pa.DataType)
+    )

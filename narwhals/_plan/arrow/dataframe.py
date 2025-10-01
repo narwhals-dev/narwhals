@@ -1,15 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+import operator
+from functools import reduce
+from itertools import chain
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.expressions import NamedIR
 from narwhals._plan.protocols import EagerDataFrame, namespace
-from narwhals._utils import Version
+from narwhals._plan.typing import Seq
+from narwhals._utils import Version, parse_columns_to_drop
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -29,10 +35,17 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
+    _native: pa.Table
+    _version: Version
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 
         return ArrowNamespace(self._version)
+
+    @property
+    def _group_by(self) -> type[GroupBy]:
+        return GroupBy
 
     @property
     def columns(self) -> list[str]:
@@ -95,9 +108,25 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         chunked = self.native.column(name)
         return Series.from_native(chunked, name, version=self.version)
 
-    def drop(self, columns: Sequence[str]) -> Self:
-        to_drop = list(columns)
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+        to_drop = parse_columns_to_drop(self, columns, strict=strict)
         return self._with_native(self.native.drop(to_drop))
+
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
+        if subset is None:
+            native = self.native.drop_null()
+        else:
+            to_drop = reduce(operator.or_, (pc.field(name).is_null() for name in subset))
+            native = self.native.filter(~to_drop)
+        return self._with_native(native)
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        names: dict[str, str] | list[str]
+        if fn.BACKEND_VERSION >= (17,):
+            names = cast("dict[str, str]", mapping)
+        else:  # pragma: no cover
+            names = [mapping.get(c, c) for c in self.columns]
+        return self._with_native(self.native.rename_columns(names))
 
     # NOTE: Use instead of `with_columns` for trivial cases
     def _with_columns(self, exprs: Iterable[Expr | Scalar], /) -> Self:
@@ -113,3 +142,10 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
             else:
                 native = native.append_column(name, chunked)
         return self._with_native(native)
+
+    def select_names(self, *column_names: str) -> Self:
+        return self._with_native(self.native.select(list(column_names)))
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        row = self.native.slice(index, 1)
+        return tuple(chain.from_iterable(row.to_pydict().values()))

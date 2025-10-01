@@ -1,12 +1,24 @@
+"""TODO: Split this module up into `narwhals._plan.compliant.*`."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence, Sized
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
-from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.typing import NativeDataFrameT, NativeFrameT, NativeSeriesT, Seq
+from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan.common import flatten_hash_safe, replace, temp
+from narwhals._plan.typing import (
+    IntoExpr,
+    NativeDataFrameT,
+    NativeFrameT,
+    NativeSeriesT,
+    Seq,
+)
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
@@ -15,6 +27,7 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import (
         BinaryExpr,
+        ExprIR,
         FunctionExpr,
         NamedIR,
         aggregation as agg,
@@ -25,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
     from narwhals._plan.series import Series
     from narwhals._plan.typing import OneOrIterable
     from narwhals.dtypes import DType
@@ -49,6 +63,8 @@ ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
 ColumnT = TypeVar("ColumnT")
 ColumnT_co = TypeVar("ColumnT_co", covariant=True)
 
+ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
+
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
@@ -69,7 +85,9 @@ ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
 FrameT = TypeVar("FrameT", bound=FrameAny)
+FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
+DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
@@ -199,6 +217,7 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
         return self.from_native(native, name or self.name, self.version)
 
     # series & scalar
+    def abs(self, node: FunctionExpr[F.Abs], frame: FrameT_contra, name: str) -> Self: ...
     def cast(self, node: ir.Cast, frame: FrameT_contra, name: str) -> Self: ...
     def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
     def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
@@ -267,6 +286,9 @@ class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def count(
         self, node: agg.Count, frame: FrameT_contra, name: str
+    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def len(
+        self, node: agg.Len, frame: FrameT_contra, name: str
     ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
     def max(
         self, node: agg.Max, frame: FrameT_contra, name: str
@@ -372,6 +394,10 @@ class CompliantScalar(
 
     def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
         """Returns 0 if null, else 1."""
+        ...
+
+    def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
+        """Returns 1."""
         ...
 
     def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
@@ -531,6 +557,8 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
     def __narwhals_namespace__(self) -> Any: ...
     @property
+    def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
+    @property
     def native(self) -> NativeFrameT:
         return self._native
 
@@ -553,18 +581,44 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...
     def select(self, irs: Seq[NamedIR]) -> Self: ...
+    def select_names(self, *column_names: str) -> Self: ...
     def with_columns(self, irs: Seq[NamedIR]) -> Self: ...
     def sort(self, by: Seq[NamedIR], options: SortMultipleOptions) -> Self: ...
+    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self: ...
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
 
 
 class CompliantDataFrame(
     CompliantBaseFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    @property
+    def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
+    @property
+    def _grouper(self) -> type[Grouped]:
+        return Grouped
+
     @classmethod
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
+    def group_by_agg(
+        self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
+    ) -> Self:
+        """Compliant-level `group_by(by).agg(agg)`, allows `Expr`."""
+        return self._grouper.by(by).agg(aggs).resolve(self).evaluate(self)
+
+    def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
+        """Compliant-level `group_by`, allowing only `str` keys."""
+        return self._group_by.by_names(self, names)
+
+    def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
+        """Narwhals-level resolved `group_by`.
+
+        `keys`, `aggs` are already parsed and projections planned.
+        """
+        return self._group_by.from_resolver(self, resolver)
+
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
@@ -579,12 +633,15 @@ class CompliantDataFrame(
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
     def __len__(self) -> int: ...
     def with_row_index(self, name: str) -> Self: ...
+    def row(self, index: int) -> tuple[Any, ...]: ...
 
 
 class EagerDataFrame(
     CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    @property
+    def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
     def select(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
@@ -650,3 +707,185 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
 
     def to_list(self) -> list[Any]: ...
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
+
+
+class CompliantGroupBy(Protocol[FrameT_co]):
+    @property
+    def compliant(self) -> FrameT_co: ...
+    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
+
+
+class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
+    _keys: Seq[NamedIR]
+    _key_names: Seq[str]
+
+    @classmethod
+    def from_resolver(
+        cls, df: DataFrameT, resolver: GroupByResolver, /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+    @classmethod
+    def by_names(
+        cls, df: DataFrameT, names: Seq[str], /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    @property
+    def keys(self) -> Seq[NamedIR]:
+        return self._keys
+
+    @property
+    def key_names(self) -> Seq[str]:
+        if names := self._key_names:
+            return names
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
+
+
+class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
+    _df: EagerDataFrameT
+    _key_names: Seq[str]
+    _key_names_original: Seq[str]
+    _column_names_original: Seq[str]
+
+    @classmethod
+    def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
+        obj = cls.__new__(cls)
+        obj._df = df
+        obj._keys = ()
+        obj._key_names = names
+        obj._key_names_original = ()
+        obj._column_names_original = tuple(df.columns)
+        return obj
+
+    @classmethod
+    def from_resolver(
+        cls, df: EagerDataFrameT, resolver: GroupByResolver, /
+    ) -> EagerDataFrameGroupBy[EagerDataFrameT]:
+        key_names = resolver.key_names
+        if not resolver.requires_projection():
+            df = df.drop_nulls(key_names) if resolver._drop_null_keys else df
+            return cls.by_names(df, key_names)
+        obj = cls.__new__(cls)
+        unique_names = temp.column_names(chain(key_names, df.columns))
+        safe_keys = tuple(
+            replace(key, name=name) for key, name in zip(resolver.keys, unique_names)
+        )
+        obj._df = df.with_columns(resolver._schema_in.with_columns_irs(safe_keys))
+        obj._keys = safe_keys
+        obj._key_names = tuple(e.name for e in safe_keys)
+        obj._key_names_original = key_names
+        obj._column_names_original = resolver._schema_in.names
+        return obj
+
+
+class Grouper(Protocol[ResolverT_co]):
+    """`GroupBy` helper for collecting and forwarding `Expr`s for projection.
+
+    - Uses `Expr` everywhere (no need to duplicate layers)
+    - Resolver only needs schema (neither needs a frame, but can use one to get `schema`)
+    """
+
+    _keys: Seq[ExprIR]
+    _aggs: Seq[ExprIR]
+    _drop_null_keys: bool
+
+    @classmethod
+    def by(cls, *by: OneOrIterable[IntoExpr]) -> Self:
+        obj = cls.__new__(cls)
+        obj._keys = parse_into_seq_of_expr_ir(*by)
+        return obj
+
+    def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
+        self._aggs = parse_into_seq_of_expr_ir(*aggs)
+        return self
+
+    @property
+    def _resolver(self) -> type[ResolverT_co]: ...
+
+    def resolve(self, context: IntoFrozenSchema, /) -> ResolverT_co:
+        """Project keys and aggs in `context`, expanding all `Expr` -> `NamedIR`."""
+        return self._resolver.from_grouper(self, context)
+
+
+class GroupByResolver:
+    """Narwhals-level `GroupBy` resolver."""
+
+    _schema_in: FrozenSchema
+    _keys: Seq[NamedIR]
+    _aggs: Seq[NamedIR]
+    _key_names: Seq[str]
+    _schema: FrozenSchema
+    _drop_null_keys: bool
+
+    @property
+    def keys(self) -> Seq[NamedIR]:
+        return self._keys
+
+    @property
+    def aggs(self) -> Seq[NamedIR]:
+        return self._aggs
+
+    @property
+    def key_names(self) -> Seq[str]:
+        if names := self._key_names:
+            return names
+        if keys := self.keys:
+            return tuple(e.name for e in keys)
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self._schema
+
+    def evaluate(self, frame: DataFrameT) -> DataFrameT:
+        """Perform the `group_by` on `frame`."""
+        return frame.group_by_resolver(self).agg(self.aggs)
+
+    @classmethod
+    def from_grouper(cls, grouper: Grouper[Self], context: IntoFrozenSchema, /) -> Self:
+        """Loosely based on [`resolve_group_by`].
+
+        [`resolve_group_by`]: https://github.com/pola-rs/polars/blob/cdd247aaba8db3332be0bd031e0f31bc3fc33f77/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1125-L1227
+        """
+        obj = cls.__new__(cls)
+        keys, schema_in = prepare_projection(grouper._keys, schema=context)
+        obj._keys, obj._schema_in = keys, schema_in
+        obj._key_names = tuple(e.name for e in keys)
+        obj._aggs, _ = prepare_projection(grouper._aggs, obj.key_names, schema=schema_in)
+        obj._schema = schema_in.select(keys).merge(schema_in.select(obj._aggs))
+        obj._drop_null_keys = grouper._drop_null_keys
+        return obj
+
+    def requires_projection(self, *, allow_aliasing: bool = False) -> bool:
+        """Return True is group keys contain anything that is not a column selection.
+
+        Notes:
+            If False is returned, we can just use the resolved key names as a fast-path to group.
+
+        Arguments:
+            allow_aliasing: If False (default), any aliasing is not considered to be column selection.
+        """
+        if not all(key.is_column(allow_aliasing=allow_aliasing) for key in self.keys):
+            if self._drop_null_keys:
+                msg = "drop_null_keys cannot be True when keys contains Expr or Series"
+                raise NotImplementedError(msg)
+            return True
+        return False
+
+
+class Resolved(GroupByResolver):
+    """Compliant-level `GroupBy` resolver."""
+
+    _drop_null_keys: bool = False
+
+
+class Grouped(Grouper[Resolved]):
+    """Compliant-level `GroupBy` builder."""
+
+    _keys: Seq[ExprIR]
+    _aggs: Seq[ExprIR]
+    _drop_null_keys: bool = False
+
+    @property
+    def _resolver(self) -> type[Resolved]:
+        return Resolved
