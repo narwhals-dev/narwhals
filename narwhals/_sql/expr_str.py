@@ -1,32 +1,29 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeAlias
+import operator
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._sql.typing import SQLExprT
 
 if TYPE_CHECKING:
-    # TODO(unassigned): Make string namespace generic in NativeExprT too.
-    NativeExpr: TypeAlias = Any
+    from narwhals._compliant.expr import NativeExpr
 
 
 class SQLExprStringNamespace(
     LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
 ):
     def _lit(self, value: Any) -> NativeExpr:
-        return self.compliant._lit(value)
+        return self.compliant._lit(value)  # type: ignore[no-any-return]
 
     def _function(self, name: str, *args: Any) -> NativeExpr:
-        return self.compliant._function(name, *args)
+        return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
     def _when(
-        self,
-        condition: NativeExpr,
-        value: NativeExpr,
-        otherwise: NativeExpr | None = None,
+        self, condition: Any, value: Any, otherwise: Any | None = None
     ) -> NativeExpr:
-        return self.compliant._when(condition, value, otherwise)
+        return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
     def contains(self, pattern: str, *, literal: bool) -> SQLExprT:
         def func(expr: NativeExpr) -> NativeExpr:
@@ -64,7 +61,7 @@ class SQLExprStringNamespace(
             col_length = self._function("length", expr)
 
             _offset = (
-                col_length + self._lit(offset + 1)
+                operator.add(col_length, self._lit(offset + 1))
                 if offset < 0
                 else self._lit(offset + 1)
             )
@@ -119,10 +116,10 @@ class SQLExprStringNamespace(
                 "lpad", substring, self._lit(width - 1), zero
             )
             return self._when(
-                starts_with_minus & less_than_width,
+                operator.and_(starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
                 self._when(
-                    starts_with_plus & less_than_width,
+                    operator.and_(starts_with_plus, less_than_width),
                     self._function("concat", plus, padded_substring),
                     self._when(
                         less_than_width,

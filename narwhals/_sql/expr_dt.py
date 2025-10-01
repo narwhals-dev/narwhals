@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeAlias
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._sql.typing import SQLExprT
 
 if TYPE_CHECKING:
-    # TODO(unassigned): Make string namespace generic in NativeExprT too.
-    NativeExpr: TypeAlias = Any
+    from narwhals._compliant.expr import NativeExpr
 
 
 class SQLExprDateTimeNamesSpace(
     LazyExprNamespace[SQLExprT], DateTimeNamespace[SQLExprT], Generic[SQLExprT]
 ):
     def _function(self, name: str, *args: Any) -> NativeExpr:
-        return self.compliant._function(name, *args)
+        return self.compliant._function(name, *args)  # type: ignore[no-any-return]
 
     def year(self) -> SQLExprT:
         return self.compliant._with_elementwise(lambda expr: self._function("year", expr))
