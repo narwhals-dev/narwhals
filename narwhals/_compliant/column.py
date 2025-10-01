@@ -21,7 +21,6 @@ if TYPE_CHECKING:
         FillNullStrategy,
         IntoDType,
         ModeKeepStrategy,
-        NonNestedLiteral,
         RankMethod,
     )
 
@@ -85,10 +84,7 @@ class CompliantColumn(Protocol):
     def sqrt(self) -> Self: ...
     def fill_nan(self, value: float | None) -> Self: ...
     def fill_null(
-        self,
-        value: Self | NonNestedLiteral,
-        strategy: FillNullStrategy | None,
-        limit: int | None,
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self: ...
     def is_between(
         self, lower_bound: Self, upper_bound: Self, closed: ClosedInterval

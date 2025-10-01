@@ -229,7 +229,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
 
     def fill_null(
-        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
             if self._backend_version < (1, 3):  # pragma: no cover
@@ -262,6 +262,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def _fill_constant(expr: Expression, value: Any) -> Expression:
             return CoalesceOperator(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:

@@ -562,7 +562,7 @@ class EagerExpr(
         return self._reuse_series("fill_nan", value=value)
 
     def fill_null(
-        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         return self._reuse_series(
             "fill_null", value=value, strategy=strategy, limit=limit

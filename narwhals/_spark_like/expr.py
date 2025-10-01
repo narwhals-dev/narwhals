@@ -333,7 +333,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_nan)
 
     def fill_null(
-        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
 
@@ -361,6 +361,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         def _fill_constant(expr: Column, value: Column) -> Column:
             return self._F.ifnull(expr, value)
 
+        assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, value=value)
 
     @property

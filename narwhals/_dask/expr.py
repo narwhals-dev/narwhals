@@ -443,7 +443,7 @@ class DaskExpr(
         return self._with_callable(func)
 
     def fill_null(
-        self, value: Self | Any, strategy: FillNullStrategy | None, limit: int | None
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             if value is not None:

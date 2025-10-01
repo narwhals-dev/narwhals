@@ -255,7 +255,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_callable(lambda expr: expr.isin(other))
 
-    def fill_null(self, value: Self | Any, strategy: Any, limit: int | None) -> Self:
+    def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
         # strategies inconsistent when there are nulls present: https://github.com/ibis-project/ibis/issues/9539
         if strategy is not None:
@@ -268,6 +268,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         def _fill_null(expr: ir.Value, value: ir.Scalar) -> ir.Value:
             return expr.fill_null(value)
 
+        assert value is not None  # noqa: S101
         return self._with_callable(_fill_null, value=value)
 
     def cast(self, dtype: IntoDType) -> Self:
