@@ -32,27 +32,27 @@ if TYPE_CHECKING:
 
 class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     @property
-    def _frame(self) -> type[FrameT]: ...
-    @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
+    def _frame(self) -> type[FrameT]: ...
+    @property
     def _scalar(self) -> type[ScalarT_co]: ...
-    def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
-    def lit(
-        self, node: ir.Literal[Any], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
-    def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
-    def any_horizontal(
-        self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
-    ) -> ExprT_co | ScalarT_co: ...
     def all_horizontal(
         self, node: FunctionExpr[boolean.AllHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
+    def any_horizontal(
+        self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: FrameT, name: str
+    def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
+    def concat_str(
+        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
+    ) -> ExprT_co | ScalarT_co: ...
+    def int_range(
+        self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
+    ) -> ExprT_co: ...
+    def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
+    def lit(
+        self, node: ir.Literal[Any], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def max_horizontal(
         self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str
@@ -60,12 +60,12 @@ class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     def mean_horizontal(
         self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def concat_str(
-        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
+    def min_horizontal(
+        self, node: FunctionExpr[F.MinHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
-    def int_range(
-        self, node: ir.RangeExpr[IntRange], frame: FrameT, name: str
-    ) -> ExprT_co: ...
+    def sum_horizontal(
+        self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
+    ) -> ExprT_co | ScalarT_co: ...
 
 
 # NOTE: `mypy` is wrong
@@ -99,18 +99,23 @@ class EagerNamespace(
     Protocol[EagerDataFrameT, SeriesT, EagerExprT_co, EagerScalarT_co],
 ):
     @property
-    def _series(self) -> type[SeriesT]: ...
-    @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
     def _frame(self) -> type[EagerDataFrameT]:
         return self._dataframe
 
+    @property
+    def _series(self) -> type[SeriesT]: ...
+    def _is_dataframe(self, obj: Any) -> TypeIs[EagerDataFrameT]:
+        return isinstance(obj, self._dataframe)
+
     def _is_series(self, obj: Any) -> TypeIs[SeriesT]:
         return isinstance(obj, self._series)
 
-    def _is_dataframe(self, obj: Any) -> TypeIs[EagerDataFrameT]:
-        return isinstance(obj, self._dataframe)
+    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
+        return self._scalar.from_python(
+            len(frame), name or node.name, dtype=None, version=frame.version
+        )
 
     @overload
     def lit(
@@ -123,10 +128,6 @@ class EagerNamespace(
     def lit(
         self, node: ir.Literal[Any], frame: EagerDataFrameT, name: str
     ) -> EagerExprT_co | EagerScalarT_co: ...
-    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
-        return self._scalar.from_python(
-            len(frame), name or node.name, dtype=None, version=frame.version
-        )
 
 
 class LazyNamespace(

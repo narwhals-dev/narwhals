@@ -19,6 +19,20 @@ class CompliantScalar(
 ):
     _name: str
 
+    def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
+        """`polars` interpolates a single scalar as a float."""
+        dtype = self.version.dtypes.Float64()
+        return self.cast(node.cast(dtype), frame, name)
+
+    def _with_evaluated(self, evaluated: Any, name: str) -> Self:
+        """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
+        cls = type(self)
+        obj = cls.__new__(cls)
+        obj._evaluated = evaluated
+        obj._name = name or self.name
+        obj._version = self.version
+        return obj
+
     @property
     def name(self) -> str:
         return self._name
@@ -33,26 +47,17 @@ class CompliantScalar(
         dtype: IntoDType | None,
         version: Version,
     ) -> Self: ...
-    def _with_evaluated(self, evaluated: Any, name: str) -> Self:
-        """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
-        cls = type(self)
-        obj = cls.__new__(cls)
-        obj._evaluated = evaluated
-        obj._name = name or self.name
-        obj._version = self.version
-        return obj
+    def arg_max(self, node: agg.ArgMax, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0."""
+        ...
 
-    def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
-        return self._with_evaluated(self._evaluated, name)
+    def arg_min(self, node: agg.ArgMin, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0."""
+        ...
 
-    def min(self, node: agg.Min, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
-        return self._with_evaluated(self._evaluated, name)
-
-    def sum(self, node: agg.Sum, frame: FrameT_contra, name: str) -> Self:
-        """Returns self."""
-        return self._with_evaluated(self._evaluated, name)
+    def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
+        """Returns 0 if null, else 1."""
+        ...
 
     def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
         """Returns self."""
@@ -62,10 +67,13 @@ class CompliantScalar(
         """Returns self."""
         return self._with_evaluated(self._evaluated, name)
 
-    def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
-        """`polars` interpolates a single scalar as a float."""
-        dtype = self.version.dtypes.Float64()
-        return self.cast(node.cast(dtype), frame, name)
+    def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
+        """Returns 1."""
+        ...
+
+    def max(self, node: agg.Max, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
 
     def mean(self, node: agg.Mean, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
@@ -73,42 +81,34 @@ class CompliantScalar(
     def median(self, node: agg.Median, frame: FrameT_contra, name: str) -> Self:
         return self._cast_float(node.expr, frame, name)
 
-    def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str) -> Self:
-        return self._cast_float(node.expr, frame, name)
+    def min(self, node: agg.Min, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
 
     def n_unique(self, node: agg.NUnique, frame: FrameT_contra, name: str) -> Self:
         """Returns 1."""
         ...
 
-    def std(self, node: agg.Std, frame: FrameT_contra, name: str) -> Self:
-        """Returns null."""
-        ...
-
-    def var(self, node: agg.Var, frame: FrameT_contra, name: str) -> Self:
-        """Returns null."""
-        ...
-
-    def arg_min(self, node: agg.ArgMin, frame: FrameT_contra, name: str) -> Self:
-        """Returns 0."""
-        ...
-
-    def arg_max(self, node: agg.ArgMax, frame: FrameT_contra, name: str) -> Self:
-        """Returns 0."""
-        ...
-
-    def count(self, node: agg.Count, frame: FrameT_contra, name: str) -> Self:
-        """Returns 0 if null, else 1."""
-        ...
-
-    def len(self, node: agg.Len, frame: FrameT_contra, name: str) -> Self:
-        """Returns 1."""
-        ...
+    def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str) -> Self:
+        return self._cast_float(node.expr, frame, name)
 
     def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
 
     def sort_by(self, node: ir.SortBy, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
+
+    def std(self, node: agg.Std, frame: FrameT_contra, name: str) -> Self:
+        """Returns null."""
+        ...
+
+    def sum(self, node: agg.Sum, frame: FrameT_contra, name: str) -> Self:
+        """Returns self."""
+        return self._with_evaluated(self._evaluated, name)
+
+    def var(self, node: agg.Var, frame: FrameT_contra, name: str) -> Self:
+        """Returns null."""
+        ...
 
     # NOTE: `Filter` behaves the same, (maybe) no need to override
 

@@ -25,13 +25,15 @@ if TYPE_CHECKING:
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
     """Minimal broadcasting for `Expr` results."""
 
-    @classmethod
-    def from_series(cls, series: SeriesT, /) -> Self: ...
-    def to_series(self) -> SeriesT: ...
-    def broadcast(self, length: LengthT, /) -> SeriesT: ...
     def _length(self) -> LengthT:
         """Return the length of the current expression."""
         ...
+
+    @classmethod
+    def _length_all(
+        cls, exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]], /
+    ) -> Sequence[LengthT]:
+        return [e._length() for e in exprs]
 
     @classmethod
     def _length_max(cls, lengths: Sequence[LengthT], /) -> LengthT:
@@ -45,12 +47,6 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
         """Return the broadcast length, if all lengths do not equal the maximum."""
 
     @classmethod
-    def _length_all(
-        cls, exprs: Sequence[SupportsBroadcast[SeriesT, LengthT]], /
-    ) -> Sequence[LengthT]:
-        return [e._length() for e in exprs]
-
-    @classmethod
     def align(
         cls, *exprs: OneOrIterable[SupportsBroadcast[SeriesT, LengthT]]
     ) -> Iterator[SeriesT]:
@@ -62,6 +58,11 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
         else:
             for e in exprs:
                 yield e.broadcast(length)
+
+    def broadcast(self, length: LengthT, /) -> SeriesT: ...
+    @classmethod
+    def from_series(cls, series: SeriesT, /) -> Self: ...
+    def to_series(self) -> SeriesT: ...
 
 
 class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
@@ -85,6 +86,8 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
 
 
 class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
+    # NOTE: Needs to stay `covariant` and never be used as a parameter
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...
     @classmethod
     def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> R_co:
         obj = cls.__new__(cls)
@@ -94,6 +97,3 @@ class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     @classmethod
     def from_named_ir(cls, named_ir: ir.NamedIR[ir.ExprIR], frame: FrameT_contra) -> R_co:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
-
-    # NOTE: Needs to stay `covariant` and never be used as a parameter
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...

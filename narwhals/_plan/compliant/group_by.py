@@ -25,24 +25,24 @@ if TYPE_CHECKING:
 
 
 class CompliantGroupBy(Protocol[FrameT_co]):
+    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
     @property
     def compliant(self) -> FrameT_co: ...
-    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
 
 
 class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
 
-    @classmethod
-    def from_resolver(
-        cls, df: DataFrameT, resolver: GroupByResolver, /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
     @classmethod
     def by_names(
         cls, df: DataFrameT, names: Seq[str], /
     ) -> DataFrameGroupBy[DataFrameT]: ...
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    @classmethod
+    def from_resolver(
+        cls, df: DataFrameT, resolver: GroupByResolver, /
+    ) -> DataFrameGroupBy[DataFrameT]: ...
     @property
     def keys(self) -> Seq[NamedIR]:
         return self._keys
@@ -103,18 +103,17 @@ class Grouper(Protocol[ResolverT_co]):
     _aggs: Seq[ExprIR]
     _drop_null_keys: bool
 
+    @property
+    def _resolver(self) -> type[ResolverT_co]: ...
+    def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
+        self._aggs = parse_into_seq_of_expr_ir(*aggs)
+        return self
+
     @classmethod
     def by(cls, *by: OneOrIterable[IntoExpr]) -> Self:
         obj = cls.__new__(cls)
         obj._keys = parse_into_seq_of_expr_ir(*by)
         return obj
-
-    def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
-        self._aggs = parse_into_seq_of_expr_ir(*aggs)
-        return self
-
-    @property
-    def _resolver(self) -> type[ResolverT_co]: ...
 
     def resolve(self, context: IntoFrozenSchema, /) -> ResolverT_co:
         """Project keys and aggs in `context`, expanding all `Expr` -> `NamedIR`."""
@@ -131,31 +130,6 @@ class GroupByResolver:
     _schema: FrozenSchema
     _drop_null_keys: bool
 
-    @property
-    def keys(self) -> Seq[NamedIR]:
-        return self._keys
-
-    @property
-    def aggs(self) -> Seq[NamedIR]:
-        return self._aggs
-
-    @property
-    def key_names(self) -> Seq[str]:
-        if names := self._key_names:
-            return names
-        if keys := self.keys:
-            return tuple(e.name for e in keys)
-        msg = "at least one key is required in a group_by operation"
-        raise ComputeError(msg)
-
-    @property
-    def schema(self) -> FrozenSchema:
-        return self._schema
-
-    def evaluate(self, frame: DataFrameT) -> DataFrameT:
-        """Perform the `group_by` on `frame`."""
-        return frame.group_by_resolver(self).agg(self.aggs)
-
     @classmethod
     def from_grouper(cls, grouper: Grouper[Self], context: IntoFrozenSchema, /) -> Self:
         """Loosely based on [`resolve_group_by`].
@@ -170,6 +144,27 @@ class GroupByResolver:
         obj._schema = schema_in.select(keys).merge(schema_in.select(obj._aggs))
         obj._drop_null_keys = grouper._drop_null_keys
         return obj
+
+    @property
+    def aggs(self) -> Seq[NamedIR]:
+        return self._aggs
+
+    def evaluate(self, frame: DataFrameT) -> DataFrameT:
+        """Perform the `group_by` on `frame`."""
+        return frame.group_by_resolver(self).agg(self.aggs)
+
+    @property
+    def keys(self) -> Seq[NamedIR]:
+        return self._keys
+
+    @property
+    def key_names(self) -> Seq[str]:
+        if names := self._key_names:
+            return names
+        if keys := self.keys:
+            return tuple(e.name for e in keys)
+        msg = "at least one key is required in a group_by operation"
+        raise ComputeError(msg)
 
     def requires_projection(self, *, allow_aliasing: bool = False) -> bool:
         """Return True is group keys contain anything that is not a column selection.
@@ -186,6 +181,10 @@ class GroupByResolver:
                 raise NotImplementedError(msg)
             return True
         return False
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self._schema
 
 
 class Resolved(GroupByResolver):

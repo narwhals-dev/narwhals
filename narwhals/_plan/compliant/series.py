@@ -20,24 +20,24 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     _native: NativeSeriesT
     _name: str
 
+    def __len__(self) -> int:
+        return len(self.native)
+
     def __narwhals_series__(self) -> Self:
         return self
 
-    @property
-    def native(self) -> NativeSeriesT:
-        return self._native
+    def _with_native(self, native: NativeSeriesT) -> Self:
+        return self.from_native(native, self.name, version=self.version)
 
-    @property
-    def dtype(self) -> DType: ...
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def to_narwhals(self) -> Series[NativeSeriesT]:
-        from narwhals._plan.series import Series
-
-        return Series[NativeSeriesT]._from_compliant(self)
-
+    @classmethod
+    def from_iterable(
+        cls,
+        data: Iterable[Any],
+        *,
+        version: Version,
+        name: str = "",
+        dtype: IntoDType | None = None,
+    ) -> Self: ...
     @classmethod
     def from_native(
         cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
@@ -52,24 +52,24 @@ class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
     def from_numpy(
         cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
     ) -> Self: ...
-    @classmethod
-    def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        version: Version,
-        name: str = "",
-        dtype: IntoDType | None = None,
-    ) -> Self: ...
-    def _with_native(self, native: NativeSeriesT) -> Self:
-        return self.from_native(native, self.name, version=self.version)
+    @property
+    def dtype(self) -> DType: ...
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def native(self) -> NativeSeriesT:
+        return self._native
 
     def alias(self, name: str) -> Self:
         return self.from_native(self.native, name, version=self.version)
 
     def cast(self, dtype: IntoDType) -> Self: ...
-    def __len__(self) -> int:
-        return len(self.native)
-
     def to_list(self) -> list[Any]: ...
+    def to_narwhals(self) -> Series[NativeSeriesT]:
+        from narwhals._plan.series import Series
+
+        return Series[NativeSeriesT]._from_compliant(self)
+
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
