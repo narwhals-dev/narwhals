@@ -9,18 +9,13 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
+from narwhals._plan.common import temp
 from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._utils import (
-    Implementation,
-    Version,
-    _StoresNative,
-    generate_temporary_column_name,
-    not_implemented,
-)
+from narwhals._utils import Implementation, Version, _StoresNative, not_implemented
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -231,10 +226,8 @@ class ArrowExpr(  # type: ignore[misc]
 
     def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
-        by = (
-            self._dispatch_expr(e, frame, f"<TEMP>_{idx}")
-            for idx, e in enumerate(node.by)
-        )
+        it_names = temp.column_names(frame)
+        by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
         df = namespace(self)._concat_horizontal((series, *by))
         names = df.columns[1:]
         indices = pc.sort_indices(df.native, options=node.options.to_arrow(names))
@@ -342,7 +335,7 @@ class ArrowExpr(  # type: ignore[misc]
         # NOTE: Converting `over(order_by=..., options=...)` into the right shape for `DataFrame.sort`
         sort_by = tuple(NamedIR.from_ir(e) for e in node.order_by)
         options = node.sort_options.to_multiple(len(node.order_by))
-        idx_name = generate_temporary_column_name(8, frame.columns)
+        idx_name = temp.column_name(frame)
         sorted_context = frame.with_row_index(idx_name).sort(sort_by, options)
         evaluated = node.expr.dispatch(self, sorted_context.drop([idx_name]), name)
         if isinstance(evaluated, ArrowScalar):
