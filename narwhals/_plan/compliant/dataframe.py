@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import ColumnT_co, SeriesT, StoresVersion
+from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
 from narwhals._plan.typing import (
     IntoExpr,
     NativeDataFrameT,
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSchema
 
 
-class CompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
+class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT]):
     _native: NativeFrameT
 
     def __narwhals_namespace__(self) -> Any: ...

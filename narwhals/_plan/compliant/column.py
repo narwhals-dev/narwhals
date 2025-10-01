@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Protocol
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.compliant.typing import (
     FrameT_contra,
+    HasVersion,
     LengthT,
     NamespaceT_co,
     R_co,
     SeriesT,
-    StoresVersion,
 )
 
 if TYPE_CHECKING:
@@ -85,7 +85,7 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         return max_length if required else None
 
 
-class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
+class ExprDispatch(HasVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     # NOTE: Needs to stay `covariant` and never be used as a parameter
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
     @classmethod

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.compliant.typing import StoresVersion
+from narwhals._plan.compliant.typing import HasVersion
 from narwhals._plan.typing import NativeSeriesT
 from narwhals._utils import Version
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
 
-class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
+class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     _native: NativeSeriesT
     _name: str
 

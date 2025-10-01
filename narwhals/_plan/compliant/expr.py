@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
 from narwhals._plan.compliant.typing import (
     FrameT_contra,
+    HasVersion,
     LengthT,
     SeriesT,
     SeriesT_co,
-    StoresVersion,
 )
 from narwhals._utils import Version
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
 
 
-class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):
+class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values."""
 
     _evaluated: Any

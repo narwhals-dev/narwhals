@@ -10,11 +10,11 @@ from narwhals._plan.compliant.typing import (
     EagerScalarT_co,
     ExprT_co,
     FrameT,
+    HasVersion,
     LazyExprT_co,
     LazyScalarT_co,
     ScalarT_co,
     SeriesT,
-    StoresVersion,
 )
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ConcatMethod, NonNestedLiteral
 
 
-class CompliantNamespace(StoresVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
+class CompliantNamespace(HasVersion, Protocol[FrameT, ExprT_co, ScalarT_co]):
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
