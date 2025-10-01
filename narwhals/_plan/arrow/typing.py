@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from narwhals._typing_compat import TypeVar
@@ -23,9 +23,20 @@ if TYPE_CHECKING:
     )
     from typing_extensions import TypeAlias
 
+    from narwhals.typing import NativeDataFrame, NativeSeries
+
     StringScalar: TypeAlias = "Scalar[StringType | LargeStringType]"
     IntegerType: TypeAlias = "Int8Type | Int16Type | Int32Type | Int64Type | Uint8Type | Uint16Type | Uint32Type | Uint64Type"
     IntegerScalar: TypeAlias = "Scalar[IntegerType]"
+
+    class NativeArrowSeries(NativeSeries, Protocol):
+        @property
+        def chunks(self) -> list[Any]: ...
+
+    class NativeArrowDataFrame(NativeDataFrame, Protocol):
+        def column(self, *args: Any, **kwds: Any) -> NativeArrowSeries: ...
+        @property
+        def columns(self) -> Sequence[NativeArrowSeries]: ...
 
 
 ScalarT = TypeVar("ScalarT", bound="pa.Scalar[Any]", default="pa.Scalar[Any]")

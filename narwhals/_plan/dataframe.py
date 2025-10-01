@@ -23,8 +23,10 @@ from narwhals.schema import Schema
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
 
 
@@ -47,6 +49,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
+    # TODO @dangotbanned: Can this be typed?
     def __init__(self, compliant: Any, /) -> None:
         self._compliant = compliant
 
@@ -100,10 +103,20 @@ class DataFrame(
     def _series(self) -> type[Series[NativeSeriesT]]:
         return Series[NativeSeriesT]
 
+    @overload
+    @classmethod
+    def from_native(
+        cls: type[DataFrame[Any, Any]], native: NativeArrowDataFrame, /
+    ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+    @overload
     @classmethod
     def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
-    ) -> DataFrame[NativeDataFrameT]:
+    ) -> DataFrame[NativeDataFrameT]: ...
+    @classmethod
+    def from_native(
+        cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
+    ) -> DataFrame[Any, Any]:
         if is_pyarrow_table(native):
             from narwhals._plan.arrow.dataframe import ArrowDataFrame
 

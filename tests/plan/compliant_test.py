@@ -540,6 +540,7 @@ def test_row_is_py_literal(
 
 
 if TYPE_CHECKING:
+    from typing_extensions import assert_type
 
     def test_protocol_expr() -> None:
         """Static test for all members implemented.
@@ -554,3 +555,14 @@ if TYPE_CHECKING:
         scalar = ArrowScalar()
         assert expr
         assert scalar
+
+    def test_dataframe_from_native_overloads() -> None:
+        """Ensure we can reveal the `NativeSeries` **without** a dependency."""
+        data: dict[str, Any] = {}
+        native_good = pa.table(data)
+        result_good = nwp.DataFrame.from_native(native_good)
+        assert_type(result_good, "nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]")
+
+        native_bad = native_good.to_batches()[0]
+        nwp.DataFrame.from_native(native_bad)  # type: ignore[call-overload]
+        assert_type(native_bad, "pa.RecordBatch")
