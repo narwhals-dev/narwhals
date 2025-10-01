@@ -24,12 +24,12 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.compliant.dataframe import CompliantBaseFrame, CompliantDataFrame
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
     from narwhals.typing import NativeFrame
 
 
 class BaseFrame(Generic[NativeFrameT]):
-    _compliant: CompliantBaseFrame[Any, NativeFrameT]
+    _compliant: CompliantFrame[Any, NativeFrameT]
     _version: ClassVar[Version] = Version.MAIN
 
     @property
@@ -52,7 +52,7 @@ class BaseFrame(Generic[NativeFrameT]):
         raise NotImplementedError
 
     @classmethod
-    def _from_compliant(cls, compliant: CompliantBaseFrame[Any, NativeFrameT], /) -> Self:
+    def _from_compliant(cls, compliant: CompliantFrame[Any, NativeFrameT], /) -> Self:
         obj = cls.__new__(cls)
         obj._compliant = compliant
         return obj

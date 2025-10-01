@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.dataframe import (
-        CompliantBaseFrame,
         CompliantDataFrame,
+        CompliantFrame,
         EagerDataFrame,
     )
     from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
@@ -36,7 +36,7 @@ ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
-FrameAny: TypeAlias = "CompliantBaseFrame[Any, Any]"
+FrameAny: TypeAlias = "CompliantFrame[Any, Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 

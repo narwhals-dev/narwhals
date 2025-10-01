@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoSchema
 
 
-class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
+class CompliantFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
     _native: NativeFrameT
 
     def __narwhals_namespace__(self) -> Any: ...
@@ -71,7 +71,7 @@ class CompliantBaseFrame(StoresVersion, Protocol[ColumnT_co, NativeFrameT]):
 
 
 class CompliantDataFrame(
-    CompliantBaseFrame[SeriesT, NativeDataFrameT],
+    CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
     @property
