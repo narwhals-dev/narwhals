@@ -70,6 +70,6 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def to_narwhals(self) -> Series[NativeSeriesT]:
         from narwhals._plan.series import Series
 
-        return Series[NativeSeriesT]._from_compliant(self)
+        return Series[NativeSeriesT](self)
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...

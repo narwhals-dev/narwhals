@@ -114,7 +114,11 @@ class CompliantDataFrame(
     def to_dict(
         self, *, as_series: bool
     ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]: ...
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+        from narwhals._plan.dataframe import DataFrame
+
+        return DataFrame[NativeDataFrameT, NativeSeriesT](self)
+
     def with_row_index(self, name: str) -> Self: ...
 
 

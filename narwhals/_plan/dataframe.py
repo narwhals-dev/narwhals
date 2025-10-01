@@ -10,7 +10,9 @@ from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     IntoExpr,
     NativeDataFrameT,
+    NativeDataFrameT_co,
     NativeFrameT,
+    NativeFrameT_co,
     NativeSeriesT,
     OneOrIterable,
 )
@@ -21,15 +23,13 @@ from narwhals.schema import Schema
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
-    from narwhals.typing import NativeFrame
 
 
-class BaseFrame(Generic[NativeFrameT]):
-    _compliant: CompliantFrame[Any, NativeFrameT]
+class BaseFrame(Generic[NativeFrameT_co]):
+    _compliant: CompliantFrame[Any, NativeFrameT_co]
     _version: ClassVar[Version] = Version.MAIN
 
     @property
@@ -47,30 +47,26 @@ class BaseFrame(Generic[NativeFrameT]):
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    @classmethod
-    def from_native(cls, native: Any, /) -> Self:
-        raise NotImplementedError
+    def __init__(self, compliant: Any, /) -> None:
+        self._compliant = compliant
 
-    @classmethod
-    def _from_compliant(cls, compliant: CompliantFrame[Any, NativeFrameT], /) -> Self:
-        obj = cls.__new__(cls)
-        obj._compliant = compliant
-        return obj
+    def _with_compliant(self, compliant: CompliantFrame[Any, NativeFrameT], /) -> Self:
+        return type(self)(compliant)
 
-    def to_native(self) -> NativeFrameT:
+    def to_native(self) -> NativeFrameT_co:
         return self._compliant.native
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
-        return self._from_compliant(self._compliant.select(schema.select_irs(named_irs)))
+        return self._with_compliant(self._compliant.select(schema.select_irs(named_irs)))
 
     def with_columns(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(
             _parse.parse_into_seq_of_expr_ir(*exprs, **named_exprs), schema=self
         )
-        return self._from_compliant(
+        return self._with_compliant(
             self._compliant.with_columns(schema.with_columns_irs(named_irs))
         )
 
@@ -85,32 +81,33 @@ class BaseFrame(Generic[NativeFrameT]):
             by, *more_by, descending=descending, nulls_last=nulls_last
         )
         named_irs, _ = prepare_projection(sort, schema=self)
-        return self._from_compliant(self._compliant.sort(named_irs, opts))
+        return self._with_compliant(self._compliant.sort(named_irs, opts))
 
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
-        return self._from_compliant(self._compliant.drop(columns, strict=strict))
+        return self._with_compliant(self._compliant.drop(columns, strict=strict))
 
     def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
-        return self._from_compliant(self._compliant.drop_nulls(subset))
+        return self._with_compliant(self._compliant.drop_nulls(subset))
 
 
-class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSeriesT]):
-    _compliant: CompliantDataFrame[Any, NativeDataFrameT, NativeSeriesT]
+class DataFrame(
+    BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
+):
+    _compliant: CompliantDataFrame[Any, NativeDataFrameT_co, NativeSeriesT]
 
     @property
     def _series(self) -> type[Series[NativeSeriesT]]:
         return Series[NativeSeriesT]
 
-    # NOTE: Gave up on trying to get typing working for now
     @classmethod
-    def from_native(  # type: ignore[override]
-        cls, native: NativeFrame, /
-    ) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]:
+    def from_native(
+        cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
+    ) -> DataFrame[NativeDataFrameT]:
         if is_pyarrow_table(native):
             from narwhals._plan.arrow.dataframe import ArrowDataFrame
 
-            return ArrowDataFrame.from_native(native, cls._version).to_narwhals()
+            return cls(ArrowDataFrame.from_native(native, cls._version))
 
         raise NotImplementedError(type(native))
 
@@ -129,7 +126,7 @@ class DataFrame(BaseFrame[NativeDataFrameT], Generic[NativeDataFrameT, NativeSer
     ) -> dict[str, Series[NativeSeriesT]] | dict[str, list[Any]]:
         if as_series:
             return {
-                key: self._series._from_compliant(value)
+                key: self._series(value)
                 for key, value in self._compliant.to_dict(as_series=as_series).items()
             }
         return self._compliant.to_dict(as_series=as_series)

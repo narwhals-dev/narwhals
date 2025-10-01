@@ -87,9 +87,21 @@ NonNestedLiteralT = TypeVar(
     "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
 )
 NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries", default="NativeSeries")
+NativeSeriesT_co = TypeVar(
+    "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
+)
 NativeFrameT = TypeVar("NativeFrameT", bound="NativeFrame", default="NativeFrame")
+NativeFrameT_co = TypeVar(
+    "NativeFrameT_co", bound="NativeFrame", covariant=True, default="NativeFrame"
+)
 NativeDataFrameT = TypeVar(
     "NativeDataFrameT", bound="NativeDataFrame", default="NativeDataFrame"
+)
+NativeDataFrameT_co = TypeVar(
+    "NativeDataFrameT_co",
+    bound="NativeDataFrame",
+    covariant=True,
+    default="NativeDataFrame",
 )
 LiteralT = TypeVar("LiteralT", bound="NonNestedLiteral | Series[t.Any]", default=t.Any)
 MapIR: TypeAlias = "t.Callable[[ExprIR], ExprIR]"

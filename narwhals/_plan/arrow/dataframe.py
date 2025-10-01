@@ -24,10 +24,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny
+    from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.namespace import ArrowNamespace
-    from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
@@ -62,11 +61,6 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
 
     def __len__(self) -> int:
         return self.native.num_rows
-
-    def to_narwhals(self) -> NwDataFrame[pa.Table, ChunkedArrayAny]:
-        from narwhals._plan.dataframe import DataFrame
-
-        return DataFrame[pa.Table, "ChunkedArrayAny"]._from_compliant(self)
 
     @classmethod
     def from_dict(
