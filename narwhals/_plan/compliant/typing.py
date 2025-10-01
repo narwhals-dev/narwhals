@@ -7,6 +7,7 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.dataframe import (
         CompliantBaseFrame,
         CompliantDataFrame,
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
         CompliantScalar,
         EagerExpr,
         EagerScalar,
-        ExprDispatch,
         LazyExpr,
         LazyScalar,
     )

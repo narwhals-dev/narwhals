@@ -1,16 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Sequence, Sized
+from collections.abc import Sized
 from typing import TYPE_CHECKING, Protocol
 
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.compliant.typing import LengthT, SeriesT
+from narwhals._plan.compliant.typing import (
+    FrameT_contra,
+    LengthT,
+    NamespaceT_co,
+    R_co,
+    SeriesT,
+    StoresVersion,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
     from typing_extensions import Self
 
+    from narwhals._plan import expressions as ir
     from narwhals._plan.typing import OneOrIterable
 
 
@@ -74,3 +82,18 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         max_length = cls._length_max(lengths)
         required = any(len_ != max_length for len_ in lengths)
         return max_length if required else None
+
+
+class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
+    @classmethod
+    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> R_co:
+        obj = cls.__new__(cls)
+        obj._version = frame.version
+        return node.dispatch(obj, frame, name)
+
+    @classmethod
+    def from_named_ir(cls, named_ir: ir.NamedIR[ir.ExprIR], frame: FrameT_contra) -> R_co:
+        return cls.from_ir(named_ir.expr, frame, named_ir.name)
+
+    # NOTE: Needs to stay `covariant` and never be used as a parameter
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...

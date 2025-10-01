@@ -8,8 +8,6 @@ from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
 from narwhals._plan.compliant.typing import (
     FrameT_contra,
     LengthT,
-    NamespaceT_co,
-    R_co,
     SeriesT,
     SeriesT_co,
     StoresVersion,
@@ -23,28 +21,12 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr,
-        NamedIR,
         aggregation as agg,
         boolean,
         functions as F,
     )
     from narwhals._plan.expressions.boolean import IsBetween, IsFinite, IsNan, IsNull, Not
     from narwhals.typing import IntoDType, PythonLiteral
-
-
-class ExprDispatch(StoresVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> R_co:
-        obj = cls.__new__(cls)
-        obj._version = frame.version
-        return node.dispatch(obj, frame, name)
-
-    @classmethod
-    def from_named_ir(cls, named_ir: NamedIR[ir.ExprIR], frame: FrameT_contra) -> R_co:
-        return cls.from_ir(named_ir.expr, frame, named_ir.name)
-
-    # NOTE: Needs to stay `covariant` and never be used as a parameter
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
 class CompliantExpr(StoresVersion, Protocol[FrameT_contra, SeriesT_co]):

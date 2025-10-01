@@ -9,9 +9,10 @@ from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
+from narwhals._plan.compliant.column import ExprDispatch
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._plan.protocols import EagerExpr, EagerScalar, ExprDispatch
+from narwhals._plan.protocols import EagerExpr, EagerScalar
 from narwhals._utils import (
     Implementation,
     Version,
