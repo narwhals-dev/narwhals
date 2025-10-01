@@ -7,7 +7,7 @@ from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
 from narwhals._plan.typing import (
     IntoExpr,
     NativeDataFrameT,
-    NativeFrameT,
+    NativeFrameT_co,
     NativeSeriesT,
     OneOrIterable,
 )
@@ -15,7 +15,7 @@ from narwhals._plan.typing import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.group_by import (
@@ -33,31 +33,22 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
 
+Incomplete: TypeAlias = Any
 
-class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT]):
-    _native: NativeFrameT
 
+class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def __narwhals_namespace__(self) -> Any: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
     ) -> Iterator[ColumnT_co]: ...
     @property
     def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
-    def _with_native(self, native: NativeFrameT) -> Self:
-        return self.from_native(native, self.version)
-
+    def _with_native(self, native: Incomplete) -> Self: ...
     @classmethod
-    def from_native(cls, native: NativeFrameT, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._version = version
-        return obj
-
+    def from_native(cls, native: Incomplete, /, version: Version) -> Self: ...
     @property
-    def native(self) -> NativeFrameT:
-        return self._native
-
-    def to_narwhals(self) -> BaseFrame[NativeFrameT]: ...
+    def native(self) -> NativeFrameT_co: ...
+    def to_narwhals(self) -> BaseFrame[NativeFrameT_co]: ...
     @property
     def columns(self) -> list[str]: ...
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self: ...
@@ -74,12 +65,28 @@ class CompliantDataFrame(
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    _native: NativeDataFrameT
+
     def __len__(self) -> int: ...
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
     @property
     def _grouper(self) -> type[Grouped]:
         return Grouped
+
+    def _with_native(self, native: NativeDataFrameT) -> Self:
+        return self.from_native(native, self.version)
+
+    @classmethod
+    def from_native(cls, native: NativeDataFrameT, /, version: Version) -> Self:
+        obj = cls.__new__(cls)
+        obj._native = native
+        obj._version = version
+        return obj
+
+    @property
+    def native(self) -> NativeDataFrameT:
+        return self._native
 
     @classmethod
     def from_dict(

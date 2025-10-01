@@ -11,7 +11,6 @@ from narwhals._plan.typing import (
     IntoExpr,
     NativeDataFrameT,
     NativeDataFrameT_co,
-    NativeFrameT,
     NativeFrameT_co,
     NativeSeriesT,
     OneOrIterable,
@@ -24,10 +23,12 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
+
+Incomplete: TypeAlias = Any
 
 
 class BaseFrame(Generic[NativeFrameT_co]):
@@ -49,11 +50,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    # TODO @dangotbanned: Can this be typed?
-    def __init__(self, compliant: Any, /) -> None:
+    def __init__(self, compliant: CompliantFrame[Any, NativeFrameT_co], /) -> None:
         self._compliant = compliant
 
-    def _with_compliant(self, compliant: CompliantFrame[Any, NativeFrameT], /) -> Self:
+    def _with_compliant(self, compliant: CompliantFrame[Any, Incomplete], /) -> Self:
         return type(self)(compliant)
 
     def to_native(self) -> NativeFrameT_co:
