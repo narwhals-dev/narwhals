@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expr import Expr, Selector
     from narwhals._plan.expressions.expr import Alias, Cast, Column
     from narwhals._plan.meta import MetaNamespace
-    from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals._plan.typing import ExprIRT2, MapIR, Seq
     from narwhals.dtypes import DType
 

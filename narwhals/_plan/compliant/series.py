@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.protocols import StoresVersion
+from narwhals._plan.compliant.typing import StoresVersion
 from narwhals._plan.typing import NativeSeriesT
 from narwhals._utils import Version
 

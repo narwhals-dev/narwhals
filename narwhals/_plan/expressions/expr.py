@@ -29,12 +29,12 @@ from narwhals.exceptions import InvalidOperationError
 if t.TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.expressions.selectors import Selector
     from narwhals._plan.expressions.window import Window
     from narwhals._plan.options import FunctionOptions, SortMultipleOptions, SortOptions
-    from narwhals._plan.protocols import Ctx, FrameT_contra, R_co
     from narwhals.dtypes import DType
 
 __all__ = [
