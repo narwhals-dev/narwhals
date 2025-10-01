@@ -784,7 +784,7 @@ class EagerExpr(
         return self._reuse_series("sqrt")
 
     def is_between(
-        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
+        self, lower_bound: Self, upper_bound: Self, closed: ClosedInterval
     ) -> Self:
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
