@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.protocols import CompliantBaseFrame, CompliantDataFrame
+    from narwhals._plan.compliant.dataframe import CompliantBaseFrame, CompliantDataFrame
     from narwhals.typing import NativeFrame
 
 

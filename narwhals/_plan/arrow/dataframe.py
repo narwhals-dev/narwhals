@@ -12,9 +12,9 @@ from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
+from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
-from narwhals._plan.protocols import EagerDataFrame
 from narwhals._plan.typing import Seq
 from narwhals._utils import Version, parse_columns_to_drop
 from narwhals.schema import Schema
