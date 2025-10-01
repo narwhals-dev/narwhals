@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._plan._parse import parse_into_seq_of_expr_ir
-from narwhals._plan.protocols import GroupByResolver as Resolved, Grouper
+from narwhals._plan.compliant.group_by import GroupByResolver as Resolved, Grouper
 from narwhals._plan.typing import DataFrameT
 
 if TYPE_CHECKING:

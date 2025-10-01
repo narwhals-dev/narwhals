@@ -7,6 +7,7 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.protocols import (
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
         EagerExpr,
         EagerScalar,
         ExprDispatch,
-        GroupByResolver,
         LazyExpr,
         LazyScalar,
     )
