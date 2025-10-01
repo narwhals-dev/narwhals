@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.protocols import CompliantSeries
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals.dtypes import DType
     from narwhals.typing import NativeSeries
 

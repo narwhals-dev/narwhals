@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expr import Expr
-    from narwhals._plan.protocols import CompliantSeries
     from narwhals._plan.series import Series
     from narwhals._plan.typing import NativeSeriesT, Seq
     from narwhals.typing import NonNestedLiteral

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_dtype
 from narwhals._plan.arrow import functions as fn
-from narwhals._plan.protocols import CompliantSeries
+from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._utils import Version
 from narwhals.dependencies import is_numpy_array_1d
 

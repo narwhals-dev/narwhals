@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import (
         BinaryExpr,
@@ -44,12 +45,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ConcatMethod,
-        Into1DArray,
         IntoDType,
         IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
-        _1DArray,
     )
 
 T = TypeVar("T")
@@ -648,65 +647,6 @@ class EagerDataFrame(
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
-
-
-class CompliantSeries(StoresVersion, Protocol[NativeSeriesT]):
-    _native: NativeSeriesT
-    _name: str
-
-    def __narwhals_series__(self) -> Self:
-        return self
-
-    @property
-    def native(self) -> NativeSeriesT:
-        return self._native
-
-    @property
-    def dtype(self) -> DType: ...
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def to_narwhals(self) -> Series[NativeSeriesT]:
-        from narwhals._plan.series import Series
-
-        return Series[NativeSeriesT]._from_compliant(self)
-
-    @classmethod
-    def from_native(
-        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._name = name
-        obj._version = version
-        return obj
-
-    @classmethod
-    def from_numpy(
-        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self: ...
-    @classmethod
-    def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        version: Version,
-        name: str = "",
-        dtype: IntoDType | None = None,
-    ) -> Self: ...
-    def _with_native(self, native: NativeSeriesT) -> Self:
-        return self.from_native(native, self.name, version=self.version)
-
-    def alias(self, name: str) -> Self:
-        return self.from_native(self.native, name, version=self.version)
-
-    def cast(self, dtype: IntoDType) -> Self: ...
-    def __len__(self) -> int:
-        return len(self.native)
-
-    def to_list(self) -> list[Any]: ...
-    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
 
 
 class CompliantGroupBy(Protocol[FrameT_co]):
