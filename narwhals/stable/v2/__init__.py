@@ -971,6 +971,10 @@ def concat_str(
     )
 
 
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    return _stableify(nw.format(f_string, *args))
+
+
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     """Folds the columns from left to right, keeping the first non-null value.
 
