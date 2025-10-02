@@ -79,59 +79,8 @@ def _native_agg(
     return methodcaller(name, **kwds)
 
 
-# NOTE: Caching disabled to avoid using an `apply` warning either:
-# - Once per unique args
-# - Once per column in a multi-output expression
-# *Least bad* option is to warn once per expression
-def _native_ordered_agg(
-    name: OrderedAggregation, *, has_pyarrow_string: bool, is_cudf: bool
-) -> _NativeAgg:
-    """Best effort alignment of `first`, `last` across versions.
-
-    The way `polars` works **by default**, is a constantly moving target in `pandas` 😫
-    """
-    pd_version = Implementation.PANDAS._backend_version()
-    if (
-        is_cudf
-        or has_pyarrow_string
-        or (pd_version >= (2, 0, 0) and pd_version < _MINIMUM_SKIPNA)
-    ):
-        # NOTE: `>=2.0.0; <2.2.1` breaks the `nth` workaround
-        # ATOW (`2.3.1`), `string[pyarrow]` has always required `apply`
-        # https://github.com/pandas-dev/pandas/issues/13666
-        # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v2.0.0.html#dataframegroupby-nth-and-seriesgroupby-nth-now-behave-as-filtrations
-        return _apply_ordered_agg(
-            name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf
-        )
-    if pd_version >= _MINIMUM_SKIPNA:
-        # NOTE: Introduces option to disable default null skipping
-        # https://github.com/pandas-dev/pandas/pull/57102
-        return methodcaller(name, skipna=False)
-    if pd_version >= (1, 1, 5):  # pragma: no cover
-        # NOTE: `>=1.1.5; <2.0.0`, `nth` could be used as a non-skipping aggregation
-        # https://github.com/pandas-dev/pandas/issues/57019#issuecomment-1905038446
-        return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
-    # NOTE: `<1.1.5`, nulls weren't skipped by default
-    # https://github.com/pandas-dev/pandas/issues/38286
-    return methodcaller(name)  # pragma: no cover
-
-
-def _apply_ordered_agg(
-    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
-) -> Callable[[NativeGroupBy], pd.DataFrame]:
-    """Taken from https://github.com/pandas-dev/pandas/issues/57019#issue-2094896421.
-
-    - Theoretically could be slow
-    - but works in all cases for `string[pyarrow]`
-    - and `>=2.0.0; <2.2.1`
-    """
-    warn_ordered_apply(name, has_pyarrow_string=has_pyarrow_string, is_cudf=is_cudf)
-    index = _REMAP_ORDERED_INDEX[name]
-
-    def fn(dgb: NativeGroupBy, /) -> pd.DataFrame:
-        return dgb.apply(lambda group: group.iloc[index])
-
-    return fn
+def _native_ordered_agg(name: OrderedAggregation) -> _NativeAgg:
+    return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
 
 
 def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
@@ -219,6 +168,12 @@ class AggExpr:
                     for col in cols
                 ]
             )
+        elif self.is_last() or self.is_first():
+            select = names[0] if len(names) == 1 else list(names)
+            result = self.native_agg(group_by)(
+                group_by._grouped[[*group_by._keys, *select]]
+            )
+            result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg(group_by)(group_by._grouped[select])
@@ -230,6 +185,12 @@ class AggExpr:
 
     def is_len(self) -> bool:
         return self.leaf_name == "len"
+
+    def is_last(self) -> bool:
+        return self.leaf_name == "last"
+
+    def is_first(self) -> bool:
+        return self.leaf_name == "first"
 
     def is_mode(self) -> bool:
         return self.leaf_name == "mode"
@@ -257,14 +218,7 @@ class AggExpr:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
         if _is_ordered_agg(native_name):
-            dtypes: pd.Series = group_by.compliant.native.dtypes
-            targets = dtypes[list(self.output_names)]
-            has_pyarrow_string = targets.transform(_is_pyarrow_string).any().item()
-            return _native_ordered_agg(
-                native_name,
-                has_pyarrow_string=has_pyarrow_string,
-                is_cudf=self.implementation.is_cudf(),
-            )
+            return _native_ordered_agg(native_name)
         return _native_agg(native_name, **self.kwargs)
 
 

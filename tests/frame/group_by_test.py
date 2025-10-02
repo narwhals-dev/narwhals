@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime as dt
 import os
 import re
-from contextlib import nullcontext
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +23,6 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from contextlib import AbstractContextManager
 
     from narwhals.typing import NonNestedLiteral
 
@@ -683,18 +681,6 @@ def test_top_level_len(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def _warns_context(request: pytest.FixtureRequest) -> AbstractContextManager[Any]:
-    if "[pyarrow]" in request.node.name and "NA-order" in request.node.name:
-        pattern = r"ordered.+safely.+string\[pyarrow\]"
-    elif any(x in str(request.node.name) for x in ("pandas", "modin", "cudf")) and (
-        PANDAS_VERSION >= (2, 0, 0) and PANDAS_VERSION < (2, 2, 1)
-    ):  # pragma: no cover
-        pattern = r"ordered.+safely.+please upgrade.+2.2.1"
-    else:
-        return nullcontext()
-    return pytest.warns(UserWarning, match=re.compile(pattern, re.DOTALL | re.IGNORECASE))
-
-
 @pytest.mark.parametrize(
     ("keys", "aggs", "expected", "pre_sort"),
     [
@@ -733,8 +719,7 @@ def test_group_by_agg_first(
     df = nw.from_native(constructor_eager(data))
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
-    with _warns_context(request):
-        result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
+    result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
     assert_equal_data(result, expected)
 
 
@@ -776,6 +761,5 @@ def test_group_by_agg_last(
     df = nw.from_native(constructor_eager(data))
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
-    with _warns_context(request):
-        result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
+    result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
     assert_equal_data(result, expected)
