@@ -1831,3 +1831,44 @@ def coalesce(
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+
+    Examples:
+    --------
+    >>> import duckdb
+    >>> import narwhals as nw
+    >>> rel = duckdb.sql("select * from values ('a', 1), ('b', 2), ('c', 3) df(a, b)")
+    >>> df = nw.from_native(rel)
+    >>> df.with_columns(formatted=nw.format("foo_{}_bar_{}", nw.col("a"), "b"))
+    ┌─────────────────────────────────┐
+    |       Narwhals LazyFrame        |
+    |---------------------------------|
+    |┌─────────┬───────┬─────────────┐|
+    |│    a    │   b   │  formatted  │|
+    |│ varchar │ int32 │   varchar   │|
+    |├─────────┼───────┼─────────────┤|
+    |│ a       │     1 │ foo_a_bar_1 │|
+    |│ b       │     2 │ foo_b_bar_2 │|
+    |│ c       │     3 │ foo_c_bar_3 │|
+    |└─────────┴───────┴─────────────┘|
+    └─────────────────────────────────┘
+    """
+    if (n_placeholders := f_string.count("{}")) != len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {len(args)}."
+        raise ValueError(msg)
+
+    exprs = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(next(it))
+        if len(s) > 0:
+            exprs.append(lit(s))
+    return concat_str(exprs, separator="")
