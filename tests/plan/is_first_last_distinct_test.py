@@ -11,8 +11,7 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 XFAIL_NO_IMPL_YET = pytest.mark.xfail(
-    reason="Not added `ArrowExpr.is_{first,last}_distinct` yet",
-    raises=NotImplementedError,
+    reason="Not added `ArrowExpr.is_last_distinct` yet", raises=NotImplementedError
 )
 
 
@@ -39,8 +38,7 @@ def expected_invert(expected: Data) -> Data:
     return {k: [not el for el in v] for k, v in expected.items()}
 
 
-@XFAIL_NO_IMPL_YET
-def test_is_first_distinct(data: Data, expected: Data) -> None:  # pragma: no cover
+def test_is_first_distinct(data: Data, expected: Data) -> None:
     result = dataframe(data).select(nwp.all().is_first_distinct())
     assert_equal_data(result, expected)
 
@@ -51,10 +49,7 @@ def test_is_last_distinct(data: Data, expected_invert: Data) -> None:  # pragma:
     assert_equal_data(result, expected_invert)
 
 
-@XFAIL_NO_IMPL_YET
-def test_is_first_distinct_order_by(
-    data_indexed: Data, expected: Data
-) -> None:  # pragma: no cover
+def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
     result = (
         dataframe(data_indexed)
         .select(nwp.col("a", "b").is_first_distinct().over(order_by="i"), "i")

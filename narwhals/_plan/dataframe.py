@@ -86,7 +86,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         named_irs, _ = prepare_projection(sort, schema=self)
         return self._with_compliant(self._compliant.sort(named_irs, opts))
 
-    def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self:
+    def drop(self, *columns: str, strict: bool = True) -> Self:
         return self._with_compliant(self._compliant.drop(columns, strict=strict))
 
     def drop_nulls(self, subset: str | Sequence[str] | None = None) -> Self:

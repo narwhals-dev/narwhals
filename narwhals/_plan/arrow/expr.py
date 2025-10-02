@@ -6,6 +6,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedOrScalarAny, NativeScalar, StoresNativeT_co
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete
-    from narwhals._plan import expressions as ir
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions.aggregation import (
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
         All,
         IsBetween,
         IsFinite,
+        IsFirstDistinct,
         IsNan,
         IsNull,
         Not,
@@ -193,6 +194,9 @@ class ArrowExpr(  # type: ignore[misc]
             return ArrowScalar.from_native(result, name, version=self.version)
         return self.from_native(result, name or self.name, self.version)
 
+    # NOTE: I'm not sure what I meant by
+    # > "isn't natively supported on `ChunkedArray`"
+    # Was that supposed to say "is only supported on `ChunkedArray`"?
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         """Use instead of `_dispatch` *iff* an operation isn't natively supported on `ChunkedArray`.
 
@@ -367,7 +371,20 @@ class ArrowExpr(  # type: ignore[misc]
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
-    is_first_distinct = not_implemented()
+    def is_first_distinct(
+        self, node: FunctionExpr[IsFirstDistinct], frame: Frame, name: str
+    ) -> Self:
+        tmp_name = temp.column_name([name])
+        aggs = (ir.NamedIR.from_ir(ir.col(tmp_name).min()),)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        df_indexed = series.to_frame().with_row_index(tmp_name)
+        row_number = df_indexed.get_column(tmp_name).native
+        first_distinct_index = (
+            df_indexed.group_by_names((name,)).agg(aggs).get_column(tmp_name).native
+        )
+        result: Incomplete = pc.is_in(row_number, first_distinct_index)
+        return self._with_native(result, name)
+
     is_last_distinct = not_implemented()
 
 
