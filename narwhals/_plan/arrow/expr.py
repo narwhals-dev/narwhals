@@ -367,6 +367,9 @@ class ArrowExpr(  # type: ignore[misc]
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
+    is_first_distinct = not_implemented()
+    is_last_distinct = not_implemented()
+
 
 class ArrowScalar(
     _ArrowDispatch["ArrowScalar"],

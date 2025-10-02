@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import aggregation as agg
+    from narwhals._plan.expressions import FunctionExpr, aggregation as agg
+    from narwhals._plan.expressions.boolean import IsFirstDistinct, IsLastDistinct
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -59,6 +60,16 @@ class CompliantScalar(
 
     def first(self, node: agg.First, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
+
+    def is_first_distinct(
+        self, node: FunctionExpr[IsFirstDistinct], frame: FrameT_contra, name: str
+    ) -> Self:
+        return self.from_python(True, name, dtype=None, version=self.version)
+
+    def is_last_distinct(
+        self, node: FunctionExpr[IsLastDistinct], frame: FrameT_contra, name: str
+    ) -> Self:
+        return self.from_python(True, name, dtype=None, version=self.version)
 
     def last(self, node: agg.Last, frame: FrameT_contra, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
