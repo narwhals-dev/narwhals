@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
@@ -125,6 +131,8 @@ def test_first_expr_over_order_by_partition_by(
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+        pytest.skip()
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 1, 2]})
     )
