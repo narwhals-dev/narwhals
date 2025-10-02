@@ -101,7 +101,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         msg = "`first` is not supported for PySpark."
         raise NotImplementedError(msg)
 
-    def _last(self, expr: Column, *order_by: str) -> Column:
+    def _last(self, expr: Column, *order_by: str) -> Column:  # pragma: no cover
         # Docs say it's non-deterministic, with no way to specify order.
         msg = "`last` is not supported for PySpark."
         raise NotImplementedError(msg)

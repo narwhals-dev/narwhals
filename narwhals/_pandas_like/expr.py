@@ -102,7 +102,7 @@ def window_kwargs_to_pandas_equivalent(
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
-    elif function_name == "first":
+    elif function_name in {"first", "last"}:
         pandas_kwargs = {"skipna": False}
     else:  # sum, len, ...
         pandas_kwargs = {}
