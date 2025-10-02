@@ -74,7 +74,7 @@ def test_toplevel() -> None:
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
         "concat_str": ["ab", "ab", "ab"],
-        "fmt": ["1", "1", "1"],
+        "fmt": ["1", "2", "3"],
         "any_h": [True, True, True],
         "all_h": [True, True, True],
         "first": [1, 2, 3],
