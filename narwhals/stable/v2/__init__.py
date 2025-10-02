@@ -972,6 +972,32 @@ def concat_str(
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+
+    Examples:
+    --------
+    >>> import duckdb
+    >>> import narwhals as nw
+    >>> rel = duckdb.sql("select * from values ('a', 1), ('b', 2), ('c', 3) df(a, b)")
+    >>> df = nw.from_native(rel)
+    >>> df.with_columns(formatted=nw.format("foo_{}_bar_{}", nw.col("a"), "b"))
+    ┌─────────────────────────────────┐
+    |       Narwhals LazyFrame        |
+    |---------------------------------|
+    |┌─────────┬───────┬─────────────┐|
+    |│    a    │   b   │  formatted  │|
+    |│ varchar │ int32 │   varchar   │|
+    |├─────────┼───────┼─────────────┤|
+    |│ a       │     1 │ foo_a_bar_1 │|
+    |│ b       │     2 │ foo_b_bar_2 │|
+    |│ c       │     3 │ foo_c_bar_3 │|
+    |└─────────┴───────┴─────────────┘|
+    └─────────────────────────────────┘
+    """
     return _stableify(nw.format(f_string, *args))
 
 
@@ -1320,6 +1346,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
     "from_dicts",

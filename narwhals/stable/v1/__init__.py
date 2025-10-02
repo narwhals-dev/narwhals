@@ -1416,6 +1416,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
     "from_dicts",
