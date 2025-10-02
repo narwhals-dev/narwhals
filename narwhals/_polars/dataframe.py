@@ -185,7 +185,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         order_by: Sequence[str] | None = None,
     ) -> Self:
         if order_by and maintain_order:
-            token = generate_temporary_column_name(8, self.columns)
+            token = generate_temporary_column_name(8, self.columns, prefix="row_index_")
             res = (
                 self.native.with_row_index(token)
                 .sort(order_by, nulls_last=False)
