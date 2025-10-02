@@ -683,6 +683,8 @@ class DaskExpr(
         return DaskExprDateTimeNamespace(self)
 
     rank = not_implemented()
+    first = not_implemented()
+    last = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]
