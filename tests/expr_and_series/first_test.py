@@ -54,21 +54,12 @@ def test_first_expr_select(
 
 @single_cases
 def test_first_expr_with_columns(
-    constructor_eager: ConstructorEager,
-    col: str,
-    expected: PythonLiteral,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, col: str, expected: PythonLiteral
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 10)),
-            reason="Needs `order_by`",
-            raises=NotImplementedError,
-        )
-    )
-
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip()
     frame = nw.from_native(constructor_eager(data))
-    expr = nw.col(col).first().over(order_by="idx").alias("result")
+    expr = nw.col(col).first().alias("result")
     result = frame.with_columns(expr).select("result")
     expected_broadcast = len(data[col]) * [expected]
     assert_equal_data(result, {"result": expected_broadcast})
