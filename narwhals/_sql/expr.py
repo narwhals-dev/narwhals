@@ -194,6 +194,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self.__narwhals_namespace__()._coalesce(*expr)
 
     def _count_star(self) -> NativeExprT: ...
+    def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
+    def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
 
     def _when(
         self,
@@ -667,7 +669,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         ) -> Sequence[NativeExprT]:
             return [
                 self._window_expression(
-                    self._function("first", expr), inputs.partition_by, inputs.order_by
+                    self._first(expr, *inputs.order_by), inputs.partition_by
                 )
                 for expr in self(df)
             ]
@@ -680,7 +682,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         ) -> Sequence[NativeExprT]:
             return [
                 self._window_expression(
-                    self._function("last", expr), inputs.partition_by, inputs.order_by
+                    self._last(expr, *inputs.order_by), inputs.partition_by
                 )
                 for expr in self(df)
             ]
