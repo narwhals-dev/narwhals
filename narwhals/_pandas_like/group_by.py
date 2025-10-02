@@ -9,14 +9,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation, requires, zip_strict
+from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     import pandas as pd
-    from pandas.api.extensions import ExtensionDtype
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
     from typing_extensions import TypeAlias, TypeIs, Unpack
 
@@ -86,10 +85,6 @@ def _native_ordered_agg(name: OrderedAggregation) -> _NativeAgg:
 def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
     """`string[pyarrow]` needs special treatment with nulls in `first`, `last`."""
     return obj in _REMAP_ORDERED_INDEX
-
-
-def _is_pyarrow_string(dtype: ExtensionDtype) -> bool:
-    return dtype.name == _PYARROW_STRING_NAME
 
 
 class AggExpr:
@@ -209,10 +204,6 @@ class AggExpr:
             return name
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
-
-    @property
-    def implementation(self) -> Implementation:
-        return self.expr._implementation
 
     def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
@@ -405,33 +396,3 @@ def warn_complex_group_by() -> None:
         "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
         UserWarning,
     )
-
-
-def warn_ordered_apply(
-    name: OrderedAggregation, /, *, has_pyarrow_string: bool, is_cudf: bool
-) -> None:
-    if is_cudf:  # pragma: no cover
-        msg = (
-            f"cuDF does not support selecting the {name} value without skipping NA.\n\n"
-            "Please see: "
-            "https://docs.rapids.ai/api/cudf/stable/user_guide/api_docs/groupby/"
-        )
-    elif has_pyarrow_string:
-        msg = (
-            f"{_PYARROW_STRING_NAME!r} has different ordering semantics than other pandas dtypes.\n\n"
-            "Please see: "
-            "https://pandas.pydata.org/pdeps/0014-string-dtype.html"
-        )
-    else:  # pragma: no cover
-        found = requires._unparse_version(Implementation.PANDAS._backend_version())
-        minimum = requires._unparse_version(_MINIMUM_SKIPNA)
-        msg = (
-            f"If you can, please upgrade to 'pandas>={minimum}', found version {found!r}.\n\n"
-            "Please see: "
-            "https://github.com/pandas-dev/pandas/issues/57019"
-        )
-    msg = (
-        f"Found ordered group-by aggregation `{name}()`, which can't be expressed both efficiently and "
-        f"safely with the pandas API.\n{msg}"
-    )
-    issue_warning(msg, UserWarning)
