@@ -59,8 +59,6 @@ def concat_str(*exprs: Expression, separator: str = "") -> Expression:
         exprs: Native columns.
         separator: String that will be used to separate the values of each column.
 
-    Returns:
-        A new native expression.
 
     [concat]: https://duckdb.org/docs/stable/sql/functions/char.html#concatstring-
     [concat_ws]: https://duckdb.org/docs/stable/sql/functions/char.html#concat_wsseparator-string-

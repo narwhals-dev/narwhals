@@ -641,9 +641,6 @@ def read_csv(
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
 
-    Returns:
-        DataFrame.
-
     Examples:
         >>> import narwhals as nw
         >>> nw.read_csv("file.csv", backend="pandas")  # doctest:+SKIP
@@ -713,9 +710,6 @@ def scan_csv(
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
 
     Examples:
         >>> import duckdb
@@ -791,9 +785,6 @@ def read_parquet(
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
 
     Examples:
         >>> import pyarrow as pa
@@ -885,9 +876,6 @@ def scan_parquet(
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
-    Returns:
-        LazyFrame.
-
     Examples:
         >>> import dask.dataframe as dd
         >>> from sqlframe.duckdb import DuckDBSession
@@ -965,9 +953,6 @@ def col(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to use.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1007,9 +992,6 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to exclude.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1048,9 +1030,6 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     Arguments:
         indices: One or more indices representing the columns to retrieve.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1085,9 +1064,6 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 def all_() -> Expr:
     """Instantiate an expression representing all columns.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -1108,9 +1084,6 @@ def all_() -> Expr:
 # Add underscore so it doesn't conflict with builtin `len`
 def len_() -> Expr:
     """Return the number of rows.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1147,9 +1120,6 @@ def sum(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -1174,9 +1144,6 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1209,9 +1176,6 @@ def median(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1243,9 +1207,6 @@ def min(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1274,9 +1235,6 @@ def max(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1322,9 +1280,6 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1361,9 +1316,6 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1397,9 +1349,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1546,9 +1495,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1573,7 +1519,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |b: [[false,true,true,null,null,null]]    |
         |all: [[false,false,true,null,false,null]]|
         └─────────────────────────────────────────┘
-
     """
     return _expr_with_n_ary_op(
         "all_horizontal",
@@ -1589,9 +1534,6 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will
             be inferred by the native library.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1633,9 +1575,6 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
               is `False`.
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1681,9 +1620,6 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1727,9 +1663,6 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1781,9 +1714,6 @@ def coalesce(
 
     Raises:
         TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl

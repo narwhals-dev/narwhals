@@ -480,9 +480,6 @@ def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     Arguments:
         native_series: The object to check.
 
-    Returns:
-        `True` if `native_series` can be converted to a Narwhals Series, `False` otherwise.
-
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -516,9 +513,6 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
     Arguments:
         native_dataframe: The object to check.
-
-    Returns:
-        `True` if `native_dataframe` can be converted to a Narwhals DataFrame, `False` otherwise.
 
     Examples:
         >>> import pandas as pd
