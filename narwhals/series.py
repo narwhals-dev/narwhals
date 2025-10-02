@@ -191,9 +191,6 @@ class Series(Generic[IntoSeriesT]):
                 - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
                 - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-        Returns:
-            A new Series
-
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw

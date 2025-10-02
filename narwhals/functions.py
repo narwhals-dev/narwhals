@@ -77,9 +77,6 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
 
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
-
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
 
@@ -191,9 +188,6 @@ def new_series(
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-    Returns:
-        A new Series
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -274,9 +268,6 @@ def from_dict(
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: deprecated, same as `backend`.
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -415,9 +406,6 @@ def from_numpy(
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-    Returns:
-        A new DataFrame.
-
     Examples:
         >>> import numpy as np
         >>> import pyarrow as pa
@@ -496,9 +484,6 @@ def from_arrow(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
