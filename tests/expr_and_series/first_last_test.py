@@ -90,8 +90,20 @@ def test_first_expr_over_order_by(constructor: Constructor) -> None:
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 2, 1]})
     )
-    result = frame.with_columns(nw.col("b", "c").first().over(order_by="i")).sort("i")
-    expected = {"a": [1, 2, 1], "b": [4, 4, 4], "c": [None, None, None], "i": [0, 1, 2]}
+    result = frame.with_columns(
+        nw.col("b", "c").first().over(order_by="i").name.suffix("_first"),
+        nw.col("b", "c").last().over(order_by="i").name.suffix("_last"),
+    ).sort("i")
+    expected = {
+        "a": [1, 2, 1],
+        "b": [4, 6, 5],
+        "c": [None, 8.0, 7.0],
+        "i": [0, 1, 2],
+        "b_first": [4, 4, 4],
+        "c_first": [None, None, None],
+        "b_last": [5, 5, 5],
+        "c_last": [7.0, 7.0, 7.0],
+    }
     assert_equal_data(result, expected)
 
 
@@ -103,8 +115,18 @@ def test_first_expr_over_order_by_partition_by(constructor: Constructor) -> None
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 1, 2]})
     )
-    result = frame.with_columns(nw.col("b", "c").first().over("a", order_by="i")).sort(
-        "i"
-    )
-    expected = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [None, None, 8], "i": [0, 1, 2]}
+    result = frame.with_columns(
+        nw.col("b", "c").first().over("a", order_by="i").name.suffix("_first"),
+        nw.col("b", "c").last().over("a", order_by="i").name.suffix("_last"),
+    ).sort("i")
+    expected = {
+        "a": [1, 2, 1],
+        "b": [4, 6, 5],
+        "c": [None, 8, 7],
+        "i": [0, 1, 2],
+        "b_first": [4, 4, 4],
+        "c_first": [None, None, None],
+        "b_last": [4, 6, 5],
+        "c_last": [None, 8, 7],
+    }
     assert_equal_data(result, expected)
