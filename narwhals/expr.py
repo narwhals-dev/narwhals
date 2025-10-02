@@ -1597,6 +1597,10 @@ class Expr:
     def first(self) -> Self:
         """Get the first value.
 
+        Notes:
+            For lazy backends, this can only be used with `over`. We may introduce
+            `min_by` in the future so it can be used as an aggregation.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -1626,6 +1630,10 @@ class Expr:
 
     def last(self) -> Self:
         """Get the last value.
+
+        Notes:
+            For lazy backends, this can only be used with `over`. We may introduce
+            `max_by` in the future so it can be used as an aggregation.
 
         Examples:
             >>> import pyarrow as pa
