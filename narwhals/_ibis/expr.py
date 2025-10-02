@@ -112,6 +112,16 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
         return expr.over(window)
 
+    def _first(self, expr: ir.Value, *order_by: str) -> ir.Value:
+        return cast("ir.Column", expr).first(
+            order_by=self._sort(*order_by), include_null=True
+        )
+
+    def _last(self, expr: ir.Value, *order_by: str) -> ir.Value:
+        return cast("ir.Column", expr).last(
+            order_by=self._sort(*order_by), include_null=True
+        )
+
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
 

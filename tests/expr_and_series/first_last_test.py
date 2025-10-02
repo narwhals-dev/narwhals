@@ -84,9 +84,17 @@ def test_first_expr_with_columns(
     )
 
 
-def test_first_expr_over_order_by(constructor: Constructor) -> None:
+def test_first_expr_over_order_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
+    if "pyspark" in str(constructor):
+        # Currently unsupported.
+        request.applymarker(pytest.mark.xfail)
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 2, 1]})
     )
@@ -107,11 +115,16 @@ def test_first_expr_over_order_by(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_first_expr_over_order_by_partition_by(constructor: Constructor) -> None:
+def test_first_expr_over_order_by_partition_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 1):
         pytest.skip()
+    if "pyspark" in str(constructor):
+        # Currently unsupported.
+        request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 1, 2]})
     )
