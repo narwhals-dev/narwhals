@@ -661,6 +661,32 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_window_function(func)
 
+    def first(self) -> Self:
+        def func(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._function("first", expr), inputs.partition_by, inputs.order_by
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
+    def last(self) -> Self:
+        def func(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._function("last", expr), inputs.partition_by, inputs.order_by
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
+
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:
             func = self._function("rank")

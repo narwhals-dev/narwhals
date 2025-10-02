@@ -287,9 +287,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(s)
 
     def _scatter_in_place(self, indices: Self, values: Self) -> None:
+        # Scatter, modifying original Series. Use with care!
         implementation = self._implementation
         backend_version = self._backend_version
-        # Scatter, modifying original Series. Use with care!
         values_native = set_index(
             values.native,
             self.native.index[indices.native],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 from narwhals._compliant import EagerExpr
@@ -101,6 +102,8 @@ def window_kwargs_to_pandas_equivalent(
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
+    elif function_name == "first":
+        pandas_kwargs = {"skipna": False}
     else:  # sum, len, ...
         pandas_kwargs = {}
     return pandas_kwargs
@@ -341,9 +344,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
                 results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
-                    for s in results:
-                        s._scatter_in_place(sorting_indices, s)
-                    return results
+                    with warnings.catch_warnings():
+                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                        for s in results:
+                            s._scatter_in_place(sorting_indices, s)
+                        return results
                 if reverse:
                     return [s._gather_slice(slice(None, None, -1)) for s in results]
                 return results
