@@ -554,7 +554,7 @@ jobs:
         run: |
           uv pip uninstall narwhals --system
           # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
-          uv pip install -e ".[polars]" --system
+          uv pip install -e ".[polars]" pyarrow --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
