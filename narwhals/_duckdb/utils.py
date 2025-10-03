@@ -324,11 +324,6 @@ def window_expression(
 ) -> Expression:
     # TODO(unassigned): Replace with `duckdb.WindowExpression` when they release it.
     # https://github.com/duckdb/duckdb/discussions/14725#discussioncomment-11200348
-    try:
-        from duckdb import SQLExpression
-    except ModuleNotFoundError as exc:  # pragma: no cover
-        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
-        raise NotImplementedError(msg) from exc
     pb = generate_partition_by_sql(*partition_by)
     descending = descending or [False] * len(order_by)
     nulls_last = nulls_last or [False] * len(order_by)
@@ -344,7 +339,7 @@ def window_expression(
         rows = ""
 
     func = f"{str(expr).removesuffix(')')} ignore nulls)" if ignore_nulls else str(expr)
-    return SQLExpression(f"{func} over ({pb} {ob} {rows})")
+    return sql_expression(f"{func} over ({pb} {ob} {rows})")
 
 
 def catch_duckdb_exception(
@@ -368,3 +363,12 @@ def function(name: str, *args: Expression) -> Expression:
     if name == "isnull":
         return args[0].isnull()
     return F(name, *args)
+
+
+def sql_expression(expr: str) -> Expression:
+    try:
+        from duckdb import SQLExpression
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.3.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    return SQLExpression(expr)
