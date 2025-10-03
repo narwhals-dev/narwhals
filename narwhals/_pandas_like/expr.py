@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -49,8 +49,8 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 }
 
 
-def window_kwargs_to_pandas_equivalent(
-    function_name: NarwhalsAggregation, kwargs: ScalarKwargs
+def window_kwargs_to_pandas_equivalent(  # noqa: C901
+    function_name: str, kwargs: ScalarKwargs
 ) -> dict[str, PythonLiteral]:
     if function_name == "shift":
         assert "n" in kwargs  # noqa: S101
@@ -111,7 +111,9 @@ def window_kwargs_to_pandas_equivalent(
             "ignore_na": kwargs["ignore_nulls"],
         }
     elif function_name in {"first", "last"}:
-        pandas_kwargs = {"n": _REMAP_ORDERED_INDEX[function_name]}
+        pandas_kwargs = {
+            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)]
+        }
     else:  # sum, len, ...
         pandas_kwargs = {}
     return pandas_kwargs
@@ -275,6 +277,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
+                assert pandas_function_name is not None  # help mypy  # noqa: S101
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
@@ -302,7 +305,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
-                    assert pandas_function_name is not None  # help mypy  # noqa: S101
                     if pandas_function_name in {"std", "var"}:
                         assert "ddof" in self._scalar_kwargs  # noqa: S101
                         res_native = getattr(rolling, pandas_function_name)(
