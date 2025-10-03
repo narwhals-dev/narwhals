@@ -150,9 +150,8 @@ class AggExpr:
                 ]
             )
         elif self.is_last() or self.is_first():
-            select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg(group_by)(
-                group_by._grouped[[*group_by._keys, *select]]
+                group_by._grouped[[*group_by._keys, *names]]
             )
             result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
