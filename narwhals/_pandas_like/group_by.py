@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias, TypeIs, Unpack
+    from typing_extensions import TypeAlias, Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
 NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
-OrderedAggregation: TypeAlias = Literal["first", "last"]
-UnorderedAggregation: TypeAlias = Literal[
+NativeAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
@@ -39,6 +38,7 @@ UnorderedAggregation: TypeAlias = Literal[
     "median",
     "min",
     "mode",
+    "nth",
     "nunique",
     "prod",
     "quantile",
@@ -49,7 +49,6 @@ UnorderedAggregation: TypeAlias = Literal[
     "var",
     InefficientNativeAggregation,
 ]
-NativeAggregation: TypeAlias = Literal[UnorderedAggregation, OrderedAggregation]
 """https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#built-in-aggregation-methods"""
 
 _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
@@ -59,7 +58,7 @@ _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
 
-_REMAP_ORDERED_INDEX: Mapping[OrderedAggregation, Literal[0, -1]] = {
+_REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
 }
@@ -68,23 +67,12 @@ _MINIMUM_SKIPNA = (2, 2, 1)
 
 
 @lru_cache(maxsize=32)
-def _native_agg(
-    name: UnorderedAggregation, /, **kwds: Unpack[ScalarKwargs]
-) -> _NativeAgg:
+def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
-
-
-def _native_ordered_agg(name: OrderedAggregation) -> _NativeAgg:
-    return methodcaller("nth", n=_REMAP_ORDERED_INDEX[name])
-
-
-def _is_ordered_agg(obj: Any) -> TypeIs[OrderedAggregation]:
-    """`string[pyarrow]` needs special treatment with nulls in `first`, `last`."""
-    return obj in _REMAP_ORDERED_INDEX
 
 
 class AggExpr:
@@ -208,8 +196,8 @@ class AggExpr:
     def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
-        if _is_ordered_agg(native_name):
-            return _native_ordered_agg(native_name)
+        if self.leaf_name in _REMAP_ORDERED_INDEX:
+            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
         return _native_agg(native_name, **self.kwargs)
 
 
@@ -231,8 +219,8 @@ class PandasLikeGroupBy(
         "quantile": "quantile",
         "all": "all",
         "any": "any",
-        "first": "first",
-        "last": "last",
+        "first": "nth",
+        "last": "nth",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""

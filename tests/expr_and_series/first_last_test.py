@@ -96,7 +96,9 @@ def test_first_expr_over_order_by(
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
-        constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [0, 2, 1]})
+        constructor(
+            {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [None, 2, 1]}
+        )
     )
     result = frame.with_columns(
         nw.col("b", "c").first().over(order_by="i").name.suffix("_first"),
@@ -106,7 +108,7 @@ def test_first_expr_over_order_by(
         "a": [1, 2, 1],
         "b": [4, 6, 5],
         "c": [None, 8, 7],
-        "i": [0, 1, 2],
+        "i": [None, 1, 2],
         "b_first": [4, 4, 4],
         "c_first": [None, None, None],
         "b_last": [5, 5, 5],
@@ -129,7 +131,9 @@ def test_first_expr_over_order_by_partition_by(
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
-        constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, 0, 2]})
+        constructor(
+            {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
+        )
     )
     result = frame.with_columns(
         nw.col("b", "c").first().over("a", order_by="i").name.suffix("_first"),
@@ -139,7 +143,7 @@ def test_first_expr_over_order_by_partition_by(
         "a": [1, 1, 2],
         "b": [5, 4, 6],
         "c": [7.0, None, 8.0],
-        "i": [0, 1, 2],
+        "i": [None, 1, 2],
         "b_first": [5, 5, 6],
         "c_first": [7.0, 7.0, 8.0],
         "b_last": [4, 4, 6],

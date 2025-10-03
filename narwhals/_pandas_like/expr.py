@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.group_by import PandasLikeGroupBy
+from narwhals._pandas_like.group_by import _REMAP_ORDERED_INDEX, PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._utils import generate_temporary_column_name
 
@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        NarwhalsAggregation,
+        ScalarKwargs,
+    )
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -44,7 +50,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 
 
 def window_kwargs_to_pandas_equivalent(
-    function_name: str, kwargs: ScalarKwargs
+    function_name: NarwhalsAggregation, kwargs: ScalarKwargs
 ) -> dict[str, PythonLiteral]:
     if function_name == "shift":
         assert "n" in kwargs  # noqa: S101
@@ -102,6 +108,8 @@ def window_kwargs_to_pandas_equivalent(
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
+    elif function_name in {"first", "last"}:
+        pandas_kwargs = {"n": _REMAP_ORDERED_INDEX[function_name]}
     else:  # sum, len, ...
         pandas_kwargs = {}
     return pandas_kwargs
@@ -330,23 +338,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         msg = "Safety check failed, please report a bug."
                         raise AssertionError(msg)
                     res_native = grouped.transform("size").to_frame(aliases[0])
-                elif function_name == "first":
+                elif function_name in {"first", "last"}:
                     with warnings.catch_warnings():
                         # Ignore settingwithcopy warnings/errors, they're false-positives here.
                         warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                        _first = grouped[[*partition_by, *output_names]].nth(0)
-                    _first.reset_index(drop=True, inplace=True)
+                        _nth = getattr(
+                            grouped[[*partition_by, *output_names]], pandas_function_name
+                        )(**pandas_kwargs)
+                    _nth.reset_index(drop=True, inplace=True)
                     res_native = df.native[list(partition_by)].merge(
-                        _first, on=list(partition_by)
-                    )[list(output_names)]
-                elif function_name == "last":
-                    with warnings.catch_warnings():
-                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
-                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                        _last = grouped[[*partition_by, *output_names]].nth(-1)
-                    _last.reset_index(drop=True, inplace=True)
-                    res_native = df.native[list(partition_by)].merge(
-                        _last, on=list(partition_by)
+                        _nth, on=list(partition_by)
                     )[list(output_names)]
                 else:
                     res_native = grouped[list(output_names)].transform(
