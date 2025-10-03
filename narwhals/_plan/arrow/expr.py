@@ -391,15 +391,8 @@ class ArrowExpr(  # type: ignore[misc]
         result: Incomplete = pc.is_in(df.get_column(idx_name).native, distinct_index)
         return self._with_native(result, name)
 
-    def is_first_distinct(
-        self, node: FunctionExpr[IsFirstDistinct], frame: Frame, name: str
-    ) -> Self:
-        return self._is_first_last_distinct(node, frame, name)
-
-    def is_last_distinct(
-        self, node: FunctionExpr[IsLastDistinct], frame: Frame, name: str
-    ) -> Self:
-        return self._is_first_last_distinct(node, frame, name)
+    is_first_distinct = _is_first_last_distinct
+    is_last_distinct = _is_first_last_distinct
 
 
 class ArrowScalar(
