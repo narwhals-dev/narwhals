@@ -97,22 +97,31 @@ def test_first_expr_over_order_by(
         request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
         constructor(
-            {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [None, 2, 1]}
+            {
+                "a": [1, 1, 2],
+                "b": [4, 5, 6],
+                "c": [None, 7, 8],
+                "d": ["x", "y", "z"],
+                "i": [None, 2, 1],
+            }
         )
     )
     result = frame.with_columns(
-        nw.col("b", "c").first().over(order_by="i").name.suffix("_first"),
-        nw.col("b", "c").last().over(order_by="i").name.suffix("_last"),
+        nw.col("b", "c", "d").first().over(order_by="i").name.suffix("_first"),
+        nw.col("b", "c", "d").last().over(order_by="i").name.suffix("_last"),
     ).sort("i")
     expected = {
         "a": [1, 2, 1],
         "b": [4, 6, 5],
         "c": [None, 8, 7],
+        "d": ["x", "z", "y"],
         "i": [None, 1, 2],
         "b_first": [4, 4, 4],
         "c_first": [None, None, None],
+        "d_first": ["x", "x", "x"],
         "b_last": [5, 5, 5],
         "c_last": [7, 7, 7],
+        "d_last": ["y", "y", "y"],
     }
     assert_equal_data(result, expected)
 
