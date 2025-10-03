@@ -7,7 +7,7 @@ import pyarrow.compute as pc
 
 from narwhals._arrow.series import ArrowSeries
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import (
     Implementation,
     generate_temporary_column_name,
@@ -128,11 +128,9 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
-                if meta is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
-                    # Orderable aggregations require `order_by` columns and results in a
-                    # scalar output (well actually in a length 1 series).
-                    # Therefore we need to broadcast the results to the original size, since
-                    # `over` is not a length changing operation.
+                if meta is not None and meta.is_scalar_like:
+                    # We need to broadcast the results to the original size, since
+                    # `over` is a length-preserving operation.
                     size = len(df)
                     return [s._with_native(pa.repeat(s.item(), size)) for s in results]
 

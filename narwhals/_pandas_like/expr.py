@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING
 
 from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import ExprKind, evaluate_output_names_and_aliases
+from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.group_by import PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._utils import generate_temporary_column_name
@@ -228,13 +228,10 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
-                if (
-                    meta := self._metadata
-                ) is not None and meta.last_node is ExprKind.ORDERABLE_AGGREGATION:
-                    # Orderable aggregations require `order_by` columns and result in a
-                    # scalar output (well actually in a length 1 series).
-                    # Therefore we need to broadcast the result to the original size, since
-                    # `over` is not a length changing operation.
+                meta = self._metadata
+                if meta is not None and meta.is_scalar_like:
+                    # We need to broadcast the result to the original size, since
+                    # `over` is a length-preserving operation.
                     index = df.native.index
                     ns = self._implementation.to_native_namespace()
                     return [
