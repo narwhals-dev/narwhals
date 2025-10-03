@@ -102,8 +102,6 @@ def window_kwargs_to_pandas_equivalent(
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
-    elif function_name in {"first", "last"}:
-        pandas_kwargs = {"skipna": False}
     else:  # sum, len, ...
         pandas_kwargs = {}
     return pandas_kwargs
@@ -332,6 +330,18 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         msg = "Safety check failed, please report a bug."
                         raise AssertionError(msg)
                     res_native = grouped.transform("size").to_frame(aliases[0])
+                elif function_name == "first":
+                    _first = grouped[[*partition_by, *output_names]].nth(0)
+                    _first.reset_index(drop=True, inplace=True)
+                    res_native = df.native[list(partition_by)].merge(
+                        _first, on=list(partition_by)
+                    )[list(output_names)]
+                elif function_name == "last":
+                    _last = grouped[[*partition_by, *output_names]].nth(-1)
+                    _last.reset_index(drop=True, inplace=True)
+                    res_native = df.native[list(partition_by)].merge(
+                        _last, on=list(partition_by)
+                    )[list(output_names)]
                 else:
                     res_native = grouped[list(output_names)].transform(
                         pandas_function_name, **pandas_kwargs

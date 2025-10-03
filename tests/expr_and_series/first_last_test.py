@@ -5,13 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    Constructor,
-    assert_equal_data,
-)
+from tests.utils import POLARS_VERSION, PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
@@ -125,8 +119,6 @@ def test_first_expr_over_order_by_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
-        pytest.skip()
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 1):
         pytest.skip()
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
