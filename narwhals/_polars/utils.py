@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._polars.dataframe import Method
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
-    from narwhals._polars.typing import NativeAccessor
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
@@ -57,6 +57,12 @@ Includes `SERIES_ACCEPTS_PD_INDEX`.
 
 SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
 """`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
+
+FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
+"""`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638
+
+Typing fix in https://github.com/pola-rs/polars/pull/24584
+"""
 
 
 @overload
@@ -104,7 +110,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pragma: no cover
+    if hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pyright: ignore[reportAttributeAccessIssue] # pragma: no cover
         # Not available for Polars pre 1.8.0
         return dtypes.UInt128()
     if dtype == pl.UInt64:
@@ -261,7 +267,7 @@ class PolarsAnyNamespace(
     _StoresNative[NativeT_co],
     Protocol[CompliantT_co, NativeT_co],
 ):
-    _accessor: ClassVar[NativeAccessor]
+    _accessor: ClassVar[Accessor]
 
     def __getattr__(self, attr: str) -> Callable[..., CompliantT_co]:
         def func(*args: Any, **kwargs: Any) -> CompliantT_co:
@@ -273,7 +279,7 @@ class PolarsAnyNamespace(
 
 
 class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
-    _accessor: ClassVar[NativeAccessor] = "dt"
+    _accessor: ClassVar[Accessor] = "dt"
 
     def truncate(self, every: str) -> CompliantT:
         # Ensure consistent error message is raised.
@@ -309,7 +315,7 @@ class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
 
 class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
-    _accessor: ClassVar[NativeAccessor] = "str"
+    _accessor: ClassVar[Accessor] = "str"
 
     # NOTE: Use `abstractmethod` if we have defs to implement, but also `Method` usage
     @abc.abstractmethod
@@ -331,12 +337,12 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
-    _accessor: ClassVar[NativeAccessor] = "cat"
+    _accessor: ClassVar[Accessor] = "cat"
     get_categories: Method[CompliantT]
 
 
 class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
-    _accessor: ClassVar[NativeAccessor] = "list"
+    _accessor: ClassVar[Accessor] = "list"
 
     @abc.abstractmethod
     def len(self) -> CompliantT: ...
@@ -347,5 +353,5 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
-    _accessor: ClassVar[NativeAccessor] = "struct"
+    _accessor: ClassVar[Accessor] = "struct"
     field: Method[CompliantT]
