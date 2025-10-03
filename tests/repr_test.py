@@ -100,3 +100,19 @@ def test_polars_series_repr() -> None:
         "└────────────────────┘"
     )
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (nw.col("a"), "col(a)"),
+        (nw.col("a").abs(), "col(a).abs()"),
+        (nw.col("a").std(ddof=2), "col(a).std(ddof=2)"),
+        (
+            nw.sum_horizontal(nw.col("a").rolling_mean(2), "b"),
+            "sum_horizontal(col(a).rolling_mean(window_size=2, min_samples=2, center=False), b)",
+        ),
+    ],
+)
+def test_expr_repr(expr: nw.Expr, expected: str) -> None:
+    assert repr(expr) == expected

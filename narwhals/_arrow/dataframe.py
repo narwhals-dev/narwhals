@@ -10,7 +10,6 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._compliant import EagerDataFrame
-from narwhals._expression_parsing import ExprKind
 from narwhals._utils import (
     Implementation,
     Version,
@@ -405,12 +404,10 @@ class ArrowDataFrame(
             )
 
             return self._with_native(
-                self.with_columns(
-                    plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
-                )
+                self.with_columns(plx.lit(0, None).alias(key_token).broadcast())
                 .native.join(
                     other.with_columns(
-                        plx.lit(0, None).alias(key_token).broadcast(ExprKind.LITERAL)
+                        plx.lit(0, None).alias(key_token).broadcast()
                     ).native,
                     keys=key_token,
                     right_keys=key_token,
@@ -515,7 +512,8 @@ class ArrowDataFrame(
             )
         else:
             rank = plx.col(order_by[0]).rank("ordinal", descending=False)
-            row_index = (rank.over(partition_by=[], order_by=order_by) - 1).alias(name)
+            one = plx.lit(1, None).broadcast()
+            row_index = (rank.over(partition_by=[], order_by=order_by) - one).alias(name)
         return self.select(row_index, plx.all())
 
     def filter(self, predicate: ArrowExpr | list[bool | None]) -> Self:

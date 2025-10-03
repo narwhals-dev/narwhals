@@ -423,12 +423,5 @@ class IbisLazyFrame(
             raise NotImplementedError(msg)
         self.native.to_parquet(file)
 
-    gather_every = not_implemented.deprecated(
-        "`LazyFrame.gather_every` is deprecated and will be removed in a future version."
-    )
-    tail = not_implemented.deprecated(
-        "`LazyFrame.tail` is deprecated and will be removed in a future version."
-    )
-
     # Intentionally not implemented, as Ibis does its own expression rewriting.
     _evaluate_window_expr = not_implemented()

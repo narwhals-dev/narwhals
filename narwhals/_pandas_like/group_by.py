@@ -118,7 +118,8 @@ class AggExpr:
             )
         elif self.is_mode():
             compliant = group_by.compliant
-            if (keep := self.kwargs.get("keep")) != "any":  # pragma: no cover
+            node_kwargs = next(self.expr._metadata.op_nodes_reversed()).kwargs
+            if (keep := node_kwargs.get("keep")) != "any":  # pragma: no cover
                 msg = (
                     f"`Expr.mode(keep='{keep}')` is not implemented in group by context for "
                     f"backend {compliant._implementation}\n\n"
@@ -162,11 +163,7 @@ class AggExpr:
 
     def is_top_level_function(self) -> bool:
         # e.g. `nw.len()`.
-        return self.expr._depth == 0
-
-    @property
-    def kwargs(self) -> ScalarKwargs:
-        return self.expr._scalar_kwargs
+        return len(list(self.expr._metadata.op_nodes_reversed())) == 1
 
     @property
     def leaf_name(self) -> NarwhalsAggregation | Any:
@@ -177,8 +174,9 @@ class AggExpr:
 
     def native_agg(self) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
+        last_node = next(self.expr._metadata.op_nodes_reversed())
         return _native_agg(
-            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **self.kwargs
+            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **last_node.kwargs
         )
 
 

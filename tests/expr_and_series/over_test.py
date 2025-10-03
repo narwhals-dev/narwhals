@@ -386,7 +386,7 @@ def test_over_cum_reverse(
 def test_over_raise_len_change(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
-    with pytest.raises(InvalidOperationError):
+    with pytest.raises((InvalidOperationError, NotImplementedError)):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
 
 

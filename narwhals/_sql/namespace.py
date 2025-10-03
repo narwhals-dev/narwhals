@@ -71,3 +71,18 @@ class SQLNamespace(
             return self._coalesce(*cols)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
+
+    def when_then(
+        self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
+    ) -> SQLExprT:
+        def func(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0])
+
+        def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
+            return self._when(cols[1], cols[0], cols[2])
+
+        if otherwise is None:
+            return self._expr._from_elementwise_horizontal_op(func, then, predicate)
+        return self._expr._from_elementwise_horizontal_op(
+            func_with_otherwise, then, predicate, otherwise
+        )
