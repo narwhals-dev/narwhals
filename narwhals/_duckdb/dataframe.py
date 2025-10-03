@@ -27,7 +27,6 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     requires,
-    to_pyarrow_table,
     zip_strict,
 )
 from narwhals.dependencies import get_duckdb
@@ -138,8 +137,12 @@ class DuckDBLazyFrame(
         if backend is None or backend is Implementation.PYARROW:
             from narwhals._arrow.dataframe import ArrowDataFrame
 
+            if self._backend_version < (1, 4):
+                ret = self.native.arrow()
+            else:  # pragma: no cover
+                ret = self.native.fetch_arrow_table()
             return ArrowDataFrame(
-                to_pyarrow_table(self.native.arrow()),
+                ret,
                 validate_backend_version=True,
                 version=self._version,
                 validate_column_names=True,
