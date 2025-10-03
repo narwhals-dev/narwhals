@@ -25,19 +25,19 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import PromoteOptions
-    from narwhals._arrow.typing import (
-        ArrayAny,
-        ArrayOrScalar,
-        ChunkedArrayAny,
-        Incomplete,
-    )
+    from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.series import ArrowSeries
     from narwhals._plan.arrow.typing import (
+        Array,
+        ArrayAny,
+        ArrowAny,
         BinaryComp,
         BinaryLogical,
         BinaryNumericTemporal,
         BinOp,
         ChunkedArray,
+        ChunkedArrayAny,
+        ChunkedOrArrayAny,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
         DataType,
@@ -219,6 +219,27 @@ def is_between(
     return and_(fn_lhs(native, lower), fn_rhs(native, upper))
 
 
+@t.overload
+def is_in(
+    values: ChunkedArrayAny, /, other: ChunkedOrArrayAny
+) -> ChunkedArray[pa.BooleanScalar]: ...
+@t.overload
+def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
+@t.overload
+def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
+def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
+    """Check if elements of `values` are present in `other`.
+
+    Roughly equivalent to [`polars.Expr.is_in`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.is_in.html)
+
+    Returns a mask with `len(values)` elements.
+    """
+    # NOTE: Stubs don't include a `ChunkedArray` return
+    # NOTE: Replaced ambigious parameter name (`value_set`)
+    is_in_: Incomplete = pc.is_in
+    return is_in_(values, other)  # type: ignore[no-any-return]
+
+
 def binary(
     lhs: ChunkedOrScalarAny, op: type[ops.Operator], rhs: ChunkedOrScalarAny
 ) -> ChunkedOrScalarAny:
@@ -266,7 +287,7 @@ def array(
 
 
 def chunked_array(
-    arr: ArrayOrScalar | list[Iterable[Any]], dtype: DataType | None = None, /
+    arr: ArrowAny | list[Iterable[Any]], dtype: DataType | None = None, /
 ) -> ChunkedArrayAny:
     return _chunked_array(array(arr) if isinstance(arr, pa.Scalar) else arr, dtype)
 

@@ -388,8 +388,7 @@ class ArrowExpr(  # type: ignore[misc]
             .get_column(idx_name)
             .native
         )
-        result: Incomplete = pc.is_in(df.to_series().native, distinct_index)
-        return self._with_native(result, name)
+        return self._with_native(fn.is_in(df.to_series().native, distinct_index), name)
 
     is_first_distinct = _is_first_last_distinct
     is_last_distinct = _is_first_last_distinct
