@@ -164,9 +164,10 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
 
 
 def test_collect_empty(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(
-        x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")
-    ) and DUCKDB_VERSION >= (1, 4):
+    if any(x in str(constructor) for x in ("sqlframe", "ibis")) and DUCKDB_VERSION >= (
+        1,
+        4,
+    ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     lf = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()

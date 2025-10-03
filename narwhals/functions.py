@@ -331,6 +331,64 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
+def from_dicts(
+    data: Sequence[Mapping[str, Any]],
+    schema: IntoSchema | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Sequence with dictionaries mapping column name to value.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library.
+        backend: Specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+    Tip:
+        If you expect non-uniform keys in `data`, consider passing `schema` for
+        more consistent results, as **inference varies between backends**:
+
+        - pandas uses all rows
+        - polars uses the first 100 rows
+        - pyarrow uses only the first row
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = [
+        ...     {"item": "apple", "weight": 80, "price": 0.60},
+        ...     {"item": "egg", "weight": 55, "price": 0.40},
+        ... ]
+        >>> nw.DataFrame.from_dicts(data, backend="polars")
+        ┌──────────────────────────┐
+        |    Narwhals DataFrame    |
+        |--------------------------|
+        |shape: (2, 3)             |
+        |┌───────┬────────┬───────┐|
+        |│ item  ┆ weight ┆ price │|
+        |│ ---   ┆ ---    ┆ ---   │|
+        |│ str   ┆ i64    ┆ f64   │|
+        |╞═══════╪════════╪═══════╡|
+        |│ apple ┆ 80     ┆ 0.6   │|
+        |│ egg   ┆ 55     ┆ 0.4   │|
+        |└───────┴────────┴───────┘|
+        └──────────────────────────┘
+    """
+    return Version.MAIN.dataframe.from_dicts(data, schema, backend=backend)
+
+
 def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,

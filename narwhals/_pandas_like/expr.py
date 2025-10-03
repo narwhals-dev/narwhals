@@ -60,6 +60,8 @@ def window_kwargs_to_pandas_equivalent(
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
         pandas_kwargs = {"skipna": True}
+    elif function_name == "n_unique":
+        pandas_kwargs = {"dropna": False}
     elif function_name.startswith("rolling_"):  # Rolling operation
         assert "min_samples" in kwargs  # noqa: S101
         assert "window_size" in kwargs  # noqa: S101
