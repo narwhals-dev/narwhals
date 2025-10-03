@@ -125,6 +125,9 @@ def test_first_expr_over_order_by_partition_by(
         request.applymarker(pytest.mark.xfail)
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
         pytest.skip()
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11656
+        request.applymarker(pytest.mark.xfail)
     frame = nw.from_native(
         constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, 0, 2]})
     )

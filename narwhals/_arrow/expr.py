@@ -142,6 +142,9 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
         else:
 
             def func(df: ArrowDataFrame) -> Sequence[ArrowSeries]:
+                if order_by:
+                    df = df.sort(*order_by, descending=False, nulls_last=False)
+
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if overlap := set(output_names).intersection(partition_by):
                     # E.g. `df.select(nw.all().sum().over('a'))`. This is well-defined,
