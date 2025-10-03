@@ -26,6 +26,16 @@ def data_indexed(data: Data) -> Data:
 
 
 @pytest.fixture
+def data_alt_1() -> Data:
+    return {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3]}
+
+
+@pytest.fixture
+def data_alt_1_indexed(data_alt_1: Data) -> Data:
+    return data_alt_1 | {"i": [0, 1, 2, 3, 4]}
+
+
+@pytest.fixture
 def expected() -> Data:
     return {
         "a": [True, False, True, True, False, False],
@@ -70,3 +80,39 @@ def test_is_last_distinct_order_by(
         .drop("i")
     )
     assert_equal_data(result, expected_invert)
+
+
+# NOTE: Isn't supported on `main` for `pyarrow` + lots of other cases
+# Could be interesting to attempt here?
+@pytest.mark.xfail(
+    reason="Not supporting `over(*partition_by, order_by=...)` yet",
+    raises=NotImplementedError,
+)
+def test_is_first_distinct_partitioned_order_by(
+    data_alt_1_indexed: Data,
+) -> None:  # pragma: no cover
+    expected = {"b": [True, True, True, True, False]}
+    result = (
+        dataframe(data_alt_1_indexed)
+        .select(nwp.col("b").is_first_distinct().over("a", order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason="Not supporting `over(*partition_by, order_by=...)` yet",
+    raises=NotImplementedError,
+)
+def test_is_last_distinct_partitioned_order_by(
+    data_alt_1_indexed: Data,
+) -> None:  # pragma: no cover
+    expected = {"b": [True, True, False, True, True]}
+    result = (
+        dataframe(data_alt_1_indexed)
+        .select(nwp.col("b").is_first_distinct().over("a", order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    assert_equal_data(result, expected)
