@@ -173,12 +173,10 @@ dtypes = Version.MAIN.dtypes
 
 
 def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
-    if not HAS_INT_128:
+    if not HAS_INT_128:  # pragma: no cover
         return {}
     nw_to_pl: dict[type[DType], pl.DataType] = {dtypes.Int128: pl.Int128()}
-    if HAS_UINT_128:
-        nw_to_pl |= {dtypes.UInt128: pl.UInt128()}
-    return nw_to_pl
+    return nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
 
 
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
