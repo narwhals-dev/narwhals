@@ -148,7 +148,7 @@ def test_lazy_cum_max_ungrouped(
 
 @pytest.mark.parametrize(
     ("reverse", "expected_a"),
-    [(False, [4, 4, 4, 4, 4, 4, 4]), (True, [3, 3, 3, 3, 2, 3, 4])],
+    [(False, [4, None, 4, 4, 4, 4, 4]), (True, [3, None, 3, 3, 2, 3, 4])],
 )
 def test_lazy_cum_max_ungrouped_ordered_by_nulls(
     constructor: Constructor,
@@ -170,7 +170,7 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
     df = nw.from_native(
         constructor(
             {
-                "a": [1, 2, 3, 1, 2, 3, 4],
+                "a": [1, None, 3, 1, 2, 3, 4],
                 "b": [1, -1, 3, 2, 5, 0, None],
                 "i": [0, 1, 2, 3, 4, 5, 6],
             }

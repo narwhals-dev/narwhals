@@ -121,10 +121,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_callable(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self | Any
+        self,
+        call: Callable[..., NativeExprT],
+        window_func: WindowFunction[SQLLazyFrameT, NativeExprT] | None = None,
+        /,
+        **expressifiable_args: Self | Any,
     ) -> Self:
         return self.__class__(
             self._callable_to_eval_series(call, **expressifiable_args),
+            window_func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
@@ -216,22 +221,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     ) -> NativeExprT: ...
 
     def _cum_window_func(
-        self,
-        func_name: Literal["sum", "max", "min", "count", "product"],
-        *,
-        reverse: bool,
+        self, func_name: Literal["sum", "max", "min", "product"], *, reverse: bool
     ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def func(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                self._window_expression(
-                    self._function(func_name, expr),
-                    inputs.partition_by,
-                    inputs.order_by,
-                    descending=[reverse] * len(inputs.order_by),
-                    nulls_last=[reverse] * len(inputs.order_by),
-                    rows_end=0,
+                self._when(
+                    ~self._function("isnull", expr),  # type: ignore[operator]
+                    self._window_expression(
+                        self._function(func_name, expr),
+                        inputs.partition_by,
+                        inputs.order_by,
+                        descending=[reverse] * len(inputs.order_by),
+                        nulls_last=[reverse] * len(inputs.order_by),
+                        rows_end=0,
+                    ),
                 )
                 for expr in self(df)
             ]
@@ -371,14 +376,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __rtruediv__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: other / expr, other).alias("literal")
 
-    def __floordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__floordiv__(other), other)
-
-    def __rfloordiv__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other // expr, other).alias(
-            "literal"
-        )
-
     def __pow__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__pow__(other), other)
 
@@ -409,6 +406,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
+    def __floordiv__(self, other: Self) -> Self:
+        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
+            return self._when(
+                other != self._lit(0), op.floordiv(expr, other), self._lit(None)
+            )
+
+        return self._with_binary(func, other=other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
+            return self._when(
+                expr != self._lit(0), op.floordiv(other, expr), self._lit(None)
+            )
+
+        return self._with_binary(func, other=other).alias("literal")
+
     # Aggregations
     def all(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
@@ -427,7 +440,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 for expr in self(df)
             ]
 
-        return self._with_callable(f)._with_window_function(window_f)
+        return self._with_callable(f, window_f)
 
     def any(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
@@ -446,7 +459,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 for expr in self(df)
             ]
 
-        return self._with_callable(f)._with_window_function(window_f)
+        return self._with_callable(f, window_f)
 
     def max(self) -> Self:
         return self._with_callable(lambda expr: self._function("max", expr))
@@ -486,7 +499,34 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 for expr in self(df)
             ]
 
-        return self._with_callable(f)._with_window_function(window_f)
+        return self._with_callable(f, window_f)
+
+    def n_unique(self) -> Self:
+        F = self._function
+        W = self._window_expression  # noqa: N806
+        zero, one = self._lit(0), self._lit(1)
+
+        def func(expr: NativeExprT) -> NativeExprT:
+            return op.add(  # type: ignore[no-any-return]
+                F("count_distinct", expr),
+                F("max", self._when(F("isnull", expr), one, zero)),
+            )
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                op.add(
+                    W(F("count_distinct", expr), inputs.partition_by),
+                    W(
+                        F("max", self._when(F("isnull", expr), one, zero)),
+                        inputs.partition_by,
+                    ),
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(func, window_f)
 
     # Elementwise
     def abs(self) -> Self:
@@ -563,7 +603,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_window_function(self._cum_window_func("min", reverse=reverse))
 
     def cum_count(self, *, reverse: bool) -> Self:
-        return self._with_window_function(self._cum_window_func("count", reverse=reverse))
+        def func(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            return [
+                self._window_expression(
+                    self._function("count", expr),
+                    inputs.partition_by,
+                    inputs.order_by,
+                    descending=[reverse] * len(inputs.order_by),
+                    nulls_last=[reverse] * len(inputs.order_by),
+                    rows_end=0,
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_window_function(func)
 
     def cum_prod(self, *, reverse: bool) -> Self:
         return self._with_window_function(
@@ -726,9 +781,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 for expr in self(df)
             ]
 
-        return self._with_callable(_unpartitioned_rank)._with_window_function(
-            _partitioned_rank
-        )
+        return self._with_callable(_unpartitioned_rank, _partitioned_rank)
 
     def is_unique(self) -> Self:
         def _is_unique(

@@ -389,7 +389,7 @@ class DuckDBLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        tmp_name = generate_temporary_column_name(8, self.columns)
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
         if order_by and keep == "last":
             descending = [True] * len(order_by)
             nulls_last = [True] * len(order_by)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -10,6 +12,22 @@ def test_n_unique(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(nw.all().n_unique())
     expected = {"a": [3], "b": [4]}
+    assert_equal_data(result, expected)
+
+
+def test_n_unique_over(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/10550
+        request.applymarker(pytest.mark.xfail)
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        # "Distinct window functions are not supported"
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, None, None, 1, 2, 2, 2, None, 3], "b": [1, 1, 1, 1, 1, 1, 1, 2, 2]}
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(
+        nw.all().n_unique(), a_over_b=nw.col("a").n_unique().over("b")
+    ).sort("a_over_b")
+    expected = {"a": [4] * 9, "b": [2] * 9, "a_over_b": [2, 2, 3, 3, 3, 3, 3, 3, 3]}
     assert_equal_data(result, expected)
 
 

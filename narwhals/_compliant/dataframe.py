@@ -99,6 +99,7 @@ class CompliantFrame(
 
     def __native_namespace__(self) -> ModuleType: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def _with_native(self, df: _NativeFrameT) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
     @classmethod
     def from_native(cls, data: _NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
@@ -186,6 +187,15 @@ class CompliantDataFrame(
     def from_dict(
         cls,
         data: Mapping[str, Any],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self: ...
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
         /,
         *,
         context: _LimitedContext,

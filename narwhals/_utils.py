@@ -146,10 +146,6 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
-    _T4 = TypeVar("_T4")
-    _T5 = TypeVar("_T5")
-    _T6 = TypeVar("_T6")
-    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -750,76 +746,6 @@ def isinstance_or_issubclass(
 
 @overload
 def isinstance_or_issubclass(
-    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
-) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
-) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
-) -> TypeIs[
-    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
-]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[
-        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
-    ],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[
-        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
-    ],
-) -> TypeIs[
-    _T1
-    | _T2
-    | _T3
-    | _T4
-    | _T5
-    | _T6
-    | _T7
-    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
-]: ...
-
-
-@overload
-def isinstance_or_issubclass(
     obj_or_cls: Any, cls_or_tuple: tuple[type, ...]
 ) -> TypeIs[Any]: ...
 
@@ -1207,21 +1133,12 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast("Any", obj)
-    native_obj = obj_any.to_native()
-    if is_pandas_like_dataframe(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_frame._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    if is_pandas_like_series(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_series._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    return obj_any
+    if not obj.implementation.is_pandas_like():
+        return obj
+    result = obj._with_compliant(
+        obj._compliant._with_native(obj.to_native().convert_dtypes(*args, **kwargs))
+    )
+    return cast("FrameOrSeriesT", result)
 
 
 def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
@@ -1322,17 +1239,19 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
 
 def generate_unique_token(
-    n_bytes: int, columns: Container[str]
+    n_bytes: int, columns: Container[str], prefix: str = "nw"
 ) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
     )
     issue_deprecation_warning(msg, _version="1.13.0")
-    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns, prefix=prefix)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
+def generate_temporary_column_name(
+    n_bytes: int, columns: Container[str], prefix: str = "nw"
+) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1341,6 +1260,7 @@ def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str
     Arguments:
         n_bytes: The number of bytes to generate for the token.
         columns: The list of columns to check for uniqueness.
+        prefix: prefix with which the temporary column name should start with.
 
     Returns:
         A unique token that is not present in the given list of columns.
@@ -1353,12 +1273,15 @@ def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str
         >>> columns = ["abc", "xyz"]
         >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
         True
+        >>> temp_name = nw.generate_temporary_column_name(
+        ...     n_bytes=8, columns=columns, prefix="foo"
+        ... )
+        >>> temp_name not in columns and temp_name.startswith("foo")
+        True
     """
     counter = 0
     while True:
-        # Prepend `'nw'` to ensure it always starts with a character
-        # https://github.com/narwhals-dev/narwhals/issues/2510
-        token = f"nw{token_hex(n_bytes - 1)}"
+        token = f"{prefix}{token_hex(n_bytes - 1)}"
         if token not in columns:
             return token
 
