@@ -396,7 +396,10 @@ class ArrowExpr(  # type: ignore[misc]
     ) -> Self:
         return self._is_first_last_distinct(node, frame, name)
 
-    is_last_distinct = not_implemented()
+    def is_last_distinct(
+        self, node: FunctionExpr[IsLastDistinct], frame: Frame, name: str
+    ) -> Self:
+        return self._is_first_last_distinct(node, frame, name)
 
 
 class ArrowScalar(
