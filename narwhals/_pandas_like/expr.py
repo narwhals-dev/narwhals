@@ -331,13 +331,19 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         raise AssertionError(msg)
                     res_native = grouped.transform("size").to_frame(aliases[0])
                 elif function_name == "first":
-                    _first = grouped[[*partition_by, *output_names]].nth(0)
+                    with warnings.catch_warnings():
+                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                        _first = grouped[[*partition_by, *output_names]].nth(0)
                     _first.reset_index(drop=True, inplace=True)
                     res_native = df.native[list(partition_by)].merge(
                         _first, on=list(partition_by)
                     )[list(output_names)]
                 elif function_name == "last":
-                    _last = grouped[[*partition_by, *output_names]].nth(-1)
+                    with warnings.catch_warnings():
+                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                        _last = grouped[[*partition_by, *output_names]].nth(-1)
                     _last.reset_index(drop=True, inplace=True)
                     res_native = df.native[list(partition_by)].merge(
                         _last, on=list(partition_by)
