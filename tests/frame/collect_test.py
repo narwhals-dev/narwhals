@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin, get_polars
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import Arrow, Dask, IntoBackend, Modin, Pandas, Polars
@@ -164,9 +164,7 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
 
 
 def test_collect_empty(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(
-        x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")
-    ) and DUCKDB_VERSION >= (1, 4):
+    if any(x in str(constructor) for x in ("sqlframe", "ibis")):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     lf = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()

@@ -139,7 +139,7 @@ class DuckDBLazyFrame(
 
             if self._backend_version < (1, 4):
                 ret = self.native.arrow()
-            else:
+            else:  # pragma: no cover
                 ret = self.native.fetch_arrow_table()
             return ArrowDataFrame(
                 ret,
