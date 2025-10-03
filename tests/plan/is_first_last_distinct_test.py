@@ -32,6 +32,16 @@ def data_alt_1_indexed(data_alt_1: Data) -> Data:
 
 
 @pytest.fixture
+def data_alt_2() -> Data:
+    return {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1]}
+
+
+@pytest.fixture
+def data_alt_2_indexed(data_alt_2: Data) -> Data:
+    return data_alt_2 | {"i": [None, 1, 2, 3, 4]}
+
+
+@pytest.fixture
 def expected() -> Data:
     return {
         "a": [True, False, True, True, False, False],
@@ -42,6 +52,14 @@ def expected() -> Data:
 @pytest.fixture
 def expected_invert(expected: Data) -> Data:
     return {k: [not el for el in v] for k, v in expected.items()}
+
+
+# NOTE: Isn't supported on `main` for `pyarrow` + lots of other cases (non-elementary group-by agg)
+# Could be interesting to attempt here?
+XFAIL_PARTITIONED_ORDER_BY = pytest.mark.xfail(
+    reason="Not supporting `over(*partition_by, order_by=...)` yet",
+    raises=NotImplementedError,
+)
 
 
 def test_is_first_distinct(data: Data, expected: Data) -> None:
@@ -74,12 +92,7 @@ def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) ->
     assert_equal_data(result, expected_invert)
 
 
-# NOTE: Isn't supported on `main` for `pyarrow` + lots of other cases
-# Could be interesting to attempt here?
-@pytest.mark.xfail(
-    reason="Not supporting `over(*partition_by, order_by=...)` yet",
-    raises=NotImplementedError,
-)
+@XFAIL_PARTITIONED_ORDER_BY
 def test_is_first_distinct_partitioned_order_by(
     data_alt_1_indexed: Data,
 ) -> None:  # pragma: no cover
@@ -93,17 +106,28 @@ def test_is_first_distinct_partitioned_order_by(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="Not supporting `over(*partition_by, order_by=...)` yet",
-    raises=NotImplementedError,
-)
+@XFAIL_PARTITIONED_ORDER_BY
 def test_is_last_distinct_partitioned_order_by(
     data_alt_1_indexed: Data,
 ) -> None:  # pragma: no cover
     expected = {"b": [True, True, False, True, True]}
     result = (
         dataframe(data_alt_1_indexed)
-        .select(nwp.col("b").is_first_distinct().over("a", order_by="i"), "i")
+        .select(nwp.col("b").is_last_distinct().over("a", order_by="i"), "i")
+        .sort("i")
+        .drop("i")
+    )
+    assert_equal_data(result, expected)
+
+
+@XFAIL_PARTITIONED_ORDER_BY
+def test_is_last_distinct_partitioned_order_by_nulls(
+    data_alt_2_indexed: Data,
+) -> None:  # pragma: no cover
+    expected = {"b": [True, True, False, True, True]}
+    result = (
+        dataframe(data_alt_2_indexed)
+        .select(nwp.col("b").is_last_distinct().over("a", order_by="i"), "i")
         .sort("i")
         .drop("i")
     )
