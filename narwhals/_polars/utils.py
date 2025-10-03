@@ -49,11 +49,8 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
-HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
-"""https://github.com/pola-rs/polars/pull/24346"""
-
-HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
-"""https://github.com/pola-rs/polars/pull/20232"""
+SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
+"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
 SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 """`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
@@ -61,11 +58,14 @@ SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 Includes `SERIES_ACCEPTS_PD_INDEX`.
 """
 
-SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
-"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
+HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+"""https://github.com/pola-rs/polars/pull/20232"""
 
 FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
 """`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638"""
+
+HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+"""https://github.com/pola-rs/polars/pull/24346"""
 
 
 @overload
