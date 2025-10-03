@@ -112,7 +112,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Int16()
     if dtype == pl.Int8:
         return dtypes.Int8()
-    if HAS_UINT_128 and hasattr(pl, "UInt128") and dtype == pl.UInt128:  # pyright: ignore[reportAttributeAccessIssue] # pragma: no cover
+    if HAS_UINT_128 and dtype == pl.UInt128:
         return dtypes.UInt128()
     if dtype == pl.UInt64:
         return dtypes.UInt64()
@@ -173,7 +173,12 @@ dtypes = Version.MAIN.dtypes
 
 
 def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
-    return {} if not HAS_INT_128 else {dtypes.Int128: pl.Int128()}
+    if not HAS_INT_128:
+        return {}
+    nw_to_pl: dict[type[DType], pl.DataType] = {dtypes.Int128: pl.Int128()}
+    if HAS_UINT_128:
+        nw_to_pl |= {dtypes.UInt128: pl.UInt128()}
+    return nw_to_pl
 
 
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
