@@ -4,7 +4,7 @@ Some library maintainers must apply complex dataframe operations, using methods 
 
 ## Dataframe X in, pandas out
 
-Imagine that you maintain a library with a function that operates on pandas dataframes to produce automated reports. You want to allow users to supply a dataframe in any format to that function (pandas, Polars, DuckDB, cuDF, Modin, etc.) without adding all those dependencies to your own project and without special-casing each input library's variation of `to_pandas` / `toPandas` / `to_pandas_df` / `df` ...
+Imagine that you maintain a library with a function that operates on pandas dataframes to produce automated reports. You want to allow users to supply a dataframe in any format to that function (pandas, Polars, DuckDB, cuDF, Modin, Bodo, etc.) without adding all those dependencies to your own project and without special-casing each input library's variation of `to_pandas` / `toPandas` / `to_pandas_df` / `df` ...
 
 One solution is to use Narwhals as a thin Dataframe ingestion layer, to convert user-supplied dataframe to the format that your library uses internally. Since Narwhals is zero-dependency, this is a much more lightweight solution than including all the dataframe libraries as dependencies,
 and easier to write than special casing each input library's `to_pandas` method (if it even exists!).

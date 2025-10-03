@@ -125,8 +125,8 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
 2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
-   If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
+   If you also want to test other libraries like Dask , PySpark, Modin and Bodo, you can install them too with
+   `uv pip install -e ".[dask, pyspark, modin, bodo]" --group local-dev`.
 
 The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 

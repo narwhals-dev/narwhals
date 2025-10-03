@@ -19,6 +19,7 @@ implementations = [
     Implementation.PYARROW,
     Implementation.PYSPARK,
     Implementation.SQLFRAME,
+    Implementation.BODO,
 ]
 
 

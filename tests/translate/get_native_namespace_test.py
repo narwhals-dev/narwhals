@@ -39,6 +39,10 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import modin.pandas as mpd
 
         return mpd
+    if "bodo" in constructor_name:
+        import bodo.pandas as bd
+
+        return bd
     if "dask" in constructor_name:
         import dask.dataframe as dd
 

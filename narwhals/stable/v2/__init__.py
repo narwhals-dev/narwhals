@@ -1040,8 +1040,8 @@ def new_series(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
     Returns:
         A new Series
@@ -1062,8 +1062,8 @@ def from_arrow(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
     Returns:
         A new DataFrame.
@@ -1097,8 +1097,8 @@ def from_dict(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
     Returns:
         A new DataFrame.
@@ -1129,8 +1129,8 @@ def from_numpy(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
     Returns:
         A new DataFrame.
@@ -1150,8 +1150,8 @@ def read_csv(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
@@ -1177,8 +1177,8 @@ def scan_csv(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
@@ -1201,8 +1201,8 @@ def read_parquet(
 
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN` or `CUDF`.
-            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
@@ -1241,9 +1241,9 @@ def scan_parquet(
             - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
                 `POLARS`, `MODIN`, `CUDF`, `PYSPARK` or `SQLFRAME`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"cudf"`,
-                `"pyspark"` or `"sqlframe"`.
+                `"pyspark"`, `"bodo"`, or `"sqlframe"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `cudf`,
-                `pyspark.sql` or `sqlframe`.
+                `pyspark.sql`, `bodo`, or `sqlframe`.
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.

@@ -561,7 +561,7 @@ def origin_pandas_like_pyarrow(
 ) -> IntoPandasSchema:
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")
-    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
+    name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor", "bodo_pyarrow_constructor"}
     if constructor_pandas_like.__name__ not in name_pandas_like:
         pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
     data = {

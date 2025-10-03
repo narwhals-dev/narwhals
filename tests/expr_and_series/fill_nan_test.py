@@ -6,6 +6,7 @@ from tests.conftest import (
     dask_lazy_p2_constructor,
     modin_constructor,
     pandas_constructor,
+    bodo_constructor,
 )
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -14,6 +15,7 @@ NON_NULLABLE_CONSTRUCTORS = [
     dask_lazy_p1_constructor,
     dask_lazy_p2_constructor,
     modin_constructor,
+    bodo_constructor,
 ]
 
 

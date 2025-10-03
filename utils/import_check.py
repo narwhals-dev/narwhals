@@ -18,6 +18,7 @@ BANNED_IMPORTS = {
     "polars",
     "pyarrow",
     "pyspark",
+    "bodo",
 }
 
 ALLOWED_IMPORTS = {

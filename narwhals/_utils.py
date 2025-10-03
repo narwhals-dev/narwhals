@@ -33,6 +33,7 @@ from narwhals.dependencies import (
     get_duckdb,
     get_ibis,
     get_modin,
+    get_bodo,
     get_pandas,
     get_polars,
     get_pyarrow,
@@ -81,6 +82,7 @@ if TYPE_CHECKING:
         _NativeDuckDB,
         _NativeIbis,
         _NativeModin,
+        _NativeBodo,
         _NativePandas,
         _NativePandasLike,
         _NativePolars,
@@ -101,6 +103,7 @@ if TYPE_CHECKING:
         _LazyAllowedImpl,
         _LazyFrameCollectImpl,
         _ModinImpl,
+        _BodoImpl,
         _PandasImpl,
         _PandasLikeImpl,
         _PolarsImpl,
@@ -326,6 +329,8 @@ class Implementation(NoAutoEnum):
     """pandas implementation."""
     MODIN = "modin"
     """Modin implementation."""
+    BODO = "bodo"
+    """Bodo implementation."""
     CUDF = "cudf"
     """cuDF implementation."""
     PYARROW = "pyarrow"
@@ -362,6 +367,7 @@ class Implementation(NoAutoEnum):
         mapping = {
             get_pandas(): Implementation.PANDAS,
             get_modin(): Implementation.MODIN,
+            get_bodo(): Implementation.BODO,
             get_cudf(): Implementation.CUDF,
             get_pyarrow(): Implementation.PYARROW,
             get_pyspark_sql(): Implementation.PYSPARK,
@@ -427,7 +433,7 @@ class Implementation(NoAutoEnum):
         return self is Implementation.PANDAS
 
     def is_pandas_like(self) -> bool:
-        """Return whether implementation is pandas, Modin, or cuDF.
+        """Return whether implementation is pandas, Modin, Bodo, or cuDF.
 
         Examples:
             >>> import pandas as pd
@@ -437,7 +443,7 @@ class Implementation(NoAutoEnum):
             >>> df.implementation.is_pandas_like()
             True
         """
-        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}
+        return self in {Implementation.PANDAS, Implementation.MODIN, Implementation.BODO, Implementation.CUDF}
 
     def is_spark_like(self) -> bool:
         """Return whether implementation is pyspark or sqlframe.
@@ -494,6 +500,19 @@ class Implementation(NoAutoEnum):
             False
         """
         return self is Implementation.MODIN  # pragma: no cover
+
+    def is_bodo(self) -> bool:
+        """Return whether implementation is Bodo.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_bodo()
+            False
+        """
+        return self is Implementation.BODO  # pragma: no cover
 
     def is_pyspark(self) -> bool:
         """Return whether implementation is PySpark.
@@ -594,6 +613,7 @@ class Implementation(NoAutoEnum):
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PANDAS: (1, 1, 3),
     Implementation.MODIN: (0, 8, 2),
+    Implementation.BODO: (2025, 8),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),
@@ -608,6 +628,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
 _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.DASK: "dask.dataframe",
     Implementation.MODIN: "modin.pandas",
+    Implementation.BODO: "bodo.pandas",
     Implementation.PYSPARK: "pyspark.sql",
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
@@ -1675,6 +1696,7 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     return impl in {
         Implementation.CUDF,
         Implementation.MODIN,
+        Implementation.BODO,
         Implementation.PANDAS,
         Implementation.POLARS,
         Implementation.PYARROW,
@@ -2111,6 +2133,8 @@ class _Implementation:
     def __get__(self, instance: Narwhals[_NativePandas], owner: Any) -> _PandasImpl: ...
     @overload
     def __get__(self, instance: Narwhals[_NativeModin], owner: Any) -> _ModinImpl: ...
+    @overload
+    def __get__(self, instance: Narwhals[_NativeBodo], owner: Any) -> _BodoImpl: ...
     @overload
     def __get__(self, instance: Narwhals[_NativeCuDF], owner: Any) -> _CuDFImpl: ...
     @overload

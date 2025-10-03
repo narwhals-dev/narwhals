@@ -8,7 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
-from narwhals.dependencies import get_cudf, get_modin
+from narwhals.dependencies import get_cudf, get_modin, get_bodo
 from tests.utils import (
     PANDAS_VERSION,
     assert_equal_data,
@@ -44,6 +44,9 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     elif "modin" in str(constructor_eager):
         mpd = get_modin()
         expected_cls = mpd.DataFrame
+    elif "bodo" in str(constructor_eager):
+        bd = get_bodo()
+        expected_cls = bd.DataFrame
     elif "cudf" in str(constructor_eager):
         cudf = get_cudf()
         expected_cls = cudf.DataFrame

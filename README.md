@@ -14,7 +14,7 @@
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
-- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow.
+- **Full API support**: cuDF, Modin, pandas, Polars, PyArrow, Bodo.
 - **Lazy-only support**: Dask, DuckDB, Ibis, PySpark, SQLFrame. Work in progress: Daft.
 
 Seamlessly support all, without depending on any!
@@ -69,7 +69,7 @@ Get started!
 
 There are three steps to writing dataframe-agnostic code using Narwhals:
 
-1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF/PyArrow
+1. use `narwhals.from_native` to wrap a pandas/Polars/Modin/cuDF/PyArrow/Bodo
    DataFrame/LazyFrame in a Narwhals class
 2. use the [subset of the Polars API supported by Narwhals](https://narwhals-dev.github.io/narwhals/api-reference/)
 3. use `narwhals.to_native` to return an object to the user in its original
@@ -80,6 +80,7 @@ There are three steps to writing dataframe-agnostic code using Narwhals:
    - if you started with Modin, you'll get Modin back (and compute will be distributed)
    - if you started with cuDF, you'll get cuDF back (and compute will happen on GPU)
    - if you started with PyArrow, you'll get PyArrow back
+   - if you started with Bodo, you'll get Bodo back (and compute will be distributed)
 
 <h1 align="left">
 	<img

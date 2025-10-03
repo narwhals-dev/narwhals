@@ -512,9 +512,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                    `POLARS`, `MODIN`, `BODO`, or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
         Examples:
             >>> import pandas as pd
@@ -579,9 +579,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                    `POLARS`, `MODIN`, `BODO` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"`, or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo`, or `cudf`.
 
         Examples:
             >>> import pandas as pd
@@ -635,9 +635,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 `backend` can be specified in various ways
 
                 - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
-                    `POLARS`, `MODIN` or `CUDF`.
-                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
-                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+                    `POLARS`, `MODIN`, `BODO` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"`, `"bodo"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin`, `bodo` or `cudf`.
 
         Examples:
             >>> import numpy as np

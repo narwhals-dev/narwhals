@@ -15,6 +15,8 @@ if TYPE_CHECKING:
         _CuDFSeries,
         _ModinDataFrame,
         _ModinSeries,
+        _BodoDataFrame,
+        _BodoSeries,
         _NativePandasLikeDataFrame,
     )
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -27,6 +29,7 @@ NativeSeriesT = TypeVar(
     "pd.Series[Any]",
     "_CuDFSeries",
     "_ModinSeries",
+    "_BodoSeries",
     default="pd.Series[Any]",
 )
 NativeDataFrameT = TypeVar(
@@ -40,4 +43,6 @@ NativeNDFrameT = TypeVar(
     "_CuDFSeries",
     "_ModinDataFrame",
     "_ModinSeries",
+    "_BodoDataFrame",
+    "_BodoSeries",
 )

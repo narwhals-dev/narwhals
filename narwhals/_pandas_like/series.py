@@ -130,7 +130,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if self._implementation.is_pandas_like():
             return self._implementation.to_native_namespace()
 
-        msg = f"Expected pandas/modin/cudf, got: {type(self._implementation)}"  # pragma: no cover
+        msg = f"Expected pandas/modin/cudf/bodo, got: {type(self._implementation)}"  # pragma: no cover
         raise AssertionError(msg)
 
     def __narwhals_namespace__(self) -> PandasLikeNamespace:
@@ -721,6 +721,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             return self.native.to_pandas()
         if self._implementation is Implementation.MODIN:
             return self.native._to_pandas()
+        if self._implementation is Implementation.BODO:
+            return pd.Series(self.native)
         msg = f"Unknown implementation: {self._implementation}"  # pragma: no cover
         raise AssertionError(msg)
 

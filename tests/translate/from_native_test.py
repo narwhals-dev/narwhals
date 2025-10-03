@@ -30,7 +30,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Version
 from tests.conftest import sqlframe_pyspark_lazy_constructor
-from tests.utils import Constructor, maybe_get_modin_df
+from tests.utils import Constructor, maybe_get_modin_df, maybe_get_bodo_df
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -84,11 +84,13 @@ if find_spec("pandas") is not None:
     df_pd: pd.DataFrame | None = pd.DataFrame(data)
     assert df_pd is not None
     df_mpd = maybe_get_modin_df(df_pd)
+    df_bd = maybe_get_bodo_df(df_pd)
     series_pd = pd.Series(data["a"])
     series_mpd = df_mpd["a"]
+    series_bd = df_bd["a"]
 
-    eager_frames += [df_pd, df_mpd]
-    all_series += [series_pd, series_mpd]
+    eager_frames += [df_pd, df_mpd, df_bd]
+    all_series += [series_pd, series_mpd, series_bd]
 else:  # pragma: no cover
     df_pd = None
 

@@ -138,7 +138,7 @@ def generate_pandas_dtypes_public(aliases: Iterable[str]) -> list[ExtensionDtype
 
 
 @pytest.mark.parametrize(
-    "implementation", [Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN]
+    "implementation", [Implementation.PANDAS, Implementation.CUDF, Implementation.MODIN, Implementation.BODO]
 )
 @pytest.mark.parametrize(
     "pandas_dtype", generate_pandas_dtypes_public(SIMPLE_DTYPE_ALIASES), ids=str

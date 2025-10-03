@@ -21,6 +21,8 @@ from narwhals.dependencies import (
     is_polars_series,
     is_pyarrow_chunked_array,
     is_pyarrow_table,
+    is_bodo_dataframe,
+    is_bodo_series,
 )
 
 
@@ -35,6 +37,7 @@ from narwhals.dependencies import (
         is_polars_lazyframe,
         is_pyarrow_table,
         is_pandas_like_dataframe,
+        is_bodo_dataframe,
     ],
 )
 def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
@@ -53,6 +56,7 @@ def test_is_native_dataframe(is_native_dataframe: Callable[[Any], Any]) -> None:
         is_cudf_series,
         is_pyarrow_chunked_array,
         is_pandas_like_series,
+        is_bodo_series,
     ],
 )
 def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
