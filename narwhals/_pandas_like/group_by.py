@@ -62,8 +62,6 @@ _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
     "first": 0,
     "last": -1,
 }
-_PYARROW_STRING_NAME = "string[pyarrow]"
-_MINIMUM_SKIPNA = (2, 2, 1)
 
 
 @lru_cache(maxsize=32)
