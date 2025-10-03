@@ -304,3 +304,7 @@ class NamedIR(Immutable, Generic[ExprIRT]):
 
         ir = self.expr
         return isinstance(ir, Column) and ((self.name == ir.name) or allow_aliasing)
+
+
+def named_ir(name: str, expr: ExprIRT, /) -> NamedIR[ExprIRT]:
+    return NamedIR(expr=expr, name=name)

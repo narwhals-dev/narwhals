@@ -121,10 +121,16 @@ DataTypeT = TypeVar("DataTypeT", bound=DataType, default=Any)
 DataTypeT_co = TypeVar("DataTypeT_co", bound=DataType, covariant=True, default=Any)
 ScalarT_co = TypeVar("ScalarT_co", bound="pa.Scalar[Any]", covariant=True, default=Any)
 Scalar: TypeAlias = "pa.Scalar[DataTypeT_co]"
+Array: TypeAlias = "pa.Array[ScalarT_co]"
 ChunkedArray: TypeAlias = "pa.ChunkedArray[ScalarT_co]"
 ChunkedOrScalar: TypeAlias = "ChunkedArray[ScalarT_co] | ScalarT_co"
+ChunkedOrArray: TypeAlias = "ChunkedArray[ScalarT_co] | Array[ScalarT_co]"
 ScalarAny: TypeAlias = "Scalar[Any]"
+ArrayAny: TypeAlias = "Array[Any]"
+ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
+ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
+ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 NativeScalar: TypeAlias = ScalarAny
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 StoresNativeT_co = TypeVar("StoresNativeT_co", bound=StoresNative[Any], covariant=True)

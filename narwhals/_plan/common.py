@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
+    from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.series import Series
     from narwhals._plan.typing import (
         DTypeT,
         ExprIRT,
@@ -109,9 +111,21 @@ def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDT
     return dtype
 
 
-# TODO @dangotbanned: Review again and try to work around (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)
+# NOTE: See (https://github.com/microsoft/pyright/issues/10673#issuecomment-3033789021)
 # The issue is `T` possibly being `Iterable`
 # Ignoring here still leaks the issue to the caller, where you need to annotate the base case
+@overload
+def flatten_hash_safe(iterable: Iterable[OneOrIterable[str]], /) -> Iterator[str]: ...
+@overload
+def flatten_hash_safe(
+    iterable: Iterable[OneOrIterable[Series]], /
+) -> Iterator[Series]: ...
+@overload
+def flatten_hash_safe(
+    iterable: Iterable[OneOrIterable[CompliantSeries]], /
+) -> Iterator[CompliantSeries]: ...
+@overload
+def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]: ...
 def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
     """Fully unwrap all levels of nesting.
 

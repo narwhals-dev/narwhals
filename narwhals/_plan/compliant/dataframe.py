@@ -92,6 +92,7 @@ class CompliantDataFrame(
     def from_dict(
         cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
+    def get_column(self, name: str) -> SeriesT: ...
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
     ) -> Self:
@@ -126,6 +127,7 @@ class CompliantDataFrame(
 
         return DataFrame[NativeDataFrameT, NativeSeriesT](self)
 
+    def to_series(self, index: int = 0) -> SeriesT: ...
     def with_row_index(self, name: str) -> Self: ...
 
 
@@ -141,3 +143,6 @@ class EagerDataFrame(
 
     def with_columns(self, irs: Seq[NamedIR]) -> Self:
         return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+
+    def to_series(self, index: int = 0) -> SeriesT:
+        return self.get_column(self.columns[index])

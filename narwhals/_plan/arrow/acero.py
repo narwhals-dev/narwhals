@@ -25,6 +25,8 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
+from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import SingleColSelector
 
@@ -189,10 +191,15 @@ def _order_by(
     return Decl("order_by", pac.OrderByNodeOptions(keys, null_placement=null_placement))
 
 
-# TODO @dangotbanned: Utilize `SortMultipleOptions.to_arrow_acero`
-def sort_by(*args: Any, **kwds: Any) -> Decl:
-    msg = "Should convert from polars args -> use `_order_by"
-    raise NotImplementedError(msg)
+def sort_by(
+    by: OneOrIterable[str],
+    *more_by: str,
+    descending: OneOrIterable[bool] = False,
+    nulls_last: bool = False,
+) -> Decl:
+    return SortMultipleOptions.parse(
+        descending=descending, nulls_last=nulls_last
+    ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
 
 
 def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
