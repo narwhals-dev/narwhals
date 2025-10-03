@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa  # ignore-banned-import
@@ -13,6 +14,7 @@ from narwhals._arrow.utils import (
     chunked_array as _chunked_array,
     floordiv_compat as floordiv,
 )
+from narwhals._plan import expressions as ir
 from narwhals._plan.arrow import options
 from narwhals._plan.expressions import operators as ops
 from narwhals._utils import Implementation
@@ -20,7 +22,7 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.dataframe import PromoteOptions
     from narwhals._arrow.typing import (
@@ -55,6 +57,9 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, IntoArrowSchema
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
+
+IntoColumnAgg: TypeAlias = Callable[[str], ir.AggExpr]
+"""Helper constructor for single-column aggregations."""
 
 is_null = pc.is_null
 is_not_null = t.cast("UnaryFunction[ScalarAny,pa.BooleanScalar]", pc.is_valid)
@@ -110,6 +115,10 @@ _IS_BETWEEN: Mapping[ClosedInterval, tuple[BinaryComp, BinaryComp]] = {
     "right": (gt, lt_eq),
     "none": (gt, lt),
     "both": (gt_eq, lt_eq),
+}
+IS_FIRST_LAST_DISTINCT: Mapping[type[ir.boolean.BooleanFunction], IntoColumnAgg] = {
+    ir.boolean.IsFirstDistinct: ir.min,
+    ir.boolean.IsLastDistinct: ir.max,
 }
 
 

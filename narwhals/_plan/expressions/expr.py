@@ -30,7 +30,6 @@ if t.TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
-    from narwhals._plan.expressions import aggregation as agg
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.expressions.literal import LiteralValue
     from narwhals._plan.expressions.selectors import Selector
@@ -100,16 +99,6 @@ class Column(ExprIR, config=ExprIROptions.namespaced("col")):
 
     def __repr__(self) -> str:
         return f"col({self.name!r})"
-
-    def min(self) -> agg.Min:
-        from narwhals._plan.expressions import aggregation as agg
-
-        return agg.Min(expr=self)
-
-    def max(self) -> agg.Max:
-        from narwhals._plan.expressions import aggregation as agg
-
-        return agg.Max(expr=self)
 
 
 class _ColumnSelection(ExprIR, config=ExprIROptions.no_dispatch()):

@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         IsBetween,
         IsFinite,
         IsFirstDistinct,
+        IsLastDistinct,
         IsNan,
         IsNull,
         Not,
@@ -371,19 +372,29 @@ class ArrowExpr(  # type: ignore[misc]
     def rolling_expr(self, node: ir.RollingExpr, frame: Frame, name: str) -> Self:
         raise NotImplementedError
 
+    def _is_first_last_distinct(
+        self,
+        node: FunctionExpr[IsFirstDistinct | IsLastDistinct],
+        frame: Frame,
+        name: str,
+    ) -> Self:
+        idx_name = temp.column_name([name])
+        expr_ir = fn.IS_FIRST_LAST_DISTINCT[type(node.function)](idx_name)
+        series = self._dispatch_expr(node.input[0], frame, name)
+        df = series.to_frame().with_row_index(idx_name)
+        distinct_index = (
+            df.group_by_names((name,))
+            .agg((ir.named_ir(idx_name, expr_ir),))
+            .get_column(idx_name)
+            .native
+        )
+        result: Incomplete = pc.is_in(df.get_column(idx_name).native, distinct_index)
+        return self._with_native(result, name)
+
     def is_first_distinct(
         self, node: FunctionExpr[IsFirstDistinct], frame: Frame, name: str
     ) -> Self:
-        tmp_name = temp.column_name([name])
-        aggs = (ir.NamedIR.from_ir(ir.col(tmp_name).min()),)
-        series = self._dispatch_expr(node.input[0], frame, name)
-        df_indexed = series.to_frame().with_row_index(tmp_name)
-        row_number = df_indexed.get_column(tmp_name).native
-        first_distinct_index = (
-            df_indexed.group_by_names((name,)).agg(aggs).get_column(tmp_name).native
-        )
-        result: Incomplete = pc.is_in(row_number, first_distinct_index)
-        return self._with_native(result, name)
+        return self._is_first_last_distinct(node, frame, name)
 
     is_last_distinct = not_implemented()
 

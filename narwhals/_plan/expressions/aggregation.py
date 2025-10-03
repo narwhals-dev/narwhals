@@ -63,3 +63,15 @@ class Std(AggExpr):
 class Var(AggExpr):
     __slots__ = (*AggExpr.__slots__, "ddof")
     ddof: int
+
+
+def min(name: str, /) -> Min:
+    from narwhals._plan.expressions import col
+
+    return Min(expr=col(name))
+
+
+def max(name: str, /) -> Max:
+    from narwhals._plan.expressions import col
+
+    return Max(expr=col(name))
