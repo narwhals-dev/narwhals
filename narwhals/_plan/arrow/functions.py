@@ -235,7 +235,7 @@ def is_in(values: ArrowAny, /, other: ChunkedOrArrayAny) -> ArrowAny:
     Returns a mask with `len(values)` elements.
     """
     # NOTE: Stubs don't include a `ChunkedArray` return
-    # NOTE: Replaced ambigious parameter name (`value_set`)
+    # NOTE: Replaced ambiguous parameter name (`value_set`)
     is_in_: Incomplete = pc.is_in
     return is_in_(values, other)  # type: ignore[no-any-return]
 
