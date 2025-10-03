@@ -150,13 +150,11 @@ class AggExpr:
                 ]
             )
         elif self.is_last() or self.is_first():
-            result = self.native_agg(group_by)(
-                group_by._grouped[[*group_by._keys, *names]]
-            )
+            result = self.native_agg()(group_by._grouped[[*group_by._keys, *names]])
             result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
-            result = self.native_agg(group_by)(group_by._grouped[select])
+            result = self.native_agg()(group_by._grouped[select])
         if is_pandas_like_dataframe(result):
             result.columns = list(self.aliases)
         else:
@@ -190,7 +188,7 @@ class AggExpr:
         self._leaf_name = PandasLikeGroupBy._leaf_name(self.expr)
         return self._leaf_name
 
-    def native_agg(self, group_by: PandasLikeGroupBy) -> _NativeAgg:
+    def native_agg(self) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
         native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
         if self.leaf_name in _REMAP_ORDERED_INDEX:
