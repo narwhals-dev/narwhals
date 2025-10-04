@@ -9,7 +9,7 @@ import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan.arrow import functions as fn
+from narwhals._plan.arrow import acero, functions as fn
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, JoinStrategy
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
@@ -144,3 +144,20 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def row(self, index: int) -> tuple[Any, ...]:
         row = self.native.slice(index, 1)
         return tuple(chain.from_iterable(row.to_pydict().values()))
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: JoinStrategy,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str = "_right",
+    ) -> Self:
+        if how == "cross":
+            msg = f"join(how={how!r})"
+            raise NotImplementedError(msg)
+        result = acero.join_tables(
+            self.native, other.native, how, left_on, right_on, suffix=suffix
+        )
+        return self._with_native(result)

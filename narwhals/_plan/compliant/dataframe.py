@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals._utils import Version
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoSchema
+    from narwhals.typing import IntoSchema, JoinStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -110,6 +110,15 @@ class CompliantDataFrame(
         """
         return self._group_by.from_resolver(self, resolver)
 
+    def join(
+        self,
+        other: Self,
+        *,
+        how: JoinStrategy,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str = "_right",
+    ) -> Self: ...
     def row(self, index: int) -> tuple[Any, ...]: ...
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...

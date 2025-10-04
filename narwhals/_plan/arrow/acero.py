@@ -28,10 +28,10 @@ from pyarrow.acero import Declaration as Decl
 from narwhals._plan.common import flatten_hash_safe
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.typing import OneOrSeq
-from narwhals.typing import SingleColSelector
+from narwhals.typing import JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable, Iterator
+    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 
     from typing_extensions import TypeAlias
 
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import NullPlacement
+    from narwhals._plan.arrow.typing import JoinTypeSubset, NullPlacement
     from narwhals._plan.typing import OneOrIterable, Order, Seq
     from narwhals.typing import NonNestedLiteral
 
@@ -65,6 +65,14 @@ _THREAD_UNSAFE: Final = frozenset[Aggregation](
 col = pc.field
 lit = cast("Callable[[NonNestedLiteral], Expr]", pc.scalar)
 """Alias for `pyarrow.compute.scalar`."""
+
+_HOW_JOIN: Mapping[JoinStrategy, JoinTypeSubset] = {
+    "inner": "inner",
+    "left": "left outer",
+    "full": "full outer",
+    "anti": "left anti",
+    "semi": "left semi",
+}
 
 
 # NOTE: ATOW there are 304 valid function names, 46 can be used for some kind of agg
@@ -202,6 +210,72 @@ def sort_by(
     ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
 
 
+def join(
+    left: pa.Table,
+    right: pa.Table,
+    how: JoinTypeSubset,
+    left_on: OneOrIterable[str],
+    right_on: OneOrIterable[str],
+    suffix: str = "_right",
+    *,
+    coalesce_keys: bool = True,
+) -> Decl:
+    """Heavily based on [`pyarrow.acero._perform_join`].
+
+    [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
+    """
+    left_on = [left_on] if isinstance(left_on, str) else list(left_on)
+    right_on = [right_on] if isinstance(right_on, str) else list(right_on)
+
+    # polars full join does not coalesce keys,
+    coalesce_keys = coalesce_keys and (how != "full outer")
+    if not coalesce_keys:
+        opts = _join_options(how, left_on, right_on, suffix=suffix)
+        return _hashjoin(left, right, opts)
+
+    # By default expose all columns on both left and right table
+    left_names = left.schema.names
+    right_names = right.schema.names
+
+    if how in {"left semi", "left anti"}:
+        right_names = []
+    elif how in {"inner", "left outer"}:
+        right_names = [name for name in right_names if name not in right_on]
+    opts = _join_options(
+        how,
+        left_on,
+        right_on,
+        suffix=suffix,
+        left_output=left_names,
+        right_output=right_names,
+    )
+    return _hashjoin(left, right, opts)
+
+
+def _join_options(
+    how: JoinTypeSubset,
+    left_on: str | list[str],
+    right_on: str | list[str],
+    *,
+    suffix: str = "_right",
+    left_output: Iterable[str] | None = None,
+    right_output: Iterable[str] | None = None,
+) -> pac.HashJoinNodeOptions:
+    tp: Incomplete = pac.HashJoinNodeOptions
+    kwds = {
+        "left_output": left_output,
+        "right_output": right_output,
+        "output_suffix_for_right": suffix,
+    }
+    return tp(how, left_on, right_on, **kwds)  # type: ignore[no-any-return]
+
+
+def _hashjoin(
+    left: pa.Table, right: pa.Table, /, options: pac.HashJoinNodeOptions
+) -> Decl:
+    return Decl("hashjoin", options, [table_source(left), table_source(right)])
+
+
 def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
     """Compose and evaluate a logical plan.
 
@@ -258,3 +332,22 @@ def select_names_table(
     native: pa.Table, column_names: OneOrIterable[str], *more_names: str
 ) -> pa.Table:
     return collect(table_source(native), select_names(column_names, *more_names))
+
+
+def join_tables(
+    left: pa.Table,
+    right: pa.Table,
+    how: JoinStrategy,
+    left_on: OneOrIterable[str] | None,
+    right_on: OneOrIterable[str] | None = (),
+    suffix: str = "_right",
+    *,
+    coalesce_keys: bool = True,
+) -> pa.Table:
+    join_type = _HOW_JOIN[how]
+    left_on = left_on or ()
+    right_on = right_on or left_on
+    decl = join(
+        left, right, join_type, left_on, right_on, suffix, coalesce_keys=coalesce_keys
+    )
+    return collect(decl)

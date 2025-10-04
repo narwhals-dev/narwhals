@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
+    from narwhals.typing import JoinStrategy
 
 Incomplete: TypeAlias = Any
 
@@ -178,3 +179,24 @@ class DataFrame(
 
     def row(self, index: int) -> tuple[Any, ...]:
         return self._compliant.row(index)
+
+    def join(
+        self,
+        other: Self,
+        on: str | Sequence[str] | None = None,
+        how: JoinStrategy = "inner",
+        *,
+        left_on: str | Sequence[str] | None = None,
+        right_on: str | Sequence[str] | None = None,
+        suffix: str = "_right",
+    ) -> Self:
+        if on is not None:
+            on = [on] if isinstance(on, str) else list(on)
+        if left_on is not None:
+            left_on = [left_on] if isinstance(left_on, str) else list(left_on)
+        if right_on is not None:
+            right_on = [right_on] if isinstance(right_on, str) else list(right_on)
+        result = self._compliant.join(
+            other._compliant, how=how, left_on=left_on, right_on=right_on, suffix=suffix
+        )
+        return self._with_compliant(result)

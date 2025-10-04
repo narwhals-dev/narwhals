@@ -136,3 +136,8 @@ BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 StoresNativeT_co = TypeVar("StoresNativeT_co", bound=StoresNative[Any], covariant=True)
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
 NullPlacement: TypeAlias = Literal["at_start", "at_end"]
+
+JoinTypeSubset: TypeAlias = Literal[
+    "inner", "left outer", "full outer", "left anti", "left semi"
+]
+"""Only the `pyarrow` `JoinType`'s we use in narwhals"""
