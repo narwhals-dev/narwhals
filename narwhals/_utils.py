@@ -590,6 +590,25 @@ class Implementation(NoAutoEnum):
         """
         return self is Implementation.SQLFRAME  # pragma: no cover
 
+    def is_eager_allowed(self) -> bool:
+        """Return whether implementation supports eager evaluation.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.implementation.is_eager_allowed()
+            True
+        """
+        return self in {
+            Implementation.CUDF,
+            Implementation.MODIN,
+            Implementation.PANDAS,
+            Implementation.POLARS,
+            Implementation.PYARROW,
+        }
+
     def _backend_version(self) -> tuple[int, ...]:
         """Returns backend version."""
         return backend_version(self)
