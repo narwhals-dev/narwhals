@@ -23,13 +23,11 @@ if TYPE_CHECKING:
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries, EagerSeries
     from narwhals._compliant.window import WindowInputs
+    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
     from narwhals.typing import (
         FillNullStrategy,
         IntoLazyFrame,
         ModeKeepStrategy,
-        NativeDataFrame,
-        NativeFrame,
-        NativeSeries,
         RankMethod,
         RollingInterpolationMethod,
     )

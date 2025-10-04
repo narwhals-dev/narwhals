@@ -17,11 +17,11 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoLazyFrameT, JoinStrategy, NativeDataFrame
+    from narwhals.typing import IntoDataFrame, IntoLazyFrameT, JoinStrategy
 
 
 def from_native_lazy(
-    native: IntoLazyFrameT | NativeDataFrame,
+    native: IntoLazyFrameT | IntoDataFrame,
 ) -> nw.LazyFrame[IntoLazyFrameT] | nw.LazyFrame[Any]:
     """Every join test [needs to use `.lazy()` for typing]*.
 
