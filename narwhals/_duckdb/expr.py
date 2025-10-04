@@ -13,8 +13,10 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     col,
+    generate_order_by_sql,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
     window_expression,
 )
@@ -92,6 +94,24 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             descending=descending,
             nulls_last=nulls_last,
         )
+
+    def _first(self, expr: Expression, *order_by: str) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        order_by_sql = generate_order_by_sql(
+            *order_by,
+            descending=[False] * len(order_by),
+            nulls_last=[False] * len(order_by),
+        )
+        return sql_expression(f"first({expr} {order_by_sql})")
+
+    def _last(self, expr: Expression, *order_by: str) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        order_by_sql = generate_order_by_sql(
+            *order_by,
+            descending=[False] * len(order_by),
+            nulls_last=[False] * len(order_by),
+        )
+        return sql_expression(f"last({expr} {order_by_sql})")
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
