@@ -695,9 +695,6 @@ def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ..
 
     Arguments:
         version: Version string, or object with one, to parse.
-
-    Returns:
-        Parsed version number.
     """
     # lifted from Polars
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
@@ -778,9 +775,6 @@ def maybe_align_index(
     Arguments:
         lhs: Dataframe or Series.
         rhs: Dataframe or Series to align with.
-
-    Returns:
-        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -871,9 +865,6 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
     Arguments:
         obj: Dataframe or Series.
 
-    Returns:
-        Same type as input.
-
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already aligns indices for users.
@@ -917,9 +908,6 @@ def maybe_set_index(
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
         index: series or list of series to set as index.
-
-    Returns:
-        Same type as input.
 
     Raises:
         ValueError: If one of the following conditions happens
@@ -995,9 +983,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
 
     Arguments:
         obj: Dataframe or Series.
-
-    Returns:
-        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -1106,9 +1091,6 @@ def maybe_convert_dtypes(
         *args: Additional arguments which gets passed through.
         **kwargs: Additional arguments which gets passed through.
 
-    Returns:
-        Same type as input.
-
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
@@ -1146,9 +1128,6 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     Arguments:
         sz: original size in bytes
         unit: size unit to convert into
-
-    Returns:
-        Integer or float.
     """
     if unit in {"b", "bytes"}:
         return sz
@@ -1181,9 +1160,6 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
     Arguments:
         series: Input Series.
-
-    Returns:
-        Whether the Series is an ordered categorical.
 
     Examples:
         >>> import narwhals as nw
@@ -1677,9 +1653,6 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
     Arguments:
         data: Object which implements `__arrow_c_stream__`.
         context: Initialized compliant object.
-
-    Returns:
-        A PyArrow Table.
     """
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
