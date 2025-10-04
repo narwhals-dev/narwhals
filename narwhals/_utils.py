@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
 from datetime import timezone
 from enum import Enum, auto

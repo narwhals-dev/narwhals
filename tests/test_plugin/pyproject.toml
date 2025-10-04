@@ -1,0 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "test_plugin"
+version = "0.1.0"
+
+[project.entry-points.'narwhals.plugins']
+test-plugin = 'test_plugin'
