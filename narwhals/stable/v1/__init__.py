@@ -1175,6 +1175,10 @@ def concat_str(
     )
 
 
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    return _stableify(nw.format(f_string, *args))
+
+
 def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Expr:
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
@@ -1412,6 +1416,7 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
+    "format",
     "from_arrow",
     "from_dict",
     "from_dicts",
