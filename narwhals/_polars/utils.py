@@ -28,6 +28,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
+    from polars.datatypes import IntegerType as PlIntegerType
     from typing_extensions import TypeIs
 
     from narwhals._compliant.typing import Accessor
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntegerDType, IntoDType
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -203,9 +204,11 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
 UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
-def narwhals_to_native_dtype(  # noqa: C901
-    dtype: IntoDType, version: Version
-) -> pl.DataType:
+@overload
+def narwhals_to_native_dtype(dtype: IntegerDType, version: Version) -> PlIntegerType: ...
+@overload
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pl.DataType: ...
+def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pl.DataType:  # noqa: C901
     dtypes = version.dtypes
     base_type = dtype.base_type()
     if pl_type := NW_TO_PL_DTYPES.get(base_type):

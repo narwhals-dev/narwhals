@@ -62,12 +62,12 @@ repos:
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |
           (?x)
-            import\ narwhals.dtypes|
-            from\ narwhals\ import\ dtypes|
-            from\ narwhals.dtypes\ import\ [^D_]+|
-            import\ narwhals.stable.v1.dtypes|
-            from\ narwhals.stable\.v.\ import\ dtypes|
-            from\ narwhals.stable\.v.\.dtypes\ import
+            import\ narwhals(\.stable\.v\d)?\.dtypes|
+            from\ narwhals(\.stable\.v\d)?\ import\ dtypes|
+            ^from\ narwhals(\.stable\.v\d)?\.dtypes\ import
+              \ (DType,\ )?
+              ((Datetime|Duration|Enum)(,\ )?)+
+              ((,\ )?DType)?
       language: pygrep
       files: ^narwhals/
       exclude: |

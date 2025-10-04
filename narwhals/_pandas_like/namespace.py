@@ -16,8 +16,9 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._pandas_like.utils import import_array_module, is_non_nullable_boolean
 from narwhals._utils import zip_strict
+from narwhals.dtypes import Int64
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import ScalarKwargs
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import IntegerDType, IntoDType, NonNestedLiteral
 
 
 Incomplete: TypeAlias = Any
@@ -65,6 +66,14 @@ class PandasLikeNamespace(
     @property
     def selectors(self) -> PandasSelectorNamespace:
         return PandasSelectorNamespace.from_namespace(self)
+
+    @property
+    def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
+        if TYPE_CHECKING:
+            import numpy as np
+
+            return np
+        return import_array_module(self._implementation)
 
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
@@ -372,6 +381,18 @@ class PandasLikeNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def int_range_eager(
+        self,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerDType = Int64,
+        name: str = "literal",
+    ) -> PandasLikeSeries:
+        data = self._array_funcs.arange(start, end, step)
+        return self._series.from_iterable(data, context=self, name=name, dtype=dtype)
 
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
