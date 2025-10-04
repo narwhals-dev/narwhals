@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import enum
 from itertools import repeat
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from narwhals._plan._immutable import Immutable
+from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import pyarrow.acero
     import pyarrow.compute as pc
@@ -84,6 +85,25 @@ class FunctionOptions(Immutable):
     def __str__(self) -> str:
         return f"{type(self).__name__}(flags='{self.flags}')"
 
+    def to_dict(self, *, qualify_type_name: bool = False) -> dict[str, dict[str, int]]:
+        name = qualified_type_name(self) if qualify_type_name else type(self).__name__
+        return {name: {"flags": self.flags.value}}
+
+    @classmethod
+    def from_dict(cls, mapping: Mapping[str, Any], /) -> FunctionOptions:
+        flags = (mapping.get(cls.__name__) or mapping[qualified_type_name(cls)])["flags"]
+        return cls.from_int(int(flags))
+
+    @classmethod
+    def from_int(cls, value: int, /) -> FunctionOptions:
+        return cls.from_flags(FunctionFlags(value))
+
+    @classmethod
+    def from_flags(cls, flags: FunctionFlags, /) -> FunctionOptions:
+        obj = FunctionOptions.__new__(FunctionOptions)
+        object.__setattr__(obj, "flags", cls._ensure_valid_flags(flags))
+        return obj
+
     def is_elementwise(self) -> bool:
         return self.flags.is_elementwise()
 
@@ -99,12 +119,16 @@ class FunctionOptions(Immutable):
     def is_input_wildcard_expansion(self) -> bool:
         return self.flags.is_input_wildcard_expansion()
 
-    def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
+    @staticmethod
+    def _ensure_valid_flags(flags: FunctionFlags, /) -> FunctionFlags:
         if (FunctionFlags.RETURNS_SCALAR | FunctionFlags.LENGTH_PRESERVING) in flags:
             msg = "A function cannot both return a scalar and preserve length, they are mutually exclusive."
             raise TypeError(msg)
+        return flags
+
+    def with_flags(self, flags: FunctionFlags, /) -> FunctionOptions:
         obj = FunctionOptions.__new__(FunctionOptions)
-        object.__setattr__(obj, "flags", self.flags | flags)
+        object.__setattr__(obj, "flags", self.flags | self._ensure_valid_flags(flags))
         return obj
 
     def with_elementwise(self) -> FunctionOptions:
