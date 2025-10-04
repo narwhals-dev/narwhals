@@ -455,6 +455,54 @@ class ExprStringNamespace(Generic[ExprT]):
             lambda plx: self._expr._to_compliant_expr(plx).str.to_lowercase()
         )
 
+    def to_titlecase(self) -> ExprT:
+        """Modify strings to their titlecase equivalent.
+
+        Notes:
+            This is a form of case transform where the first letter of each word is
+            capitalized, with the rest of the word in lowercase.
+
+        Warning:
+            Different backends might follow different rules to determine what a "word" is:
+
+            | Word boundaries (characters)                                                                        | Backends                      | Example                                  |
+            | --------------------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------- |
+            | *non-alphanumeric*                                                                                  | duckdb, polars and spark-like | `"with123numbers"` -> `"With123numbers"` |
+            | *non-alphabetic* (same as [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title)) | dask, pyarrow and pandas-like | `"with123numbers"` -> `"With123Numbers"` |
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame(
+            ...     {
+            ...         "quotes": [
+            ...             "'e.t. phone home'",
+            ...             "you talkin' to me?",
+            ...             "to infinity,and BEYOND!",
+            ...         ]
+            ...     }
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(quotes_title=nw.col("quotes").str.to_titlecase())
+            ┌─────────────────────────────────────────────────────┐
+            |                 Narwhals DataFrame                  |
+            |-----------------------------------------------------|
+            |shape: (3, 2)                                        |
+            |┌─────────────────────────┬─────────────────────────┐|
+            |│ quotes                  ┆ quotes_title            │|
+            |│ ---                     ┆ ---                     │|
+            |│ str                     ┆ str                     │|
+            |╞═════════════════════════╪═════════════════════════╡|
+            |│ 'e.t. phone home'       ┆ 'E.T. Phone Home'       │|
+            |│ you talkin' to me?      ┆ You Talkin' To Me?      │|
+            |│ to infinity,and BEYOND! ┆ To Infinity,And Beyond! │|
+            |└─────────────────────────┴─────────────────────────┘|
+            └─────────────────────────────────────────────────────┘
+        """
+        return self._expr._with_elementwise(
+            lambda plx: self._expr._to_compliant_expr(plx).str.to_titlecase()
+        )
+
     def zfill(self, width: int) -> ExprT:
         """Transform string to zero-padded variant.
 

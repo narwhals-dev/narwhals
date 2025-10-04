@@ -79,6 +79,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
     def to_lowercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_lower(self.native))
 
+    def to_titlecase(self) -> ArrowSeries:
+        return self.with_native(pc.utf8_title(self.native))
+
     def zfill(self, width: int) -> ArrowSeries:
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native

@@ -786,6 +786,11 @@ class PolarsSeriesDateTimeNamespace(
 class PolarsSeriesStringNamespace(
     PolarsSeriesNamespace, PolarsStringNamespace[PolarsSeries, pl.Series]
 ):
+    def to_titlecase(self) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return self.to_frame().select(ns.col(name).str.to_titlecase()).get_column(name)
+
     def zfill(self, width: int) -> PolarsSeries:
         name = self.name
         ns = self.__narwhals_namespace__()

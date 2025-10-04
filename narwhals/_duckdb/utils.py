@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import duckdb
 import duckdb.typing as duckdb_dtypes
+from duckdb import Expression
 from duckdb.typing import DuckDBPyType
 
 from narwhals._utils import Version, isinstance_or_issubclass, zip_strict
@@ -13,7 +14,7 @@ from narwhals.exceptions import ColumnNotFoundError
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from duckdb import DuckDBPyRelation, Expression
+    from duckdb import DuckDBPyRelation
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -48,6 +49,22 @@ when = duckdb.CaseExpression
 
 F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
+
+
+def lambda_expr(
+    params: str | Expression | tuple[Expression, ...], expr: Expression, /
+) -> Expression:
+    """Wraps [`duckdb.LambdaExpression`].
+
+    [`duckdb.LambdaExpression`]: https://duckdb.org/docs/stable/sql/functions/lambda
+    """
+    try:
+        from duckdb import LambdaExpression
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        msg = f"DuckDB>=1.2.0 is required for this operation. Found: DuckDB {duckdb.__version__}"
+        raise NotImplementedError(msg) from exc
+    args = (params,) if isinstance(params, Expression) else params
+    return LambdaExpression(args, expr)
 
 
 def concat_str(*exprs: Expression, separator: str = "") -> Expression:
