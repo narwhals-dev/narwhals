@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 import pytest
 
+import narwhals._plan as nwp
 from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe
 
@@ -295,6 +296,58 @@ def test_join_cross_with_suffix(suffix: str) -> None:  # pragma: no cover
         "a": [1, 1, 1, 2, 2, 2, 3, 3, 3],
         f"a{suffix}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
     }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
+)
+@pytest.mark.parametrize(
+    ("on", "predicate", "expected"),
+    [
+        (["a", "bob"], (nwp.col("bob") < 5), {"a": [2], "bob": [6], "zor ro": [9]}),
+        (["bob"], (nwp.col("bob") < 5), {"a": [2], "bob": [6], "zor ro": [9]}),
+        (
+            ["bob"],
+            (nwp.col("bob") > 5),
+            {"a": [1, 3], "bob": [4, 4], "zor ro": [7.0, 8.0]},
+        ),
+    ],
+)
+def test_join_anti(
+    on: On, predicate: nwp.Expr, expected: Data
+) -> None:  # pragma: no cover
+    data = {"a": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    other = df.filter(predicate)  # type: ignore[attr-defined]
+    result = df.join(other, on, how="anti")
+    assert_equal_data(result, expected)
+
+
+# NOTE: Maybe merge `semi`, `anti` into the same test which just inverts the predicate?
+@pytest.mark.xfail(
+    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
+)
+@pytest.mark.parametrize(
+    ("on", "predicate", "expected"),
+    [
+        ("a", (nwp.col("bob") > 5), {"a": [2], "bob": [6], "zor ro": [9]}),
+        (["bob"], (nwp.col("bob") < 5), {"a": [1, 3], "bob": [4, 4], "zor ro": [7, 8]}),
+        (
+            ["a", "bob"],
+            (nwp.col("bob") < 5),
+            {"a": [1, 3], "bob": [4, 4], "zor ro": [7, 8]},
+        ),
+    ],
+)
+def test_join_semi(
+    on: On, predicate: nwp.Expr, expected: Data
+) -> None:  # pragma: no cover
+    data = {"a": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    other = df.filter(predicate)  # type: ignore[attr-defined]
+    assert on is not None
+    result = df.join(other, on, how="semi").sort(on)
     assert_equal_data(result, expected)
 
 
