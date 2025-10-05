@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 import pytest
 
 import narwhals._plan as nwp
-from narwhals.exceptions import NarwhalsError
+from narwhals.exceptions import DuplicateError, NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -97,13 +97,16 @@ def test_join_full(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
+XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
     reason=(
         "Did not raise on duplicate column names.\n"
         "Haven't added validation yet:\n"
         "https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L79-L93"
     )
 )
+
+
+@XFAIL_DUPLICATE_COLUMN_NAMES
 def test_join_full_duplicate() -> None:
     df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
     df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
@@ -112,6 +115,14 @@ def test_join_full_duplicate() -> None:
 
     with pytest.raises(NarwhalsError):
         df_left.join(df_right, "foo", how="full")
+
+
+@XFAIL_DUPLICATE_COLUMN_NAMES
+def test_join_duplicate_column_names() -> None:
+    data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
+    df = dataframe(data)
+    with pytest.raises(DuplicateError):
+        df.join(df, "a").join(df, "a")
 
 
 @pytest.mark.parametrize("kwds", [Keywords(left_on="a", right_on="a"), Keywords(on="a")])
