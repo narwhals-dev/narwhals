@@ -1176,6 +1176,7 @@ def concat_str(
 
 
 def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string."""
     return _stableify(nw.format(f_string, *args))
 
 
