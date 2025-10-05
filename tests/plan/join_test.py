@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import pytest
 
+from narwhals.exceptions import NarwhalsError
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -33,11 +34,36 @@ EXPECTED_DATA_1 = {
 }
 
 
+class Keywords(TypedDict, total=False):
+    """Arguments for `DataFrame.join`."""
+
+    on: On
+    how: JoinStrategy
+    left_on: On
+    right_on: On
+    suffix: str
+
+
+@pytest.fixture
+def data_inner() -> Data:
+    return {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zor ro": [7.0, 8.0, 9.0],
+        "idx": [0, 1, 2],
+    }
+
+
 @pytest.mark.parametrize(
-    ("left_data", "right_data", "expected", "on", "left_on", "right_on"),
+    ("left_data", "right_data", "expected", "kwds"),
     [
-        (LEFT_DATA_1, RIGHT_DATA_1, EXPECTED_DATA_1, None, ["id"], ["id"]),
-        (LEFT_DATA_1, RIGHT_DATA_1, EXPECTED_DATA_1, "id", None, None),
+        (
+            LEFT_DATA_1,
+            RIGHT_DATA_1,
+            EXPECTED_DATA_1,
+            Keywords(left_on=["id"], right_on=["id"]),
+        ),
+        (LEFT_DATA_1, RIGHT_DATA_1, EXPECTED_DATA_1, Keywords(on="id")),
         (
             {
                 "id": [1, 2, 3, 4],
@@ -58,22 +84,182 @@ EXPECTED_DATA_1 = {
                 "year_foo": [None, 2021, 2022, 2023, 2024],
                 "value2": [None, 500, 600, 700, 800],
             },
-            None,
-            ["id", "year"],
-            ["id", "year_foo"],
+            Keywords(left_on=["id", "year"], right_on=["id", "year_foo"]),
         ),
     ],
     ids=["left_on-right_on-identical", "on", "left_on-right_on-different"],
 )
 def test_join_full(
-    left_data: Data, right_data: Data, expected: Data, on: On, left_on: On, right_on: On
+    left_data: Data, right_data: Data, expected: Data, kwds: Keywords
 ) -> None:
+    kwds["how"] = "full"
     result = (
         dataframe(left_data)
-        .join(
-            dataframe(right_data), on=on, left_on=left_on, right_on=right_on, how="full"
-        )
+        .join(dataframe(right_data), **kwds)
         .sort("id", nulls_last=True)
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.xfail(
+    reason=(
+        "Did not raise on duplicate column names.\n"
+        "Haven't added validation yet:\n"
+        "https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L79-L93"
+    )
+)
+def test_join_full_duplicate() -> None:
+    df1 = {"foo": [1, 2, 3], "val1": [1, 2, 3]}
+    df2 = {"foo": [1, 2, 3], "foo_right": [1, 2, 3]}
+    df_left = dataframe(df1)
+    df_right = dataframe(df2)
+
+    with pytest.raises(NarwhalsError):
+        df_left.join(df_right, "foo", how="full")
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [
+        Keywords(left_on="antananarivo", right_on="antananarivo"),
+        Keywords(on="antananarivo"),
+    ],
+)
+def test_join_inner_single_key(data_inner: Data, kwds: Keywords) -> None:
+    df = dataframe(data_inner)
+    result = df.join(df, **kwds).sort("idx").drop("idx_right")
+    expected = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zor ro": [7.0, 8.0, 9.0],
+        "idx": [0, 1, 2],
+        "bob_right": [4, 4, 6],
+        "zor ro_right": [7.0, 8.0, 9.0],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [
+        Keywords(left_on=["antananarivo", "bob"], right_on=["antananarivo", "bob"]),
+        Keywords(on=["antananarivo", "bob"]),
+    ],
+)
+def test_join_inner_two_keys(data_inner: Data, kwds: Keywords) -> None:
+    df = dataframe(data_inner)
+    result = df.join(df, **kwds).sort("idx").drop("idx_right")
+    expected = {
+        "antananarivo": [1, 3, 2],
+        "bob": [4, 4, 6],
+        "zor ro": [7.0, 8.0, 9.0],
+        "idx": [0, 1, 2],
+        "zor ro_right": [7.0, 8.0, 9.0],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_join_left() -> None:
+    data_left = {
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    data_right = {
+        "antananarivo": [1.0, 2.0, 3.0],
+        "co": [4.0, 5.0, 7.0],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    df_left = dataframe(data_left)
+    df_right = dataframe(data_right)
+    result = (
+        df_left.join(df_right, left_on="bob", right_on="co", how="left")
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "idx": [0, 1, 2],
+        "antananarivo_right": [1, 2, None],
+    }
+    result_on_list = df_left.join(df_right, ["antananarivo", "idx"], how="left").sort(
+        "idx"
+    )
+    expected_on_list = {
+        "antananarivo": [1, 2, 3],
+        "bob": [4, 5, 6],
+        "idx": [0, 1, 2],
+        "co": [4, 5, 7],
+    }
+    assert_equal_data(result, expected)
+    assert_equal_data(result_on_list, expected_on_list)
+
+
+def test_join_left_multiple_column() -> None:
+    data_left = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
+    data_right = {"antananarivo": [1, 2, 3], "c": [4, 5, 6], "idx": [0, 1, 2]}
+    result = (
+        dataframe(data_left)
+        .join(
+            dataframe(data_right),
+            left_on=["antananarivo", "bob"],
+            right_on=["antananarivo", "c"],
+            how="left",
+        )
+        .sort("idx")
+        .drop("idx_right")
+    )
+    expected = {"antananarivo": [1, 2, 3], "bob": [4, 5, 6], "idx": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("kwds", "expected"),
+    [
+        (
+            Keywords(left_on="bob", right_on="c"),
+            {
+                "antananarivo": [1, 2, 3],
+                "bob": [4, 5, 6],
+                "d": [1, 4, 2],
+                "idx": [0, 1, 2],
+                "antananarivo_right": [1, 2, 3],
+                "d_right": [1, 4, 2],
+            },
+        ),
+        (
+            Keywords(left_on="antananarivo", right_on="d"),
+            {
+                "antananarivo": [1, 2, 3],
+                "bob": [4, 5, 6],
+                "d": [1, 4, 2],
+                "idx": [0, 1, 2],
+                "antananarivo_right": [1.0, 3.0, None],
+                "c": [4.0, 6.0, None],
+            },
+        ),
+    ],
+)
+def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) -> None:
+    kwds["how"] = "left"
+    data_left = {
+        "antananarivo": [1.0, 2.0, 3.0],
+        "bob": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    data_right = {
+        "antananarivo": [1.0, 2.0, 3.0],
+        "c": [4.0, 5.0, 6.0],
+        "d": [1.0, 4.0, 2.0],
+        "idx": [0.0, 1.0, 2.0],
+    }
+    result = (
+        dataframe(data_left)
+        .join(dataframe(data_right), **kwds)
+        .sort("idx")
+        .drop("idx_right")
     )
     assert_equal_data(result, expected)
 
