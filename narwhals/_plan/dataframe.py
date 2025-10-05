@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
+from narwhals._plan.common import ensure_seq_str
 from narwhals._plan.expr import _parse_sort_by
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.series import Series
@@ -14,20 +15,22 @@ from narwhals._plan.typing import (
     NativeFrameT_co,
     NativeSeriesT,
     OneOrIterable,
+    Seq,
 )
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
+from narwhals.typing import JoinStrategy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self, TypeAlias, TypeIs
 
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
-    from narwhals.typing import JoinStrategy
+
 
 Incomplete: TypeAlias = Any
 
@@ -190,13 +193,53 @@ class DataFrame(
         right_on: str | Sequence[str] | None = None,
         suffix: str = "_right",
     ) -> Self:
-        if on is not None:
-            on = [on] if isinstance(on, str) else list(on)
-        if left_on is not None:
-            left_on = [left_on] if isinstance(left_on, str) else list(left_on)
-        if right_on is not None:
-            right_on = [right_on] if isinstance(right_on, str) else list(right_on)
+        how = _validate_join_strategy(how)
+        left_on, right_on = normalize_join_on(on, how, left_on, right_on)
         result = self._compliant.join(
             other._compliant, how=how, left_on=left_on, right_on=right_on, suffix=suffix
         )
         return self._with_compliant(result)
+
+
+def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
+    return obj in {"inner", "left", "full", "cross", "anti", "semi"}
+
+
+def _validate_join_strategy(how: str, /) -> JoinStrategy:
+    if _is_join_strategy(how):
+        return how
+    msg = f"Only the following join strategies are supported: {get_args(JoinStrategy)}; found '{how}'."
+    raise NotImplementedError(msg)
+
+
+def normalize_join_on(
+    on: OneOrIterable[str] | None,
+    how: JoinStrategy,
+    left_on: OneOrIterable[str] | None,
+    right_on: OneOrIterable[str] | None,
+    /,
+) -> tuple[Seq[str], Seq[str]] | tuple[None, None]:
+    """Reduce the 3 potential key (`on*`) arguments to 2.
+
+    Ensures the keys spelling is compatible with the join strategy.
+    """
+    if how == "cross":
+        if left_on is not None or right_on is not None or on is not None:
+            msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
+            raise ValueError(msg)
+        return None, None
+    if on is None:
+        if left_on is None or right_on is None:
+            msg = f"Either (`left_on` and `right_on`) or `on` keys should be specified for {how}."
+            raise ValueError(msg)
+        left_on = ensure_seq_str(left_on)
+        right_on = ensure_seq_str(right_on)
+        if len(left_on) != len(right_on):
+            msg = "`left_on` and `right_on` must have the same length."
+            raise ValueError(msg)
+        return left_on, right_on
+    if left_on is not None or right_on is not None:
+        msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
+        raise ValueError(msg)
+    on = ensure_seq_str(on)
+    return on, on

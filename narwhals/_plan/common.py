@@ -10,7 +10,7 @@ from secrets import token_hex
 from typing import TYPE_CHECKING, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
-from narwhals._utils import _hasattr_static
+from narwhals._utils import _hasattr_static, qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
 from narwhals.utils import Version
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         FunctionT,
         NonNestedDTypeT,
         OneOrIterable,
+        Seq,
     )
     from narwhals._utils import _StoresColumns
     from narwhals.typing import NonNestedDType, NonNestedLiteral
@@ -136,6 +137,23 @@ def flatten_hash_safe(iterable: Iterable[OneOrIterable[T]], /) -> Iterator[T]:
             yield from flatten_hash_safe(element)
         else:
             yield element  # type: ignore[misc]
+
+
+def _not_one_or_iterable_str_error(obj: Any, /) -> TypeError:
+    msg = f"Expected one or an iterable of strings, but got: {qualified_type_name(obj)!r}\n{obj!r}"
+    return TypeError(msg)
+
+
+def ensure_seq_str(obj: OneOrIterable[str], /) -> Seq[str]:
+    if not isinstance(obj, Iterable):
+        raise _not_one_or_iterable_str_error(obj)
+    return (obj,) if isinstance(obj, str) else tuple(obj)
+
+
+def ensure_list_str(obj: OneOrIterable[str], /) -> list[str]:
+    if not isinstance(obj, Iterable):
+        raise _not_one_or_iterable_str_error(obj)
+    return [obj] if isinstance(obj, str) else list(obj)
 
 
 def _has_columns(obj: Any) -> TypeIs[_StoresColumns]:

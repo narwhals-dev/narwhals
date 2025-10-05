@@ -25,7 +25,7 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
-from narwhals._plan.common import flatten_hash_safe
+from narwhals._plan.common import ensure_list_str, flatten_hash_safe
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import JoinStrategy, SingleColSelector
@@ -224,8 +224,8 @@ def join(
 
     [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
     """
-    left_on = [left_on] if isinstance(left_on, str) else list(left_on)
-    right_on = [right_on] if isinstance(right_on, str) else list(right_on)
+    left_on = ensure_list_str(left_on)
+    right_on = ensure_list_str(right_on)
 
     # polars full join does not coalesce keys,
     coalesce_keys = coalesce_keys and (how != "full outer")
