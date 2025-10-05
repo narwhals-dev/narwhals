@@ -264,14 +264,38 @@ def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) 
     assert_equal_data(result, expected)
 
 
+@pytest.mark.xfail(
+    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
+)
+def test_join_cross() -> None:  # pragma: no cover
+    df = dataframe({"a": [1, 3, 2]})
+    result = df.join(df, how="cross").sort("a", "a_right")
+    expected = {"a": [1, 1, 1, 2, 2, 2, 3, 3, 3], "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_suffix(how: JoinStrategy, suffix: str) -> None:
-    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+def test_join_with_suffix(how: JoinStrategy, suffix: str) -> None:
+    data = {"a": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
-    on = ["antananarivo", "bob"]
+    on = ["a", "bob"]
     result = df.join(df, left_on=on, right_on=on, how=how, suffix=suffix)
-    assert result.schema.names() == ["antananarivo", "bob", "zor ro", f"zor ro{suffix}"]
+    assert result.schema.names() == ["a", "bob", "zor ro", f"zor ro{suffix}"]
+
+
+@pytest.mark.xfail(
+    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
+)
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_join_cross_with_suffix(suffix: str) -> None:  # pragma: no cover
+    df = dataframe({"a": [1, 3, 2]})
+    result = df.join(df, how="cross", suffix=suffix).sort("a", f"a{suffix}")
+    expected = {
+        "a": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        f"a{suffix}": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+    }
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
@@ -303,6 +327,24 @@ def test_join_keys_exceptions(how: JoinStrategy) -> None:
         ValueError, match=re.escape("`left_on` and `right_on` must have the same length.")
     ):
         df.join(df, how=how, left_on=["antananarivo", "bob"], right_on="antananarivo")
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [
+        Keywords(left_on="a"),
+        Keywords(on="a"),
+        Keywords(right_on="a"),
+        Keywords(left_on="a", right_on="a"),
+    ],
+)
+def test_join_cross_keys_exceptions(kwds: Keywords) -> None:
+    df = dataframe({"a": [1, 3, 2]})
+    kwds["how"] = "cross"
+    with pytest.raises(
+        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
+    ):
+        df.join(df, **kwds)
 
 
 @pytest.mark.parametrize("how", ["right"])
