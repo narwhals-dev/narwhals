@@ -17,7 +17,42 @@ if TYPE_CHECKING:
     from narwhals.typing import JoinStrategy
     from tests.conftest import Data
 
-On: TypeAlias = "str | Sequence[str] | None"
+    On: TypeAlias = "str | Sequence[str] | None"
+
+
+class Keywords(TypedDict, total=False):
+    """Arguments for `DataFrame.join`."""
+
+    on: On
+    how: JoinStrategy
+    left_on: On
+    right_on: On
+    suffix: str
+
+
+XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
+    reason=(
+        "Did not raise on duplicate column names.\n"
+        "Haven't added validation yet:\n"
+        "https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L79-L93"
+    )
+)
+
+
+XFAIL_JOIN_CROSS = pytest.mark.xfail(
+    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
+)
+
+
+XFAIL_DATAFRAME_FILTER = pytest.mark.xfail(
+    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
+)
+
+
+@pytest.fixture
+def data_inner() -> Data:
+    return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0], "idx": [0, 1, 2]}
+
 
 LEFT_DATA_1 = {"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"], "age": [25, 30, 35]}
 RIGHT_DATA_1 = {
@@ -33,21 +68,6 @@ EXPECTED_DATA_1 = {
     "department": [None, "HR", "Engineering", "Marketing"],
     "salary": [None, 50000, 60000, 70000],
 }
-
-
-class Keywords(TypedDict, total=False):
-    """Arguments for `DataFrame.join`."""
-
-    on: On
-    how: JoinStrategy
-    left_on: On
-    right_on: On
-    suffix: str
-
-
-@pytest.fixture
-def data_inner() -> Data:
-    return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0], "idx": [0, 1, 2]}
 
 
 @pytest.mark.parametrize(
@@ -95,15 +115,6 @@ def test_join_full(
         .sort("id", nulls_last=True)
     )
     assert_equal_data(result, expected)
-
-
-XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
-    reason=(
-        "Did not raise on duplicate column names.\n"
-        "Haven't added validation yet:\n"
-        "https://github.com/narwhals-dev/narwhals/blob/f4787d3f9e027306cb1786db7b471f63b393b8d1/narwhals/_arrow/dataframe.py#L79-L93"
-    )
-)
 
 
 @XFAIL_DUPLICATE_COLUMN_NAMES
@@ -236,9 +247,7 @@ def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) 
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
-)
+@XFAIL_JOIN_CROSS
 def test_join_cross() -> None:  # pragma: no cover
     df = dataframe({"a": [1, 3, 2]})
     result = df.join(df, how="cross").sort("a", "a_right")
@@ -256,9 +265,7 @@ def test_join_with_suffix(how: JoinStrategy, suffix: str) -> None:
     assert result.schema.names() == ["a", "b", "zor ro", f"zor ro{suffix}"]
 
 
-@pytest.mark.xfail(
-    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
-)
+@XFAIL_JOIN_CROSS
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
 def test_join_cross_with_suffix(suffix: str) -> None:  # pragma: no cover
     df = dataframe({"a": [1, 3, 2]})
@@ -270,9 +277,7 @@ def test_join_cross_with_suffix(suffix: str) -> None:  # pragma: no cover
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
-)
+@XFAIL_DATAFRAME_FILTER
 @pytest.mark.parametrize(
     ("on", "predicate", "expected"),
     [
@@ -292,9 +297,7 @@ def test_join_anti(
 
 
 # NOTE: Maybe merge `semi`, `anti` into the same test which just inverts the predicate?
-@pytest.mark.xfail(
-    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
-)
+@XFAIL_DATAFRAME_FILTER
 @pytest.mark.parametrize(
     ("on", "predicate", "expected"),
     [
