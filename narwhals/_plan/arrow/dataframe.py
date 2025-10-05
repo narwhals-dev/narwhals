@@ -155,8 +155,5 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         suffix: str = "_right",
     ) -> Self:
         left, right = self.native, other.native
-        if how == "cross":
-            result = acero.join_cross_tables(left, right, suffix=suffix)
-        else:
-            result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
+        result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
         return self._with_native(result)

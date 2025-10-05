@@ -40,7 +40,7 @@ if TYPE_CHECKING:
         Sequence,
     )
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         AggregateOptions as _AggregateOptions,
@@ -99,8 +99,17 @@ def can_thread(function_name: str, /) -> bool:
     return function_name not in _THREAD_UNSAFE
 
 
+def cols_iter(names: Iterable[str], /) -> Iterator[Expr]:
+    for name in names:
+        yield col(name)
+
+
+def _is_expr(obj: Any) -> TypeIs[pc.Expression]:
+    return isinstance(obj, pc.Expression)
+
+
 def _parse_into_expr(into: IntoExpr, /, *, str_as_lit: bool = False) -> Expr:
-    if isinstance(into, pc.Expression):
+    if _is_expr(into):
         return into
     if isinstance(into, str) and not str_as_lit:
         return col(into)
@@ -209,15 +218,15 @@ def _add_column(
 ) -> pa.Table:
     if isinstance(values, (pa.ChunkedArray, pa.Array)):
         return native.add_column(index, name, values)
-    column = _parse_into_expr(values, str_as_lit=True)
+    column = values if _is_expr(values) else lit(values)
     schema = native.schema
     schema_names = schema.names
     if index == 0:
         names: Sequence[str] = (name, *schema_names)
-        exprs = (column, *_parse_into_iter_expr(schema_names))
+        exprs = (column, *cols_iter(schema_names))
     elif index == native.num_columns:
         names = (*schema_names, name)
-        exprs = (*_parse_into_iter_expr(schema_names), column)
+        exprs = (*cols_iter(schema_names), column)
     else:
         schema_names.insert(index, name)
         names = schema_names
@@ -384,12 +393,14 @@ def join_tables(
     left: pa.Table,
     right: pa.Table,
     how: JoinStrategy,
-    left_on: OneOrIterable[str] | None,
+    left_on: OneOrIterable[str] | None = (),
     right_on: OneOrIterable[str] | None = (),
     suffix: str = "_right",
     *,
     coalesce_keys: bool = True,
 ) -> pa.Table:
+    if how == "cross":
+        return _join_cross_tables(left, right, suffix)
     join_type = _HOW_JOIN[how]
     left_on = left_on or ()
     right_on = right_on or left_on
@@ -402,8 +413,10 @@ def join_tables(
 # TODO @dangotbanned: Very rough start to get tests passing
 # - Decouple from `pa.Table` & collecting 3 times
 # - Reuse the plan from `_add_column`
-# - Write some more specialized parsers for column names/indices only
-def join_cross_tables(
+# - Write some more specialized parsers for
+#   [x] column names
+#   [ ] indices?
+def _join_cross_tables(
     left: pa.Table, right: pa.Table, suffix: str = "_right"
 ) -> pa.Table:
     key_token = temp.column_name(chain(left.column_names, right.column_names))
