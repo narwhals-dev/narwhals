@@ -264,6 +264,16 @@ def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) 
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("how", ["inner", "left"])
+@pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
+def test_suffix(how: JoinStrategy, suffix: str) -> None:
+    data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
+    df = dataframe(data)
+    on = ["antananarivo", "bob"]
+    result = df.join(df, left_on=on, right_on=on, how=how, suffix=suffix)
+    assert result.schema.names() == ["antananarivo", "bob", "zor ro", f"zor ro{suffix}"]
+
+
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
 def test_join_keys_exceptions(how: JoinStrategy) -> None:
     data = {"antananarivo": [1, 3, 2], "bob": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
