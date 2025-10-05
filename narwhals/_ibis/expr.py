@@ -342,10 +342,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
                 raise NotImplementedError(msg)
             return [
                 _rank(cast("ir.Column", expr)).over(
-                    ibis.window(
-                        group_by=inputs.partition_by,
-                        order_by=self._sort(*inputs.order_by),
-                    )
+                    ibis.window(group_by=inputs.partition_by)
                 )
                 for expr in self(df)
             ]
