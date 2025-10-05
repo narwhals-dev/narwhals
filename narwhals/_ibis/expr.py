@@ -341,7 +341,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
                 msg = "`rank` followed by `over` with `order_by` specified is not supported for Ibis backend."
                 raise NotImplementedError(msg)
             return [
-                _rank(expr).over(
+                _rank(cast("ir.Column", expr)).over(
                     ibis.window(
                         group_by=inputs.partition_by,
                         order_by=self._sort(*inputs.order_by),
