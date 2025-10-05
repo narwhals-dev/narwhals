@@ -362,6 +362,13 @@ def test_rank_with_order_by(
             "c": [2, 1, 4, 3, 5, 6],
         }
         assert_equal_data(result, expected)
+    
+    with context:
+        # gh 3177
+        df = nw.from_native(constructor({'i': [0,1,2], 'j': [1,2,1]}))
+        result = df.with_columns(z=nw.col('j').rank('min').over(order_by='i')).sort('i').select('z')
+        expected = {'z': [1.5, 3., 1.5]}
+        assert_equal_data(result, expected)
 
 
 def test_rank_with_order_by_and_partition_by(
