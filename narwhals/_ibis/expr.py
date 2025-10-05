@@ -336,7 +336,21 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
             return ibis.cases((expr.notnull(), rank_))
 
-        return self._with_callable(_rank)
+        def window_f(df: IbisLazyFrame, inputs: WindowInputs[ir.Value]) -> list[ir.Value]:
+            if inputs.order_by:
+                msg = "`rank` followed by `over` with `order_by` specified is not supported for Ibis backend."
+                raise NotImplementedError(msg)
+            return [
+                _rank(expr).over(
+                    ibis.window(
+                        group_by=inputs.partition_by,
+                        order_by=self._sort(*inputs.order_by),
+                    )
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(_rank, window_f)
 
     @property
     def str(self) -> IbisExprStringNamespace:

@@ -340,19 +340,28 @@ def test_rank_with_order_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")
 
+    context = (
+        pytest.raises(NotImplementedError)
+        if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis"))
+        else does_not_raise()
+    )
+
     df = nw.from_native(
         constructor(
             {"a": [1, 1, 2, 2, 3, 3], "b": [3, None, 4, 3, 5, 6], "i": list(range(6))}
         )
     )
-    result = df.with_columns(c=nw.col("a").rank("ordinal").over(order_by="b")).sort("i")
-    expected = {
-        "a": [1, 1, 2, 2, 3, 3],
-        "b": [3, None, 4, 3, 5, 6],
-        "i": [0, 1, 2, 3, 4, 5],
-        "c": [2, 1, 4, 3, 5, 6],
-    }
-    assert_equal_data(result, expected)
+    with context:
+        result = df.with_columns(c=nw.col("a").rank("ordinal").over(order_by="b")).sort(
+            "i"
+        )
+        expected = {
+            "a": [1, 1, 2, 2, 3, 3],
+            "b": [3, None, 4, 3, 5, 6],
+            "i": [0, 1, 2, 3, 4, 5],
+            "c": [2, 1, 4, 3, 5, 6],
+        }
+        assert_equal_data(result, expected)
 
 
 def test_rank_with_order_by_and_partition_by(
@@ -386,14 +395,20 @@ def test_rank_with_order_by_and_partition_by(
             }
         )
     )
-    result = df.with_columns(c=nw.col("a").rank("ordinal").over("g", order_by="b")).sort(
-        "i"
+    context = (
+        pytest.raises(NotImplementedError)
+        if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis"))
+        else does_not_raise()
     )
-    expected = {
-        "a": [1, 1, 2, 2, 3, 3],
-        "b": [3, None, 4, 3, 5, 6],
-        "i": [0, 1, 2, 3, 4, 5],
-        "g": ["x", "x", "x", "y", "y", "y"],
-        "c": [2, 1, 3, 1, 2, 3],
-    }
-    assert_equal_data(result, expected)
+    with context:
+        result = df.with_columns(
+            c=nw.col("a").rank("ordinal").over("g", order_by="b")
+        ).sort("i")
+        expected = {
+            "a": [1, 1, 2, 2, 3, 3],
+            "b": [3, None, 4, 3, 5, 6],
+            "i": [0, 1, 2, 3, 4, 5],
+            "g": ["x", "x", "x", "y", "y", "y"],
+            "c": [2, 1, 3, 1, 2, 3],
+        }
+        assert_equal_data(result, expected)

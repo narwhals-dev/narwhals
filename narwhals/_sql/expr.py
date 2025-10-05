@@ -796,8 +796,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def _partitioned_rank(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
-            # node: when `descending` / `nulls_last` are supported in `.over`, they should be respected here
-            # https://github.com/narwhals-dev/narwhals/issues/2790
+            if inputs.order_by:
+                msg = "`rank` followed by `over` with `order_by` specified is not supported for SQL-like backends."
+                raise NotImplementedError(msg)
             return [
                 _rank(
                     expr,
