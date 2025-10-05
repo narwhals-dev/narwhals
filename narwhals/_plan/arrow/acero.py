@@ -71,6 +71,9 @@ AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"
 OutputName: TypeAlias = str
 
+IntoDecl: TypeAlias = Union[pa.Table, Decl]
+"""An in-memory table, or a plan that began with one."""
+
 _THREAD_UNSAFE: Final = frozenset[Aggregation](
     ("hash_first", "hash_last", "first", "last")
 )
@@ -265,6 +268,9 @@ def sort_by(
     ).to_arrow_acero(tuple(flatten_hash_safe((by, more_by))))
 
 
+# TODO @dangotbanned: Add a variant that doesn't depend on 2x tables
+# - `_join_options`: just needs iterables (currently sourced from `schema.names``)
+# -`_hashjoin`: can now accept `Declaration`s in either case
 def join(
     left: pa.Table,
     right: pa.Table,
@@ -279,56 +285,56 @@ def join(
 
     [`pyarrow.acero._perform_join`]: https://github.com/apache/arrow/blob/f7320c9a40082639f9e0cf8b3075286e3fc6c0b9/python/pyarrow/acero.py#L82-L260
     """
-    left_on = ensure_list_str(left_on)
-    right_on = ensure_list_str(right_on)
-
-    # polars full join does not coalesce keys,
-    coalesce_keys = coalesce_keys and (how != "full outer")
-    if not coalesce_keys:
-        opts = _join_options(how, left_on, right_on, suffix=suffix)
-        return _hashjoin(left, right, opts)
-
-    # By default expose all columns on both left and right table
-    left_names = left.schema.names
-    right_names = right.schema.names
-
-    if how in {"left semi", "left anti"}:
-        right_names = []
-    elif how in {"inner", "left outer"}:
-        right_names = [name for name in right_names if name not in right_on]
     opts = _join_options(
         how,
         left_on,
         right_on,
-        suffix=suffix,
-        left_output=left_names,
-        right_output=right_names,
+        suffix,
+        left.schema.names,
+        right.schema.names,
+        coalesce_keys=coalesce_keys,
     )
     return _hashjoin(left, right, opts)
 
 
 def _join_options(
     how: JoinTypeSubset,
-    left_on: str | list[str],
-    right_on: str | list[str],
-    *,
+    left_on: OneOrIterable[str],
+    right_on: OneOrIterable[str],
     suffix: str = "_right",
-    left_output: Iterable[str] | None = None,
-    right_output: Iterable[str] | None = None,
+    left_names: Iterable[str] | None = None,
+    right_names: Iterable[str] = (),
+    *,
+    coalesce_keys: bool = True,
 ) -> pac.HashJoinNodeOptions:
+    right_on = ensure_list_str(right_on)
+    rhs_names: Iterable[str] | None = None
+    # polars full join does not coalesce keys
+    if not (coalesce_keys and (how != "full outer")):
+        lhs_names = None
+    else:
+        lhs_names = left_names
+        if how in {"inner", "left outer"}:
+            rhs_names = (name for name in right_names if name not in right_on)
     tp: Incomplete = pac.HashJoinNodeOptions
-    kwds = {
-        "left_output": left_output,
-        "right_output": right_output,
-        "output_suffix_for_right": suffix,
-    }
-    return tp(how, left_on, right_on, **kwds)  # type: ignore[no-any-return]
+    return tp(  # type: ignore[no-any-return]
+        join_type=how,
+        left_keys=ensure_list_str(left_on),
+        right_keys=right_on,
+        left_output=lhs_names,
+        right_output=rhs_names,
+        output_suffix_for_right=suffix,
+    )
+
+
+def _into_decl(source: IntoDecl, /) -> Decl:
+    return source if not isinstance(source, pa.Table) else table_source(source)
 
 
 def _hashjoin(
-    left: pa.Table, right: pa.Table, /, options: pac.HashJoinNodeOptions
+    left: IntoDecl, right: IntoDecl, /, options: pac.HashJoinNodeOptions
 ) -> Decl:
-    return Decl("hashjoin", options, [table_source(left), table_source(right)])
+    return Decl("hashjoin", options, [_into_decl(left), _into_decl(right)])
 
 
 def collect(*declarations: Decl, use_threads: bool = True) -> pa.Table:
