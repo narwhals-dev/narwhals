@@ -154,10 +154,9 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         right_on: Sequence[str] | None,
         suffix: str = "_right",
     ) -> Self:
+        left, right = self.native, other.native
         if how == "cross":
-            msg = f"join(how={how!r})"
-            raise NotImplementedError(msg)
-        result = acero.join_tables(
-            self.native, other.native, how, left_on, right_on, suffix=suffix
-        )
+            result = acero.join_cross_tables(left, right, suffix=suffix)
+        else:
+            result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
         return self._with_native(result)

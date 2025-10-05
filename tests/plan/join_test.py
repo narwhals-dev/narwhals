@@ -39,11 +39,6 @@ XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
 )
 
 
-XFAIL_JOIN_CROSS = pytest.mark.xfail(
-    reason=("Not implemented `how='cross'` yet"), raises=NotImplementedError
-)
-
-
 XFAIL_DATAFRAME_FILTER = pytest.mark.xfail(
     reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
 )
@@ -247,8 +242,7 @@ def test_join_left_overlapping_column(kwds: Keywords, expected: dict[str, Any]) 
     assert_equal_data(result, expected)
 
 
-@XFAIL_JOIN_CROSS
-def test_join_cross() -> None:  # pragma: no cover
+def test_join_cross() -> None:
     df = dataframe({"a": [1, 3, 2]})
     result = df.join(df, how="cross").sort("a", "a_right")
     expected = {"a": [1, 1, 1, 2, 2, 2, 3, 3, 3], "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
@@ -265,9 +259,8 @@ def test_join_with_suffix(how: JoinStrategy, suffix: str) -> None:
     assert result.schema.names() == ["a", "b", "zor ro", f"zor ro{suffix}"]
 
 
-@XFAIL_JOIN_CROSS
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_join_cross_with_suffix(suffix: str) -> None:  # pragma: no cover
+def test_join_cross_with_suffix(suffix: str) -> None:
     df = dataframe({"a": [1, 3, 2]})
     result = df.join(df, how="cross", suffix=suffix).sort("a", f"a{suffix}")
     expected = {

@@ -25,13 +25,20 @@ import pyarrow.acero as pac
 import pyarrow.compute as pc  # ignore-banned-import
 from pyarrow.acero import Declaration as Decl
 
-from narwhals._plan.common import ensure_list_str, flatten_hash_safe
+from narwhals._plan.common import ensure_list_str, flatten_hash_safe, temp
 from narwhals._plan.options import SortMultipleOptions
 from narwhals._plan.typing import OneOrSeq
 from narwhals.typing import JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
+    from collections.abc import (
+        Callable,
+        Collection,
+        Iterable,
+        Iterator,
+        Mapping,
+        Sequence,
+    )
 
     from typing_extensions import TypeAlias
 
@@ -40,13 +47,18 @@ if TYPE_CHECKING:
         Aggregation as _Aggregation,
     )
     from narwhals._plan.arrow.group_by import AggSpec
-    from narwhals._plan.arrow.typing import JoinTypeSubset, NullPlacement
+    from narwhals._plan.arrow.typing import (
+        ArrowAny,
+        JoinTypeSubset,
+        NullPlacement,
+        ScalarAny,
+    )
     from narwhals._plan.typing import OneOrIterable, Order, Seq
     from narwhals.typing import NonNestedLiteral
 
 Incomplete: TypeAlias = Any
 Expr: TypeAlias = pc.Expression
-IntoExpr: TypeAlias = "Expr | NonNestedLiteral"
+IntoExpr: TypeAlias = "Expr | NonNestedLiteral | ScalarAny"
 Field: TypeAlias = Union[Expr, SingleColSelector]
 """Anything that passes as a single item in [`_compute._ensure_field_ref`].
 
@@ -63,8 +75,13 @@ _THREAD_UNSAFE: Final = frozenset[Aggregation](
     ("hash_first", "hash_last", "first", "last")
 )
 col = pc.field
-lit = cast("Callable[[NonNestedLiteral], Expr]", pc.scalar)
-"""Alias for `pyarrow.compute.scalar`."""
+lit = cast("Callable[[NonNestedLiteral | ScalarAny], Expr]", pc.scalar)
+"""Alias for `pyarrow.compute.scalar`.
+
+Extends the signature from `bool | float | str`.
+
+See https://github.com/apache/arrow/pull/47609#discussion_r2392499842
+"""
 
 _HOW_JOIN: Mapping[JoinStrategy, JoinTypeSubset] = {
     "inner": "inner",
@@ -185,6 +202,35 @@ def project(**named_exprs: IntoExpr) -> Decl:
     """
     exprs = _parse_into_seq_of_expr(named_exprs.values())
     return _project(names=named_exprs.keys(), exprs=exprs)
+
+
+def _add_column(
+    native: pa.Table, index: int, name: str, values: IntoExpr | ArrowAny
+) -> pa.Table:
+    if isinstance(values, (pa.ChunkedArray, pa.Array)):
+        return native.add_column(index, name, values)
+    column = _parse_into_expr(values, str_as_lit=True)
+    schema = native.schema
+    schema_names = schema.names
+    if index == 0:
+        names: Sequence[str] = (name, *schema_names)
+        exprs = (column, *_parse_into_iter_expr(schema_names))
+    elif index == native.num_columns:
+        names = (*schema_names, name)
+        exprs = (*_parse_into_iter_expr(schema_names), column)
+    else:
+        schema_names.insert(index, name)
+        names = schema_names
+        exprs = tuple(_parse_into_iter_expr(nm if nm != name else column for nm in names))
+    return collect(table_source(native), _project(exprs, names))
+
+
+def append_column(native: pa.Table, name: str, values: IntoExpr | ArrowAny) -> pa.Table:
+    return _add_column(native, native.num_columns, name, values)
+
+
+def prepend_column(native: pa.Table, name: str, values: IntoExpr | ArrowAny) -> pa.Table:
+    return _add_column(native, 0, name, values)
 
 
 def _order_by(
@@ -351,3 +397,21 @@ def join_tables(
         left, right, join_type, left_on, right_on, suffix, coalesce_keys=coalesce_keys
     )
     return collect(decl)
+
+
+# TODO @dangotbanned: Very rough start to get tests passing
+# - Decouple from `pa.Table` & collecting 3 times
+# - Reuse the plan from `_add_column`
+# - Write some more specialized parsers for column names/indices only
+def join_cross_tables(
+    left: pa.Table, right: pa.Table, suffix: str = "_right"
+) -> pa.Table:
+    key_token = temp.column_name(chain(left.column_names, right.column_names))
+    result = join_tables(
+        prepend_column(left, key_token, 0),
+        prepend_column(right, key_token, 0),
+        how="inner",
+        left_on=key_token,
+        suffix=suffix,
+    )
+    return result.remove_column(0)
