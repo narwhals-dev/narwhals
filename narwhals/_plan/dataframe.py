@@ -89,8 +89,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
             # Should be unreachable, but I guess we will see
             msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
             raise ValueError(msg)
-        predicate = named_irs[0].expr
-        return self._with_compliant(self._compliant.filter(predicate))
+        return self._with_compliant(self._compliant.filter(named_irs[0]))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(

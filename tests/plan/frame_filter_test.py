@@ -7,16 +7,11 @@ import pytest
 pytest.importorskip("pyarrow")
 
 import narwhals._plan as nwp
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError, ShapeError
 from tests.plan.utils import assert_equal_data, dataframe, series
 
 if TYPE_CHECKING:
     from tests.conftest import Data
-
-
-XFAIL_DATAFRAME_FILTER = pytest.mark.xfail(
-    reason=("Not implemented `DataFrame.filter` yet"), raises=NotImplementedError
-)
 
 
 @pytest.fixture
@@ -26,11 +21,7 @@ def data() -> Data:
 
 @pytest.mark.parametrize(
     "predicate",
-    [
-        [False, True, True],
-        series([False, True, True]),  # NOTE: On `main`, this test uses `Series.__gt__`
-        pytest.param(nwp.col("a") > 1, marks=XFAIL_DATAFRAME_FILTER),
-    ],
+    [[False, True, True], series([False, True, True]), nwp.col("a") > 1],
     ids=["list[bool]", "Series", "Expr"],
 )
 def test_filter_single(
@@ -41,22 +32,20 @@ def test_filter_single(
     assert_equal_data(result, expected)
 
 
-@XFAIL_DATAFRAME_FILTER
-def test_filter_raise_on_agg_predicate(data: Data) -> None:  # pragma: no cover
+@pytest.mark.xfail(reason=("Not sure why this isn't allowed on `main`"))
+def test_filter_raise_on_agg_predicate(data: Data) -> None:
     df = dataframe(data)
     with pytest.raises(InvalidOperationError):
         df.filter(nwp.col("a").max() > 2)
 
 
-@XFAIL_DATAFRAME_FILTER
-def test_filter_raise_on_shape_mismatch(data: Data) -> None:  # pragma: no cover
+def test_filter_raise_on_shape_mismatch(data: Data) -> None:
     df = dataframe(data)
-    with pytest.raises(InvalidOperationError):
-        df.filter(nwp.col("b").unique() > 2)
+    with pytest.raises(ShapeError):
+        df.filter(nwp.col("b").filter(nwp.col("b") < 6))
 
 
-@XFAIL_DATAFRAME_FILTER
-def test_filter_with_constraints() -> None:  # pragma: no cover
+def test_filter_with_constraints() -> None:
     df = dataframe({"a": [1, 3, 2], "b": [4, 4, 6]})
     result_scalar = df.filter(a=3)
     expected_scalar = {"a": [3], "b": [4]}

@@ -10,18 +10,14 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan.arrow import acero, functions as fn
+from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import ArrowGroupBy as GroupBy
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
-from narwhals._utils import (
-    Implementation,
-    Version,
-    parse_columns_to_drop,
-    qualified_type_name,
-)
+from narwhals._utils import Implementation, Version, parse_columns_to_drop
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -29,8 +25,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
-    from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
@@ -164,8 +159,14 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
         return self._with_native(result)
 
-    def filter(self, predicate: ExprIR | Series) -> Self:
-        if fn.is_series(predicate):
-            return self._with_native(self.native.filter(predicate.native))
-        msg = f"`ArrowDataFrame.filter` doesn't support {qualified_type_name(predicate)!r} yet"
-        raise NotImplementedError(msg)
+    def filter(self, predicate: NamedIR | Series) -> Self:
+        mask: pc.Expression | ChunkedArrayAny
+        if not fn.is_series(predicate):
+            resolved = Expr.from_named_ir(predicate, self)
+            if isinstance(resolved, Expr):
+                mask = resolved.broadcast(len(self)).native
+            else:
+                mask = acero.lit(resolved.native)
+        else:
+            mask = predicate.native
+        return self._with_native(self.native.filter(mask))

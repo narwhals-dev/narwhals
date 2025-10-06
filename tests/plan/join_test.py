@@ -39,11 +39,6 @@ XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
 )
 
 
-XFAIL_DATAFRAME_FILTER = pytest.mark.xfail(
-    reason=("Not implemented `DataFrame.filter` yet"), raises=NotImplementedError
-)
-
-
 @pytest.fixture
 def data_inner() -> Data:
     return {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0], "idx": [0, 1, 2]}
@@ -270,7 +265,6 @@ def test_join_cross_with_suffix(suffix: str) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_DATAFRAME_FILTER
 @pytest.mark.parametrize(
     ("on", "predicate", "expected"),
     [
@@ -279,9 +273,7 @@ def test_join_cross_with_suffix(suffix: str) -> None:
         (["b"], (nwp.col("b") > 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7.0, 8.0]}),
     ],
 )
-def test_join_anti(
-    on: On, predicate: nwp.Expr, expected: Data
-) -> None:  # pragma: no cover
+def test_join_anti(on: On, predicate: nwp.Expr, expected: Data) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
     other = df.filter(predicate)
@@ -290,7 +282,6 @@ def test_join_anti(
 
 
 # NOTE: Maybe merge `semi`, `anti` into the same test which just inverts the predicate?
-@XFAIL_DATAFRAME_FILTER
 @pytest.mark.parametrize(
     ("on", "predicate", "expected"),
     [
@@ -299,9 +290,7 @@ def test_join_anti(
         (["a", "b"], (nwp.col("b") < 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7, 8]}),
     ],
 )
-def test_join_semi(
-    on: On, predicate: nwp.Expr, expected: Data
-) -> None:  # pragma: no cover
+def test_join_semi(on: On, predicate: nwp.Expr, expected: Data) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
     other = df.filter(predicate)
