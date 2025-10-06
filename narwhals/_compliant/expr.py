@@ -53,6 +53,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NumericLiteral,
         RankMethod,
         RollingInterpolationMethod,
         TimeUnit,
@@ -129,6 +130,8 @@ class CompliantExpr(
     def mean(self) -> Self: ...
     def sum(self) -> Self: ...
     def median(self) -> Self: ...
+    def first(self) -> Self: ...
+    def last(self) -> Self: ...
     def skew(self) -> Self: ...
     def kurtosis(self) -> Self: ...
     def std(self, *, ddof: int) -> Self: ...
@@ -789,6 +792,28 @@ class EagerExpr(
         return self._reuse_series(
             "is_between", lower_bound=lower_bound, upper_bound=upper_bound, closed=closed
         )
+
+    def is_close(
+        self,
+        other: Self | NumericLiteral,
+        *,
+        abs_tol: float,
+        rel_tol: float,
+        nans_equal: bool,
+    ) -> Self:
+        return self._reuse_series(
+            "is_close",
+            other=other,
+            abs_tol=abs_tol,
+            rel_tol=rel_tol,
+            nans_equal=nans_equal,
+        )
+
+    def first(self) -> Self:
+        return self._reuse_series("first", returns_scalar=True)
+
+    def last(self) -> Self:
+        return self._reuse_series("last", returns_scalar=True)
 
     @property
     def cat(self) -> EagerExprCatNamespace[Self]:

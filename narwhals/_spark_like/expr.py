@@ -94,6 +94,16 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
+    def _first(self, expr: Column, *order_by: str) -> Column:
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`first` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
+    def _last(self, expr: Column, *order_by: str) -> Column:  # pragma: no cover
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`last` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
     def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])
 

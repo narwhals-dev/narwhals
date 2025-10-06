@@ -5,7 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import LazyNamespace
-from narwhals._compliant.typing import NativeExprT, NativeFrameT_co
+from narwhals._compliant.typing import NativeExprT, NativeFrameT
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 
 class SQLNamespace(
-    LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT_co],
-    Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT_co, NativeExprT],
+    LazyNamespace[SQLLazyFrameT, SQLExprT, NativeFrameT],
+    Protocol[SQLLazyFrameT, SQLExprT, NativeFrameT, NativeExprT],
 ):
     def _function(self, name: str, *args: NativeExprT | PythonLiteral) -> NativeExprT: ...
     def _lit(self, value: Any) -> NativeExprT: ...

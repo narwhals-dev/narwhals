@@ -6,9 +6,6 @@ from warnings import warn
 def find_stacklevel() -> int:
     """Find the first place in the stack that is not inside narwhals.
 
-    Returns:
-        Stacklevel.
-
     Taken from:
     https://github.com/pandas-dev/pandas/blob/ab89c53f48df67709a533b6a95ce3d911871a0a8/pandas/util/_exceptions.py#L30-L51
     """
