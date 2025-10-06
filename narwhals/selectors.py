@@ -68,9 +68,6 @@ def by_dtype(*dtypes: DType | type[DType] | Iterable[DType | type[DType]]) -> Se
     Arguments:
         dtypes: one or data types to select
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -101,9 +98,6 @@ def matches(pattern: str) -> Selector:
     Arguments:
         pattern: A valid regular expression pattern.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -127,9 +121,6 @@ def matches(pattern: str) -> Selector:
 
 def numeric() -> Selector:
     """Select numeric columns.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -158,9 +149,6 @@ def numeric() -> Selector:
 
 def boolean() -> Selector:
     """Select boolean columns.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -194,9 +182,6 @@ def boolean() -> Selector:
 def string() -> Selector:
     """Select string columns.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -224,9 +209,6 @@ def string() -> Selector:
 
 def categorical() -> Selector:
     """Select categorical columns.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -257,9 +239,6 @@ def categorical() -> Selector:
 
 def all() -> Selector:
     """Select all columns.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -295,9 +274,6 @@ def datetime(
                 run `import zoneinfo; zoneinfo.available_timezones()` for a full list).
             * Set `None` to select Datetime columns that do not have a timezone.
             * Set `"*"` to select Datetime columns that have *any* timezone.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> from datetime import datetime, timezone
