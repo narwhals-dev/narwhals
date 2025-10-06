@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import warnings
+from typing import TYPE_CHECKING, cast
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.group_by import PandasLikeGroupBy
+from narwhals._pandas_like.group_by import _REMAP_ORDERED_INDEX, PandasLikeGroupBy
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._utils import generate_temporary_column_name
 
@@ -13,7 +14,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries, ScalarKwargs
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        NarwhalsAggregation,
+        ScalarKwargs,
+    )
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
@@ -42,7 +49,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
 }
 
 
-def window_kwargs_to_pandas_equivalent(
+def window_kwargs_to_pandas_equivalent(  # noqa: C901
     function_name: str, kwargs: ScalarKwargs
 ) -> dict[str, PythonLiteral]:
     if function_name == "shift":
@@ -60,6 +67,8 @@ def window_kwargs_to_pandas_equivalent(
         }
     elif function_name.startswith("cum_"):  # Cumulative operation
         pandas_kwargs = {"skipna": True}
+    elif function_name == "n_unique":
+        pandas_kwargs = {"dropna": False}
     elif function_name.startswith("rolling_"):  # Rolling operation
         assert "min_samples" in kwargs  # noqa: S101
         assert "window_size" in kwargs  # noqa: S101
@@ -100,6 +109,10 @@ def window_kwargs_to_pandas_equivalent(
             "adjust": kwargs["adjust"],
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
+        }
+    elif function_name in {"first", "last"}:
+        pandas_kwargs = {
+            "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)]
         }
     else:  # sum, len, ...
         pandas_kwargs = {}
@@ -225,6 +238,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     *order_by, descending=False, nulls_last=False
                 )
                 results = self(df.drop([token], strict=True))
+                meta = self._metadata
+                if meta is not None and meta.is_scalar_like:
+                    # We need to broadcast the result to the original size, since
+                    # `over` is a length-preserving operation.
+                    index = df.native.index
+                    ns = self._implementation.to_native_namespace()
+                    return [
+                        s._with_native(ns.Series(s.item(), index=index, name=s.name))
+                        for s in results
+                    ]
+
                 sorting_indices = df.get_column(token)
                 for s in results:
                     s._scatter_in_place(sorting_indices, s)
@@ -253,6 +277,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
             )
 
             def func(df: PandasLikeDataFrame) -> Sequence[PandasLikeSeries]:  # noqa: C901, PLR0912, PLR0914, PLR0915
+                assert pandas_function_name is not None  # help mypy  # noqa: S101
                 output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
                 if function_name == "cum_count":
                     plx = self.__narwhals_namespace__()
@@ -280,7 +305,6 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 grouped = df._native_frame.groupby(partition_by)
                 if function_name.startswith("rolling"):
                     rolling = grouped[list(output_names)].rolling(**pandas_kwargs)
-                    assert pandas_function_name is not None  # help mypy  # noqa: S101
                     if pandas_function_name in {"std", "var"}:
                         assert "ddof" in self._scalar_kwargs  # noqa: S101
                         res_native = getattr(rolling, pandas_function_name)(
@@ -318,6 +342,17 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                         msg = "Safety check failed, please report a bug."
                         raise AssertionError(msg)
                     res_native = grouped.transform("size").to_frame(aliases[0])
+                elif function_name in {"first", "last"}:
+                    with warnings.catch_warnings():
+                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                        _nth = getattr(
+                            grouped[[*partition_by, *output_names]], pandas_function_name
+                        )(**pandas_kwargs)
+                    _nth.reset_index(drop=True, inplace=True)
+                    res_native = df.native[list(partition_by)].merge(
+                        _nth, on=list(partition_by)
+                    )[list(output_names)]
                 else:
                     res_native = grouped[list(output_names)].transform(
                         pandas_function_name, **pandas_kwargs
@@ -327,9 +362,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
                 results = [result_frame.get_column(name) for name in aliases]
                 if order_by:
-                    for s in results:
-                        s._scatter_in_place(sorting_indices, s)
-                    return results
+                    with warnings.catch_warnings():
+                        # Ignore settingwithcopy warnings/errors, they're false-positives here.
+                        warnings.filterwarnings("ignore", message="\n.*copy of a slice")
+                        for s in results:
+                            s._scatter_in_place(sorting_indices, s)
+                        return results
                 if reverse:
                     return [s._gather_slice(slice(None, None, -1)) for s in results]
                 return results
