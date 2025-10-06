@@ -6,7 +6,7 @@ from narwhals._arrow.utils import narwhals_to_native_dtype, native_to_narwhals_d
 from narwhals._plan.arrow import functions as fn
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.compliant.typing import namespace
-from narwhals._utils import Version
+from narwhals._utils import Implementation, Version
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 
 class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
+    implementation = Implementation.PYARROW
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace
 

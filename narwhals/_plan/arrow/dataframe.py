@@ -16,7 +16,7 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
-from narwhals._utils import Version, parse_columns_to_drop
+from narwhals._utils import Implementation, Version, parse_columns_to_drop
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 
 class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
+    implementation = Implementation.PYARROW
     _native: pa.Table
     _version: Version
 

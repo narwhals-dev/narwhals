@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import ColumnT_co, HasVersion, SeriesT
@@ -25,11 +25,13 @@ if TYPE_CHECKING:
         GroupByResolver,
     )
     from narwhals._plan.compliant.namespace import EagerNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import BaseFrame, DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
-    from narwhals._utils import Version
+    from narwhals._typing import _EagerAllowedImpl
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema, JoinStrategy
 
@@ -37,6 +39,8 @@ Incomplete: TypeAlias = Any
 
 
 class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
+    implementation: ClassVar[Implementation]
+
     def __narwhals_namespace__(self) -> Any: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR[ir.ExprIR]], /
@@ -54,7 +58,7 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     def drop(self, columns: Sequence[str], *, strict: bool = True) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     # Doesn't need to be `NamedIR`
-    def filter(self, predicate: Incomplete) -> Self: ...
+    def filter(self, predicate: ir.ExprIR | Incomplete) -> Self: ...
     @property
     def schema(self) -> Mapping[str, DType]: ...
     def select(self, irs: Seq[NamedIR]) -> Self: ...
@@ -67,6 +71,7 @@ class CompliantDataFrame(
     CompliantFrame[SeriesT, NativeDataFrameT],
     Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
 ):
+    implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeDataFrameT
 
     def __len__(self) -> int: ...
@@ -112,6 +117,7 @@ class CompliantDataFrame(
         """
         return self._group_by.from_resolver(self, resolver)
 
+    def filter(self, predicate: ir.ExprIR | CompliantSeries) -> Self: ...
     def join(
         self,
         other: Self,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
 from narwhals._plan.typing import NativeSeriesT
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.series import Series
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import Into1DArray, IntoDType, _1DArray
 
@@ -19,6 +20,7 @@ Incomplete: TypeAlias = Any
 
 
 class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
+    implementation: ClassVar[_EagerAllowedImpl]
     _native: NativeSeriesT
     _name: str
 

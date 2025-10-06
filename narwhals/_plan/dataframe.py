@@ -11,6 +11,7 @@ from narwhals._plan.series import Series
 from narwhals._plan.typing import (
     ColumnNameOrSelector,
     IntoExpr,
+    IntoExprColumn,
     NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
@@ -18,7 +19,7 @@ from narwhals._plan.typing import (
     OneOrIterable,
     Seq,
 )
-from narwhals._utils import Version, generate_repr, is_list_of
+from narwhals._utils import Implementation, Version, generate_repr, is_list_of
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
 from narwhals.typing import JoinStrategy
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
+    from narwhals._typing import _EagerAllowedImpl
 
 
 Incomplete: TypeAlias = Any
@@ -43,6 +45,10 @@ class BaseFrame(Generic[NativeFrameT_co]):
     @property
     def version(self) -> Version:
         return self._version
+
+    @property
+    def implementation(self) -> Implementation:
+        return self._compliant.implementation
 
     @property
     def schema(self) -> Schema:
@@ -65,14 +71,11 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._compliant.native
 
     def filter(
-        self, *predicates: OneOrIterable[IntoExpr] | list[bool], **constraints: Any
+        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and is_list_of(predicates[0], bool):
-            predicate = predicates[0]
-        else:
-            # no `ir.Filter`,
-            msg = "DataFrame.filter"
-            raise NotImplementedError(msg)
+        msg = "BaseFrame.filter"
+        raise NotImplementedError(msg)
+        predicate = NotImplementedError
         return self._with_compliant(self._compliant.filter(predicate))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
@@ -113,6 +116,10 @@ class DataFrame(
     BaseFrame[NativeDataFrameT_co], Generic[NativeDataFrameT_co, NativeSeriesT]
 ):
     _compliant: CompliantDataFrame[Any, NativeDataFrameT_co, NativeSeriesT]
+
+    @property
+    def implementation(self) -> _EagerAllowedImpl:
+        return self._compliant.implementation
 
     def __len__(self) -> int:
         return len(self._compliant)
@@ -210,6 +217,20 @@ class DataFrame(
             other._compliant, how=how, left_on=left_on, right_on=right_on, suffix=suffix
         )
         return self._with_compliant(result)
+
+    def filter(
+        self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
+    ) -> Self:
+        msg = "DataFrame.filter"
+        raise NotImplementedError(msg)
+        if len(predicates) == 1 and is_list_of(predicates[0], bool):
+            series = self._series.from_iterable(
+                predicates[0],
+                dtype=self.version.dtypes.Boolean(),
+                backend=self.implementation,
+            )._compliant
+            return self._with_compliant(self._compliant.filter(series))
+        return super().filter(*predicates, **constraints)
 
 
 def _is_join_strategy(obj: Any) -> TypeIs[JoinStrategy]:
