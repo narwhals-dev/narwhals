@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.namespace import ArrowNamespace
+    from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.options import SortMultipleOptions
     from narwhals._plan.typing import Seq
@@ -158,3 +159,7 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
         left, right = self.native, other.native
         result = acero.join_tables(left, right, how, left_on, right_on, suffix=suffix)
         return self._with_native(result)
+
+    def filter(self, predicate: ExprIR | CompliantSeries) -> Self:
+        msg = "ArrowDataFrame.filter"
+        raise NotImplementedError(msg)

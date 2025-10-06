@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._arrow.typing import ChunkedArrayAny  # noqa: F401
+    from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals.dtypes import DType
@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 class ArrowSeries(CompliantSeries["ChunkedArrayAny"]):
     implementation = Implementation.PYARROW
+    _native: ChunkedArrayAny
+    _version: Version
+    _name: str
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         from narwhals._plan.arrow.namespace import ArrowNamespace

@@ -545,12 +545,18 @@ if TYPE_CHECKING:
         doesn't happen elsewhere at the moment.
         """
         pytest.importorskip("pyarrow")
+        from narwhals._plan.arrow.dataframe import ArrowDataFrame
         from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
+        from narwhals._plan.arrow.series import ArrowSeries
 
         expr = ArrowExpr()
         scalar = ArrowScalar()
+        df = ArrowDataFrame()
+        ser = ArrowSeries()
         assert expr
         assert scalar
+        assert df
+        assert ser
 
     def test_dataframe_from_native_overloads() -> None:
         """Ensure we can reveal the `NativeSeries` **without** a dependency."""
