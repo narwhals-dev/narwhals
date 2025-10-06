@@ -18,7 +18,7 @@ from narwhals._plan.typing import (
     OneOrIterable,
     Seq,
 )
-from narwhals._utils import Version, generate_repr
+from narwhals._utils import Version, generate_repr, is_list_of
 from narwhals.dependencies import is_pyarrow_table
 from narwhals.schema import Schema
 from narwhals.typing import JoinStrategy
@@ -63,6 +63,17 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     def to_native(self) -> NativeFrameT_co:
         return self._compliant.native
+
+    def filter(
+        self, *predicates: OneOrIterable[IntoExpr] | list[bool], **constraints: Any
+    ) -> Self:
+        if len(predicates) == 1 and is_list_of(predicates[0], bool):
+            predicate = predicates[0]
+        else:
+            # no `ir.Filter`,
+            msg = "DataFrame.filter"
+            raise NotImplementedError(msg)
+        return self._with_compliant(self._compliant.filter(predicate))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, schema = prepare_projection(

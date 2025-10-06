@@ -40,7 +40,7 @@ XFAIL_DUPLICATE_COLUMN_NAMES = pytest.mark.xfail(
 
 
 XFAIL_DATAFRAME_FILTER = pytest.mark.xfail(
-    reason=("Not implemented `DataFrame.filter` yet"), raises=AttributeError
+    reason=("Not implemented `DataFrame.filter` yet"), raises=NotImplementedError
 )
 
 
@@ -284,7 +284,7 @@ def test_join_anti(
 ) -> None:  # pragma: no cover
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
-    other = df.filter(predicate)  # type: ignore[attr-defined]
+    other = df.filter(predicate)
     result = df.join(other, on, how="anti")
     assert_equal_data(result, expected)
 
@@ -304,7 +304,7 @@ def test_join_semi(
 ) -> None:  # pragma: no cover
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
     df = dataframe(data)
-    other = df.filter(predicate)  # type: ignore[attr-defined]
+    other = df.filter(predicate)
     assert on is not None
     result = df.join(other, on, how="semi").sort(on)
     assert_equal_data(result, expected)
