@@ -168,6 +168,11 @@ class DepthTrackingGroupBy(
         """Return the last function name in the chain defined by `expr`."""
         return next(expr._metadata.op_nodes_reversed()).name
 
+    @classmethod
+    def _kwargs(cls, expr: DepthTrackingExprAny, /) -> dict[str, Any]:
+        """Return the last function name in the chain defined by `expr`."""
+        return next(expr._metadata.op_nodes_reversed()).kwargs
+
 
 class EagerGroupBy(
     DepthTrackingGroupBy[CompliantDataFrameT, EagerExprT_contra, NativeAggregationT_co],
