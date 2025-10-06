@@ -327,6 +327,9 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
     # NOTE: Use `abstractmethod` if we have defs to implement, but also `Method` usage
     @abc.abstractmethod
+    def to_titlecase(self) -> CompliantT: ...
+
+    @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
     len_chars: Method[CompliantT]
