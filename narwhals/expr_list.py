@@ -111,9 +111,6 @@ class ExprListNamespace(Generic[ExprT]):
 
         Negative indices are not accepted.
 
-        Returns:
-            A new expression.
-
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw

@@ -31,15 +31,14 @@ NativeAggregation: TypeAlias = Literal[
     "any",
     "all",
     "count",
-    "first",
     "idxmax",
     "idxmin",
-    "last",
     "max",
     "mean",
     "median",
     "min",
     "mode",
+    "nth",
     "nunique",
     "prod",
     "quantile",
@@ -58,6 +57,11 @@ _NativeAgg: TypeAlias = "Callable[[Any], pd.DataFrame | pd.Series[Any]]"
 
 NonStrHashable: TypeAlias = Any
 """Because `pandas` allows *"names"* like that 😭"""
+
+_REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
+    "first": 0,
+    "last": -1,
+}
 
 
 @lru_cache(maxsize=32)
@@ -145,6 +149,9 @@ class AggExpr:
                     for col in cols
                 ]
             )
+        elif self.is_last() or self.is_first():
+            result = self.native_agg()(group_by._grouped[[*group_by._keys, *names]])
+            result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(group_by._grouped[select])
@@ -156,6 +163,12 @@ class AggExpr:
 
     def is_len(self) -> bool:
         return self.leaf_name == "len"
+
+    def is_last(self) -> bool:
+        return self.leaf_name == "last"
+
+    def is_first(self) -> bool:
+        return self.leaf_name == "first"
 
     def is_mode(self) -> bool:
         return self.leaf_name == "mode"
@@ -177,9 +190,10 @@ class AggExpr:
 
     def native_agg(self) -> _NativeAgg:
         """Return a partial `DataFrameGroupBy` method, missing only `self`."""
-        return _native_agg(
-            PandasLikeGroupBy._remap_expr_name(self.leaf_name), **self.kwargs
-        )
+        native_name = PandasLikeGroupBy._remap_expr_name(self.leaf_name)
+        if self.leaf_name in _REMAP_ORDERED_INDEX:
+            return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
+        return _native_agg(native_name, **self.kwargs)
 
 
 class PandasLikeGroupBy(
@@ -200,6 +214,8 @@ class PandasLikeGroupBy(
         "quantile": "quantile",
         "all": "all",
         "any": "any",
+        "first": "nth",
+        "last": "nth",
     }
     _original_columns: tuple[str, ...]
     """Column names *prior* to any aliasing in `ParseKeysGroupBy`."""

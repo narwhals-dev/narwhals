@@ -75,9 +75,6 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
             - diagonal: Finds a union between the column schemas and fills missing column
                 values with null.
 
-    Returns:
-        A new DataFrame or LazyFrame resulting from the concatenation.
-
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
 
@@ -189,9 +186,6 @@ def new_series(
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
 
-    Returns:
-        A new Series
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -273,9 +267,6 @@ def from_dict(
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
         native_namespace: deprecated, same as `backend`.
 
-    Returns:
-        A new DataFrame.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -329,6 +320,64 @@ def _from_dict_no_backend(
     return data, native_namespace
 
 
+def from_dicts(
+    data: Sequence[Mapping[str, Any]],
+    schema: IntoSchema | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed],
+) -> DataFrame[Any]:
+    """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+    Notes:
+        For pandas-like dataframes, conversion to schema is applied after dataframe
+        creation.
+
+    Arguments:
+        data: Sequence with dictionaries mapping column name to value.
+        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            specified, the schema will be inferred by the native library.
+        backend: Specifies which eager backend instantiate to.
+
+            `backend` can be specified in various ways
+
+            - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                `POLARS`, `MODIN` or `CUDF`.
+            - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+            - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+    Tip:
+        If you expect non-uniform keys in `data`, consider passing `schema` for
+        more consistent results, as **inference varies between backends**:
+
+        - pandas uses all rows
+        - polars uses the first 100 rows
+        - pyarrow uses only the first row
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> data = [
+        ...     {"item": "apple", "weight": 80, "price": 0.60},
+        ...     {"item": "egg", "weight": 55, "price": 0.40},
+        ... ]
+        >>> nw.DataFrame.from_dicts(data, backend="polars")
+        ┌──────────────────────────┐
+        |    Narwhals DataFrame    |
+        |--------------------------|
+        |shape: (2, 3)             |
+        |┌───────┬────────┬───────┐|
+        |│ item  ┆ weight ┆ price │|
+        |│ ---   ┆ ---    ┆ ---   │|
+        |│ str   ┆ i64    ┆ f64   │|
+        |╞═══════╪════════╪═══════╡|
+        |│ apple ┆ 80     ┆ 0.6   │|
+        |│ egg   ┆ 55     ┆ 0.4   │|
+        |└───────┴────────┴───────┘|
+        └──────────────────────────┘
+    """
+    return Version.MAIN.dataframe.from_dicts(data, schema, backend=backend)
+
+
 def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,
@@ -354,9 +403,6 @@ def from_numpy(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import numpy as np
@@ -436,9 +482,6 @@ def from_arrow(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
-
-    Returns:
-        A new DataFrame.
 
     Examples:
         >>> import pandas as pd
@@ -581,9 +624,6 @@ def read_csv(
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
 
-    Returns:
-        DataFrame.
-
     Examples:
         >>> import narwhals as nw
         >>> nw.read_csv("file.csv", backend="pandas")  # doctest:+SKIP
@@ -653,9 +693,6 @@ def scan_csv(
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        LazyFrame.
 
     Examples:
         >>> import duckdb
@@ -731,9 +768,6 @@ def read_parquet(
         kwargs: Extra keyword arguments which are passed to the native parquet reader.
             For example, you could use
             `nw.read_parquet('file.parquet', backend=pd, engine='pyarrow')`.
-
-    Returns:
-        DataFrame.
 
     Examples:
         >>> import pyarrow as pa
@@ -825,9 +859,6 @@ def scan_parquet(
             For example, you could use
             `nw.scan_parquet('file.parquet', backend=pd, engine='pyarrow')`.
 
-    Returns:
-        LazyFrame.
-
     Examples:
         >>> import dask.dataframe as dd
         >>> from sqlframe.duckdb import DuckDBSession
@@ -905,9 +936,6 @@ def col(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to use.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -947,9 +975,6 @@ def exclude(*names: str | Iterable[str]) -> Expr:
     Arguments:
         names: Name(s) of the columns to exclude.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -988,9 +1013,6 @@ def nth(*indices: int | Sequence[int]) -> Expr:
     Arguments:
         indices: One or more indices representing the columns to retrieve.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1025,9 +1047,6 @@ def nth(*indices: int | Sequence[int]) -> Expr:
 def all_() -> Expr:
     """Instantiate an expression representing all columns.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -1048,9 +1067,6 @@ def all_() -> Expr:
 # Add underscore so it doesn't conflict with builtin `len`
 def len_() -> Expr:
     """Return the number of rows.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1087,9 +1103,6 @@ def sum(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pandas as pd
         >>> import narwhals as nw
@@ -1114,9 +1127,6 @@ def mean(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pyarrow as pa
@@ -1149,9 +1159,6 @@ def median(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1183,9 +1190,6 @@ def min(*columns: str) -> Expr:
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1214,9 +1218,6 @@ def max(*columns: str) -> Expr:
 
     Arguments:
         columns: Name(s) of the columns to use in the aggregation function.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1262,9 +1263,6 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1301,9 +1299,6 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1337,9 +1332,6 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1486,9 +1478,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1513,7 +1502,6 @@ def all_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
         |b: [[false,true,true,null,null,null]]    |
         |all: [[false,false,true,null,false,null]]|
         └─────────────────────────────────────────┘
-
     """
     return _expr_with_n_ary_op(
         "all_horizontal",
@@ -1529,9 +1517,6 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
         value: The value to use as literal.
         dtype: The data type of the literal value. If not provided, the data type will
             be inferred by the native library.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1573,9 +1558,6 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
               is `False`.
             - If `False`, Kleene logic is followed. Note that this is not allowed for
               pandas with classical NumPy dtypes when null values are present.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import polars as pl
@@ -1621,9 +1603,6 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import pyarrow as pa
         >>> import narwhals as nw
@@ -1667,9 +1646,6 @@ def concat_str(
         ignore_nulls: Ignore null values (default is `False`).
             If set to `False`, null values will be propagated and if the row contains any
             null values, the output is null.
-
-    Returns:
-        A new expression.
 
     Examples:
         >>> import pandas as pd
@@ -1722,9 +1698,6 @@ def coalesce(
     Raises:
         TypeError: If any of the inputs are not a str, nw.Expr, or nw.Series.
 
-    Returns:
-        A new expression.
-
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
@@ -1771,3 +1744,43 @@ def coalesce(
         ),
         ExprMetadata.from_horizontal_op(*flat_exprs),
     )
+
+
+def format(f_string: str, *args: IntoExpr) -> Expr:
+    """Format expressions as a string.
+
+    Arguments:
+        f_string: A string that with placeholders.
+        args: Expression(s) that fill the placeholders.
+
+    Examples:
+        >>> import duckdb
+        >>> import narwhals as nw
+        >>> rel = duckdb.sql("select * from values ('a', 1), ('b', 2), ('c', 3) df(a, b)")
+        >>> df = nw.from_native(rel)
+        >>> df.with_columns(formatted=nw.format("foo_{}_bar_{}", nw.col("a"), "b"))
+        ┌─────────────────────────────────┐
+        |       Narwhals LazyFrame        |
+        |---------------------------------|
+        |┌─────────┬───────┬─────────────┐|
+        |│    a    │   b   │  formatted  │|
+        |│ varchar │ int32 │   varchar   │|
+        |├─────────┼───────┼─────────────┤|
+        |│ a       │     1 │ foo_a_bar_1 │|
+        |│ b       │     2 │ foo_b_bar_2 │|
+        |│ c       │     3 │ foo_c_bar_3 │|
+        |└─────────┴───────┴─────────────┘|
+        └─────────────────────────────────┘
+    """
+    if (n_placeholders := f_string.count("{}")) != len(args):
+        msg = f"number of placeholders should equal the number of arguments. Expected {n_placeholders} arguments, got {len(args)}."
+        raise ValueError(msg)
+
+    exprs = []
+    it = iter(args)
+    for i, s in enumerate(f_string.split("{}")):
+        if i > 0:
+            exprs.append(next(it))
+        if len(s) > 0:
+            exprs.append(lit(s))
+    return concat_str(exprs, separator="")

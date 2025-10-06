@@ -691,9 +691,6 @@ def to_py_scalar(scalar_like: Any) -> Any:
     Arguments:
         scalar_like: Scalar-like value.
 
-    Returns:
-        Python scalar.
-
     Raises:
         ValueError: If the object is not convertible to a scalar.
 

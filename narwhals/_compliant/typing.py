@@ -192,6 +192,8 @@ NarwhalsAggregation: TypeAlias = Literal[
     "quantile",
     "all",
     "any",
+    "first",
+    "last",
 ]
 """`Expr` methods we aim to support in `DepthTrackingGroupBy`.
 
