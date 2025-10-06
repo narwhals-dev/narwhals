@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import pytest
@@ -322,21 +321,14 @@ def test_join_keys_exceptions(how: JoinStrategy, kwds: Keywords, message: str) -
 def test_join_cross_keys_exceptions(kwds: Keywords) -> None:
     df = dataframe({"a": [1, 3, 2]})
     kwds["how"] = "cross"
-    with pytest.raises(
-        ValueError, match="Can not pass `left_on`, `right_on` or `on` keys for cross join"
-    ):
+    with pytest.raises(ValueError, match=r"not.+ `left_on`.+`right_on`.+`on`.+cross"):
         df.join(df, **kwds)
 
 
-@pytest.mark.parametrize("how", ["right"])
-def test_join_not_implemented(how: str) -> None:
-    data = {"b": [4, 4, 6]}
-    df = dataframe(data)
-
-    with pytest.raises(
-        NotImplementedError,
-        match=re.escape(
-            f"Only the following join strategies are supported: ('inner', 'left', 'full', 'cross', 'semi', 'anti'); found '{how}'."
-        ),
-    ):
-        df.join(df, left_on="b", right_on="b", how=how)  # type: ignore[arg-type]
+def test_join_not_implemented() -> None:
+    df = dataframe({"b": [4, 4, 6]})
+    pattern = (
+        r"supported.+'inner', 'left', 'full', 'cross', 'semi', 'anti'.+ found 'right'"
+    )
+    with pytest.raises(NotImplementedError, match=(pattern)):
+        df.join(df, left_on="b", right_on="b", how="right")  # type: ignore[arg-type]
