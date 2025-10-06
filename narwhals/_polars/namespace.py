@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from datetime import timezone
 
+    from typing_extensions import TypeIs
+
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
@@ -213,6 +215,13 @@ class PolarsNamespace:
         return self._expr(
             pl.when(when_native).then(then_native).otherwise(otherwise_native),
             version=self._version,
+        )
+
+    def is_native(self, obj: Any, /) -> TypeIs[pl.DataFrame | pl.LazyFrame | pl.Series]:
+        return (
+            self._dataframe._is_native(obj)
+            or self._series._is_native(obj)
+            or self._lazyframe._is_native(obj)
         )
 
     # NOTE: Implementation is too different to annotate correctly (vs other `*SelectorNamespace`)
