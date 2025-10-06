@@ -16,7 +16,12 @@ from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.compliant.typing import namespace
 from narwhals._plan.expressions import NamedIR
 from narwhals._plan.typing import Seq
-from narwhals._utils import Implementation, Version, parse_columns_to_drop
+from narwhals._utils import (
+    Implementation,
+    Version,
+    parse_columns_to_drop,
+    qualified_type_name,
+)
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
@@ -162,5 +167,5 @@ class ArrowDataFrame(EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]):
     def filter(self, predicate: ExprIR | Series) -> Self:
         if fn.is_series(predicate):
             return self._with_native(self.native.filter(predicate.native))
-        msg = "ArrowDataFrame.filter"
+        msg = f"`ArrowDataFrame.filter` doesn't support {qualified_type_name(predicate)!r} yet"
         raise NotImplementedError(msg)

@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 pytest.importorskip("pyarrow")
-import pyarrow as pa
 
 import narwhals._plan as nwp
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import assert_equal_data, dataframe, series
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -33,9 +32,8 @@ def test_filter(data: Data) -> None:  # pragma: no cover
 
 
 # NOTE: On `main`, this test uses `Series.__gt__`
-@XFAIL_DATAFRAME_FILTER
-def test_filter_with_series(data: Data) -> None:  # pragma: no cover
-    predicate = nwp.Series.from_native(pa.chunked_array([[False, True, True]]))
+def test_filter_with_series(data: Data) -> None:
+    predicate = series([False, True, True])
     result = dataframe(data).filter(predicate)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     assert_equal_data(result, expected)

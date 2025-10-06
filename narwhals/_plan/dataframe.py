@@ -13,6 +13,7 @@ from typing import (
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._guards import is_series
 from narwhals._plan.common import ensure_seq_str
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import SortMultipleOptions
@@ -236,13 +237,19 @@ class DataFrame(
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
-        if len(predicates) == 1 and is_list_of(predicates[0], bool) and not constraints:
-            series = self._series.from_iterable(
-                predicates[0],
-                dtype=self.version.dtypes.Boolean(),
-                backend=self.implementation,
-            )._compliant
-            return self._with_compliant(self._compliant.filter(series))
+        if len(predicates) == 1 and not constraints:
+            first = predicates[0]
+            if is_list_of(first, bool):
+                series = self._series.from_iterable(
+                    first,
+                    dtype=self.version.dtypes.Boolean(),
+                    backend=self.implementation,
+                )
+            elif is_series(first):
+                series = first
+            else:
+                return super().filter(first)
+            return self._with_compliant(self._compliant.filter(series._compliant))
         non_mask = cast("tuple[OneOrIterable[IntoExprColumn],...]", predicates)
         return super().filter(*non_mask, **constraints)
 
