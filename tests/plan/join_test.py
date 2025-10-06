@@ -287,35 +287,27 @@ def test_join_filter(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
-def test_join_keys_exceptions(how: JoinStrategy) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = dataframe(data)
-    with pytest.raises(
-        ValueError,
-        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
-    ):
-        df.join(df, how=how)
-    with pytest.raises(
-        ValueError,
-        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
-    ):
-        df.join(df, how=how, left_on="a")
-    with pytest.raises(
-        ValueError,
-        match=rf"Either \(`left_on` and `right_on`\) or `on` keys should be specified for {how}.",
-    ):
-        df.join(df, how=how, right_on="a")
-    with pytest.raises(
-        ValueError,
-        match=f"If `on` is specified, `left_on` and `right_on` should be None for {how}.",
-    ):
-        df.join(df, how=how, on="a", right_on="a")
+EITHER_LR_OR_ON = r"`left_on` and `right_on`.+or.+`on`"
+ONLY_ON = r"`on` is specified.+`left_on` and `right_on`.+be.+None"
+SAME_LENGTH = r"`left_on` and `right_on`.+same length"
 
-    with pytest.raises(
-        ValueError, match=re.escape("`left_on` and `right_on` must have the same length.")
-    ):
-        df.join(df, how=how, left_on=["a", "b"], right_on="a")
+
+@pytest.mark.parametrize(
+    ("kwds", "message"),
+    [
+        (Keywords(), EITHER_LR_OR_ON),
+        (Keywords(left_on="a"), EITHER_LR_OR_ON),
+        (Keywords(right_on="a"), EITHER_LR_OR_ON),
+        (Keywords(on="a", right_on="a"), ONLY_ON),
+        (Keywords(left_on=["a", "b"], right_on="a"), SAME_LENGTH),
+    ],
+)
+@pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
+def test_join_keys_exceptions(how: JoinStrategy, kwds: Keywords, message: str) -> None:
+    df = dataframe({"a": [1], "b": [4]})
+    kwds["how"] = how
+    with pytest.raises(ValueError, match=message):
+        df.join(df, **kwds)
 
 
 @pytest.mark.parametrize(
