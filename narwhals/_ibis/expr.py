@@ -112,6 +112,16 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
         return expr.over(window)
 
+    def _first(self, expr: ir.Value, *order_by: str) -> ir.Value:
+        return cast("ir.Column", expr).first(
+            order_by=self._sort(*order_by), include_null=True
+        )
+
+    def _last(self, expr: ir.Value, *order_by: str) -> ir.Value:
+        return cast("ir.Column", expr).last(
+            order_by=self._sort(*order_by), include_null=True
+        )
+
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
 
@@ -326,7 +336,18 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
             return ibis.cases((expr.notnull(), rank_))
 
-        return self._with_callable(_rank)
+        def window_f(df: IbisLazyFrame, inputs: WindowInputs[ir.Value]) -> list[ir.Value]:
+            if inputs.order_by:
+                msg = "`rank` followed by `over` with `order_by` specified is not supported for Ibis backend."
+                raise NotImplementedError(msg)
+            return [
+                _rank(cast("ir.Column", expr)).over(
+                    ibis.window(group_by=inputs.partition_by)
+                )
+                for expr in self(df)
+            ]
+
+        return self._with_callable(_rank, window_f)
 
     @property
     def str(self) -> IbisExprStringNamespace:

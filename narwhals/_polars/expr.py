@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal
 
 import polars as pl
 
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._expression_parsing import ExprKind, ExprMetadata
     from narwhals._polars.dataframe import Method
     from narwhals._polars.namespace import PolarsNamespace
@@ -126,15 +127,16 @@ class PolarsExpr:
         return self._with_native(native)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        # Use `pl.repeat(1, pl.len())` instead of `pl.lit(1)` to avoid issues for
+        # non-numeric types: https://github.com/pola-rs/polars/issues/24756.
+        pl_partition_by = partition_by or pl.repeat(1, pl.len())
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
-            native = self.native.over(partition_by or pl.lit(1))
+            native = self.native.over(pl_partition_by)
         else:
-            native = self.native.over(
-                partition_by or pl.lit(1), order_by=order_by or None
-            )
+            native = self.native.over(pl_partition_by, order_by=order_by or None)
         return self._with_native(native)
 
     @requires.backend_version((1,))
@@ -244,6 +246,14 @@ class PolarsExpr:
     def __floordiv__(self, other: Any) -> Self:
         return self._with_native(self.native.__floordiv__(extract_native(other)))
 
+    def __rfloordiv__(self, other: Any) -> Self:
+        native = self.native
+        result = native.__rfloordiv__(extract_native(other))
+        if self._backend_version < (1, 10, 0):
+            # Polars 1.9.0 and earlier returns 0 for division by 0 in rfloordiv.
+            result = pl.when(native != 0).then(result).otherwise(None)
+        return self._with_native(result)
+
     def __mod__(self, other: Any) -> Self:
         return self._with_native(self.native.__mod__(extract_native(other)))
 
@@ -340,6 +350,8 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
+    first: Method[Self]
+    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
@@ -372,7 +384,6 @@ class PolarsExpr:
     tail: Method[Self]
     unique: Method[Self]
     var: Method[Self]
-    __rfloordiv__: Method[Self]
     __rsub__: Method[Self]
     __rmod__: Method[Self]
     __rpow__: Method[Self]
@@ -400,16 +411,10 @@ class PolarsExprDateTimeNamespace(
 class PolarsExprStringNamespace(
     PolarsExprNamespace, PolarsStringNamespace[PolarsExpr, pl.Expr]
 ):
+    @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
-
-        if backend_version < (0, 20, 5):  # pragma: no cover
-            # Reason:
-            # `TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`
-            # in `native_expr.str.slice(1, length)`
-            msg = "`zfill` is only available in 'polars>=0.20.5', found version '0.20.4'."
-            raise NotImplementedError(msg)
 
         if backend_version <= (1, 30, 0):
             length = self.native.str.len_chars()
@@ -435,7 +440,7 @@ class PolarsExprCatNamespace(
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
-    _accessor = "name"
+    _accessor: ClassVar[Accessor] = "name"
     keep: Method[PolarsExpr]
     map: Method[PolarsExpr]
     prefix: Method[PolarsExpr]

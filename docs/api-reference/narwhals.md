@@ -14,8 +14,10 @@ Here are the top-level functions available in Narwhals.
         - concat
         - concat_str
         - exclude
+        - format
         - from_arrow
         - from_dict
+        - from_dicts
         - from_native
         - from_numpy
         - generate_temporary_column_name

@@ -611,6 +611,76 @@ class DataFrame(BaseFrame[DataFrameT]):
         raise ValueError(msg)
 
     @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        schema: IntoSchema | None = None,
+        *,
+        backend: IntoBackend[EagerAllowed],
+    ) -> DataFrame[Any]:
+        """Instantiate DataFrame from a sequence of dictionaries representing rows.
+
+        Notes:
+            For pandas-like dataframes, conversion to schema is applied after dataframe
+            creation.
+
+        Arguments:
+            data: Sequence with dictionaries mapping column name to value.
+            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+                specified, the schema will be inferred by the native library.
+            backend: Specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Tip:
+            If you expect non-uniform keys in `data`, consider passing `schema` for
+            more consistent results, as **inference varies between backends**:
+
+            - pandas uses all rows
+            - polars uses the first 100 rows
+            - pyarrow uses only the first row
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = [
+            ...     {"item": "apple", "weight": 80, "price": 0.60},
+            ...     {"item": "egg", "weight": 55, "price": 0.40},
+            ... ]
+            >>> nw.DataFrame.from_dicts(data, backend="polars")
+            ┌──────────────────────────┐
+            |    Narwhals DataFrame    |
+            |--------------------------|
+            |shape: (2, 3)             |
+            |┌───────┬────────┬───────┐|
+            |│ item  ┆ weight ┆ price │|
+            |│ ---   ┆ ---    ┆ ---   │|
+            |│ str   ┆ i64    ┆ f64   │|
+            |╞═══════╪════════╪═══════╡|
+            |│ apple ┆ 80     ┆ 0.6   │|
+            |│ egg   ┆ 55     ┆ 0.4   │|
+            |└───────┴────────┴───────┘|
+            └──────────────────────────┘
+        """
+        implementation = Implementation.from_backend(backend)
+        if is_eager_allowed(implementation):
+            ns = cls._version.namespace.from_backend(implementation).compliant
+            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+            return cls(compliant, level="full")
+        # NOTE: (#2786) needs resolving for extensions
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    nw.DataFrame.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+
+    @classmethod
     def from_numpy(
         cls,
         data: _2DArray,
@@ -1715,16 +1785,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             k if is_expr else col(k)
             for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
-
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="DataFrame.group_by")
         return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
     def sort(
@@ -1779,9 +1841,6 @@ class DataFrame(BaseFrame[DataFrameT]):
             by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
-
-        Returns:
-            The dataframe with the `k` largest rows.
 
         Examples:
             >>> import pandas as pd
@@ -2961,15 +3020,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         _keys = [
             k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
         ]
-        expr_flat_keys, kinds = self._flatten_and_extract(*_keys)
-
-        if not all(kind is ExprKind.ELEMENTWISE for kind in kinds):
-            from narwhals.exceptions import ComputeError
-
-            msg = (
-                "Group by is not supported with keys that are not elementwise expressions"
-            )
-            raise ComputeError(msg)
+        expr_flat_keys, _kinds = self._flatten_and_extract(*_keys)
+        check_expressions_preserve_length(*_keys, function_name="LazyFrame.group_by")
 
         return LazyGroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
 
@@ -3032,9 +3084,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             by: Column(s) used to determine the top rows. Accepts expression input. Strings are parsed as column names.
             reverse: Consider the k smallest elements of the by column(s) (instead of the k largest).
                 This can be specified per column by passing a sequence of booleans.
-
-        Returns:
-            The LazyFrame with the `k` largest rows.
 
         Examples:
             >>> import duckdb

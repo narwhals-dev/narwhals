@@ -11,7 +11,7 @@ import pyarrow as pa
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import DuplicateError, InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -22,7 +22,7 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from narwhals.typing import NonNestedLiteral
 
@@ -511,36 +511,34 @@ def test_group_by_expr(
 
 
 @pytest.mark.parametrize(
-    ("keys", "lazy_context"),
+    "keys",
     [
-        ([nw.col("a").drop_nulls()], pytest.raises(InvalidOperationError)),  # Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],
-            pytest.raises(InvalidOperationError),
-        ),  # Transform and Filtration
-        (
-            [nw.col("a").alias("foo"), nw.col("a").max()],
-            pytest.raises(ComputeError),
-        ),  # Transform and Aggregation
-        (
-            [nw.col("a").alias("foo"), nw.col("a").cum_max()],
-            pytest.raises(InvalidOperationError),
-        ),  # Transform and Window
-        ([nw.lit(42)], pytest.raises(ComputeError)),  # Literal
-        ([nw.lit(42).abs()], pytest.raises(ComputeError)),  # Literal
+        [nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").drop_nulls()],  # Transform and Filtration
+        [nw.col("a").alias("foo"), nw.col("a").max()],  # Transform and Aggregation
+        [nw.lit(42)],  # Literal
+        [nw.lit(42).abs()],  # Literal
     ],
 )
-def test_group_by_raise_if_not_elementwise(
-    constructor: Constructor, keys: list[nw.Expr], lazy_context: Any
+def test_group_by_raise_if_not_preserves_length(
+    constructor: Constructor, keys: list[nw.Expr]
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
-
-    context: Any = (
-        lazy_context if isinstance(df, nw.LazyFrame) else pytest.raises(ComputeError)
-    )
-    with context:
+    with pytest.raises(InvalidOperationError):
         df.group_by(keys).agg(nw.col("x").max())
+
+
+def test_group_by_window(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.group_by(nw.col("a").mean().over("b"))
+        .agg(nw.col("x").max())
+        .sort("a", nulls_last=True)
+    )
+    expected = {"a": [1.5, 2.0], "x": [2, 4]}
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -678,4 +676,88 @@ def test_top_level_len(constructor: Constructor) -> None:
         .agg(nw.col("weight").len(), nw.col("age").len())
         .sort("gender")
     )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_first(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keys", "aggs", "expected", "pre_sort"),
+    [
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 3, 5, 6]}, None),
+        (["a"], ["b"], {"a": [1, 2, 3, 4], "b": [1, 2, 4, 6]}, {"descending": True}),
+        (["a"], ["c"], {"a": [1, 2, 3, 4], "c": [None, "A", "B", "B"]}, None),
+        (
+            ["a"],
+            ["c"],
+            {"a": [1, 2, 3, 4], "c": [None, "A", None, "B"]},
+            {"nulls_last": True},
+        ),
+    ],
+    ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
+)
+def test_group_by_agg_last(
+    constructor_eager: ConstructorEager,
+    keys: Sequence[str],
+    aggs: Sequence[str],
+    expected: Mapping[str, Any],
+    pre_sort: Mapping[str, Any] | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    data = {
+        "a": [1, 2, 2, 3, 3, 4],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, "A", "A", None, "B", "B"],
+    }
+    df = nw.from_native(constructor_eager(data))
+    if pre_sort:
+        df = df.sort(aggs, **pre_sort)
+    result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
     assert_equal_data(result, expected)
