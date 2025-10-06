@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import pytest
 
@@ -268,34 +268,22 @@ def test_join_cross_with_suffix(suffix: str) -> None:
 @pytest.mark.parametrize(
     ("on", "predicate", "expected"),
     [
-        (["a", "b"], (nwp.col("b") < 5), {"a": [2], "b": [6], "zor ro": [9]}),
-        (["b"], (nwp.col("b") < 5), {"a": [2], "b": [6], "zor ro": [9]}),
-        (["b"], (nwp.col("b") > 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7.0, 8.0]}),
-    ],
-)
-def test_join_anti(on: On, predicate: nwp.Expr, expected: Data) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = dataframe(data)
-    other = df.filter(predicate)
-    result = df.join(other, on, how="anti")
-    assert_equal_data(result, expected)
-
-
-# NOTE: Maybe merge `semi`, `anti` into the same test which just inverts the predicate?
-@pytest.mark.parametrize(
-    ("on", "predicate", "expected"),
-    [
-        ("a", (nwp.col("b") > 5), {"a": [2], "b": [6], "zor ro": [9]}),
-        (["b"], (nwp.col("b") < 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7, 8]}),
         (["a", "b"], (nwp.col("b") < 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7, 8]}),
+        (["b"], (nwp.col("b") < 5), {"a": [1, 3], "b": [4, 4], "zor ro": [7, 8]}),
+        (["b"], (nwp.col("b") > 5), {"a": [2], "b": [6], "zor ro": [9]}),
     ],
 )
-def test_join_semi(on: On, predicate: nwp.Expr, expected: Data) -> None:
-    data = {"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = dataframe(data)
-    other = df.filter(predicate)
-    assert on is not None
-    result = df.join(other, on, how="semi").sort(on)
+@pytest.mark.parametrize("how", ["anti", "semi"])
+def test_join_filter(
+    on: str | Sequence[str],
+    predicate: nwp.Expr,
+    how: Literal["anti", "semi"],
+    expected: Data,
+) -> None:
+    # NOTE: "anti" and "semi" should be the inverse of eachother
+    df = dataframe({"a": [1, 3, 2], "b": [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]})
+    other = df.filter(predicate if how == "semi" else ~predicate)
+    result = df.join(other, on, how=how).sort(on)
     assert_equal_data(result, expected)
 
 
