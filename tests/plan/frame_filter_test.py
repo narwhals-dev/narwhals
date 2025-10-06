@@ -66,8 +66,7 @@ def test_filter_with_constraints() -> None:  # pragma: no cover
     assert_equal_data(result_expr, expected_expr)
 
 
-@XFAIL_DATAFRAME_FILTER
-def test_filter_missing_column() -> None:  # pragma: no cover
+def test_filter_missing_column() -> None:
     df = dataframe({"a": [1, 2], "b": [3, 4]})
     msg = (
         r"The following columns were not found: \[.*\]"

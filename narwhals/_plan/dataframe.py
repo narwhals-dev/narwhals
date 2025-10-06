@@ -83,9 +83,13 @@ class BaseFrame(Generic[NativeFrameT_co]):
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        msg = "`BaseFrame.filter` needs to use a version of `_parse.parse_predicates_constraints_into_expr_ir`"
-        raise NotImplementedError(msg)
-        predicate = NotImplementedError
+        e = _parse.parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        named_irs, _ = prepare_projection((e,), schema=self)
+        if len(named_irs) != 1:
+            # Should be unreachable, but I guess we will see
+            msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
+            raise ValueError(msg)
+        predicate = named_irs[0].expr
         return self._with_compliant(self._compliant.filter(predicate))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
