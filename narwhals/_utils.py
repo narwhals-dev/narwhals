@@ -15,6 +15,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Generic,
     Literal,
     Protocol,
@@ -72,7 +73,13 @@ if TYPE_CHECKING:
         CompliantSeriesT,
         NativeSeriesT_co,
     )
-    from narwhals._compliant.typing import EvalNames, NativeDataFrameT, NativeLazyFrameT
+    from narwhals._compliant.any_namespace import NamespaceAccessor
+    from narwhals._compliant.typing import (
+        Accessor,
+        EvalNames,
+        NativeDataFrameT,
+        NativeLazyFrameT,
+    )
     from narwhals._namespace import (
         Namespace,
         _NativeArrow,
@@ -139,10 +146,6 @@ if TYPE_CHECKING:
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
     _T3 = TypeVar("_T3")
-    _T4 = TypeVar("_T4")
-    _T5 = TypeVar("_T5")
-    _T6 = TypeVar("_T6")
-    _T7 = TypeVar("_T7")
     _Fn = TypeVar("_Fn", bound="Callable[..., Any]")
     P = ParamSpec("P")
     R = TypeVar("R")
@@ -163,8 +166,9 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 NativeT_co = TypeVar("NativeT_co", covariant=True)
 CompliantT_co = TypeVar("CompliantT_co", covariant=True)
-_ContextT = TypeVar("_ContextT", bound="_FullContext")
-_Method: TypeAlias = "Callable[Concatenate[_ContextT, P], R]"
+_IntoContext: TypeAlias = "_FullContext | NamespaceAccessor[_FullContext]"
+_IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
+_Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
 
@@ -223,12 +227,11 @@ class _LimitedContext(_StoresImplementation, _StoresVersion, Protocol):
     """
 
 
-class _FullContext(_StoresBackendVersion, _LimitedContext, Protocol):
-    """Provides 3 attributes.
+class _FullContext(_StoresImplementation, _StoresBackendVersion, Protocol):
+    """Provides 2 attributes.
 
     - `_implementation`
     - `_backend_version`
-    - `_version`
     """
 
 
@@ -629,9 +632,8 @@ def _import_native_namespace(module_name: str) -> ModuleType:
 def backend_version(implementation: Implementation, /) -> tuple[int, ...]:
     if not isinstance(implementation, Implementation):
         assert_never(implementation)
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        msg = "Cannot return backend version from UNKNOWN Implementation"
-        raise AssertionError(msg)
+    if implementation is Implementation.UNKNOWN:
+        return (0, 0, 0)
     into_version: ModuleType | str
     impl = implementation
     module_name = _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value)
@@ -693,9 +695,6 @@ def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ..
 
     Arguments:
         version: Version string, or object with one, to parse.
-
-    Returns:
-        Parsed version number.
     """
     # lifted from Polars
     # [marco]: Take care of DuckDB pre-releases which end with e.g. `-dev4108`
@@ -743,76 +742,6 @@ def isinstance_or_issubclass(
 
 @overload
 def isinstance_or_issubclass(
-    obj_or_cls: type, cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]]
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4]],
-) -> TypeIs[_T1 | _T2 | _T3 | _T4 | type[_T1 | _T2 | _T3 | _T4]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5]],
-) -> TypeIs[_T1 | _T2 | _T3 | _T4 | _T5 | type[_T1 | _T2 | _T3 | _T4 | _T5]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6]],
-) -> TypeIs[
-    _T1 | _T2 | _T3 | _T4 | _T5 | _T6 | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6]
-]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: type,
-    cls_or_tuple: tuple[
-        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
-    ],
-) -> TypeIs[type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]]: ...
-
-
-@overload
-def isinstance_or_issubclass(
-    obj_or_cls: object | type,
-    cls_or_tuple: tuple[
-        type[_T1], type[_T2], type[_T3], type[_T4], type[_T5], type[_T6], type[_T7]
-    ],
-) -> TypeIs[
-    _T1
-    | _T2
-    | _T3
-    | _T4
-    | _T5
-    | _T6
-    | _T7
-    | type[_T1 | _T2 | _T3 | _T4 | _T5 | _T6 | _T7]
-]: ...
-
-
-@overload
-def isinstance_or_issubclass(
     obj_or_cls: Any, cls_or_tuple: tuple[type, ...]
 ) -> TypeIs[Any]: ...
 
@@ -846,9 +775,6 @@ def maybe_align_index(
     Arguments:
         lhs: Dataframe or Series.
         rhs: Dataframe or Series to align with.
-
-    Returns:
-        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -939,9 +865,6 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
     Arguments:
         obj: Dataframe or Series.
 
-    Returns:
-        Same type as input.
-
     Notes:
         This is only really intended for backwards-compatibility purposes,
         for example if your library already aligns indices for users.
@@ -985,9 +908,6 @@ def maybe_set_index(
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
         index: series or list of series to set as index.
-
-    Returns:
-        Same type as input.
 
     Raises:
         ValueError: If one of the following conditions happens
@@ -1063,9 +983,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
 
     Arguments:
         obj: Dataframe or Series.
-
-    Returns:
-        Same type as input.
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -1174,9 +1091,6 @@ def maybe_convert_dtypes(
         *args: Additional arguments which gets passed through.
         **kwargs: Additional arguments which gets passed through.
 
-    Returns:
-        Same type as input.
-
     Notes:
         For non-pandas-like inputs, this is a no-op.
         Also, `args` and `kwargs` just get passed down to the underlying library as-is.
@@ -1200,21 +1114,12 @@ def maybe_convert_dtypes(
         b           boolean
         dtype: object
     """
-    obj_any = cast("Any", obj)
-    native_obj = obj_any.to_native()
-    if is_pandas_like_dataframe(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_frame._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    if is_pandas_like_series(native_obj):
-        return obj_any._with_compliant(
-            obj_any._compliant_series._with_native(
-                native_obj.convert_dtypes(*args, **kwargs)
-            )
-        )
-    return obj_any
+    if not obj.implementation.is_pandas_like():
+        return obj
+    result = obj._with_compliant(
+        obj._compliant._with_native(obj.to_native().convert_dtypes(*args, **kwargs))
+    )
+    return cast("FrameOrSeriesT", result)
 
 
 def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
@@ -1223,9 +1128,6 @@ def scale_bytes(sz: int, unit: SizeUnit) -> int | float:
     Arguments:
         sz: original size in bytes
         unit: size unit to convert into
-
-    Returns:
-        Integer or float.
     """
     if unit in {"b", "bytes"}:
         return sz
@@ -1258,9 +1160,6 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
     Arguments:
         series: Input Series.
-
-    Returns:
-        Whether the Series is an ordered categorical.
 
     Examples:
         >>> import narwhals as nw
@@ -1315,17 +1214,19 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
 
 
 def generate_unique_token(
-    n_bytes: int, columns: Container[str]
+    n_bytes: int, columns: Container[str], prefix: str = "nw"
 ) -> str:  # pragma: no cover
     msg = (
         "Use `generate_temporary_column_name` instead. `generate_unique_token` is "
         "deprecated and it will be removed in future versions"
     )
     issue_deprecation_warning(msg, _version="1.13.0")
-    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns)
+    return generate_temporary_column_name(n_bytes=n_bytes, columns=columns, prefix=prefix)
 
 
-def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str:
+def generate_temporary_column_name(
+    n_bytes: int, columns: Container[str], prefix: str = "nw"
+) -> str:
     """Generates a unique column name that is not present in the given list of columns.
 
     It relies on [python secrets token_hex](https://docs.python.org/3/library/secrets.html#secrets.token_hex)
@@ -1334,6 +1235,7 @@ def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str
     Arguments:
         n_bytes: The number of bytes to generate for the token.
         columns: The list of columns to check for uniqueness.
+        prefix: prefix with which the temporary column name should start with.
 
     Returns:
         A unique token that is not present in the given list of columns.
@@ -1346,12 +1248,15 @@ def generate_temporary_column_name(n_bytes: int, columns: Container[str]) -> str
         >>> columns = ["abc", "xyz"]
         >>> nw.generate_temporary_column_name(n_bytes=8, columns=columns) not in columns
         True
+        >>> temp_name = nw.generate_temporary_column_name(
+        ...     n_bytes=8, columns=columns, prefix="foo"
+        ... )
+        >>> temp_name not in columns and temp_name.startswith("foo")
+        True
     """
     counter = 0
     while True:
-        # Prepend `'nw'` to ensure it always starts with a character
-        # https://github.com/narwhals-dev/narwhals/issues/2510
-        token = f"nw{token_hex(n_bytes - 1)}"
+        token = f"{prefix}{token_hex(n_bytes - 1)}"
         if token not in columns:
             return token
 
@@ -1631,9 +1536,11 @@ def passthrough_column_names(names: Sequence[str], /) -> EvalNames[Any]:
     return fn
 
 
+_SENTINEL: Final = object()
+
+
 def _hasattr_static(obj: Any, attr: str) -> bool:
-    sentinel = object()
-    return getattr_static(obj, attr, sentinel) is not sentinel
+    return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
 def is_compliant_dataframe(
@@ -1669,6 +1576,16 @@ def is_compliant_expr(
     obj: CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co] | Any,
 ) -> TypeIs[CompliantExpr[CompliantFrameT, CompliantSeriesOrNativeExprT_co]]:
     return hasattr(obj, "__narwhals_expr__")
+
+
+def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
+    # NOTE: Only `compliant` has false positives **internally**
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
+    # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_namespace.py#L166-L168
+    # NOTE: Only `_accessor` has false positives **upstream**
+    # - https://github.com/pandas-dev/pandas/blob/e209a35403f8835bbcff97636b83d2fc39b51e68/pandas/core/accessor.py#L200-L233
+    # - https://github.com/pola-rs/polars/blob/a60c5019f7b694c97009ef9208d25aaa4cc1d8a6/py-polars/polars/api.py#L29-L42
+    return _hasattr_static(obj, "compliant") and _hasattr_static(obj, "_accessor")
 
 
 def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
@@ -1736,9 +1653,6 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
     Arguments:
         data: Object which implements `__arrow_c_stream__`.
         context: Initialized compliant object.
-
-    Returns:
-        A PyArrow Table.
     """
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
@@ -1906,6 +1820,11 @@ class requires:  # noqa: N801
 
     _min_version: tuple[int, ...]
     _hint: str
+    _wrapped_name: str
+    """(Unqualified) decorated method name.
+
+    When used in a namespace accessor, it will be prefixed by the property name.
+    """
 
     @classmethod
     def backend_version(cls, minimum: tuple[int, ...], /, hint: str = "") -> Self:
@@ -1924,23 +1843,37 @@ class requires:  # noqa: N801
     def _unparse_version(backend_version: tuple[int, ...], /) -> str:
         return ".".join(f"{d}" for d in backend_version)
 
-    def _ensure_version(self, instance: _FullContext, /) -> None:
-        if instance._backend_version >= self._min_version:
+    def _qualify_accessor_name(self, prefix: Accessor, /) -> None:
+        # NOTE: Should only need to do this once per class (the first time the method is called)
+        if "." not in self._wrapped_name:
+            self._wrapped_name = f"{prefix}.{self._wrapped_name}"
+
+    def _unwrap_context(self, instance: _IntoContext, /) -> tuple[tuple[int, ...], str]:
+        if _is_namespace_accessor(instance):
+            self._qualify_accessor_name(instance._accessor)
+            compliant = instance.compliant
+        else:
+            compliant = instance
+        return compliant._backend_version, str(compliant._implementation)
+
+    def _ensure_version(self, instance: _IntoContext, /) -> None:
+        version, backend = self._unwrap_context(instance)
+        if version >= self._min_version:
             return
-        method = self._wrapped_name
-        backend = instance._implementation
         minimum = self._unparse_version(self._min_version)
-        found = self._unparse_version(instance._backend_version)
-        msg = f"`{method}` is only available in '{backend}>={minimum}', found version {found!r}."
+        found = self._unparse_version(version)
+        msg = f"`{self._wrapped_name}` is only available in '{backend}>={minimum}', found version {found!r}."
         if self._hint:
             msg = f"{msg}\n{self._hint}"
         raise NotImplementedError(msg)
 
-    def __call__(self, fn: _Method[_ContextT, P, R], /) -> _Method[_ContextT, P, R]:
+    def __call__(
+        self, fn: _Method[_IntoContextT, P, R], /
+    ) -> _Method[_IntoContextT, P, R]:
         self._wrapped_name = fn.__name__
 
         @wraps(fn)
-        def wrapper(instance: _ContextT, *args: P.args, **kwds: P.kwargs) -> R:
+        def wrapper(instance: _IntoContextT, *args: P.args, **kwds: P.kwargs) -> R:
             self._ensure_version(instance)
             return fn(instance, *args, **kwds)
 

@@ -194,6 +194,8 @@ NarwhalsAggregation: TypeAlias = Literal[
     "quantile",
     "all",
     "any",
+    "first",
+    "last",
 ]
 """`Expr` methods we aim to support in `DepthTrackingGroupBy`.
 
@@ -204,3 +206,8 @@ Be sure to update me if you're working on one of these:
 - https://github.com/narwhals-dev/narwhals/issues/2526
 - https://github.com/narwhals-dev/narwhals/issues/2660
 """
+
+Accessor: TypeAlias = Literal[
+    "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
+]
+"""`{Expr,Series}` method namespace accessor name."""

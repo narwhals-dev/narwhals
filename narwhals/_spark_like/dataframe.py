@@ -376,7 +376,7 @@ class SparkLikeLazyFrame(
         subset_ = subset or self.columns
         if error := self._check_columns_exist(subset_):
             raise error
-        tmp_name = generate_temporary_column_name(8, self.columns)
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_index_")
         window = self._Window.partitionBy(subset_)
         if order_by and keep == "last":
             window = window.orderBy(*[self._F.desc_nulls_last(x) for x in order_by])

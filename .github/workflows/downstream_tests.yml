@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -63,7 +63,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -79,7 +79,9 @@ jobs:
           uv venv -p 3.12
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools hatch --system
+        run:
+          uv pip install --upgrade tox virtualenv setuptools hatch
+          "click!=8.3.0" --system
       - name: install-marimo-dev
         run: |
           cd marimo
@@ -124,7 +126,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -161,7 +163,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -216,7 +218,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: clone-tea-tasting
@@ -240,6 +242,11 @@ jobs:
           cd tea-tasting
           uv pip uninstall narwhals
           uv pip install -e ./..
+      - name: temporary pin duckdb # TODO(FBruzzesi): Unpin duckdb
+        run: |
+          cd tea-tasting
+          uv pip uninstall duckdb
+          uv pip install "duckdb<1.4"
       - name: show-deps
         run: |
           cd tea-tasting
@@ -260,7 +267,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -275,7 +282,8 @@ jobs:
           cd tubular
           git log
       - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools pytest-env --system
+        run:
+          uv pip install --upgrade tox virtualenv setuptools pytest-env --system
       - name: install-tubular-dev
         run: |
           cd tubular
@@ -302,7 +310,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -347,7 +355,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -387,7 +395,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -404,7 +412,7 @@ jobs:
       - name: create-hatch-env
         run: |
           cd formulaic
-          uv pip install hatch hatch-vcs --system
+          uv pip install hatch hatch-vcs "click!=8.3.0" --system
       - name: install-formulaic-dev
         run: |
           cd formulaic
@@ -429,7 +437,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -480,7 +488,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -497,7 +505,7 @@ jobs:
       - name: install-validoopsie-dev
         run: |
           cd validoopsie
-          uv sync --dev
+          uv sync --dev --upgrade
       - name: install-narwhals-dev
         run: |
           cd validoopsie
@@ -518,7 +526,7 @@ jobs:
           # Keep `--no-sync` in case Narwhals is re-synced with PyPI version
           uv run --no-sync pytest tests
         timeout-minutes: 15
-  
+
   darts:
     strategy:
       matrix:
@@ -527,7 +535,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -549,7 +557,7 @@ jobs:
         run: |
           uv pip uninstall narwhals --system
           # TODO(FBruzzesi): Install polars from darts requirements when they introcude it
-          uv pip install -e ".[polars]" --system
+          uv pip install -e ".[polars]" pyarrow --system
       - name: show-deps
         run: uv pip freeze
       - name: Run tests
@@ -568,7 +576,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv

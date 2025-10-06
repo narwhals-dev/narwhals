@@ -99,6 +99,7 @@ class CompliantFrame(
 
     def __native_namespace__(self) -> ModuleType: ...
     def __narwhals_namespace__(self) -> Any: ...
+    def _with_native(self, df: _NativeFrameT) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
     @classmethod
     def from_native(cls, data: _NativeFrameT, /, *, context: _LimitedContext) -> Self: ...
@@ -186,6 +187,15 @@ class CompliantDataFrame(
     def from_dict(
         cls,
         data: Mapping[str, Any],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: IntoSchema | None,
+    ) -> Self: ...
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
         /,
         *,
         context: _LimitedContext,
@@ -320,8 +330,12 @@ class EagerDataFrame(
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
 
-    def aggregate(self, *exprs: EagerExprT) -> Self:
-        # NOTE: Ignore intermittent [False Negative]
+    def aggregate(self, *exprs: EagerExprT) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        # NOTE: Ignore intermittent [False Negative] (1)
+        # Method "aggregate" overrides class "CompliantLazyFrame" in an incompatible manner
+        # Keyword parameter "exprs" type mismatch: base parameter is type "EagerExprT@EagerDataFrame", override parameter is type "EagerExprT@EagerDataFrame"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        # NOTE: Ignore intermittent [False Negative] (2)
         # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "exprs" of type "EagerExprT@EagerDataFrame" in function "select"
         #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
