@@ -13,6 +13,7 @@ from narwhals._plan.exceptions import (
     is_iterable_polars_error,
 )
 from narwhals.dependencies import get_polars, is_pandas_dataframe, is_pandas_series
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -122,6 +123,25 @@ def parse_predicates_constraints_into_expr_ir(
         chained = chain(all_predicates, _parse_constraints(constraints))
         return _combine_predicates(chained)
     return _combine_predicates(all_predicates)
+
+
+def parse_sort_by_into_seq_of_expr_ir(
+    by: OneOrIterable[IntoExprColumn] = (), *more_by: IntoExprColumn
+) -> Seq[ExprIR]:
+    """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of `ExprIR` nodes."""
+    return tuple(_parse_sort_by_into_iter_expr_ir(by, more_by))
+
+
+# TODO @dangotbanned: Review the rejection predicate
+# It doesn't cover all length-changing expressions, only aggregations/literals
+def _parse_sort_by_into_iter_expr_ir(
+    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
+) -> Iterator[ExprIR]:
+    for e in _parse_into_iter_expr_ir(by, *more_by):
+        if e.is_scalar:
+            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
+            raise InvalidOperationError(msg)
+        yield e
 
 
 def _parse_into_iter_expr_ir(

@@ -10,6 +10,7 @@ from narwhals._plan._parse import (
     parse_into_expr_ir,
     parse_into_seq_of_expr_ir,
     parse_predicates_constraints_into_expr_ir,
+    parse_sort_by_into_seq_of_expr_ir,
 )
 from narwhals._plan.expressions import (
     aggregation as agg,
@@ -25,7 +26,7 @@ from narwhals._plan.options import (
     rolling_options,
 )
 from narwhals._utils import Version
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from typing_extensions import Never, Self
@@ -48,21 +49,6 @@ if TYPE_CHECKING:
         RollingInterpolationMethod,
         TemporalLiteral,
     )
-
-
-# NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
-def _parse_sort_by(
-    by: OneOrIterable[IntoExprColumn] = (),
-    *more_by: IntoExprColumn,
-    descending: OneOrIterable[bool] = False,
-    nulls_last: OneOrIterable[bool] = False,
-) -> tuple[Seq[ir.ExprIR], SortMultipleOptions]:
-    sort_by = parse_into_seq_of_expr_ir(by, *more_by)
-    if length_changing := next((e for e in sort_by if e.is_scalar), None):
-        msg = f"All expressions sort keys must preserve length, but got:\n{length_changing!r}"
-        raise InvalidOperationError(msg)
-    options = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-    return sort_by, options
 
 
 # NOTE: Overly simplified placeholders for mocking typing
@@ -180,9 +166,8 @@ class Expr:
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        keys, opts = _parse_sort_by(
-            by, *more_by, descending=descending, nulls_last=nulls_last
-        )
+        keys = parse_sort_by_into_seq_of_expr_ir(by, *more_by)
+        opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
         return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
 
     def filter(
