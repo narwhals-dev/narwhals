@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
 # NOTE: Trying to keep consistent logic between `DataFrame.sort` and `Expr.sort_by`
 def _parse_sort_by(
-    by: OneOrIterable[IntoExpr] = (),
-    *more_by: IntoExpr,
+    by: OneOrIterable[IntoExprColumn] = (),
+    *more_by: IntoExprColumn,
     descending: OneOrIterable[bool] = False,
     nulls_last: OneOrIterable[bool] = False,
 ) -> tuple[Seq[ir.ExprIR], SortMultipleOptions]:
@@ -151,8 +151,8 @@ class Expr:
 
     def over(
         self,
-        *partition_by: OneOrIterable[IntoExpr],
-        order_by: OneOrIterable[IntoExpr] = None,
+        *partition_by: OneOrIterable[IntoExprColumn],
+        order_by: OneOrIterable[IntoExprColumn] | None = None,
         descending: bool = False,
         nulls_last: bool = False,
     ) -> Self:
@@ -175,8 +175,8 @@ class Expr:
 
     def sort_by(
         self,
-        by: OneOrIterable[IntoExpr],
-        *more_by: IntoExpr,
+        by: OneOrIterable[IntoExprColumn],
+        *more_by: IntoExprColumn,
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
