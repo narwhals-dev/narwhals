@@ -465,15 +465,18 @@ class ExprStringNamespace(Generic[ExprT]):
         Warning:
             Different backends might follow different rules to determine what a "word" is:
 
-            - duckdb, polars and spark-like use **non-alphanumeric** characters to
+            - duckdb, polars and spark-like use non-**alphanumeric** characters to
                 define the word boundaries.
-            - pandas-like, pyarrow and dask use **non-alphabetic** characters to define
+            - pandas-like, pyarrow and dask use non-**alphabetic** characters to define
                 the word boundaries, matching the behavior of
                 [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
 
-            As an example of such difference, in the former case the string `"with123numbers"`
-            is mapped to `"With123numbers"` (notice lowercase **n** after the digits), while
-            in the latter to `"With123Numbers"` (notice uppercase **N** after the digits).
+            We can observe the difference with the string `"with123numbers"`:
+
+            - non-**alphanumeric** -> `"With123numbers"`
+                - notice lowercase **n** after the digits
+            - non-**alphabetic** -> `"With123Numbers"`
+                - notice uppercase **N** after the digits
 
         Examples:
             >>> import polars as pl
