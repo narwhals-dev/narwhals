@@ -1565,9 +1565,7 @@ class Expr:
             |    1  2  None    |
             └──────────────────┘
         """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).first()
-        )
+        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
 
     def last(self) -> Self:
         """Get the last value.
@@ -1606,9 +1604,7 @@ class Expr:
             |b: [[null,"baz"]] |
             └──────────────────┘
         """
-        return self._with_orderable_aggregation(
-            lambda plx: self._to_compliant_expr(plx).last()
-        )
+        return self._with_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
     def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
