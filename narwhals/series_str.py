@@ -402,10 +402,14 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Warning:
             Different backends might follow different rules to determine what a "word" is:
 
-            | Word boundaries (characters)                                                                        | Backends                      | Example                                  |
-            | --------------------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------- |
-            | *non-alphanumeric*                                                                                  | duckdb, polars and spark-like | `"with123numbers"` -> `"With123numbers"` |
-            | *non-alphabetic* (same as [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title)) | dask, pyarrow and pandas-like | `"with123numbers"` -> `"With123Numbers"` |
+            - polars uses **non-alphanumeric** characters to define the word boundaries.
+            - pandas-like and pyarrow use **non-alphabetic** characters to define
+                the word boundaries, matching the behavior of
+                [`str.title`](https://docs.python.org/3/library/stdtypes.html#str.title).
+
+            As an example of such difference, in the former case the string `"with123numbers"`
+            is mapped to `"With123numbers"` (notice lowercase **n** after the digits), while
+            in the latter to `"With123Numbers"` (notice uppercase **N** after the digits).
 
         Examples:
             >>> import pyarrow as pa

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
 import pytest
 
 import narwhals as nw
@@ -16,7 +14,8 @@ data = {
         "__dunder__score_a1_.2b ?three",
     ]
 }
-expected = {
+
+expected_non_alphabetic = {
     "a": [
         "E.T. Phone Home",
         "They'Re Bill'S Friends From The Uk",
@@ -25,10 +24,17 @@ expected = {
         "__Dunder__Score_A1_.2B ?Three",
     ]
 }
-non_alphabetic_to_non_alphanumeric_boundary_mapping = {
-    "With123Numbers": "With123numbers",
-    "__Dunder__Score_A1_.2B ?Three": "__Dunder__Score_A1_.2b ?Three",
+expected_non_alphanumeric = {
+    "a": [
+        "E.T. Phone Home",
+        "They'Re Bill'S Friends From The Uk",
+        "To Infinity,And Beyond!",
+        "With123numbers",
+        "__Dunder__Score_A1_.2b ?Three",
+    ]
 }
+
+NON_ALPHANUMERIC_BACKENDS = ("duckdb", "polars", "pyspark")
 
 
 def test_str_to_titlecase_expr(
@@ -41,32 +47,26 @@ def test_str_to_titlecase_expr(
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    expected_ = deepcopy(expected)
-    if any(x in str(constructor) for x in ("duckdb", "polars", "pyspark")):
-        expected_ = {
-            "a": [
-                non_alphabetic_to_non_alphanumeric_boundary_mapping.get(el, el)
-                for el in expected_["a"]
-            ]
-        }
+    expected = (
+        expected_non_alphanumeric
+        if any(x in str(constructor) for x in NON_ALPHANUMERIC_BACKENDS)
+        else expected_non_alphabetic
+    )
 
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.to_titlecase())
 
-    assert_equal_data(result_frame, expected_)
+    assert_equal_data(result_frame, expected)
 
 
 def test_str_to_titlecase_series(constructor_eager: ConstructorEager) -> None:
-    expected_ = deepcopy(expected)
-    if "polars" in str(constructor_eager):
-        expected_ = {
-            "a": [
-                non_alphabetic_to_non_alphanumeric_boundary_mapping.get(el, el)
-                for el in expected_["a"]
-            ]
-        }
+    expected = (
+        expected_non_alphanumeric
+        if any(x in str(constructor_eager) for x in NON_ALPHANUMERIC_BACKENDS)
+        else expected_non_alphabetic
+    )
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.to_titlecase()
 
-    assert_equal_data({"a": result_series}, expected_)
+    assert_equal_data({"a": result_series}, expected)
