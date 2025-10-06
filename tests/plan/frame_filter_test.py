@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -24,24 +24,20 @@ def data() -> Data:
     return {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
 
-@XFAIL_DATAFRAME_FILTER
-def test_filter(data: Data) -> None:  # pragma: no cover
-    result = dataframe(data).filter(nwp.col("a") > 1)
+@pytest.mark.parametrize(
+    "predicate",
+    [
+        [False, True, True],
+        series([False, True, True]),  # NOTE: On `main`, this test uses `Series.__gt__`
+        pytest.param(nwp.col("a") > 1, marks=XFAIL_DATAFRAME_FILTER),
+    ],
+    ids=["list[bool]", "Series", "Expr"],
+)
+def test_filter_single(
+    data: Data, predicate: list[bool] | nwp.Series[Any] | nwp.Expr
+) -> None:
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    assert_equal_data(result, expected)
-
-
-# NOTE: On `main`, this test uses `Series.__gt__`
-def test_filter_with_series(data: Data) -> None:
-    predicate = series([False, True, True])
     result = dataframe(data).filter(predicate)
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    assert_equal_data(result, expected)
-
-
-def test_filter_with_boolean_list(data: Data) -> None:
-    result = dataframe(data).filter([False, True, True])
-    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     assert_equal_data(result, expected)
 
 

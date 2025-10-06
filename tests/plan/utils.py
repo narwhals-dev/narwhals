@@ -13,7 +13,7 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from typing_extensions import LiteralString
 
@@ -64,6 +64,10 @@ def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
 
 def dataframe(data: dict[str, Any], /) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
     return nwp.DataFrame.from_native(pa.table(data))
+
+
+def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
+    return nwp.Series.from_native(pa.chunked_array([values]))
 
 
 def assert_equal_data(
