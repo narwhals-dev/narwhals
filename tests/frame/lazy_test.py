@@ -55,6 +55,7 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
     assert isinstance(result.to_native(), expected_cls)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "backend",
     [

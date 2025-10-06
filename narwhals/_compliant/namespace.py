@@ -161,10 +161,10 @@ class EagerNamespace(
         self, predicate: EagerExprT, then: EagerExprT, otherwise: EagerExprT | None = None
     ) -> EagerExprT:
         def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT_co]:
-            predicate_s = df._evaluate_expr(predicate)
+            predicate_s = df._evaluate_single_output_expr(predicate)
             align = predicate_s._align_full_broadcast
 
-            then_s = df._evaluate_expr(then)
+            then_s = df._evaluate_single_output_expr(then)
             if otherwise is None:
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)
@@ -173,7 +173,7 @@ class EagerNamespace(
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)
             else:
-                otherwise_s = df._evaluate_expr(otherwise)
+                otherwise_s = df._evaluate_single_output_expr(otherwise)
                 predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
                 result = self._if_then_else(
                     predicate_s.native, then_s.native, otherwise_s.native

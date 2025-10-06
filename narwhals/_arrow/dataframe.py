@@ -332,7 +332,7 @@ class ArrowDataFrame(
         )
 
     def select(self, *exprs: ArrowExpr) -> Self:
-        new_series = self._evaluate_into_exprs(*exprs)
+        new_series = self._evaluate_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(
@@ -359,7 +359,7 @@ class ArrowDataFrame(
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
-        new_columns = self._evaluate_into_exprs(*exprs)
+        new_columns = self._evaluate_exprs(*exprs)
         columns = self.columns
 
         for col_value in new_columns:
@@ -522,7 +522,7 @@ class ArrowDataFrame(
             mask_native: Mask | ChunkedArrayAny = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask_native = self._evaluate_into_exprs(predicate)[0].native
+            mask_native = self._evaluate_exprs(predicate)[0].native
         return self._with_native(
             self.native.filter(mask_native), validate_column_names=False
         )

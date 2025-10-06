@@ -418,7 +418,7 @@ class PandasLikeDataFrame(
         )
 
     def select(self, *exprs: PandasLikeExpr) -> Self:
-        new_series = self._evaluate_into_exprs(*exprs)
+        new_series = self._evaluate_exprs(*exprs)
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(type(self.native)(), validate_column_names=False)
@@ -466,14 +466,14 @@ class PandasLikeDataFrame(
             mask_native: pd.Series[Any] | list[bool] = predicate
         else:
             # `[0]` is safe as the predicate's expression only returns a single column
-            mask = self._evaluate_into_exprs(predicate)[0]
+            mask = self._evaluate_exprs(predicate)[0]
             mask_native = self._extract_comparand(mask)
         return self._with_native(
             self.native.loc[mask_native], validate_column_names=False
         )
 
     def with_columns(self, *exprs: PandasLikeExpr) -> Self:
-        columns = self._evaluate_into_exprs(*exprs)
+        columns = self._evaluate_exprs(*exprs)
         if not columns and len(self) == 0:
             return self
         name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}

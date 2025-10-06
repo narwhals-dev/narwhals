@@ -63,7 +63,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def func(df: SQLLazyFrameT) -> list[NativeExprT]:
             native_series_list = self(df)
             other_native_series = {
-                key: df._evaluate_expr(value)
+                key: df._evaluate_single_output_expr(value)
                 for key, value in expressifiable_args.items()
             }
             return [

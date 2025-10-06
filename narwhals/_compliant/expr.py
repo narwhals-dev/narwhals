@@ -343,7 +343,9 @@ class EagerExpr(
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
             **{
-                name: df._evaluate_expr(value) if self._is_expr(value) else value
+                name: df._evaluate_single_output_expr(value)
+                if self._is_expr(value)
+                else value
                 for name, value in kwargs.items()
             }
         }
@@ -386,7 +388,9 @@ class EagerExpr(
 
         def inner(df: EagerDataFrameT) -> list[EagerSeriesT]:
             kwargs = {
-                name: df._evaluate_expr(value) if self._is_expr(value) else value
+                name: df._evaluate_single_output_expr(value)
+                if self._is_expr(value)
+                else value
                 for name, value in expressifiable_args.items()
             }
             return [

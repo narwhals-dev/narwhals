@@ -347,21 +347,24 @@ class EagerDataFrame(
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
 
-    def _evaluate_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
+    def _evaluate_single_output_expr(self, expr: EagerExprT, /) -> EagerSeriesT:
         """Evaluate `expr` and ensure it has a **single** output."""
-        result: Sequence[EagerSeriesT] = expr(self)
+        # NOTE: Ignore intermittent [False Negative]
+        # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
+        #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
+        result = self._evaluate_expr(expr)  # pyright: ignore[reportArgumentType]
         if len(result) != 1:  # pragma: no cover
             msg = "multi-output expressions not allowed in this context"
             raise MultiOutputExpressionError(msg)
         return result[0]
 
-    def _evaluate_into_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
+    def _evaluate_exprs(self, *exprs: EagerExprT) -> Sequence[EagerSeriesT]:
         # NOTE: Ignore intermittent [False Negative]
         # Argument of type "EagerExprT@EagerDataFrame" cannot be assigned to parameter "expr" of type "EagerExprT@EagerDataFrame" in function "_evaluate_into_expr"
         #  Type "EagerExprT@EagerDataFrame" is not assignable to type "EagerExprT@EagerDataFrame"
-        return list(chain.from_iterable(self._evaluate_into_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
+        return list(chain.from_iterable(self._evaluate_expr(expr) for expr in exprs))  # pyright: ignore[reportArgumentType]
 
-    def _evaluate_into_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
+    def _evaluate_expr(self, expr: EagerExprT, /) -> Sequence[EagerSeriesT]:
         """Return list of raw columns.
 
         For eager backends we alias operations at each step.
