@@ -17,7 +17,7 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, pyspark
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from narwhals.typing import IntoSeries, NonNestedDType
+    from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
     from tests.utils import Constructor, ConstructorPandasLike
 
 
@@ -235,6 +235,10 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
+def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
+    return nw.from_native(native).collect_schema()
+
+
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -245,10 +249,17 @@ def test_huge_int() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]})
 
     if POLARS_VERSION >= (1, 18):
-        result = nw.from_native(df.select(pl.col("a").cast(pl.Int128))).collect_schema()
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.Int128)))
         assert result["a"] == nw.Int128
+        assert result.to_polars()["a"] == pl.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
+        pass
+    if POLARS_VERSION >= (1, 34):
+        result = from_native_collect_schema(df.select(pl.col("a").cast(pl.UInt128)))
+        assert result["a"] == nw.UInt128
+        assert result.to_polars()["a"] == pl.UInt128
+    else:  # pragma: no cover
         pass
 
     rel = duckdb.sql("""
@@ -263,7 +274,7 @@ def test_huge_int() -> None:
         select cast(a as uint128) as a
         from df
                      """)
-    result = nw.from_native(rel).collect_schema()
+    result = from_native_collect_schema(rel)
     assert result["a"] == nw.UInt128
 
     # TODO(unassigned): once other libraries support Int128/UInt128,

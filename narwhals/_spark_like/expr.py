@@ -96,6 +96,16 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             window = window.rowsBetween(rows_start, self._Window.unboundedFollowing)
         return expr.over(window)
 
+    def _first(self, expr: Column, *order_by: str) -> Column:
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`first` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
+    def _last(self, expr: Column, *order_by: str) -> Column:  # pragma: no cover
+        # Docs say it's non-deterministic, with no way to specify order.
+        msg = "`last` is not supported for PySpark."
+        raise NotImplementedError(msg)
+
     def broadcast(self, kind: Literal[ExprKind.AGGREGATION, ExprKind.LITERAL]) -> Self:
         if kind is ExprKind.LITERAL:
             return self
@@ -207,13 +217,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def __floordiv__(self, other: SparkLikeExpr) -> Self:
         def _floordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, expr, other))
+            F = self._F
+            return F.when(
+                other != F.lit(0), F.floor(true_divide(F, expr, other))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_floordiv, other)
 
     def __rfloordiv__(self, other: SparkLikeExpr) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
-            return self._F.floor(true_divide(self._F, other, expr))
+            F = self._F
+            return F.when(
+                expr != F.lit(0), F.floor(true_divide(F, other, expr))
+            ).otherwise(F.lit(None))
 
         return self._with_binary(_rfloordiv, other).alias("literal")
 
@@ -323,14 +339,6 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def kurtosis(self) -> Self:
         return self._with_callable(self._F.kurtosis)
-
-    def n_unique(self) -> Self:
-        def _n_unique(expr: Column) -> Column:
-            return self._F.count_distinct(expr) + self._F.max(
-                self._F.isnull(expr).cast(self._native_dtypes.IntegerType())
-            )
-
-        return self._with_callable(_n_unique)
 
     def is_nan(self) -> Self:
         def _is_nan(expr: Column) -> Column:

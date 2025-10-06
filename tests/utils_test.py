@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
 import pandas as pd
@@ -16,7 +16,6 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 import narwhals as nw
 from narwhals._utils import (
     Implementation,
-    Version,
     _DeferredIterable,
     check_columns_exist,
     deprecate_native_namespace,
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._compliant.typing import Accessor
     from narwhals._utils import _SupportsVersion
     from narwhals.series import Series
 
@@ -282,6 +282,17 @@ def test_generate_temporary_column_name(n_bytes: int) -> None:
     assert temp_col_name not in columns
 
 
+@pytest.mark.parametrize("_idx", [1, 2])
+def test_generate_temporary_column_name_prefix(_idx: int) -> None:
+    columns = ["abc", "XYZ"]
+    prefix = columns[0][:_idx]
+
+    temp_col_name = nw.generate_temporary_column_name(
+        n_bytes=2, columns=columns, prefix=prefix
+    )
+    assert temp_col_name not in columns
+
+
 def test_generate_temporary_column_name_raise() -> None:
     from itertools import product
 
@@ -297,6 +308,22 @@ def test_generate_temporary_column_name_raise() -> None:
         match="Internal Error: Narwhals was not able to generate a column name with ",
     ):
         nw.generate_temporary_column_name(n_bytes=1, columns=columns)
+
+
+def test_generate_temporary_column_name_pr_3118_example() -> None:
+    from tests.utils import DUCKDB_VERSION
+
+    if DUCKDB_VERSION < (1, 3, 0):
+        pytest.skip()
+
+    import duckdb
+
+    conn = duckdb.connect()
+    conn.sql("""CREATE TABLE df (a int64, b int64);""")
+
+    df = nw.from_native(conn.table("df"))
+    sql = df.unique("b", keep="any").select("a").to_native().sql_query()
+    assert "AS row_index_" in sql
 
 
 @pytest.mark.parametrize(
@@ -495,9 +522,25 @@ def test_deprecate_native_namespace() -> None:
 
 
 def test_requires() -> None:
+    class SomeAccesssor:
+        _accessor: ClassVar[Accessor] = "str"
+
+        def __init__(self, compliant: ProbablyCompliant) -> None:
+            self._compliant: ProbablyCompliant = compliant
+
+        @property
+        def compliant(self) -> ProbablyCompliant:
+            return self._compliant
+
+        def waddle(self) -> str:
+            return f"waddle<{self.compliant.native}>waddle"
+
+        @requires.backend_version((1, 8, 0))
+        def nope(self) -> str:
+            return "nooooooooooooooooooooooooooo"
+
     class ProbablyCompliant:
         _implementation: Implementation = Implementation.POLARS
-        _version: Version = Version.MAIN
 
         def __init__(self, native_obj: str, backend_version: tuple[int, ...]) -> None:
             self._native_obj: str = native_obj
@@ -518,6 +561,10 @@ def test_requires() -> None:
         @requires.backend_version((3, 0, 0))
         def repeat(self, n: int) -> str:
             return self.native * n
+
+        @property
+        def str(self) -> SomeAccesssor:
+            return SomeAccesssor(self)
 
     v_05 = ProbablyCompliant("123", (0, 5))
     v_201 = ProbablyCompliant("123", (2, 0, 1))
@@ -546,6 +593,15 @@ def test_requires() -> None:
     )
     with pytest.raises(NotImplementedError, match=pattern):
         v_05.concat("never")
+
+    waddled = v_201.str.waddle()
+    assert waddled == "waddle<123>waddle"
+    assert v_05.str.waddle() == waddled
+    noped = v_201.str.nope()
+    assert noped == "nooooooooooooooooooooooooooo"
+    match = r"`str\.nope`.+\'polars>=1.8.0\'.+found.+\'0.5\'"
+    with pytest.raises(NotImplementedError, match=match):
+        v_05.str.nope()
 
 
 def test_deferred_iterable() -> None:

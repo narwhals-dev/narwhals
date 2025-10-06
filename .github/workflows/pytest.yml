@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -42,7 +42,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -53,7 +53,8 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark on Windows here because it is very slow
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -73,7 +74,7 @@ jobs:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
@@ -83,7 +84,8 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        # TODO(FBruzzesi): Unpin duckdb version once ibis makes a new release
+        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra "duckdb<1.4" --system
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -102,7 +104,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv

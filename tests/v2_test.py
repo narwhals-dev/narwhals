@@ -55,6 +55,7 @@ def test_toplevel() -> None:
         mean_h=nw_v2.mean_horizontal("a"),
         len=nw_v2.len(),
         concat_str=nw_v2.concat_str(nw_v2.lit("a"), nw_v2.lit("b")),
+        fmt=nw_v2.format("{}", "a"),
         any_h=nw_v2.any_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         all_h=nw_v2.all_horizontal(nw_v2.lit(True), nw_v2.lit(True), ignore_nulls=True),
         first=nw_v2.nth(0),
@@ -73,6 +74,7 @@ def test_toplevel() -> None:
         "mean_h": [1, 2, 3],
         "len": [3, 3, 3],
         "concat_str": ["ab", "ab", "ab"],
+        "fmt": ["1", "2", "3"],
         "any_h": [True, True, True],
         "all_h": [True, True, True],
         "first": [1, 2, 3],
@@ -114,6 +116,10 @@ def test_constructors() -> None:
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v2.DataFrame)
     result = nw_v2.from_arrow(pd.DataFrame({"a": [1, 2, 3]}), backend="pandas")
+    assert_equal_data(result, {"a": [1, 2, 3]})
+    assert isinstance(result, nw_v2.DataFrame)
+    assert isinstance(result, nw_v2.DataFrame)
+    result = nw_v2.from_dicts([{"a": 1}, {"a": 2}, {"a": 3}], backend="pandas")
     assert_equal_data(result, {"a": [1, 2, 3]})
     assert isinstance(result, nw_v2.DataFrame)
 
@@ -356,6 +362,16 @@ def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
     schema = {"c": nw_v2.Int16(), "d": nw_v2.Float32()}
     result = nw_v2.DataFrame.from_dict(
         {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_dataframe_from_dicts(eager_backend: EagerAllowed) -> None:
+    schema = {"c": nw_v2.Int16(), "d": nw_v2.Float32()}
+    result = nw_v2.DataFrame.from_dicts(
+        [{"c": 1, "d": 5}, {"c": 2, "d": 6}], backend=eager_backend, schema=schema
     )
     assert result.collect_schema() == schema
     assert result._version is Version.V2
