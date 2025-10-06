@@ -128,15 +128,16 @@ class PolarsExpr:
         return self._with_native(native)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        # Use `pl.repeat(1, pl.len())` instead of `pl.lit(1)` to avoid issues for
+        # non-numeric types: https://github.com/pola-rs/polars/issues/24756.
+        pl_partition_by = partition_by or pl.repeat(1, pl.len())
         if self._backend_version < (1, 9):
             if order_by:
                 msg = "`order_by` in Polars requires version 1.10 or greater"
                 raise NotImplementedError(msg)
-            native = self.native.over(partition_by or pl.lit(1))
+            native = self.native.over(pl_partition_by)
         else:
-            native = self.native.over(
-                partition_by or pl.lit(1), order_by=order_by or None
-            )
+            native = self.native.over(pl_partition_by, order_by=order_by or None)
         return self._with_native(native)
 
     @requires.backend_version((1,))
@@ -246,6 +247,14 @@ class PolarsExpr:
     def __floordiv__(self, other: Any) -> Self:
         return self._with_native(self.native.__floordiv__(extract_native(other)))
 
+    def __rfloordiv__(self, other: Any) -> Self:
+        native = self.native
+        result = native.__rfloordiv__(extract_native(other))
+        if self._backend_version < (1, 10, 0):
+            # Polars 1.9.0 and earlier returns 0 for division by 0 in rfloordiv.
+            result = pl.when(native != 0).then(result).otherwise(None)
+        return self._with_native(result)
+
     def __mod__(self, other: Any) -> Self:
         return self._with_native(self.native.__mod__(extract_native(other)))
 
@@ -342,6 +351,8 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
+    first: Method[Self]
+    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
@@ -374,7 +385,6 @@ class PolarsExpr:
     tail: Method[Self]
     unique: Method[Self]
     var: Method[Self]
-    __rfloordiv__: Method[Self]
     __rsub__: Method[Self]
     __rmod__: Method[Self]
     __rpow__: Method[Self]

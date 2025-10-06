@@ -13,8 +13,10 @@ from narwhals._duckdb.utils import (
     DeferredTimeZone,
     F,
     col,
+    generate_order_by_sql,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
     window_expression,
 )
@@ -93,6 +95,24 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             nulls_last=nulls_last,
         )
 
+    def _first(self, expr: Expression, *order_by: str) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        order_by_sql = generate_order_by_sql(
+            *order_by,
+            descending=[False] * len(order_by),
+            nulls_last=[False] * len(order_by),
+        )
+        return sql_expression(f"first({expr} {order_by_sql})")
+
+    def _last(self, expr: Expression, *order_by: str) -> Expression:
+        # https://github.com/duckdb/duckdb/discussions/19252
+        order_by_sql = generate_order_by_sql(
+            *order_by,
+            descending=[False] * len(order_by),
+            nulls_last=[False] * len(order_by),
+        )
+        return sql_expression(f"last({expr} {order_by_sql})")
+
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
@@ -146,6 +166,8 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(invert)
 
     def skew(self) -> Self:
+        W = self._window_expression  # noqa: N806
+
         def func(expr: Expression) -> Expression:
             count = F("count", expr)
             # Adjust population skewness by correction factor to get sample skewness
@@ -160,7 +182,26 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
                 )
             )
 
-        return self._with_callable(func)
+        def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
+            ret = []
+            for expr in self(df):
+                count = W(F("count", expr), inputs.partition_by)
+                # Adjust population skewness by correction factor to get sample skewness
+                sample_skewness = (
+                    W(F("skewness", expr), inputs.partition_by)
+                    * (count - lit(2))
+                    / F("sqrt", count * (count - lit(1)))
+                )
+                ret.append(
+                    when(count == lit(0), lit(None)).otherwise(
+                        when(count == lit(1), lit(float("nan"))).otherwise(
+                            when(count == lit(2), lit(0.0)).otherwise(sample_skewness)
+                        )
+                    )
+                )
+            return ret
+
+        return self._with_callable(func, window_f)
 
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
@@ -173,15 +214,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
                 return F("quantile_cont", expr, lit(quantile))
             msg = "Only linear interpolation methods are supported for DuckDB quantile."
             raise NotImplementedError(msg)
-
-        return self._with_callable(func)
-
-    def n_unique(self) -> Self:
-        def func(expr: Expression) -> Expression:
-            # https://stackoverflow.com/a/79338887/4451315
-            return F("array_unique", F("array_agg", expr)) + F(
-                "max", when(expr.isnotnull(), lit(0)).otherwise(lit(1))
-            )
 
         return self._with_callable(func)
 

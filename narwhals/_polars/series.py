@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         _1DArray,
     )
 
@@ -250,6 +251,17 @@ class PolarsSeries:
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def __rfloordiv__(self, other: Any) -> PolarsSeries:
+        if self._backend_version < (1, 10, 0):
+            name = self.name
+            ns = self.__narwhals_namespace__()
+            return (
+                self.to_frame()
+                .select((ns.col(name).__rfloordiv__(other)).alias(name))
+                .get_column(name)
+            )
+        return self._with_native(self.native.__rfloordiv__(extract_native(other)))
 
     @property
     def name(self) -> str:
@@ -637,6 +649,16 @@ class PolarsSeries:
     def to_polars(self) -> pl.Series:
         return self.native
 
+    def first(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(0) if len(self) else None
+        return self.native.first()  # type: ignore[return-value]
+
+    def last(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(-1) if len(self) else None
+        return self.native.last()  # type: ignore[return-value]
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -664,7 +686,6 @@ class PolarsSeries:
     __pow__: Method[Self]
     __radd__: Method[Self]
     __rand__: Method[Self]
-    __rfloordiv__: Method[Self]
     __rmod__: Method[Self]
     __rmul__: Method[Self]
     __ror__: Method[Self]
