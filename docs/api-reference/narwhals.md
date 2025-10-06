@@ -14,6 +14,7 @@ Here are the top-level functions available in Narwhals.
         - concat
         - concat_str
         - exclude
+        - format
         - from_arrow
         - from_dict
         - from_dicts

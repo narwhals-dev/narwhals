@@ -568,7 +568,9 @@ class DaskExpr(
     def is_first_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             first_distinct_index = frame.groupby(_name).agg({col_token: "min"})[col_token]
             return frame[col_token].isin(first_distinct_index)
@@ -578,7 +580,9 @@ class DaskExpr(
     def is_last_distinct(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            col_token = generate_temporary_column_name(n_bytes=8, columns=[_name])
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
             frame = add_row_index(expr.to_frame(), col_token)
             last_distinct_index = frame.groupby(_name).agg({col_token: "max"})[col_token]
             return frame[col_token].isin(last_distinct_index)
@@ -725,6 +729,8 @@ class DaskExpr(
         return DaskExprDateTimeNamespace(self)
 
     rank = not_implemented()
+    first = not_implemented()
+    last = not_implemented()
 
     # namespaces
     list: not_implemented = not_implemented()  # type: ignore[assignment]

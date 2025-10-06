@@ -23,6 +23,7 @@
         - fill_nan
         - fill_null
         - filter
+        - first
         - is_between
         - is_close
         - is_duplicated
@@ -34,6 +35,7 @@
         - is_null
         - is_unique
         - kurtosis
+        - last
         - len
         - log
         - map_batches

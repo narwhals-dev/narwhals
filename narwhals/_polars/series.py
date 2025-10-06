@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NonNestedLiteral,
         NumericLiteral,
+        PythonLiteral,
         _1DArray,
     )
 
@@ -647,6 +648,16 @@ class PolarsSeries:
 
     def to_polars(self) -> pl.Series:
         return self.native
+
+    def first(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(0) if len(self) else None
+        return self.native.first()  # type: ignore[return-value]
+
+    def last(self) -> PythonLiteral:
+        if self._backend_version < (1, 10):  # pragma: no cover
+            return self.native.item(-1) if len(self) else None
+        return self.native.last()  # type: ignore[return-value]
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
